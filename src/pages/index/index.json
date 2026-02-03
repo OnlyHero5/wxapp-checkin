@@ -1,8 +1,9 @@
 {
   "navigationBarTitleText": "活动签到",
   "usingComponents": {
-    "ant-container": "antd-mini/Container/index",
-    "ant-button": "antd-mini/Button/index",
-    "ant-tag": "antd-mini/Tag/index"
+    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
+    "t-cell": "tdesign-miniprogram/cell/cell",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-tag": "tdesign-miniprogram/tag/tag"
   }
 }

@@ -8,40 +8,29 @@
       <view class="title-line"></view>
     </view>
 
-    <ant-container className="card info-card">
-      <view class="info-row">
-        <text class="label">活动</text>
-        <text class="value">{{activity.activity_title || '—'}}</text>
-      </view>
-      <view class="divider"></view>
-      <view class="info-row">
-        <text class="label">身份</text>
-        <text class="value">{{name}} · {{studentId}}</text>
-      </view>
-      <view class="info-row">
-        <text class="label">二维码有效期</text>
-        <text class="value">{{activity.qr_expire_seconds || 10}} 秒</text>
-      </view>
-    </ant-container>
+    <t-cell-group class="card info-card">
+      <t-cell title="活动" note="{{activity.activity_title || '—'}}" />
+      <t-cell title="身份" note="{{name}} · {{studentId}}" />
+      <t-cell title="二维码有效期" note="{{activity.qr_expire_seconds || 10}} 秒" />
+    </t-cell-group>
 
-    <ant-button type="primary" className="btn-primary" loading="{{loading}}" disabled="{{!isOnline || loading}}" bindtap="onScan">
+    <t-button theme="primary" class="btn-primary" loading="{{loading}}" disabled="{{!isOnline || loading}}" bindtap="onScan">
       {{loading ? '正在验证...' : '扫码签到'}}
-    </ant-button>
+    </t-button>
     <text class="hint subtle">二维码每 10 秒更新，过期将判无效</text>
 
-    <ant-container className="status-card" wx:if="{{lastStatus}}">
-      <text class="status-title">{{lastStatus.title}}</text>
-      <text class="status-message">{{lastStatus.message}}</text>
-      <text class="status-meta" wx:if="{{lastStatus.meta}}">{{lastStatus.meta}}</text>
-    </ant-container>
+    <t-cell-group class="status-card" wx:if="{{lastStatus}}">
+      <t-cell title="{{lastStatus.title}}" note="{{lastStatus.message}}" />
+      <t-cell wx:if="{{lastStatus.meta}}" title="记录号" note="{{lastStatus.meta}}" />
+    </t-cell-group>
   </view>
 
   <view class="success-overlay" wx:if="{{showSuccess}}" bindtap="closeSuccess">
-    <ant-container className="success-card">
+    <view class="success-card">
       <view class="checkmark"></view>
       <text class="status-title">签到成功</text>
       <text class="status-message">记录已保存，可在签到记录查看</text>
-      <ant-button type="light" className="btn-ghost" bindtap="goRecords">查看记录</ant-button>
-    </ant-container>
+      <t-button theme="default" class="btn-ghost" bindtap="goRecords">查看记录</t-button>
+    </view>
   </view>
 </view>
