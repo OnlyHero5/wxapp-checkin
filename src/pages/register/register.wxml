@@ -1,0 +1,25 @@
+<view class="page page-register">
+
+  <view class="content">
+    <view wx:if="{{!isOnline}}" class="network-banner">当前无网络，无法注册</view>
+
+    <view class="header">
+      <text class="title">注册绑定</text>
+      <view class="title-line"></view>
+    </view>
+
+    <view class="card">
+      <view class="info-row">
+        <text class="label">微信身份</text>
+        <text class="tag">{{wxIdentity ? '已识别' : '未获取'}}</text>
+      </view>
+      <view class="divider"></view>
+      <input class="input" placeholder="学号" value="{{studentId}}" bindinput="onInputStudent" />
+      <input class="input" placeholder="姓名" value="{{name}}" bindinput="onInputName" />
+      <button class="btn-primary" bindtap="onSubmit" disabled="{{!isOnline || submitting}}">
+        {{submitting ? '提交中...' : '完成绑定'}}
+      </button>
+    </view>
+  </view>
+
+</view>

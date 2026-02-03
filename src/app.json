@@ -1,0 +1,33 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/records/records",
+    "pages/register/register",
+    "pages/record-detail/record-detail"
+  ],
+  "window": {
+    "navigationBarTitleText": "活动签到",
+    "navigationBarBackgroundColor": "#0b0d12",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0b0d12",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#9aa6b2",
+    "selectedColor": "#65f0c2",
+    "backgroundColor": "#0b0d12",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "签到"
+      },
+      {
+        "pagePath": "pages/records/records",
+        "text": "记录"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

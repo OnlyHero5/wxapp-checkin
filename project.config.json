@@ -1,0 +1,13 @@
+{
+  "miniprogramRoot": "src/",
+  "projectname": "wxapp-checkin",
+  "description": "活动二维码签到小程序",
+  "appid": "touristappid",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": false
+  }
+}

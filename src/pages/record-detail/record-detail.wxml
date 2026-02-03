@@ -1,0 +1,31 @@
+<view class="page page-detail">
+
+  <view class="content">
+    <view wx:if="{{!isOnline}}" class="network-banner">当前无网络，无法刷新详情</view>
+
+    <view class="header">
+      <text class="title">签到详情</text>
+      <view class="title-line"></view>
+    </view>
+
+    <view class="card info-card">
+      <view class="info-row">
+        <text class="label">活动</text>
+        <text class="value">{{detail.activity_title || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">时间</text>
+        <text class="value">{{detail.time || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">地点</text>
+        <text class="value">{{detail.location || '—'}}</text>
+      </view>
+      <view class="divider"></view>
+      <text class="hint">{{detail.description || '无更多描述'}}</text>
+    </view>
+
+    <view class="hint subtle">可截图保存作为签到凭证</view>
+    <button class="btn-ghost" bindtap="goBack">返回</button>
+  </view>
+</view>
