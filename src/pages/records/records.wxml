@@ -10,14 +10,14 @@
 
     <view wx:if="{{loading}}" class="hint">正在加载记录...</view>
 
-    <view wx:for="{{records}}" wx:key="record_id" class="list-card" bindtap="openDetail" data-id="{{item.record_id}}">
+    <t-cell-group wx:for="{{records}}" wx:key="record_id" class="list-card" bindtap="openDetail" data-id="{{item.record_id}}">
       <view class="info-row">
         <text class="list-title">{{item.activity_title}}</text>
-        <text class="chip">已签</text>
+        <t-tag theme="success" variant="light" class="chip">已签</t-tag>
       </view>
       <text class="list-meta">{{item.time}}</text>
       <text class="list-meta">{{item.location}}</text>
-    </view>
+    </t-cell-group>
 
     <view wx:if="{{!loading && records.length === 0}}" class="empty">暂无签到记录</view>
   </view>
