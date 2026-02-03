@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "dependencies": {
-    "antd-mini": "latest"
+    "tdesign-miniprogram": "latest"
   }
 }
