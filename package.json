@@ -1,0 +1,8 @@
+{
+  "name": "wxapp-checkin",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "antd-mini": "latest"
+  }
+}
