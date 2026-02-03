@@ -1,6 +1,14 @@
 page {
-  background-color: #f6f7f9;
-  color: #0f172a;
+  --bg: #0b0d12;
+  --surface: #0f172a;
+  --surface-elevated: #111b30;
+  --border: rgba(148, 163, 184, 0.18);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --accent: #65f0c2;
+  --danger: #f87171;
+  background-color: var(--bg);
+  color: var(--text);
   font-family: "HarmonyOS Sans", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
@@ -39,7 +47,7 @@ button::after {
   font-size: 22rpx;
   text-transform: uppercase;
   letter-spacing: 4rpx;
-  color: #7c8a99;
+  color: var(--muted);
 }
 
 .title {
@@ -47,28 +55,29 @@ button::after {
   font-weight: 600;
   margin-top: 6rpx;
   letter-spacing: 2rpx;
+  color: var(--text);
 }
 
 .title-line {
   width: 72rpx;
   height: 2rpx;
   margin-top: 10rpx;
-  background: linear-gradient(90deg, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.2));
+  background: linear-gradient(90deg, rgba(101, 240, 194, 0.9), rgba(101, 240, 194, 0.05));
   opacity: 0.9;
 }
 
 .subtitle {
   font-size: 26rpx;
-  color: #b6c0cc;
+  color: var(--muted);
   margin-top: 12rpx;
 }
 
 .card {
   padding: 30rpx;
   border-radius: 20rpx;
-  background: #ffffff;
-  border: 1rpx solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 16rpx 32rpx rgba(15, 23, 42, 0.08);
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  box-shadow: 0 18rpx 32rpx rgba(0, 0, 0, 0.35);
 }
 
 .info-card {
@@ -88,12 +97,12 @@ button::after {
 
 .label {
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .value {
   font-size: 26rpx;
-  color: #0f172a;
+  color: var(--text);
   text-align: right;
   display: block;
   max-width: 68%;
@@ -114,32 +123,32 @@ button::after {
 
 .divider {
   height: 1rpx;
-  background: rgba(15, 23, 42, 0.08);
+  background: var(--border);
   margin: 12rpx 0 18rpx;
 }
 
 .hint {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: var(--muted);
   margin-top: 16rpx;
 }
 
 .hint.subtle {
-  color: #9aa3af;
+  color: rgba(148, 163, 184, 0.7);
   margin-top: 16rpx;
 }
 
 .btn-primary {
   margin-top: 24rpx;
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--accent);
+  color: #0b0d12;
   font-weight: 600;
   border-radius: 999rpx;
   padding: 20rpx 32rpx;
-  box-shadow: 0 16rpx 30rpx rgba(15, 23, 42, 0.16);
+  box-shadow: 0 16rpx 30rpx rgba(101, 240, 194, 0.2);
   transition: transform 0.15s ease;
   min-height: 90rpx;
-  letter-spacing: 4rpx;
+  letter-spacing: 2rpx;
 }
 
 .btn-primary:active {
@@ -152,9 +161,9 @@ button::after {
 
 .btn-ghost {
   margin-top: 18rpx;
-  background: #ffffff;
-  color: #0f172a;
-  border: 1rpx solid rgba(15, 23, 42, 0.12);
+  background: transparent;
+  color: var(--text);
+  border: 1rpx solid var(--border);
   border-radius: 999rpx;
   padding: 14rpx 28rpx;
   transition: transform 0.15s ease;
@@ -165,67 +174,68 @@ button::after {
 }
 
 .input {
-  background: #f3f4f6;
+  background: var(--surface-elevated);
   border-radius: 14rpx;
   padding: 18rpx 20rpx;
   margin-top: 18rpx;
-  color: #0f172a;
-  border: 1rpx solid rgba(15, 23, 42, 0.08);
+  color: var(--text);
+  border: 1rpx solid var(--border);
 }
 
 .input::placeholder {
-  color: #9ca3af;
+  color: var(--muted);
 }
 
 .tag {
   padding: 6rpx 16rpx;
   border-radius: 999rpx;
   font-size: 20rpx;
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
-  border: 1rpx solid rgba(59, 130, 246, 0.2);
+  background: rgba(101, 240, 194, 0.12);
+  color: var(--accent);
+  border: 1rpx solid rgba(101, 240, 194, 0.3);
 }
 
 .chip {
   padding: 4rpx 14rpx;
   border-radius: 999rpx;
   font-size: 20rpx;
-  background: rgba(16, 185, 129, 0.12);
-  color: #059669;
-  border: 1rpx solid rgba(16, 185, 129, 0.2);
+  background: rgba(101, 240, 194, 0.12);
+  color: var(--accent);
+  border: 1rpx solid rgba(101, 240, 194, 0.3);
 }
 
 .network-banner {
   padding: 14rpx 20rpx;
   border-radius: 14rpx;
-  background: rgba(248, 113, 113, 0.1);
-  color: #b91c1c;
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
   margin-bottom: 20rpx;
-  border: 1rpx solid rgba(248, 113, 113, 0.2);
+  border: 1rpx solid rgba(248, 113, 113, 0.3);
 }
 
 .status-card {
   margin-top: 26rpx;
   padding: 24rpx;
   border-radius: 20rpx;
-  background: #ffffff;
-  border: 1rpx solid rgba(15, 23, 42, 0.08);
+  background: var(--surface-elevated);
+  border: 1rpx solid var(--border);
 }
 
 .status-title {
   font-size: 28rpx;
   font-weight: 600;
+  color: var(--text);
 }
 
 .status-message {
   font-size: 24rpx;
-  color: #475569;
+  color: var(--muted);
   margin-top: 10rpx;
 }
 
 .status-meta {
   font-size: 22rpx;
-  color: #94a3b8;
+  color: rgba(148, 163, 184, 0.7);
   margin-top: 10rpx;
 }
 
@@ -235,32 +245,32 @@ button::after {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.2);
+  background: rgba(2, 6, 23, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 99;
   animation: fadeIn 0.25s ease-out;
-  backdrop-filter: blur(4rpx);
+  backdrop-filter: blur(6rpx);
 }
 
 .success-card {
   width: 520rpx;
   padding: 36rpx;
   border-radius: 28rpx;
-  background: #ffffff;
-  border: 1rpx solid rgba(15, 23, 42, 0.08);
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   text-align: center;
   animation: popIn 0.3s ease-out;
-  box-shadow: 0 24rpx 40rpx rgba(15, 23, 42, 0.16);
+  box-shadow: 0 24rpx 40rpx rgba(0, 0, 0, 0.4);
 }
 
 .checkmark {
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
-  background: rgba(16, 185, 129, 0.12);
-  border: 2rpx solid #10b981;
+  background: rgba(101, 240, 194, 0.12);
+  border: 2rpx solid var(--accent);
   margin: 0 auto 18rpx;
   position: relative;
 }
@@ -270,8 +280,8 @@ button::after {
   position: absolute;
   width: 34rpx;
   height: 18rpx;
-  border-left: 6rpx solid #10b981;
-  border-bottom: 6rpx solid #10b981;
+  border-left: 6rpx solid var(--accent);
+  border-bottom: 6rpx solid var(--accent);
   transform: rotate(-45deg);
   top: 32rpx;
   left: 28rpx;
@@ -300,8 +310,8 @@ button::after {
 .list-card {
   padding: 24rpx;
   border-radius: 22rpx;
-  background: #ffffff;
-  border: 1rpx solid rgba(15, 23, 42, 0.08);
+  background: var(--surface);
+  border: 1rpx solid var(--border);
   margin-bottom: 18rpx;
   transition: transform 0.15s ease;
 }
@@ -314,16 +324,17 @@ button::after {
   font-size: 28rpx;
   font-weight: 600;
   max-width: 75%;
+  color: var(--text);
 }
 
 .list-meta {
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--muted);
   margin-top: 8rpx;
 }
 
 .empty {
   text-align: center;
-  color: #9ca3af;
+  color: var(--muted);
   margin-top: 60rpx;
 }
