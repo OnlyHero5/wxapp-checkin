@@ -126,3 +126,9 @@
   - task_plan.md (to update)
 - Notes:
   - 测试按用户要求跳过
+
+### 发布收尾（完成）
+- **Status:** complete
+- Actions taken:
+  - 推送文档提交：154ed4b
+  - 创建并推送 release tag：v2026.02.04

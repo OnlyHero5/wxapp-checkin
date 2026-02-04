@@ -70,4 +70,4 @@ Phase 4
 - [x] 移除旧 worktree
 - [x] 同步 `main` 至 `origin/main`（已备份未跟踪文件）
 - [x] 更新根目录中文记录
-- [ ] 创建并推送 release tag
+- [x] 创建并推送 release tag（v2026.02.04）
