@@ -23,3 +23,4 @@
 - 新增“个人中心”页与 TabBar 入口，完善页面结构与导航。
 - 更新 `app.json` 页面列表与底部导航配置。
 - 将 `package.json`/`package-lock.json` 移入 `src/`，以符合 `miniprogramRoot` 的 NPM 构建要求。
+- 主题优化为“石墨雾”风格，降低黑白对比，卡片/按钮更柔和。
