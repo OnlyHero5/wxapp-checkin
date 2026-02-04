@@ -6,16 +6,16 @@ page {
   --border: rgba(148, 163, 184, 0.14);
   --text: #e7edf5;
   --muted: rgba(231, 237, 245, 0.6);
-  --accent: #7bdcc0;
-  --accent-strong: #5fc9ad;
-  --accent-soft: rgba(123, 220, 192, 0.12);
+  --accent: #3f6fd1;
+  --accent-strong: #2f5fcd;
+  --accent-soft: rgba(63, 111, 209, 0.16);
   --danger: #f87171;
   --shadow-soft: 0 18rpx 30rpx rgba(0, 0, 0, 0.35);
   --shadow-tight: 0 12rpx 20rpx rgba(0, 0, 0, 0.3);
 
   --td-brand-color: var(--accent-strong);
-  --td-brand-color-active: #49b49a;
-  --td-brand-color-light: rgba(123, 220, 192, 0.18);
+  --td-brand-color-active: #264fb0;
+  --td-brand-color-light: rgba(63, 111, 209, 0.18);
   --td-text-color-primary: var(--text);
   --td-text-color-secondary: rgba(231, 237, 245, 0.68);
   --td-text-color-placeholder: rgba(231, 237, 245, 0.45);
@@ -37,16 +37,16 @@ page {
   --td-button-default-color: rgba(231, 237, 245, 0.9);
   --td-button-primary-bg-color: var(--accent-strong);
   --td-button-primary-border-color: var(--accent-strong);
-  --td-button-primary-color: #0b1117;
-  --td-button-primary-active-bg-color: #49b49a;
-  --td-button-primary-active-border-color: #49b49a;
+  --td-button-primary-color: #eaf1ff;
+  --td-button-primary-active-bg-color: #264fb0;
+  --td-button-primary-active-border-color: #264fb0;
   --td-input-bg-color: var(--surface-elevated);
   --td-input-border-color: var(--border);
   --td-input-placeholder-text-color: rgba(231, 237, 245, 0.45);
   --td-input-default-text-color: var(--text);
-  --td-success-color: var(--accent);
-  --td-success-color-1: rgba(123, 220, 192, 0.16);
-  --td-success-color-5: var(--accent);
+  --td-success-color: #5fd3b0;
+  --td-success-color-1: rgba(95, 211, 176, 0.16);
+  --td-success-color-5: #5fd3b0;
 
   background-color: var(--bg);
   color: var(--text);
@@ -106,7 +106,7 @@ button::after {
   width: 72rpx;
   height: 2rpx;
   margin-top: 10rpx;
-  background: linear-gradient(90deg, rgba(123, 220, 192, 0.7), rgba(123, 220, 192, 0.05));
+  background: linear-gradient(90deg, rgba(63, 111, 209, 0.7), rgba(63, 111, 209, 0.05));
   opacity: 0.8;
 }
 
@@ -185,14 +185,20 @@ button::after {
 .btn-primary {
   margin-top: 24rpx;
   background: var(--accent-strong);
-  color: #0b1117;
+  color: #eaf1ff;
   font-weight: 600;
   border-radius: 999rpx;
   padding: 20rpx 32rpx;
-  box-shadow: 0 12rpx 22rpx rgba(95, 201, 173, 0.25);
+  box-shadow: 0 12rpx 22rpx rgba(47, 95, 205, 0.28);
   transition: transform 0.15s ease, box-shadow 0.2s ease;
   min-height: 90rpx;
   letter-spacing: 2rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .btn-primary:active {
@@ -234,18 +240,18 @@ button::after {
   padding: 6rpx 16rpx;
   border-radius: 999rpx;
   font-size: 20rpx;
-  background: rgba(123, 220, 192, 0.14);
+  background: rgba(63, 111, 209, 0.16);
   color: var(--accent);
-  border: 1rpx solid rgba(123, 220, 192, 0.28);
+  border: 1rpx solid rgba(63, 111, 209, 0.3);
 }
 
 .chip {
   padding: 4rpx 14rpx;
   border-radius: 999rpx;
   font-size: 20rpx;
-  background: rgba(123, 220, 192, 0.14);
+  background: rgba(63, 111, 209, 0.16);
   color: var(--accent);
-  border: 1rpx solid rgba(123, 220, 192, 0.28);
+  border: 1rpx solid rgba(63, 111, 209, 0.3);
 }
 
 .network-banner {
@@ -313,7 +319,7 @@ button::after {
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
-  background: rgba(123, 220, 192, 0.14);
+  background: rgba(63, 111, 209, 0.16);
   border: 2rpx solid var(--accent);
   margin: 0 auto 18rpx;
   position: relative;
