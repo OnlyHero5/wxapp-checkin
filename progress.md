@@ -145,3 +145,8 @@
   - 更新 docs/changes.md 与根目录 changes.md
   - README 补充现状与构建步骤
   - .gitignore 增加 `.backup-untracked/` 忽略
+
+### 标签重指向
+- **Status:** complete
+- Actions taken:
+  - 删除并重新创建 `v2026.02.04`，已指向最新提交（ca60c8f）
