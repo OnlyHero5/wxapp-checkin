@@ -37,10 +37,12 @@ Page({
     });
   },
   onInputStudent(e) {
-    this.setData({ studentId: e.detail.value.trim() });
+    const value = (e.detail && e.detail.value) ? e.detail.value : "";
+    this.setData({ studentId: value.trim() });
   },
   onInputName(e) {
-    this.setData({ name: e.detail.value.trim() });
+    const value = (e.detail && e.detail.value) ? e.detail.value : "";
+    this.setData({ name: value.trim() });
   },
   async onSubmit() {
     if (!this.data.isOnline) {

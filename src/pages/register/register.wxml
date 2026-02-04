@@ -8,18 +8,18 @@
       <view class="title-line"></view>
     </view>
 
-    <view class="card">
+    <t-cell-group class="card">
       <view class="info-row">
         <text class="label">微信身份</text>
-        <text class="tag">{{wxIdentity ? '已识别' : '未获取'}}</text>
+        <t-tag theme="primary" variant="light" class="tag">{{wxIdentity ? '已识别' : '未获取'}}</t-tag>
       </view>
       <view class="divider"></view>
-      <input class="input" placeholder="学号" value="{{studentId}}" bindinput="onInputStudent" />
-      <input class="input" placeholder="姓名" value="{{name}}" bindinput="onInputName" />
-      <button class="btn-primary" bindtap="onSubmit" disabled="{{!isOnline || submitting}}">
+      <t-input class="input" placeholder="学号" value="{{studentId}}" bindchange="onInputStudent" />
+      <t-input class="input" placeholder="姓名" value="{{name}}" bindchange="onInputName" />
+      <t-button theme="primary" class="btn-primary" loading="{{submitting}}" disabled="{{!isOnline || submitting}}" bindtap="onSubmit">
         {{submitting ? '提交中...' : '完成绑定'}}
-      </button>
-    </view>
+      </t-button>
+    </t-cell-group>
   </view>
 
 </view>
