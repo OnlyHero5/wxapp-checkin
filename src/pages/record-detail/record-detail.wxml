@@ -8,24 +8,14 @@
       <view class="title-line"></view>
     </view>
 
-    <view class="card info-card">
-      <view class="info-row">
-        <text class="label">活动</text>
-        <text class="value">{{detail.activity_title || '—'}}</text>
-      </view>
-      <view class="info-row">
-        <text class="label">时间</text>
-        <text class="value">{{detail.time || '—'}}</text>
-      </view>
-      <view class="info-row">
-        <text class="label">地点</text>
-        <text class="value">{{detail.location || '—'}}</text>
-      </view>
-      <view class="divider"></view>
-      <text class="hint">{{detail.description || '无更多描述'}}</text>
-    </view>
+    <t-cell-group class="card info-card">
+      <t-cell title="活动" note="{{detail.activity_title || '—'}}" />
+      <t-cell title="时间" note="{{detail.time || '—'}}" />
+      <t-cell title="地点" note="{{detail.location || '—'}}" />
+    </t-cell-group>
 
+    <text class="hint">{{detail.description || '无更多描述'}}</text>
     <view class="hint subtle">可截图保存作为签到凭证</view>
-    <button class="btn-ghost" bindtap="goBack">返回</button>
+    <t-button theme="default" class="btn-ghost" bindtap="goBack">返回</t-button>
   </view>
 </view>
