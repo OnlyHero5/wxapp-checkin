@@ -16,3 +16,9 @@
 - 前端通过 `auth.ensureSession` 统一获取 `session_token`，避免各页重复逻辑。
 - API 层提供 mock 模式，确保无后端时也能直接运行和演示流程；上线时将 `src/utils/config.js` 的 `mock` 改为 `false` 并配置 `baseUrl`。
 - 加密逻辑暂用 Base64 作为占位，后续可替换为后端指定的 AES/RSA 实现。
+
+## 2026-02-04
+- 切换至 `tdesign-miniprogram` 作为 UI 组件库，移除 AntD 依赖。
+- 签到、记录、详情、注册页全面替换为 TDesign 组件（button/tag/cell/input）。
+- 新增“个人中心”页与 TabBar 入口，完善页面结构与导航。
+- 更新 `app.json` 页面列表与底部导航配置。
