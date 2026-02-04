@@ -76,6 +76,8 @@
 - Actions taken:
   - Verified TDesign tags present via rg checks
   - Verified no AntD tags remain in src
+  - 定位 DevTools “NPM packages not found” 原因：package.json 不在 miniprogramRoot 下
+  - 已将 package.json/package-lock.json 移入 `src/` 并在 `src/` 下执行 `npm install`
   - Manual WeChat DevTools “Tools → Build npm” pending
   - Manual UI verification pending
 
