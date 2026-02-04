@@ -22,3 +22,4 @@
 - 签到、记录、详情、注册页全面替换为 TDesign 组件（button/tag/cell/input）。
 - 新增“个人中心”页与 TabBar 入口，完善页面结构与导航。
 - 更新 `app.json` 页面列表与底部导航配置。
+- 将 `package.json`/`package-lock.json` 移入 `src/`，以符合 `miniprogramRoot` 的 NPM 构建要求。
