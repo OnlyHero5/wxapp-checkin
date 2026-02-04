@@ -16,9 +16,11 @@
       <view class="divider"></view>
       <t-input class="input" placeholder="学号" value="{{studentId}}" bindchange="onInputStudent" />
       <t-input class="input" placeholder="姓名" value="{{name}}" bindchange="onInputName" />
-      <t-button theme="primary" class="btn-primary" loading="{{submitting}}" disabled="{{!isOnline || submitting}}" bindtap="onSubmit">
-        {{submitting ? '提交中...' : '完成绑定'}}
-      </t-button>
+      <view class="btn-center">
+        <t-button theme="primary" class="btn-primary" loading="{{submitting}}" disabled="{{!isOnline || submitting}}" bindtap="onSubmit">
+          {{submitting ? '提交中...' : '完成绑定'}}
+        </t-button>
+      </view>
     </t-cell-group>
   </view>
 

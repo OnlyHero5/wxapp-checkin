@@ -14,9 +14,11 @@
       <t-cell title="二维码有效期" note="{{activity.qr_expire_seconds || 10}} 秒" />
     </t-cell-group>
 
-    <t-button theme="primary" class="btn-primary" loading="{{loading}}" disabled="{{!isOnline || loading}}" bindtap="onScan">
-      {{loading ? '正在验证...' : '扫码签到'}}
-    </t-button>
+    <view class="btn-center">
+      <t-button theme="primary" class="btn-primary" loading="{{loading}}" disabled="{{!isOnline || loading}}" bindtap="onScan">
+        {{loading ? '正在验证...' : '扫码签到'}}
+      </t-button>
+    </view>
     <text class="hint subtle">二维码每 10 秒更新，过期将判无效</text>
 
     <t-cell-group class="status-card" wx:if="{{lastStatus}}">

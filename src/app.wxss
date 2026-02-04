@@ -182,8 +182,15 @@ button::after {
   margin-top: 16rpx;
 }
 
-.btn-primary {
+.btn-center {
+  display: flex;
+  justify-content: center;
+  width: 100%;
   margin-top: 24rpx;
+}
+
+.btn-primary {
+  margin-top: 0;
   background: var(--accent-strong);
   color: #eaf1ff;
   font-weight: 600;
@@ -197,8 +204,8 @@ button::after {
   align-items: center;
   justify-content: center;
   width: 68%;
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .btn-primary:active {

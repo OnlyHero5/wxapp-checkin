@@ -19,9 +19,11 @@
         <text class="label">状态</text>
         <t-tag theme="success" variant="light" class="tag">{{bound ? '已绑定' : '未绑定'}}</t-tag>
       </view>
-      <t-button theme="primary" class="btn-primary" bindtap="onAction">
-        {{bound ? '重新绑定' : '去绑定'}}
-      </t-button>
+      <view class="btn-center">
+        <t-button theme="primary" class="btn-primary" bindtap="onAction">
+          {{bound ? '重新绑定' : '去绑定'}}
+        </t-button>
+      </view>
     </view>
   </view>
 </view>
