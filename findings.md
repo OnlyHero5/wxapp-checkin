@@ -1,0 +1,57 @@
+# Findings & Decisions
+
+## Requirements
+- Redesign all four pages: index, records, record-detail, register
+- Add a new minimal “个人中心” page and tabBar entry
+- Visual style: Moonshot-like geek minimalism, dark background dominant
+- Use TDesign (腾讯官方小程序组件库) as the primary UI building blocks; remove Ant Design
+- Keep key status feedback (network, success, errors) and animations
+- Record changes in changes.md
+
+## Research Findings
+- Product docs emphasize 10s rolling QR, non-repeat check-in, and clear error states.
+- Current layout uses plain WXML + custom CSS, no AntD components detected in src.
+- Global styling is centralized in src/app.wxss; page wxss files are empty.
+- Tab bar currently has two items: 签到, 记录 (text only).
+- Storage keys exist for session, wx identity, studentId, name, and bound status in src/utils/storage.js.
+- Page JS already handles network status and bound checks; no logic changes needed for UI refactor.
+- TDesign miniprogram uses npm package `tdesign-miniprogram` with `usingComponents` paths like `tdesign-miniprogram/button/button`; min base library version ^2.6.5; npm install is the recommended install method.
+
+## Technical Decisions
+| Decision | Rationale |
+|----------|-----------|
+| Adopt Obsidian Grid dark minimal design | Closest to Moonshot style and user preference |
+| Keep global theme tokens in app.wxss | Ensures consistency across all pages |
+| Minimal “个人中心” content only | User explicitly requested option 3 |
+| TabBar text-only | Keeps minimalism and avoids icon asset management |
+| Use TDesign components across pages | Align with Tencent official component library request |
+
+## Issues Encountered
+| Issue | Resolution |
+|-------|------------|
+| session-catchup.py path missing under .claude | Located script under .codex and executed |
+| Recursive search timeout | Used targeted path search |
+
+## Resources
+- docs/REQUIREMENTS.md
+- docs/FUNCTIONAL_SPEC.md
+- docs/plans/2026-02-03-moonshot-miniapp-design.md
+- docs/plans/2026-02-03-moonshot-tdesign-ui-design.md
+- docs/plans/2026-02-03-moonshot-tdesign-ui-implementation.md
+- docs/plans/2026-02-03-moonshot-ui-implementation-plan.md
+- src/app.json
+- src/app.wxss
+- src/pages/index/index.wxml
+- src/pages/records/records.wxml
+- src/pages/record-detail/record-detail.wxml
+- src/pages/register/register.wxml
+- design-system/moonshot-checkin/MASTER.md
+
+## Visual/Browser Findings
+- Existing pages use header + card layout with simple list patterns; all are light theme by default.
+- Current status messaging relies on inline banners and hint text.
+- Success overlay is implemented in index with a modal-like card.
+
+---
+*Update this file after every 2 view/browser/search operations*
+*This prevents visual information from being lost*
