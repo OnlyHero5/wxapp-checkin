@@ -70,3 +70,8 @@
 - 统一样式应集中在 `src/app.wxss`，页面 wxss 保持轻量。
 - 新增“个人中心”页并更新 `app.json` 的 `pages` 与 `tabBar`。
 - 所有修改需记录在 `changes.md`。
+
+## 2026-02-04 更新
+- 组件库由 Ant Design 改为 TDesign（腾讯官方）。
+- 主题从冷绿强调改为“石墨雾”深色体系，主按钮为深蓝且居中。
+- 依赖构建路径调整为 `src/`（与 `miniprogramRoot` 对齐）。

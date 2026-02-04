@@ -68,3 +68,9 @@
 ## 2026-02-04 README 检查
 - 根目录 README.md 仍为早期描述，缺少 TDesign、构建方式与发布信息，需要补充。
 - README.md 已更新为当前实现状态与构建流程说明。
+
+## 2026-02-04 文档全量检查
+- 发现 `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md` 与 `docs/plans/2026-02-03-moonshot-miniapp-design.md` 仍停留在 02-03，需要补充 02-04 的 TDesign/发布收尾说明。
+- `docs/changes.md` 需追加 README 更新与 tag 重新指向最新提交的记录。
+- 已完成全量 Markdown 复核与补齐（需求/功能/计划/变更/README）。
+- `.backup-untracked/` 已加入 .gitignore 保留备份但不再影响状态。

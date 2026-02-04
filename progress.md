@@ -137,3 +137,11 @@
 - **Status:** complete
 - Actions taken:
   - 更新 README.md，补充 TDesign、构建步骤、发布标签说明
+
+### 文档全量检查与补齐
+- **Status:** complete
+- Actions taken:
+  - 复核并更新 docs/REQUIREMENTS.md、docs/FUNCTIONAL_SPEC.md、docs/plans/2026-02-03-moonshot-miniapp-design.md
+  - 更新 docs/changes.md 与根目录 changes.md
+  - README 补充现状与构建步骤
+  - .gitignore 增加 `.backup-untracked/` 忽略

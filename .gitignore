@@ -1,3 +1,4 @@
 .worktrees/
+.backup-untracked/
 node_modules/
 src/miniprogram_npm/
