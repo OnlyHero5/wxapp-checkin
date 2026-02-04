@@ -106,3 +106,23 @@
 
 ---
 *Update after completing each phase or encountering errors*
+
+## Session: 2026-02-04
+
+### 发布收尾
+- **Status:** in_progress
+- Actions taken:
+  - 创建清理工作区 `ops/release-cleanup`
+  - 移除旧 worktree `.worktrees/moonshot-miniapp-design`
+  - 备份 `main` 未跟踪文件到 `.backup-untracked/20260204-1107`
+  - `main` 快进同步至 `origin/main`
+  - 更新执行计划 `docs/plans/2026-02-04-release-cleanup.md`
+  - 按要求补充根目录中文记录
+- Files created/modified:
+  - docs/plans/2026-02-04-release-cleanup.md (created)
+  - changes.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+  - task_plan.md (to update)
+- Notes:
+  - 测试按用户要求跳过

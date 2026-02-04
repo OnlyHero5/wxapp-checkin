@@ -10,3 +10,9 @@
 - 视觉风格调整为“石墨雾”，降低黑白撞色的突兀感。
 - 主按钮色调整为深蓝，整体更稳重。
 - 统一主按钮为居中展示。
+
+## 2026-02-04（发布收尾）
+- 移除旧 worktree：`.worktrees/moonshot-miniapp-design`。
+- 本地 `main` 已与 `origin/main` 同步，未跟踪文件已备份至 `.backup-untracked/20260204-1107`。
+- 根目录文档以中文补充发布与清理记录。
+- 计划创建并推送 release tag。

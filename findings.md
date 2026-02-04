@@ -55,3 +55,11 @@
 ---
 *Update this file after every 2 view/browser/search operations*
 *This prevents visual information from being lost*
+
+## 2026-02-04 继续执行
+- 用户要求：继续执行并更新根目录 Markdown 文档，且以中文为主记录。
+- 已更新执行计划：新增“更新根目录文档 + 提交 + 推送”步骤，并将打 tag 放在文档提交之后。
+
+## 2026-02-04 文档同步
+- 根目录文档当前以英文为主，需补充中文执行记录与发布收尾。
+- 计划将本次清理与发布流程写入 changes.md / progress.md / task_plan.md。

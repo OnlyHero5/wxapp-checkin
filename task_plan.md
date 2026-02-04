@@ -65,3 +65,9 @@ Phase 4
 - Update phase status as you progress: pending → in_progress → complete
 - Re-read this plan before major decisions (attention manipulation)
 - Log ALL errors - they help avoid repetition
+
+## 2026-02-04 发布收尾清单
+- [x] 移除旧 worktree
+- [x] 同步 `main` 至 `origin/main`（已备份未跟踪文件）
+- [x] 更新根目录中文记录
+- [ ] 创建并推送 release tag
