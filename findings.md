@@ -74,4 +74,4 @@
 - `docs/changes.md` 需追加 README 更新与 tag 重新指向最新提交的记录。
 - 已完成全量 Markdown 复核与补齐（需求/功能/计划/变更/README）。
 - `.backup-untracked/` 已加入 .gitignore 保留备份但不再影响状态。
-- 发布标签 `v2026.02.04` 已重新指向最新提交（ca60c8f）。
+- 发布标签 `v2026.02.04` 已重新指向 main 最新提交。
