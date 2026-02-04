@@ -132,3 +132,8 @@
 - Actions taken:
   - 推送文档提交：154ed4b、2c52c74
   - 创建并推送 release tag：v2026.02.04（指向 154ed4b）
+
+### 文档补齐（README）
+- **Status:** complete
+- Actions taken:
+  - 更新 README.md，补充 TDesign、构建步骤、发布标签说明

@@ -71,3 +71,4 @@ Phase 4
 - [x] 同步 `main` 至 `origin/main`（已备份未跟踪文件）
 - [x] 更新根目录中文记录
 - [x] 创建并推送 release tag（v2026.02.04）
+- [x] README.md 已更新（构建步骤与发布说明）

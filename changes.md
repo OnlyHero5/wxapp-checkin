@@ -17,3 +17,4 @@
 - 根目录文档以中文补充发布与清理记录。
 - 计划创建并推送 release tag。
 - 已创建并推送 release tag：`v2026.02.04`。
+- 更新 README.md，补充 TDesign、构建步骤与发布信息。
