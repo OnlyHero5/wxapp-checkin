@@ -3,7 +3,8 @@
     "pages/index/index",
     "pages/records/records",
     "pages/register/register",
-    "pages/record-detail/record-detail"
+    "pages/record-detail/record-detail",
+    "pages/profile/profile"
   ],
   "window": {
     "navigationBarTitleText": "活动签到",
@@ -25,6 +26,10 @@
       {
         "pagePath": "pages/records/records",
         "text": "记录"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "个人中心"
       }
     ]
   },

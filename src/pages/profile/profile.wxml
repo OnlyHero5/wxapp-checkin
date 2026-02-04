@@ -1,0 +1,27 @@
+<view class="page page-profile">
+  <view class="content">
+    <view class="header">
+      <text class="title">个人中心</text>
+      <view class="title-line"></view>
+    </view>
+
+    <view class="card info-card">
+      <t-avatar size="large"></t-avatar>
+      <view class="info-row" style="margin-top: 20rpx;">
+        <text class="label">姓名</text>
+        <text class="value">{{name || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">学号</text>
+        <text class="value">{{studentId || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">状态</text>
+        <t-tag theme="success" variant="light" class="tag">{{bound ? '已绑定' : '未绑定'}}</t-tag>
+      </view>
+      <t-button theme="primary" class="btn-primary" bindtap="onAction">
+        {{bound ? '重新绑定' : '去绑定'}}
+      </t-button>
+    </view>
+  </view>
+</view>
