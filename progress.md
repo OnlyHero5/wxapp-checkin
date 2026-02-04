@@ -150,3 +150,9 @@
 - **Status:** complete
 - Actions taken:
   - 删除并重新创建 `v2026.02.04`，已指向 main 最新提交
+
+### 后端接口说明
+- **Status:** complete
+- Actions taken:
+  - 新建 docs/API_SPEC.md（统一 code/message/data）
+  - 与前端 src/utils/api.js 对齐接口字段与行为

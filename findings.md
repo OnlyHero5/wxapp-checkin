@@ -75,3 +75,9 @@
 - 已完成全量 Markdown 复核与补齐（需求/功能/计划/变更/README）。
 - `.backup-untracked/` 已加入 .gitignore 保留备份但不再影响状态。
 - 发布标签 `v2026.02.04` 已重新指向 main 最新提交。
+
+## 2026-02-04 API 对齐
+- 现有前端实现定义的接口：/api/auth/wx-login、/api/register、/api/checkin/verify、/api/checkin/records、/api/checkin/records/{id}、/api/activity/current。
+- 请求字段与返回字段已在 src/utils/api.js 中明确（包含 session_token、student_id、name、qr_token、checkin_record_id 等）。
+- 将新增 docs/API_SPEC.md 作为后端接口说明主文档。
+- API 说明文档已建立：docs/API_SPEC.md（统一返回结构）。

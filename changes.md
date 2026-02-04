@@ -19,3 +19,4 @@
 - 已创建并推送 release tag：`v2026.02.04`。
 - 更新 README.md，补充 TDesign、构建步骤与发布信息。
 - 已将发布标签 `v2026.02.04` 重新指向最新提交。
+- 新增 `docs/API_SPEC.md`，提供后端接口说明（code/message/data 统一返回）。

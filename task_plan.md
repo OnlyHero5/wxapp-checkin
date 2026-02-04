@@ -75,3 +75,4 @@ Phase 4
 - [x] 全量检查并更新其他 Markdown 文档
 - [x] 处理备份目录（加入 .gitignore，保留备份）
 - [x] 重新指向并推送 v2026.02.04（已完成）
+- [x] 新增 docs/API_SPEC.md（后端接口说明）
