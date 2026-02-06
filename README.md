@@ -1,52 +1,103 @@
-# 微信小程序活动二维码签到
+<div align="center">
 
-本仓库实现微信小程序前端的活动二维码签到功能，包含角色分流、注册绑定、活动卡片、扫码动作与个人信息展示。
+# 微信小程序活动签到平台
 
-## 当前状态
-- 已完成 TDesign（腾讯官方）组件化改造
-- 视觉主题为“石墨雾”深色体系，主按钮为深蓝色
-- 登录后角色分流：
-  - 普通用户：活动卡片浏览 + 个人信息（社会分/讲座分）
-  - 工作人员：活动卡片操作（签到/签退/详情） + 个人信息
-- NPM 依赖已迁移至 `src/`（与 `miniprogramRoot` 对齐）
+前端实现：角色分流 + 活动卡片 + 扫码签到/签退 + 个人积分展示
 
-## 文档
-- 需求文档：`docs/REQUIREMENTS.md`
-- 功能说明书：`docs/FUNCTIONAL_SPEC.md`
-- 后端接口文档：`docs/API_SPEC.md`
-- 变更摘要：`changes.md`
-- 详细变更：`docs/changes.md`
+[![MiniProgram](https://img.shields.io/badge/WeChat-MiniProgram-07C160?style=for-the-badge&logo=wechat&logoColor=white)](https://developers.weixin.qq.com/miniprogram/dev/framework/)
+[![TDesign](https://img.shields.io/badge/UI-TDesign-0052D9?style=for-the-badge)](https://tdesign.tencent.com/miniprogram)
+[![Role Based](https://img.shields.io/badge/Auth-Role%20Based-111827?style=for-the-badge)](#角色能力矩阵)
+[![API Spec](https://img.shields.io/badge/API-Spec-2563EB?style=for-the-badge)](docs/API_SPEC.md)
+[![Main](https://img.shields.io/badge/Branch-main-0f172a?style=for-the-badge)](https://github.com/OnlyHero5/wxapp-checkin/tree/main)
 
-## 目录结构
-- `src/` 小程序源码（`miniprogramRoot`）
-- `docs/` 需求、功能说明与设计/计划文档
-- `design-system/` 视觉与设计系统文档
+</div>
 
-## 功能概述
-- 微信身份与学号姓名绑定（支持学院/社团字段）
-- 活动卡片列表与详情
-- 工作人员扫码签到/签退
-- 普通用户卡片展示“我的签到状态”
-- 个人中心展示社会分、讲座分（由后端返回）
-- 无网络状态提醒
+## 项目亮点
+- 深色“石墨雾”视觉体系 + TDesign 组件化
+- 登录后自动角色分流：普通用户 / 工作人员
+- 活动卡片可按角色显示不同信息与动作
+- 普通用户显示“社会分/讲座分”，积分来源后端字段
+- 文档齐全：需求、功能说明、接口协议、变更日志
 
-## 开发与运行
-1. 使用微信开发者工具导入仓库根目录。
-2. 在 `src/` 目录安装依赖：
+## 角色能力矩阵
+| 能力 | 普通用户 (`normal`) | 工作人员 (`staff`) |
+|------|---------------------|--------------------|
+| 浏览活动卡片 | `Yes` | `Yes` |
+| 查看活动详情 | `Yes` | `Yes` |
+| 发起签到动作 | `No` | `Yes` |
+| 发起签退动作 | `No` | `Yes`（`support_checkout=true`） |
+| 查看活动总签到人数 | `No` | `Yes`（`checkin_count`） |
+| 查看我的签到状态 | `Yes`（`my_checked_in`） | 可选 |
+| 个人中心积分 | `Yes`（`social_score`、`lecture_score`） | 可选 |
+
+## 页面结构
+```text
+src/pages/
+  index/            # 活动页（卡片）
+  activity-detail/  # 活动详情页
+  profile/          # 我的（个人信息/积分）
+  register/         # 注册绑定
+  records/          # 记录页（历史能力）
+  record-detail/    # 记录详情页
+```
+
+## 运行方式
+1. 用微信开发者工具导入仓库根目录
+2. 安装依赖（在 `src/` 下）：
 
 ```bash
 cd src
 npm install
 ```
 
-3. 在微信开发者工具中执行：`工具 → 构建 NPM`。
-4. 点击“编译/预览”进行运行验证。
+3. 微信开发者工具执行 `工具 -> 构建 NPM`
+4. 编译并预览
 
-## 说明
-- 依赖安装与构建均在 `src/` 下完成。
-- 发布标签：`v2026.02.04`（已推送）。
+## 配置说明
+`src/utils/config.js`:
+- `mock`: 是否启用 mock 数据
+- `mockUserRole`: `normal` 或 `staff`（用于本地切角色验收）
+- `baseUrl`: 后端 API 地址
 
-## 后端对接提示
-- 当前前端接口字段以 `src/utils/api.js` 为准。
-- 请优先实现并返回：`role`、`permissions`、`social_score`、`lecture_score`、`my_checked_in`。
-- 详细定义见 `docs/API_SPEC.md`。
+## 后端必传字段（联调重点）
+> 详细协议见 `docs/API_SPEC.md`
+
+### 登录接口 `POST /api/auth/wx-login`
+- `session_token`
+- `role`
+- `permissions`
+- `user_profile.student_id`
+- `user_profile.name`
+- `user_profile.department`
+- `user_profile.club`
+- `user_profile.avatar_url`
+- `user_profile.social_score`
+- `user_profile.lecture_score`
+
+### 活动列表 `GET /api/staff/activities`
+- `activities[].activity_id`
+- `activities[].activity_title`
+- `activities[].activity_type`
+- `activities[].start_time`
+- `activities[].location`
+- `activities[].support_checkout`
+- `activities[].has_detail`
+- `activities[].description`
+- `activities[].checkin_count`（工作人员）
+- `activities[].my_checked_in`（普通用户）
+
+### 活动动作 `POST /api/staff/activity-action`
+- `status`
+- `message`
+- `checkin_record_id`
+
+## 文档导航
+- 需求文档：`docs/REQUIREMENTS.md`
+- 功能说明书：`docs/FUNCTIONAL_SPEC.md`
+- 后端接口文档：`docs/API_SPEC.md`
+- 变更摘要：`changes.md`
+- 详细变更：`docs/changes.md`
+
+## 版本说明
+- 当前主干包含角色分流 + 活动卡片 + 积分展示版本
+- 发布标签：`v2026.02.04`
