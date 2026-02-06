@@ -1,6 +1,8 @@
 const config = {
   baseUrl: "https://api.example.com",
-  mock: true
+  mock: true,
+  // "staff" | "normal"
+  mockUserRole: "staff"
 };
 
 module.exports = config;

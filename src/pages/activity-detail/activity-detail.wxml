@@ -1,0 +1,40 @@
+<view class="page page-activity-detail">
+  <view class="content">
+    <view wx:if="{{!isOnline}}" class="network-banner">当前无网络，活动详情可能不是最新</view>
+
+    <view class="header">
+      <text class="title">活动详情</text>
+      <view class="title-line"></view>
+    </view>
+
+    <view wx:if="{{loading}}" class="hint">正在加载活动详情...</view>
+
+    <view class="card info-card" wx:if="{{!loading}}">
+      <view class="info-row">
+        <text class="label">活动名称</text>
+        <text class="value">{{detail.activity_title || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">活动类型</text>
+        <t-tag theme="primary" variant="light" class="tag">{{detail.activity_type || '未分类'}}</t-tag>
+      </view>
+      <view class="info-row">
+        <text class="label">开始时间</text>
+        <text class="value">{{detail.start_time || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">活动地点</text>
+        <text class="value">{{detail.location || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">已签到人数</text>
+        <text class="value">{{detail.checkin_count || 0}} 人</text>
+      </view>
+      <view class="divider"></view>
+      <text class="hint">{{detail.description || '暂无更多活动描述'}}</text>
+      <view class="btn-center">
+        <t-button theme="default" class="btn-ghost back-btn" bindtap="goBack">返回</t-button>
+      </view>
+    </view>
+  </view>
+</view>

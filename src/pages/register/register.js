@@ -9,6 +9,8 @@ Page({
     isOnline: true,
     studentId: "",
     name: "",
+    department: "",
+    club: "",
     wxIdentity: "",
     sessionToken: "",
     submitting: false
@@ -33,7 +35,11 @@ Page({
     const sessionToken = await auth.ensureSession();
     this.setData({
       sessionToken,
-      wxIdentity: storage.getWxIdentity()
+      wxIdentity: storage.getWxIdentity(),
+      studentId: storage.getStudentId(),
+      name: storage.getName(),
+      department: storage.getDepartment(),
+      club: storage.getClub()
     });
   },
   onInputStudent(e) {
@@ -44,6 +50,14 @@ Page({
     const value = (e.detail && e.detail.value) ? e.detail.value : "";
     this.setData({ name: value.trim() });
   },
+  onInputDepartment(e) {
+    const value = (e.detail && e.detail.value) ? e.detail.value : "";
+    this.setData({ department: value.trim() });
+  },
+  onInputClub(e) {
+    const value = (e.detail && e.detail.value) ? e.detail.value : "";
+    this.setData({ club: value.trim() });
+  },
   async onSubmit() {
     if (!this.data.isOnline) {
       ui.showToast("当前无网络");
@@ -51,6 +65,8 @@ Page({
     }
     const studentId = this.data.studentId;
     const name = this.data.name;
+    const department = this.data.department;
+    const club = this.data.club;
     if (!studentId || !name) {
       ui.showToast("请填写学号与姓名");
       return;
@@ -65,6 +81,8 @@ Page({
       wx_identity: this.data.wxIdentity,
       student_id: studentId,
       name,
+      department,
+      club,
       timestamp: Date.now()
     };
     const encrypted = crypto.encryptPayload(payload);
@@ -74,14 +92,23 @@ Page({
         sessionToken: this.data.sessionToken,
         studentId,
         name,
+        department,
+        club,
         payloadEncrypted: encrypted
       });
       if (result && result.status === "success") {
-        storage.setStudentId(studentId);
-        storage.setName(name);
+        const profile = result.user_profile || {};
+        storage.setStudentId(profile.student_id || studentId);
+        storage.setName(profile.name || name);
+        storage.setDepartment(profile.department || department);
+        storage.setClub(profile.club || club);
         storage.setBound(true);
         ui.showToast("绑定成功", "success");
-        wx.switchTab({ url: "/pages/index/index" });
+        if (storage.getRole() === "staff") {
+          wx.switchTab({ url: "/pages/index/index" });
+        } else {
+          wx.switchTab({ url: "/pages/profile/profile" });
+        }
       } else {
         ui.showToast(result.message || "绑定失败");
       }

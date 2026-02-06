@@ -156,3 +156,74 @@
 - Actions taken:
   - 新建 docs/API_SPEC.md（统一 code/message/data）
   - 与前端 src/utils/api.js 对齐接口字段与行为
+
+## Session: 2026-02-06
+
+### 角色分流与活动卡片需求实现
+- **Status:** complete
+- Actions taken:
+  - 执行 superpowers bootstrap 并加载 `planning-with-files`、`ui-ux-pro-max`、`frontend-design`、`superpowers:brainstorming`、`superpowers:writing-plans`
+  - 审查现有页面与数据流：`index/profile/register/records`、`auth/storage/api/app.json`
+  - 确认改造路径：先扩展角色与数据层，再改活动页/个人页/详情页与路由
+  - 扩展 `storage/auth/api/config`：支持角色权限、个人信息字段、工作人员活动列表与签到/签退动作接口（mock）
+  - 重构 `pages/index`：活动卡片 + 按钮操作（签到/签退/详情），普通用户自动跳转 `profile`
+  - 重构 `pages/profile`：个人信息字段展示 + 历史活动列表
+  - 新增 `pages/activity-detail`：承接活动详情按钮
+  - 调整 `app.json` tabBar 为“活动/我的”，并保留记录详情路由
+  - 完成 JS/JSON 语法验证与关键引用检查
+- Files created/modified:
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+  - src/utils/config.js (updated)
+  - src/utils/storage.js (updated)
+  - src/utils/auth.js (updated)
+  - src/utils/api.js (rewritten)
+  - src/pages/register/register.js (updated)
+  - src/pages/register/register.wxml (updated)
+  - src/pages/index/index.js (updated)
+  - src/pages/index/index.wxml (updated)
+  - src/pages/index/index.json (updated)
+  - src/pages/index/index.wxss (updated)
+  - src/pages/profile/profile.js (updated)
+  - src/pages/profile/profile.wxml (updated)
+  - src/pages/profile/profile.wxss (updated)
+  - src/pages/activity-detail/activity-detail.js (created)
+  - src/pages/activity-detail/activity-detail.wxml (created)
+  - src/pages/activity-detail/activity-detail.json (created)
+  - src/pages/activity-detail/activity-detail.wxss (created)
+  - src/app.json (updated)
+- Notes:
+  - bootstrap 在 PowerShell 下直接执行失败，已切换为 node 入口执行（记录于 task_plan.md）
+  - WeChat DevTools 真机/模拟器视觉验收未在 CLI 内执行，需要你本地打开 DevTools 再做一轮 UI 行为确认
+
+### 角色页面补充需求（社会分/讲座分 + 活动卡片）
+- **Status:** complete
+- Actions taken:
+  - `storage/auth/api` 增加 `social_score/lecture_score` 字段链路（mock 登录 -> 本地缓存 -> 页面展示）
+  - `profile` 页新增“成长积分”卡片（社会分、讲座分），仅普通用户展示
+  - `index` 页取消普通用户自动跳转，统一展示活动卡片
+  - 保留工作人员卡片操作按钮（签到、签退、详情），普通用户仅保留详情
+  - 完成静态校验：`node --check`（storage/auth/api/profile/index）
+- Files created/modified:
+  - src/utils/storage.js (updated)
+  - src/utils/auth.js (updated)
+  - src/utils/api.js (updated)
+  - src/pages/profile/profile.js (updated)
+  - src/pages/profile/profile.wxml (updated)
+  - src/pages/profile/profile.wxss (updated)
+  - src/pages/index/index.js (updated)
+  - src/pages/index/index.wxml (updated)
+
+### 普通用户视角二次调整
+- **Status:** complete
+- Actions taken:
+  - 普通用户“我的”页隐藏“曾参加活动”卡片，避免展示非必要模块
+  - 普通用户活动卡片改为显示“我的签到状态”，不显示活动总签到人数
+  - API mock 活动列表补充 `my_checked_in` 字段（模拟后端返回）
+  - 再次执行语法检查：`node --check` 通过
+- Files created/modified:
+  - src/pages/profile/profile.js (updated)
+  - src/pages/profile/profile.wxml (updated)
+  - src/pages/index/index.wxml (updated)
+  - src/utils/api.js (updated)

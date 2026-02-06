@@ -1,13 +1,26 @@
 <view class="page page-profile">
   <view class="content">
+    <view wx:if="{{!isOnline}}" class="network-banner">当前无网络，部分信息无法刷新</view>
+
     <view class="header">
-      <text class="title">个人中心</text>
+      <text class="title">个人信息</text>
       <view class="title-line"></view>
+      <text class="subtitle">登录后按角色分流展示</text>
     </view>
 
-    <view class="card info-card">
-      <t-avatar size="large"></t-avatar>
-      <view class="info-row" style="margin-top: 20rpx;">
+    <view class="card info-card profile-card">
+      <view class="profile-row">
+        <t-avatar size="large" image="{{avatarUrl}}"></t-avatar>
+        <view class="profile-info">
+          <text class="profile-name">{{name || '未填写姓名'}}</text>
+          <text class="profile-meta">{{roleLabel}}</text>
+        </view>
+        <t-tag theme="{{role === 'staff' ? 'warning' : 'primary'}}" variant="light" class="tag">{{roleLabel}}</t-tag>
+      </view>
+
+      <view class="divider"></view>
+
+      <view class="info-row">
         <text class="label">姓名</text>
         <text class="value">{{name || '—'}}</text>
       </view>
@@ -16,13 +29,69 @@
         <text class="value">{{studentId || '—'}}</text>
       </view>
       <view class="info-row">
-        <text class="label">状态</text>
+        <text class="label">学院/部门</text>
+        <text class="value">{{department || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">社团/组织</text>
+        <text class="value">{{club || '—'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">账号状态</text>
         <t-tag theme="success" variant="light" class="tag">{{bound ? '已绑定' : '未绑定'}}</t-tag>
       </view>
+
       <view class="btn-center">
-        <t-button theme="primary" class="btn-primary" bindtap="onAction">
+        <t-button theme="primary" class="btn-primary profile-btn" bindtap="onAction">
           {{bound ? '重新绑定' : '去绑定'}}
         </t-button>
+      </view>
+      <view class="btn-center" wx:if="{{role === 'staff'}}">
+        <t-button theme="default" class="btn-ghost profile-btn" bindtap="goActivities">
+          进入活动页
+        </t-button>
+      </view>
+    </view>
+
+    <view class="card info-card history-card" wx:if="{{showHistory}}">
+      <view class="history-head">
+        <text class="section-title">曾参加活动</text>
+        <text class="hint subtle">最近 {{historyRecords.length}} 条</text>
+      </view>
+
+      <view wx:if="{{loadingHistory}}" class="hint">正在加载活动记录...</view>
+
+      <view
+        wx:for="{{historyRecords}}"
+        wx:key="record_id"
+        class="history-item"
+        data-id="{{item.record_id}}"
+        bindtap="openHistoryDetail"
+      >
+        <view class="history-item-head">
+          <text class="history-title">{{item.activity_title}}</text>
+          <t-tag size="small" theme="success" variant="light">已参加</t-tag>
+        </view>
+        <text class="history-meta">{{item.time}}</text>
+        <text class="history-meta">{{item.location}}</text>
+      </view>
+
+      <view wx:if="{{!loadingHistory && historyRecords.length === 0}}" class="empty">暂无活动记录</view>
+    </view>
+
+    <view class="card info-card score-card" wx:if="{{role === 'normal'}}">
+      <view class="history-head">
+        <text class="section-title">成长积分</text>
+      </view>
+      <view class="score-grid">
+        <view class="score-item">
+          <text class="score-label">社会分</text>
+          <text class="score-value">{{socialScore}}</text>
+        </view>
+        <view class="score-item">
+          <text class="score-label">讲座分</text>
+          <text class="score-value">{{lectureScore}}</text>
+        </view>
       </view>
     </view>
   </view>

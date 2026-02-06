@@ -1,38 +1,85 @@
-<view class="page page-home">
-
+<view class="page page-activities">
   <view class="content">
-    <view wx:if="{{!isOnline}}" class="network-banner">当前无网络，无法签到</view>
+    <view wx:if="{{!isOnline}}" class="network-banner">当前无网络，无法扫码操作</view>
 
     <view class="header">
-      <text class="title">活动签到</text>
+      <text class="title">活动页面</text>
       <view class="title-line"></view>
+      <text wx:if="{{role === 'staff'}}" class="subtitle">工作人员可执行签到、签退和详情查看</text>
+      <text wx:else class="subtitle">普通用户可查看活动卡片与详情</text>
     </view>
 
-    <t-cell-group class="card info-card">
-      <t-cell title="活动" note="{{activity.activity_title || '—'}}" />
-      <t-cell title="身份" note="{{name}} · {{studentId}}" />
-      <t-cell title="二维码有效期" note="{{activity.qr_expire_seconds || 10}} 秒" />
-    </t-cell-group>
+    <view wx:if="{{loading}}" class="hint">正在加载活动列表...</view>
 
-    <view class="btn-center">
-      <t-button theme="primary" class="btn-primary" loading="{{loading}}" disabled="{{!isOnline || loading}}" bindtap="onScan">
-        {{loading ? '正在验证...' : '扫码签到'}}
-      </t-button>
+    <view wx:for="{{activities}}" wx:key="activity_id" class="activity-card">
+      <view class="activity-head">
+        <view class="activity-title-wrap">
+          <text class="activity-title">{{item.activity_title}}</text>
+          <text class="activity-type">{{item.activity_type}}</text>
+        </view>
+        <view class="activity-actions">
+          <t-button
+            wx:if="{{role === 'staff'}}"
+            size="small"
+            theme="primary"
+            class="action-btn"
+            loading="{{actionLoadingId === item.activity_id && actionLoadingType === 'checkin'}}"
+            disabled="{{actionLoadingId === item.activity_id}}"
+            data-id="{{item.activity_id}}"
+            bindtap="onTapCheckin"
+          >
+            签到
+          </t-button>
+          <t-button
+            wx:if="{{role === 'staff' && item.support_checkout}}"
+            size="small"
+            theme="default"
+            class="action-btn"
+            loading="{{actionLoadingId === item.activity_id && actionLoadingType === 'checkout'}}"
+            disabled="{{actionLoadingId === item.activity_id}}"
+            data-id="{{item.activity_id}}"
+            bindtap="onTapCheckout"
+          >
+            签退
+          </t-button>
+          <t-button
+            wx:if="{{item.has_detail}}"
+            size="small"
+            theme="default"
+            class="action-btn"
+            data-id="{{item.activity_id}}"
+            bindtap="onTapDetail"
+          >
+            详情
+          </t-button>
+        </view>
+      </view>
+
+      <view class="activity-meta-grid">
+        <view class="meta-item">
+          <text class="meta-label">时间</text>
+          <text class="meta-value">{{item.start_time}}</text>
+        </view>
+        <view class="meta-item">
+          <text class="meta-label">地点</text>
+          <text class="meta-value">{{item.location}}</text>
+        </view>
+        <view class="meta-item" wx:if="{{role === 'staff'}}">
+          <text class="meta-label">已签到</text>
+          <text class="meta-value">{{item.checkin_count}} 人</text>
+        </view>
+        <view class="meta-item" wx:else>
+          <text class="meta-label">我的签到</text>
+          <text class="meta-value">{{item.my_checked_in ? '已签到' : '未签到'}}</text>
+        </view>
+      </view>
     </view>
-    <text class="hint subtle">二维码每 10 秒更新，过期将判无效</text>
 
-    <t-cell-group class="status-card" wx:if="{{lastStatus}}">
+    <view wx:if="{{!loading && activities.length === 0}}" class="empty">暂无活动卡片</view>
+
+    <t-cell-group class="status-card" wx:if="{{role === 'staff' && lastStatus}}">
       <t-cell title="{{lastStatus.title}}" note="{{lastStatus.message}}" />
       <t-cell wx:if="{{lastStatus.meta}}" title="记录号" note="{{lastStatus.meta}}" />
     </t-cell-group>
-  </view>
-
-  <view class="success-overlay" wx:if="{{showSuccess}}" bindtap="closeSuccess">
-    <view class="success-card">
-      <view class="checkmark"></view>
-      <text class="status-title">签到成功</text>
-      <text class="status-message">记录已保存，可在签到记录查看</text>
-      <t-button theme="default" class="btn-ghost" bindtap="goRecords">查看记录</t-button>
-    </view>
   </view>
 </view>

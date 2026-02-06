@@ -6,20 +6,23 @@ const ui = require("../../utils/ui");
 Page({
   data: {
     isOnline: true,
-    activity: {},
-    studentId: "",
-    name: "",
+    initialized: false,
+    role: "normal",
     sessionToken: "",
     loading: false,
-    lastStatus: null,
-    showSuccess: false
+    activities: [],
+    actionLoadingId: "",
+    actionLoadingType: "",
+    lastStatus: null
   },
   onLoad() {
     this.bindNetwork();
     this.init();
   },
   onShow() {
-    this.ensureBound();
+    if (this.data.initialized) {
+      this.handleRoleEntry();
+    }
   },
   onUnload() {
     if (this.unsubNetwork) {
@@ -35,98 +38,111 @@ Page({
   },
   async init() {
     const sessionToken = await auth.ensureSession();
-    this.setData({ sessionToken });
-    this.loadActivity();
-  },
-  async loadActivity() {
-    try {
-      const activity = await api.getActivityCurrent();
-      this.setData({ activity: activity || {} });
-    } catch (err) {
-      ui.showToast("活动信息加载失败");
-    }
+    this.setData({
+      sessionToken,
+      role: storage.getRole(),
+      initialized: true
+    });
+    this.handleRoleEntry();
   },
   ensureBound() {
     if (!storage.isBound()) {
       wx.navigateTo({ url: "/pages/register/register" });
+      return false;
+    }
+    return true;
+  },
+  handleRoleEntry() {
+    this.setData({ role: storage.getRole() });
+    if (!this.ensureBound()) {
       return;
     }
-    this.setData({
-      studentId: storage.getStudentId(),
-      name: storage.getName()
-    });
+    this.loadActivities();
   },
-  onScan() {
+  async loadActivities() {
+    if (!this.data.isOnline) {
+      return;
+    }
+    this.setData({ loading: true });
+    try {
+      const result = await api.getStaffActivities(this.data.sessionToken);
+      this.setData({ activities: (result && result.activities) || [] });
+    } catch (err) {
+      ui.showToast("活动信息加载失败");
+    }
+    this.setData({ loading: false });
+  },
+  onTapCheckin(e) {
+    const activityId = e.currentTarget.dataset.id;
+    this.scanAndSubmit(activityId, "checkin");
+  },
+  onTapCheckout(e) {
+    const activityId = e.currentTarget.dataset.id;
+    this.scanAndSubmit(activityId, "checkout");
+  },
+  onTapDetail(e) {
+    const activityId = e.currentTarget.dataset.id;
+    if (!activityId) {
+      return;
+    }
+    wx.navigateTo({ url: `/pages/activity-detail/activity-detail?id=${activityId}` });
+  },
+  scanAndSubmit(activityId, actionType) {
     if (!this.data.isOnline) {
       ui.showToast("当前无网络");
       return;
     }
-    if (!storage.isBound()) {
-      ui.showToast("请先完成注册绑定");
-      wx.navigateTo({ url: "/pages/register/register" });
+    const activity = this.data.activities.find((item) => item.activity_id === activityId);
+    if (!activity) {
+      ui.showToast("活动信息不存在");
       return;
     }
-    this.setData({ loading: true, lastStatus: null });
+    if (actionType === "checkout" && !activity.support_checkout) {
+      ui.showToast("该活动暂不支持签退");
+      return;
+    }
+
+    this.setData({
+      actionLoadingId: activityId,
+      actionLoadingType: actionType,
+      lastStatus: null
+    });
+
     wx.scanCode({
       onlyFromCamera: true,
       success: async (res) => {
         try {
-          const result = await api.verifyCheckin({
+          const result = await api.staffActivityAction({
             sessionToken: this.data.sessionToken,
+            activityId,
+            actionType,
             qrToken: res.result,
-            studentId: storage.getStudentId(),
-            name: storage.getName()
           });
-          this.handleCheckinResult(result);
+          this.handleActionResult(result, actionType, activity.activity_title);
         } catch (err) {
-          ui.showToast("签到失败，请重试");
+          ui.showToast(`${actionType === "checkout" ? "签退" : "签到"}失败，请重试`);
         }
-        this.setData({ loading: false });
+        this.setData({ actionLoadingId: "", actionLoadingType: "" });
       },
       fail: () => {
-        this.setData({ loading: false });
+        this.setData({ actionLoadingId: "", actionLoadingType: "" });
       }
     });
   },
-  handleCheckinResult(result) {
-    if (!result) {
-      ui.showToast("签到失败");
+  handleActionResult(result, actionType, activityTitle) {
+    if (!result || result.status !== "success") {
+      ui.showToast((result && result.message) || "操作失败");
       return;
     }
-    const map = {
-      success: {
-        title: "签到成功",
-        message: result.message || "签到已完成"
-      },
-      invalid_qr: {
-        title: "二维码无效",
-        message: result.message || "二维码已失效，请扫码最新二维码"
-      },
-      duplicate: {
-        title: "重复签到",
-        message: result.message || "该活动已签到"
-      },
-      identity_mismatch: {
-        title: "身份不匹配",
-        message: result.message || "请确认学号姓名与微信身份一致"
+    const actionLabel = actionType === "checkout" ? "签退" : "签到";
+    ui.showToast(result.message || `${actionLabel}成功`, "success");
+    this.setData({
+      lastStatus: {
+        title: `${activityTitle} ${actionLabel}成功`,
+        message: result.message || "已记录操作",
+        meta: result.checkin_record_id ? `记录号: ${result.checkin_record_id}` : ""
       }
-    };
-    const status = map[result.status] || {
-      title: "签到失败",
-      message: result.message || "未知错误"
-    };
-    status.meta = result.checkin_record_id ? `记录号: ${result.checkin_record_id}` : "";
-
-    if (result.status === "success") {
-      this.setData({ showSuccess: true });
-    }
-    this.setData({ lastStatus: status });
-  },
-  closeSuccess() {
-    this.setData({ showSuccess: false });
-  },
-  goRecords() {
-    this.setData({ showSuccess: false });
-    wx.switchTab({ url: "/pages/records/records" });
+    });
+    this.loadActivities();
   }
 });

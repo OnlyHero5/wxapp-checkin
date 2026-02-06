@@ -1,1 +1,89 @@
-/* page specific styles */
+.page-activities .subtitle {
+  margin-bottom: 4rpx;
+}
+
+.activity-card {
+  padding: 24rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(180deg, rgba(18, 26, 36, 0.97), rgba(15, 21, 30, 0.98));
+  border: 1rpx solid rgba(148, 163, 184, 0.14);
+  margin-bottom: 20rpx;
+}
+
+.activity-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.activity-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.activity-type {
+  display: block;
+  font-size: 22rpx;
+  color: var(--muted);
+  margin-top: 8rpx;
+}
+
+.activity-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12rpx;
+  flex-wrap: wrap;
+  max-width: 280rpx;
+}
+
+.activity-actions .action-btn {
+  min-width: 96rpx;
+  min-height: 56rpx;
+  font-size: 22rpx;
+  border-radius: 999rpx;
+  padding: 0 18rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activity-meta-grid {
+  margin-top: 20rpx;
+  border-top: 1rpx solid rgba(148, 163, 184, 0.14);
+  padding-top: 16rpx;
+}
+
+.meta-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+  gap: 16rpx;
+}
+
+.meta-item:last-child {
+  margin-bottom: 0;
+}
+
+.meta-label {
+  color: var(--muted);
+  font-size: 22rpx;
+}
+
+.meta-value {
+  color: var(--text);
+  font-size: 24rpx;
+  text-align: right;
+  flex: 1;
+}

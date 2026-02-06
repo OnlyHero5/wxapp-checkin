@@ -1,8 +1,9 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/records/records",
     "pages/register/register",
+    "pages/activity-detail/activity-detail",
+    "pages/records/records",
     "pages/record-detail/record-detail",
     "pages/profile/profile"
   ],
@@ -21,15 +22,11 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "签到"
-      },
-      {
-        "pagePath": "pages/records/records",
-        "text": "记录"
+        "text": "活动"
       },
       {
         "pagePath": "pages/profile/profile",
-        "text": "个人中心"
+        "text": "我的"
       }
     ]
   },

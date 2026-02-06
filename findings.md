@@ -81,3 +81,43 @@
 - 请求字段与返回字段已在 src/utils/api.js 中明确（包含 session_token、student_id、name、qr_token、checkin_record_id 等）。
 - 将新增 docs/API_SPEC.md 作为后端接口说明主文档。
 - API 说明文档已建立：docs/API_SPEC.md（统一返回结构）。
+
+## 2026-02-06 新需求研究结果（角色分流 + 活动卡片）
+- 现状：`app.json` 目前 tabBar 为 `签到/记录/个人中心`，无角色分流机制。
+- 现状：`index` 是“单活动扫码签到”页面，不是“多活动卡片管理”。
+- 现状：`profile` 仅展示姓名学号绑定状态，信息维度不足。
+- 现状：`auth.ensureSession` 只缓存 `session_token/wx_identity`，没有角色和权限字段。
+- 现状：mock API 仅支持 `/api/activity/current` 单活动，不支持工作人员活动列表和签到/签退动作。
+- 约束：微信小程序 tabBar 为静态配置，不适合直接按角色动态删减；更稳妥方案是普通用户进入活动 tab 时自动转到个人页。
+
+### 实施决策
+| 决策 | 理由 |
+|------|------|
+| 在 `storage` 增加 role/permissions/department/club/avatar 等字段 | 满足个人信息展示与角色分流 |
+| 在 `auth.ensureSession` 中接收登录返回的角色与用户资料并缓存 | 角色判断需在页面加载初期可用 |
+| `index` 改为工作人员活动列表，普通用户 `switchTab` 到 profile | 在静态 tabBar 条件下最接近“普通用户仅个人页” |
+| `profile` 增加历史活动列表（复用 records API） | 满足“可选显示曾参加活动”需求 |
+| 新增 `activity-detail` 页面承接“详情”按钮 | 满足卡片详情可选需求，并便于后续对接后台 |
+
+### 已完成实现（2026-02-06）
+- 已在 mock 登录返回中引入 `role + permissions + user_profile`，并提供 `config.mockUserRole` 切换（`staff` / `normal`）。
+- 已实现工作人员活动接口：`/api/staff/activities`、`/api/staff/activity-action`、`/api/staff/activities/{id}`（mock）。
+- 已实现活动卡片操作：
+  - `签到`：始终展示，扫码后调用 staff action
+  - `签退`：仅当 `support_checkout=true` 展示
+  - `详情`：仅当 `has_detail=true` 展示，并跳转新页面
+- 已实现普通用户分流：进入活动 tab 时自动跳转个人信息页。
+- 已实现个人页扩展：姓名/学号/学院部门/社团组织/账号状态 + 历史活动列表。
+
+## 2026-02-06 补充需求调整
+- 用户新增要求：普通用户“我的”页底部展示“社会分 + 讲座分”。
+- 用户新增要求：活动页需要显示活动卡片（普通用户不再自动跳转个人页）。
+- 调整决策：
+  - 保留工作人员在活动卡片上的签到/签退/详情操作；
+  - 普通用户仅展示活动卡片与详情按钮，不展示签到/签退按钮；
+  - 社会分与讲座分由登录 profile 字段 `social_score/lecture_score` 提供并落本地缓存。
+
+## 2026-02-06 二次补充（普通用户视角）
+- 普通用户“我的”页面移除“曾参加活动”卡片。
+- 普通用户“活动页面”卡片不展示“已签到多少人”，仅展示“我的签到状态（已签到/未签到）”。
+- 分数字段继续保持后端返回来源，不在前端做业务计算。

@@ -76,3 +76,33 @@ Phase 4
 - [x] 处理备份目录（加入 .gitignore，保留备份）
 - [x] 重新指向并推送 v2026.02.04（已完成）
 - [x] 新增 docs/API_SPEC.md（后端接口说明）
+
+## 2026-02-06 角色分流与活动卡片新需求
+
+### Goal
+- 登录后按角色分流：
+- 普通用户：仅个人信息页（可查看历史参加活动）
+- 有权限工作人员：活动页 + 个人信息页
+- 活动页卡片支持动作按钮：`签到`、`签退（可选）`、`详情（可选）`
+
+### Phases
+- [x] Phase A: 扩展 storage/auth/api，支持角色、权限、个人信息字段与工作人员活动接口
+- [x] Phase B: 重构 `pages/index` 为工作人员活动卡片页 + 扫码签到/签退流程
+- [x] Phase C: 重构 `pages/profile`，展示个人信息 + 历史活动列表
+- [x] Phase D: 新增活动详情页并调整 `app.json` 路由与 tabBar
+- [x] Phase E: 更新 planning 文件并完成关键路径验证
+
+### Current Phase
+- `Completed`
+
+### Follow-up (2026-02-06)
+- [x] 普通用户“我的”页新增 `社会分`、`讲座分`
+- [x] 活动页对普通用户显示活动卡片（不再自动跳转）
+- [x] 普通用户“我的”页移除“曾参加活动”卡片
+- [x] 普通用户活动卡片仅显示“我的签到状态”
+
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| superpowers bootstrap 直接执行失败（PowerShell 文件关联） | 1 | 改为 `node ~/.codex/superpowers/.codex/superpowers-codex bootstrap` |
+| `rg` 正则包含未闭合分组导致解析失败 | 1 | 改为 `--fixed-strings` 精确匹配 |
