@@ -10,72 +10,106 @@
     </view>
 
     <view wx:if="{{loading}}" class="hint">正在加载活动列表...</view>
+    <view wx:else class="overview-card">
+      <view class="overview-item">
+        <text class="overview-value">{{ongoingActivities.length}}</text>
+        <text class="overview-label">正在进行</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-item">
+        <text class="overview-value">{{completedActivities.length}}</text>
+        <text class="overview-label">已完成</text>
+      </view>
+    </view>
 
-    <view wx:for="{{activities}}" wx:key="activity_id" class="activity-card">
-      <view class="activity-head">
-        <view class="activity-title-wrap">
-          <text class="activity-title">{{item.activity_title}}</text>
-          <text class="activity-type">{{item.activity_type}}</text>
+    <view wx:for="{{activitySections}}" wx:key="key" wx:for-item="section" class="activity-section" wx:if="{{section.items.length > 0}}">
+      <view class="section-head">
+        <view class="section-title-wrap">
+          <text class="section-title">{{section.title}}</text>
+          <text class="section-subtitle">共 {{section.items.length}} 场</text>
         </view>
-        <view class="activity-actions">
-          <t-button
-            wx:if="{{role === 'staff'}}"
-            size="small"
-            theme="primary"
-            class="action-btn"
-            loading="{{actionLoadingId === item.activity_id && actionLoadingType === 'checkin'}}"
-            disabled="{{actionLoadingId === item.activity_id}}"
-            data-id="{{item.activity_id}}"
-            bindtap="onTapCheckin"
-          >
-            签到
-          </t-button>
-          <t-button
-            wx:if="{{role === 'staff' && item.support_checkout}}"
-            size="small"
-            theme="default"
-            class="action-btn"
-            loading="{{actionLoadingId === item.activity_id && actionLoadingType === 'checkout'}}"
-            disabled="{{actionLoadingId === item.activity_id}}"
-            data-id="{{item.activity_id}}"
-            bindtap="onTapCheckout"
-          >
-            签退
-          </t-button>
-          <t-button
-            wx:if="{{item.has_detail}}"
-            size="small"
-            theme="default"
-            class="action-btn"
-            data-id="{{item.activity_id}}"
-            bindtap="onTapDetail"
-          >
-            详情
-          </t-button>
-        </view>
+        <t-tag size="small" theme="{{section.key === 'ongoing' ? 'primary' : 'default'}}" variant="light">
+          {{section.key === 'ongoing' ? '优先处理' : '历史归档'}}
+        </t-tag>
       </view>
 
-      <view class="activity-meta-grid">
-        <view class="meta-item">
-          <text class="meta-label">时间</text>
-          <text class="meta-value">{{item.start_time}}</text>
+      <view wx:for="{{section.items}}" wx:key="activity_id" wx:for-item="activity" class="activity-card activity-card-{{section.key}}">
+        <view class="activity-head">
+          <view class="activity-title-wrap">
+            <text class="activity-title">{{activity.activity_title}}</text>
+            <view class="activity-tag-row">
+              <text class="activity-type activity-type-{{activity.type_tone}}">{{activity.activity_type}}</text>
+              <t-tag size="small" theme="{{section.key === 'ongoing' ? 'primary' : 'default'}}" variant="light">
+                {{section.key === 'ongoing' ? '进行中' : '已完成'}}
+              </t-tag>
+            </view>
+          </view>
         </view>
-        <view class="meta-item">
-          <text class="meta-label">地点</text>
-          <text class="meta-value">{{item.location}}</text>
+
+        <view class="activity-meta-grid">
+          <view class="meta-item">
+            <text class="meta-label">时间</text>
+            <text class="meta-value">{{activity.start_time}}</text>
+          </view>
+          <view class="meta-item">
+            <text class="meta-label">地点</text>
+            <text class="meta-value">{{activity.location}}</text>
+          </view>
+          <view class="meta-item" wx:if="{{role === 'staff'}}">
+            <text class="meta-label">已签到</text>
+            <text class="meta-value">{{activity.checkin_count}} 人</text>
+          </view>
+          <view class="meta-item" wx:else>
+            <text class="meta-label">我的签到</text>
+            <text class="meta-value">{{activity.my_checked_in ? '已签到' : '未签到'}}</text>
+          </view>
         </view>
-        <view class="meta-item" wx:if="{{role === 'staff'}}">
-          <text class="meta-label">已签到</text>
-          <text class="meta-value">{{item.checkin_count}} 人</text>
-        </view>
-        <view class="meta-item" wx:else>
-          <text class="meta-label">我的签到</text>
-          <text class="meta-value">{{item.my_checked_in ? '已签到' : '未签到'}}</text>
+
+        <view
+          class="activity-actions"
+          wx:if="{{(role === 'staff' && section.key === 'ongoing') || activity.has_detail}}"
+        >
+          <view class="actions-grid">
+            <t-button
+              wx:if="{{role === 'staff' && section.key === 'ongoing'}}"
+              size="small"
+              theme="primary"
+              class="action-btn"
+              loading="{{actionLoadingId === activity.activity_id && actionLoadingType === 'checkin'}}"
+              disabled="{{actionLoadingId === activity.activity_id}}"
+              data-id="{{activity.activity_id}}"
+              bindtap="onTapCheckin"
+            >
+              签到
+            </t-button>
+            <t-button
+              wx:if="{{role === 'staff' && section.key === 'ongoing' && activity.support_checkout}}"
+              size="small"
+              theme="default"
+              class="action-btn"
+              loading="{{actionLoadingId === activity.activity_id && actionLoadingType === 'checkout'}}"
+              disabled="{{actionLoadingId === activity.activity_id}}"
+              data-id="{{activity.activity_id}}"
+              bindtap="onTapCheckout"
+            >
+              签退
+            </t-button>
+            <t-button
+              wx:if="{{activity.has_detail}}"
+              size="small"
+              theme="default"
+              class="action-btn action-btn-detail"
+              data-id="{{activity.activity_id}}"
+              bindtap="onTapDetail"
+            >
+              详情
+            </t-button>
+          </view>
         </view>
       </view>
     </view>
 
-    <view wx:if="{{!loading && activities.length === 0}}" class="empty">暂无活动卡片</view>
+    <view wx:if="{{!loading && ongoingActivities.length === 0 && completedActivities.length === 0}}" class="empty">暂无活动卡片</view>
 
     <t-cell-group class="status-card" wx:if="{{role === 'staff' && lastStatus}}">
       <t-cell title="{{lastStatus.title}}" note="{{lastStatus.message}}" />

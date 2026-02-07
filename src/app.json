@@ -3,8 +3,6 @@
     "pages/index/index",
     "pages/register/register",
     "pages/activity-detail/activity-detail",
-    "pages/records/records",
-    "pages/record-detail/record-detail",
     "pages/profile/profile"
   ],
   "window": {

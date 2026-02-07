@@ -227,3 +227,81 @@
   - src/pages/profile/profile.wxml (updated)
   - src/pages/index/index.wxml (updated)
   - src/utils/api.js (updated)
+
+## Session: 2026-02-07
+
+### 工作人员页去重 + 活动分组排序 + hack 数据扩充
+- **Status:** complete
+- Actions taken:
+  - 执行 superpowers bootstrap 并加载 `superpowers:brainstorming`、`ui-ux-pro-max`、`planning-with-files`
+  - 清理工作人员个人页“曾参加活动”模块（WXML/JS/WXSS）
+  - 移除旧路由入口并删除页面文件：`pages/records/records`、`pages/record-detail/record-detail`
+  - 活动页改为分组展示：`正在进行` 在上、`已完成` 在下
+  - 两个分组均按时间倒序（新的在上）
+  - hack/mock 活动与记录数据扩展为多场景集合（进行中/已完成、按钮组合、签到状态）
+  - 完成验证：`node --check`（index/profile/api）+ `app.json` 解析 + 引用扫描
+- Files created/modified:
+  - src/pages/profile/profile.js (updated)
+  - src/pages/profile/profile.wxml (updated)
+  - src/pages/profile/profile.wxss (updated)
+  - src/pages/index/index.js (updated)
+  - src/pages/index/index.wxml (updated)
+  - src/pages/index/index.wxss (updated)
+  - src/utils/api.js (updated)
+  - src/app.json (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
+### 活动页反馈修正（已完成仅详情 + 页面美化）
+- **Status:** complete
+- Actions taken:
+  - 修复按钮逻辑：`已完成` 分组不再显示 `签到/签退`，仅保留 `详情`
+  - 前端动作保护：`scanAndSubmit` 拦截 completed 活动并提示
+  - mock 后端保护：`/api/staff/activity-action` 对 completed 活动返回 `forbidden`
+  - 重构活动页 UI：新增顶部概览卡、优化分组标题信息、卡片操作区移到底部、按钮形态与信息排版重做
+  - 完成检查：`node --check src/pages/index/index.js`、`node --check src/utils/api.js`
+- Files created/modified:
+  - src/pages/index/index.wxml (updated)
+  - src/pages/index/index.js (updated)
+  - src/pages/index/index.wxss (updated)
+  - src/utils/api.js (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
+### 活动页色彩增强（联网样例驱动）
+- **Status:** complete
+- Actions taken:
+  - 联网检索活动卡片标签样式与主流设计系统标签规范（Material/MUI/Atlassian/Dribbble）
+  - 在 `index.js` 新增 `ACTIVITY_TYPE_TONES` 与 `resolveActivityTypeTone`
+  - 在 `index.wxml` 增加动态类型胶囊类名：`activity-type-{{activity.type_tone}}`
+  - 在 `index.wxss` 实现多色系圆角胶囊（路演/竞赛等）与分组卡片色调差异
+  - 完成校验：`node --check src/pages/index/index.js`、`node --check src/utils/api.js`
+- Files created/modified:
+  - src/pages/index/index.js (updated)
+  - src/pages/index/index.wxml (updated)
+  - src/pages/index/index.wxss (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
+### 文档全量对齐（重点 API_SPEC）
+- **Status:** complete
+- Actions taken:
+  - 基于当前代码（`src/pages/*`、`src/utils/api.js`、`src/app.json`）做文档差异盘点
+  - 重写 `docs/API_SPEC.md`：增加接口到页面功能的逐项映射、字段来源与 UI 呈现、错误表现和联调测试清单
+  - 更新 `docs/FUNCTIONAL_SPEC.md`：同步双分组、已完成仅详情、记录页下线状态
+  - 更新 `docs/REQUIREMENTS.md`：将需求口径与当前实现对齐，保留接口能力单独标识
+  - 更新 `README.md`：页面结构与联调重点字段更新
+  - 更新 `docs/changes.md` 与根目录 `changes.md`：追加 2026-02-07 变更摘要
+- Files created/modified:
+  - docs/API_SPEC.md (rewritten)
+  - docs/FUNCTIONAL_SPEC.md (rewritten)
+  - docs/REQUIREMENTS.md (rewritten)
+  - README.md (updated)
+  - docs/changes.md (updated)
+  - changes.md (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)

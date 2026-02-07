@@ -53,32 +53,6 @@
       </view>
     </view>
 
-    <view class="card info-card history-card" wx:if="{{showHistory}}">
-      <view class="history-head">
-        <text class="section-title">曾参加活动</text>
-        <text class="hint subtle">最近 {{historyRecords.length}} 条</text>
-      </view>
-
-      <view wx:if="{{loadingHistory}}" class="hint">正在加载活动记录...</view>
-
-      <view
-        wx:for="{{historyRecords}}"
-        wx:key="record_id"
-        class="history-item"
-        data-id="{{item.record_id}}"
-        bindtap="openHistoryDetail"
-      >
-        <view class="history-item-head">
-          <text class="history-title">{{item.activity_title}}</text>
-          <t-tag size="small" theme="success" variant="light">已参加</t-tag>
-        </view>
-        <text class="history-meta">{{item.time}}</text>
-        <text class="history-meta">{{item.location}}</text>
-      </view>
-
-      <view wx:if="{{!loadingHistory && historyRecords.length === 0}}" class="empty">暂无活动记录</view>
-    </view>
-
     <view class="card info-card score-card" wx:if="{{role === 'normal'}}">
       <view class="history-head">
         <text class="section-title">成长积分</text>

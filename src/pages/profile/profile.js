@@ -1,5 +1,4 @@
 const auth = require("../../utils/auth");
-const api = require("../../utils/api");
 const storage = require("../../utils/storage");
 const ui = require("../../utils/ui");
 
@@ -16,10 +15,7 @@ Page({
     avatarUrl: "",
     socialScore: 0,
     lectureScore: 0,
-    showHistory: false,
-    bound: false,
-    loadingHistory: false,
-    historyRecords: []
+    bound: false
   },
   onLoad() {
     this.bindNetwork();
@@ -27,11 +23,6 @@ Page({
   },
   onShow() {
     this.refreshProfile();
-    if (storage.isBound() && this.data.showHistory) {
-      this.loadHistory();
-    } else {
-      this.setData({ historyRecords: [] });
-    }
   },
   onUnload() {
     if (this.unsubNetwork) {
@@ -49,11 +40,6 @@ Page({
     const sessionToken = await auth.ensureSession();
     this.setData({ sessionToken });
     this.refreshProfile();
-    if (storage.isBound() && this.data.showHistory) {
-      this.loadHistory();
-    } else {
-      this.setData({ historyRecords: [] });
-    }
   },
   refreshProfile() {
     const role = storage.getRole();
@@ -67,29 +53,8 @@ Page({
       avatarUrl: storage.getAvatarUrl(),
       socialScore: storage.getSocialScore(),
       lectureScore: storage.getLectureScore(),
-      showHistory: role === "staff",
       bound: storage.isBound()
     });
-  },
-  async loadHistory() {
-    if (!this.data.isOnline) {
-      return;
-    }
-    this.setData({ loadingHistory: true });
-    try {
-      const result = await api.getRecords(this.data.sessionToken);
-      this.setData({ historyRecords: (result && result.records) || [] });
-    } catch (err) {
-      ui.showToast("活动记录加载失败");
-    }
-    this.setData({ loadingHistory: false });
-  },
-  openHistoryDetail(e) {
-    const recordId = e.currentTarget.dataset.id;
-    if (!recordId) {
-      return;
-    }
-    wx.navigateTo({ url: `/pages/record-detail/record-detail?id=${recordId}` });
   },
   goActivities() {
     if (this.data.role !== "staff") {

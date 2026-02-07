@@ -49,13 +49,125 @@ const mockStore = {
       location: "南校区报告厅",
       activity_title: "新生技术讲座",
       description: "讲座场次：1 次"
+    },
+    {
+      record_id: "rec_seed_002",
+      time: "2026-01-28 18:45:00",
+      location: "大学生活动中心",
+      activity_title: "学生组织开放日",
+      description: "签到完成 · 展会"
+    },
+    {
+      record_id: "rec_seed_003",
+      time: "2026-02-01 15:18:00",
+      location: "教学楼 B302",
+      activity_title: "前端设计沙龙",
+      description: "签到完成 · 研讨会"
+    },
+    {
+      record_id: "rec_seed_004",
+      time: "2026-02-03 20:08:00",
+      location: "创新空间 A201",
+      activity_title: "技术社群 Meetup",
+      description: "签退完成 · 社群活动"
     }
   ],
   normalCheckinStatus: {
     act_tech_talk_20260112: true,
-    act_meetup_20260114: false
+    act_meetup_20260114: true,
+    act_open_day_20260128: true,
+    act_ui_salon_20260201: false,
+    act_product_forum_20260208: false,
+    act_ai_workshop_20260210: true,
+    act_hackathon_20260215: false,
+    act_research_roadshow_20260220: false,
+    act_safety_training_20260207: true
   },
   staffActivities: [
+    {
+      activity_id: "act_research_roadshow_20260220",
+      activity_title: "科研成果路演",
+      activity_type: "路演",
+      start_time: "2026-02-20 14:00",
+      location: "学术报告厅",
+      checkin_count: 0,
+      support_checkout: false,
+      has_detail: false,
+      progress_status: "ongoing",
+      description: "院系联合路演，含评审打分环节。"
+    },
+    {
+      activity_id: "act_hackathon_20260215",
+      activity_title: "校园 HackDay",
+      activity_type: "竞赛",
+      start_time: "2026-02-15 09:00",
+      location: "创新中心 1F",
+      checkin_count: 18,
+      support_checkout: true,
+      has_detail: true,
+      progress_status: "ongoing",
+      description: "48 小时团队赛，支持签到与签退。"
+    },
+    {
+      activity_id: "act_ai_workshop_20260210",
+      activity_title: "AI 工具实战工作坊",
+      activity_type: "工作坊",
+      start_time: "2026-02-10 19:30",
+      location: "图书馆创客空间",
+      checkin_count: 32,
+      support_checkout: true,
+      has_detail: true,
+      progress_status: "ongoing",
+      description: "现场实操课程，支持全程签退统计。"
+    },
+    {
+      activity_id: "act_product_forum_20260208",
+      activity_title: "产品思维论坛",
+      activity_type: "论坛",
+      start_time: "2026-02-08 16:00",
+      location: "北校区报告厅",
+      checkin_count: 26,
+      support_checkout: false,
+      has_detail: true,
+      progress_status: "ongoing",
+      description: "校友分享与问答交流。"
+    },
+    {
+      activity_id: "act_safety_training_20260207",
+      activity_title: "活动安全培训",
+      activity_type: "培训",
+      start_time: "2026-02-07 14:30",
+      location: "行政楼 2F 会议室",
+      checkin_count: 14,
+      support_checkout: false,
+      has_detail: true,
+      progress_status: "ongoing",
+      description: "工作人员安全规范与应急演练。"
+    },
+    {
+      activity_id: "act_ui_salon_20260201",
+      activity_title: "前端设计沙龙",
+      activity_type: "研讨会",
+      start_time: "2026-02-01 15:00",
+      location: "教学楼 B302",
+      checkin_count: 21,
+      support_checkout: false,
+      has_detail: true,
+      progress_status: "completed",
+      description: "围绕设计规范与组件复用的专题讨论。"
+    },
+    {
+      activity_id: "act_open_day_20260128",
+      activity_title: "学生组织开放日",
+      activity_type: "展会",
+      start_time: "2026-01-28 18:00",
+      location: "大学生活动中心",
+      checkin_count: 45,
+      support_checkout: true,
+      has_detail: true,
+      progress_status: "completed",
+      description: "社团联合展位与招新咨询。"
+    },
     {
       activity_id: "act_tech_talk_20260112",
       activity_title: "新生技术讲座",
@@ -65,6 +177,7 @@ const mockStore = {
       checkin_count: 1,
       support_checkout: false,
       has_detail: true,
+      progress_status: "completed",
       description: "讲座场次：1 次，面向 2025 级新生。"
     },
     {
@@ -76,7 +189,20 @@ const mockStore = {
       checkin_count: 6,
       support_checkout: true,
       has_detail: true,
+      progress_status: "completed",
       description: "讲座场次：6 次，含签到与签退。"
+    },
+    {
+      activity_id: "act_ops_review_20251230",
+      activity_title: "年度运营复盘会",
+      activity_type: "复盘",
+      start_time: "2025-12-30 19:00",
+      location: "主楼 5F 多功能厅",
+      checkin_count: 37,
+      support_checkout: false,
+      has_detail: true,
+      progress_status: "completed",
+      description: "上一年度活动运营复盘与改进计划。"
     }
   ]
 };
@@ -196,6 +322,11 @@ const mockRequest = (url, data) => {
 
         if (!activity) {
           resolve({ status: "invalid_activity", message: "活动不存在或已下线" });
+          return;
+        }
+
+        if (activity.progress_status === "completed") {
+          resolve({ status: "forbidden", message: "已完成活动仅支持查看详情" });
           return;
         }
 
