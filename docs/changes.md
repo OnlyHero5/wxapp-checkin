@@ -82,3 +82,6 @@
   - `staff-qr` 改为前端本地生成二维码 payload（`wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>`）
   - `qr-session` 接口改为仅返回 `rotate_seconds/grace_seconds/server_time`，不再返回二维码内容
   - `checkin/consume` 增加结构化入参（`activity_id/action_type/slot/nonce`）与业务防重放校验
+- 文档对齐：
+  - `docs/API_SPEC.md` 升级为 v2.4，重点补齐“二维码前端本地生成、后端仅返回配置与业务校验”的联调口径
+  - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 同步上述职责边界

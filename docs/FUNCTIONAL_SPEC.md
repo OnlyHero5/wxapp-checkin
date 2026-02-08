@@ -154,13 +154,14 @@
   - `activities[].my_checked_out`
   - `activities[].progress_status`（建议必传，避免前端时间推断）
 
-### 6.3 管理员二维码会话接口
+### 6.3 管理员二维码配置接口
 - `POST /api/staff/activities/{activity_id}/qr-session`
 - 必需字段:
   - 入参 `action_type`（`checkin/checkout`）
   - 入参 `rotate_seconds`（默认 10）
   - 入参 `grace_seconds`（默认 20）
-  - 出参 `rotate_seconds`、`grace_seconds`、`server_time`
+  - 出参 `activity_id`、`action_type`、`rotate_seconds`、`grace_seconds`、`server_time`
+  - 说明：不再返回二维码内容，二维码由前端按配置本地生成
 - 推荐错误状态:
   - `forbidden`
   - `invalid_activity`
@@ -217,3 +218,4 @@
 - 2026-02-07：活动页升级为双分组模型；已完成活动仅详情；同步 API 协作规则。
 - 2026-02-08：普通用户活动可见范围收敛为“已报名/已签到/已签退”，并补齐详情接口鉴权规则。
 - 2026-02-08：新增管理员动态二维码与普通用户扫码提交链路（10 秒轮换 + 20 秒宽限）。
+- 2026-02-08：二维码生成职责切换为前端本地换码，后端仅返回配置并执行业务校验。

@@ -1,6 +1,6 @@
 # 后端接口说明（前端联调版）
 
-文档版本: v2.3  
+文档版本: v2.4  
 更新日期: 2026-02-08  
 对应前端分支: `main`（当前工作区）  
 代码对齐基线: `src/utils/api.js`、`src/pages/*`
@@ -33,7 +33,7 @@
 | `POST /api/auth/wx-login` | `api.login` -> `auth.ensureSession` | `index/profile/register/activity-detail` 页面初始化 | 写入 `session_token/role/permissions/user_profile`，页面继续加载 | Toast：`登录失败，请重试` |
 | `POST /api/register` | `api.register` | `register` 页点击“完成绑定” | Toast：`绑定成功`，写本地缓存，按角色跳转 tab | Toast：`绑定失败` 或后端 message |
 | `GET /api/staff/activities` | `api.getStaffActivities` | `index` 页进入/回到前台时拉取 | 分组为“正在进行/已完成”，按时间倒序渲染卡片；普通用户仅收到“已报名/已签到/已签退”活动 | Toast：`活动信息加载失败` |
-| `POST /api/staff/activities/{id}/qr-session` | `api.createStaffQrSession` | `staff-qr` 页加载换码配置 | 返回 `rotate/grace/server_time`，页面前端本地换码并倒计时 | Toast：后端 message（如活动已完成/权限不足） |
+| `POST /api/staff/activities/{id}/qr-session` | `api.createStaffQrSession` | `staff-qr` 页加载换码配置 | 返回 `rotate/grace/server_time`（不返回二维码内容），页面前端本地换码并倒计时 | Toast：后端 message（如活动已完成/权限不足） |
 | `POST /api/checkin/consume` | `api.consumeCheckinAction` | `scan-action` 页普通用户扫码提交 | Toast + 结果卡；成功后活动页状态同步为已签到/已签退 | Toast：后端 message（如二维码过期/无权限） |
 | `GET /api/staff/activities/{id}` | `api.getStaffActivityDetail` | `activity-detail` 页 onLoad/onShow | 展示活动详情字段（名称/类型/时间/地点/人数/描述）；普通用户显示“我的状态” | Toast：`活动详情加载失败`，或无权限提示并返回上一页 |
 | `POST /api/staff/activity-action` | `api.staffActivityAction` | 当前版本 UI 未直接使用（兼容保留） | N/A | N/A |
@@ -280,7 +280,7 @@
 
 ---
 
-## 4.4 工作人员二维码会话
+## 4.4 工作人员二维码配置
 **POST** `/api/staff/activities/{activity_id}/qr-session`
 
 ### 前端触发位置
@@ -304,6 +304,8 @@
 ```json
 {
   "status": "success",
+  "activity_id": "act_hackathon_20260215",
+  "action_type": "checkin",
   "rotate_seconds": 10,
   "grace_seconds": 20,
   "server_time": 1770518390000
@@ -313,6 +315,7 @@
 ### 字段与前端行为映射
 | 字段 | 前端用途 |
 |------|----------|
+| `activity_id/action_type` | 与页面上下文一致性校验 |
 | `rotate_seconds/grace_seconds` | 前端本地换码窗口（默认 10s + 20s） |
 | `server_time` | 校准客户端时钟偏差 |
 
@@ -327,6 +330,7 @@
 1. payload 格式：`wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>`。
 2. `slot = floor(server_now_ms / (rotate_seconds * 1000))`。
 3. staff 页每秒同步倒计时，slot 变化时本地生成新 payload 并刷新二维码。
+4. 服务端不再返回 `qr_payload`、`display_expire_at`、`accept_expire_at`。
 
 ---
 
@@ -479,8 +483,8 @@
 - 预期：卡片进入“已完成”分组，且只显示详情
 - 定位页：`pages/index/index`
 
-4. `staff` 进入二维码页生成会话
-- 预期：显示二维码、倒计时、10 秒自动换码、20 秒宽限文案
+4. `staff` 进入二维码页加载换码配置
+- 预期：接口返回 `rotate/grace/server_time`，页面前端本地生成二维码并 10 秒自动换码、显示 20 秒宽限文案
 - 定位页：`pages/staff-qr/staff-qr`
 
 5. `normal` 扫码提交成功
@@ -512,3 +516,4 @@
 - 2026-02-08：新增普通用户“已报名/已签到/已签退”可见性约束，补充 `my_registered` 字段与详情鉴权口径
 - 2026-02-08：新增管理员动态二维码接口与普通用户扫码提交流程（10 秒轮换 + 20 秒宽限）。
 - 2026-02-08：二维码方案调整为“前端本地换码 + 后端业务校验”，`qr-session` 仅返回换码配置。
+- 2026-02-08：API 文档升级至 v2.4，补齐 `qr-session` 新出参与“不返回二维码内容”约束。

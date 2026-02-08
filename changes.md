@@ -55,3 +55,6 @@
   - 管理员二维码改为前端本地换码生成，不再依赖后端按 10 秒高频返回二维码内容
   - `qr-session` 接口仅返回换码配置（`rotate_seconds/grace_seconds/server_time`）
   - `checkin/consume` 支持结构化字段并加入业务级防重放与时间窗校验
+- 文档同步：
+  - `docs/API_SPEC.md` 升级到 v2.4，新增“`qr-session` 不返回二维码内容”与最新联调示例
+  - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 同步二维码职责边界
