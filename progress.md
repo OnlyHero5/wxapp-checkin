@@ -440,3 +440,18 @@
   - `node --check src/utils/api.js` -> PASS
   - `node --check src/pages/staff-qr/staff-qr.js` -> PASS
   - `node --check src/pages/scan-action/scan-action.js` -> PASS
+
+### API 文档重构（进行中）
+- **Status:** in_progress
+- Actions taken:
+  - 加载技能：`superpowers:brainstorming`、`superpowers:writing-plans`、`planning-with-files`。
+  - 扫描现有文档关键词与冲突口径，确认 4.4/4.5 为主要可读性瓶颈。
+  - 启动 API 文档信息架构重建，准备全量改写。
+
+### API 文档重构（完成）
+- **Status:** complete
+- Actions taken:
+  - 全量重写 `docs/API_SPEC.md`，版本升级至 v3.0。
+  - 聚焦后端可执行信息：职责边界、请求/响应契约、校验顺序、错误码、联调清单。
+  - 重点修复 4.4/4.5 可读性：拆掉旧混写内容，改为后端实现规范化描述。
+  - 同步更新 `docs/changes.md` 与 `changes.md` 记录重构结果。

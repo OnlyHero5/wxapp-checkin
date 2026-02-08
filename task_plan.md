@@ -270,3 +270,23 @@ Phase 4
 
 ### Current Phase
 - `Completed`
+
+## 2026-02-08 API 文档重构（可读性与后端可执行性）
+
+### Goal
+- 彻底重构 `docs/API_SPEC.md`，让后端可直接按文档实现/联调，不再混杂前端实现细节。
+
+### Phases
+- [x] Phase A: 识别当前文档混乱点（特别是 4.4 / 4.5）
+- [ ] Phase B: 重建文档信息架构（职责边界 -> 协议 -> 错误码 -> 联调清单）
+- [ ] Phase C: 全量重写 API 文档正文
+- [ ] Phase D: 对齐其他文档摘要并推送
+
+### Current Phase
+- `Phase B in_progress`
+
+### Update (2026-02-08)
+- [x] Phase B: 重建文档信息架构（职责边界 -> 协议 -> 错误码 -> 联调清单）
+- [x] Phase C: 全量重写 API 文档正文
+- [x] Phase D: 对齐变更记录并准备推送
+- `Current Phase` -> `Completed`

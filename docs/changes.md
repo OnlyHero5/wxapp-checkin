@@ -85,3 +85,7 @@
 - 文档对齐：
   - `docs/API_SPEC.md` 升级为 v2.4，重点补齐“二维码前端本地生成、后端仅返回配置与业务校验”的联调口径
   - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 同步上述职责边界
+- API 文档重构（v3.0）：
+  - `docs/API_SPEC.md` 按“后端实现视角”全量重写
+  - 重构 4.4/4.5：明确 `qr-session` 只返回配置，`consume` 专注业务校验链路
+  - 删除前端实现噪音与历史方案混写，补齐可直接执行的错误码与联调清单

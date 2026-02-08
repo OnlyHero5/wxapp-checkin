@@ -58,3 +58,6 @@
 - 文档同步：
   - `docs/API_SPEC.md` 升级到 v2.4，新增“`qr-session` 不返回二维码内容”与最新联调示例
   - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 同步二维码职责边界
+- API 文档可读性重构：
+  - `docs/API_SPEC.md` 重写为 v3.0（后端实现版）
+  - 重点重构 4.4/4.5，避免前端实现细节干扰后端联调
