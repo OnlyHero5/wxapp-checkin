@@ -36,3 +36,14 @@
 - 下线 `records` 与 `record-detail` 页面入口，清理“曾参加活动”重复信息。
 - 重写 `docs/API_SPEC.md` 为前端联调版，明确每个接口对应页面功能与前端呈现。
 - 同步更新 `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md`。
+
+## 2026-02-08
+- 普通用户活动可见性收敛为“已报名或已参加”：
+  - 列表仅返回 `my_registered=true` 或 `my_checked_in=true` 的活动
+  - 未报名未参加活动对普通用户不可见
+- 普通用户活动详情鉴权补齐：
+  - 访问不可见活动详情返回 `forbidden`
+  - 前端收到 `forbidden` 后提示并返回上一页
+- 活动字段补充：
+  - 新增 `my_registered` 并与 `my_checked_in` 共同驱动“我的状态”
+- 已同步更新主文档：`docs/API_SPEC.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md`。

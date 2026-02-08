@@ -1,8 +1,8 @@
 # 微信小程序活动二维码签到功能说明书
 
-文档版本: v1.2  
+文档版本: v1.3  
 状态: 进行中  
-更新日期: 2026-02-07  
+更新日期: 2026-02-08  
 项目: wxapp-checkin  
 依据: `docs/REQUIREMENTS.md`、`docs/API_SPEC.md`
 
@@ -40,7 +40,8 @@
 
 普通用户:
 - 不显示签到/签退按钮
-- 显示“我的签到状态”（`my_checked_in`）
+- 仅展示“已报名或已参加”的活动（`my_registered=true` 或 `my_checked_in=true`）
+- 显示“我的状态”（`已报名`/`已参加`）
 
 工作人员:
 - 仅在“正在进行”分组显示签到按钮
@@ -53,6 +54,7 @@
 
 ### 4.2 活动详情页（`pages/activity-detail`）
 - 展示活动完整信息：名称、类型、开始时间、地点、已签到人数、描述
+- 普通用户仅可查看“已报名或已参加”活动详情，违规访问返回 `forbidden`
 - 无网时显示顶部提示，不阻塞页面查看
 
 ### 4.3 个人中心页（`pages/profile`）
@@ -89,8 +91,9 @@
 
 ### 5.3 普通用户活动浏览流程
 1. 拉取活动列表
-2. 查看活动分组与详情入口
-3. 查看每个活动的“我的签到状态”
+2. 后端按 `my_registered || my_checked_in` 过滤后返回活动
+3. 前端按同规则兜底过滤并展示“我的状态”
+4. 仅在可见活动上允许进入详情
 
 ### 5.4 注册绑定流程
 1. 填写表单并提交
@@ -121,6 +124,7 @@
   - `activities[].has_detail`
   - `activities[].support_checkout`
   - `activities[].checkin_count`
+  - `activities[].my_registered`
   - `activities[].my_checked_in`
   - `activities[].progress_status`（建议必传，避免前端时间推断）
 
@@ -138,6 +142,9 @@
 - `GET /api/staff/activities/{activity_id}`
 - 必需字段:
   - `activity_title/activity_type/start_time/location/checkin_count/description`
+- 普通用户访问控制:
+  - 可见活动：返回详情
+  - 不可见活动：返回 `status=forbidden` + message
 
 ### 6.5 保留兼容接口（当前 UI 未直接使用）
 - `POST /api/checkin/verify`
@@ -156,7 +163,8 @@
 ## 8. 验收要点
 - 活动页必须是双分组 + 组内时间倒序
 - `已完成` 分组活动仅保留详情，不允许签到/签退
-- 普通用户活动卡片显示 `my_checked_in`，不显示总人数
+- 普通用户活动卡片仅显示“已报名或已参加”活动，不显示总人数
+- 普通用户活动详情禁止越权查看（未报名未参加活动）
 - 工作人员活动卡片显示 `checkin_count`
 - 普通用户“我的”页显示积分，不显示“曾参加活动”模块
 
@@ -164,3 +172,4 @@
 - 2026-02-04：完成 TDesign 化与深色主题升级。
 - 2026-02-06：切换角色分流活动卡片模型，新增普通用户积分与“我的签到状态”。
 - 2026-02-07：活动页升级为双分组模型；已完成活动仅详情；同步 API 协作规则。
+- 2026-02-08：普通用户活动可见范围收敛为“已报名或已参加”，并补齐详情接口鉴权规则。

@@ -305,3 +305,34 @@
   - task_plan.md (updated)
   - findings.md (updated)
   - progress.md (updated)
+
+## Session: 2026-02-08
+
+### 普通用户活动可见性收敛（完成）
+- **Status:** complete
+- Actions taken:
+  - 执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap` 方式）。
+  - 加载并应用技能：`superpowers:brainstorming`、`superpowers:writing-plans`、`superpowers:test-driven-development`、`frontend-design`、`ui-ux-pro-max`、`planning-with-files`。
+  - 完成代码调研：定位活动列表与详情链路（`src/pages/index`、`src/pages/activity-detail`、`src/utils/api.js`）。
+  - 明确需求差距：普通用户当前仍可见未报名未参加活动，详情接口缺少普通用户可见性鉴权。
+  - 按 TDD 新增失败测试 `src/tests/activity-visibility.test.js`，先验证旧逻辑不满足需求，再实现修复并转绿。
+  - 改造 mock API：新增 `my_registered`，普通用户列表按 `my_registered || my_checked_in` 过滤，详情接口补充普通用户可见性鉴权，动作接口补充角色鉴权。
+  - 改造前端：普通用户活动卡片改为“我的状态（已报名/已参加）”，详情页处理 `forbidden` 并回退页面。
+  - 全量更新文档：`README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`、`docs/changes.md`、`changes.md`。
+  - 验证通过：`node src/tests/activity-visibility.test.js`、`node --check src/utils/api.js`、`node --check src/pages/index/index.js`、`node --check src/pages/activity-detail/activity-detail.js`。
+- Files created/modified:
+  - src/tests/activity-visibility.test.js (created)
+  - src/utils/api.js (updated)
+  - src/pages/index/index.js (updated)
+  - src/pages/index/index.wxml (updated)
+  - src/pages/activity-detail/activity-detail.js (updated)
+  - src/pages/activity-detail/activity-detail.wxml (updated)
+  - README.md (updated)
+  - docs/REQUIREMENTS.md (updated)
+  - docs/FUNCTIONAL_SPEC.md (updated)
+  - docs/API_SPEC.md (updated)
+  - docs/changes.md (updated)
+  - changes.md (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)

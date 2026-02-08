@@ -15,20 +15,21 @@
 - 活动页按状态分组：`正在进行`（上）/`已完成`（下）
 - 两组均按时间倒序（新的在上）
 - 已完成活动仅支持“详情”，不支持签到/签退
+- 普通用户仅可见“已报名/已参加”活动（不可见未报名未参加活动）
 - 角色分流：
-  - `normal`：浏览活动 + 我的签到状态 + 个人积分
+  - `normal`：浏览“已报名/已参加”活动 + 我的状态（已报名/已参加）+ 个人积分
   - `staff`：浏览活动 + 签到/签退 + 详情 + 个人信息
 
 ## 角色能力矩阵
 | 能力 | 普通用户 (`normal`) | 工作人员 (`staff`) |
 |------|---------------------|--------------------|
-| 浏览活动卡片 | `Yes` | `Yes` |
-| 查看活动详情 | `Yes`（`has_detail=true`） | `Yes`（`has_detail=true`） |
+| 浏览活动卡片 | `Yes`（仅已报名/已参加） | `Yes`（全部活动） |
+| 查看活动详情 | `Yes`（仅已报名/已参加且 `has_detail=true`） | `Yes`（`has_detail=true`） |
 | 发起签到动作 | `No` | `Yes`（仅进行中活动） |
 | 发起签退动作 | `No` | `Yes`（仅进行中且 `support_checkout=true`） |
 | 已完成活动动作 | 仅详情 | 仅详情 |
 | 查看活动总签到人数 | `No` | `Yes`（`checkin_count`） |
-| 查看我的签到状态 | `Yes`（`my_checked_in`） | 可选 |
+| 查看我的状态 | `Yes`（`my_registered` / `my_checked_in`） | 可选 |
 | 个人中心积分 | `Yes`（`social_score`、`lecture_score`） | 可选 |
 
 ## 页面结构
@@ -70,7 +71,7 @@ npm install
 
 关键字段：
 - 登录：`role`、`permissions`、`user_profile.*`
-- 活动列表：`progress_status`、`support_checkout`、`has_detail`、`checkin_count`、`my_checked_in`
+- 活动列表：`progress_status`、`support_checkout`、`has_detail`、`checkin_count`、`my_registered`、`my_checked_in`
 - 活动动作：`status`、`message`、`checkin_record_id`
 
 ## 文档导航

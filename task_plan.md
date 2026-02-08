@@ -95,6 +95,11 @@ Phase 4
 ### Current Phase
 - `Completed`
 
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| PowerShell 下 `rg` 正则含引号时解析失败 | 1 | 改用 `--fixed-strings` 与单引号模式进行精确检索 |
+
 ### Follow-up (2026-02-06)
 - [x] 普通用户“我的”页新增 `社会分`、`讲座分`
 - [x] 活动页对普通用户显示活动卡片（不再自动跳转）
@@ -173,6 +178,24 @@ Phase 4
 - [x] Phase C: 同步更新 `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`
 - [x] Phase D: 同步更新 `README.md`、`docs/changes.md`、`changes.md`
 - [x] Phase E: 扫描一致性并完成交付
+
+### Current Phase
+- `Completed`
+
+## 2026-02-08 普通用户活动可见性收敛（仅已报名/已参加）
+
+### Goal
+- 普通用户只能看到“自己已报名的活动”与“自己已参加过的活动”。
+- 普通用户不能看到“未报名且未参加”的活动。
+- 活动详情接口同样按上述规则做后端鉴权，防止通过活动 ID 越权查看。
+- 前后端 API 与全部文档保持一致。
+
+### Phases
+- [x] Phase A: 以测试定义可见性规则（列表过滤 + 详情鉴权）
+- [x] Phase B: 改造 mock 后端 API（活动列表/详情）
+- [x] Phase C: 前端活动页与详情页适配新字段与提示文案
+- [x] Phase D: 全量更新文档（README、REQUIREMENTS、FUNCTIONAL、API_SPEC、changes）
+- [x] Phase E: 语法与行为验证，更新 planning 文件
 
 ### Current Phase
 - `Completed`

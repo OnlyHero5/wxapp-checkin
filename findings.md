@@ -157,3 +157,18 @@
   - 在 API 文档中新增“接口 -> 前端函数 -> 页面入口 -> 成功/失败表现 -> 测试定位”链路。
   - 对未接入 UI 的保留接口单独标识，避免后端误判为主验收阻塞项。
   - 在 README/功能说明/需求文档中统一页面结构和按钮规则，避免跨文档冲突。
+
+## 2026-02-08 新需求研究结果（普通用户可见性收敛）
+- 当前问题确认：
+  - `src/pages/index/index.js` 的 `loadActivities` 直接渲染 `/api/staff/activities` 返回的全量活动。
+  - 普通用户虽然仅显示 `my_checked_in`，但依然可看到未报名未参加的活动卡片。
+  - `src/utils/api.js` 的 `/api/staff/activities/{id}` 未做普通用户归属校验，存在通过活动 ID 查看任意活动详情的风险（mock 侧）。
+- 现有字段现状：
+  - 已有 `my_checked_in`，但缺少“已报名”显式字段。
+  - 需求“已报名 或 已参加”可抽象为 `my_registered || my_checked_in`。
+- 实施决策：
+  - 新增活动字段 `my_registered`（后端返回，普通用户可见性判定主字段之一）。
+  - 后端列表 API 在 `normal` 角色下仅返回 `my_registered=true` 或 `my_checked_in=true` 的活动。
+  - 后端详情 API 在 `normal` 角色下对不满足可见性条件的活动返回 `forbidden`（并附带 message）。
+  - 前端详情页兼容 `forbidden` 响应，展示友好提示并返回上一页。
+  - 文档统一改写“普通用户活动可见范围”与新增字段说明，避免联调歧义。

@@ -1,7 +1,7 @@
 # 后端接口说明（前端联调版）
 
-文档版本: v2.0  
-更新日期: 2026-02-07  
+文档版本: v2.1  
+更新日期: 2026-02-08  
 对应前端分支: `main`（当前工作区）  
 代码对齐基线: `src/utils/api.js`、`src/pages/*`
 
@@ -30,9 +30,9 @@
 |------|--------------|---------------|----------------|----------------|
 | `POST /api/auth/wx-login` | `api.login` -> `auth.ensureSession` | `index/profile/register/activity-detail` 页面初始化 | 写入 `session_token/role/permissions/user_profile`，页面继续加载 | Toast：`登录失败，请重试` |
 | `POST /api/register` | `api.register` | `register` 页点击“完成绑定” | Toast：`绑定成功`，写本地缓存，按角色跳转 tab | Toast：`绑定失败` 或后端 message |
-| `GET /api/staff/activities` | `api.getStaffActivities` | `index` 页进入/回到前台时拉取 | 分组为“正在进行/已完成”，按时间倒序渲染卡片 | Toast：`活动信息加载失败` |
+| `GET /api/staff/activities` | `api.getStaffActivities` | `index` 页进入/回到前台时拉取 | 分组为“正在进行/已完成”，按时间倒序渲染卡片；普通用户仅收到“已报名/已参加”活动 | Toast：`活动信息加载失败` |
 | `POST /api/staff/activity-action` | `api.staffActivityAction` | `index` 页工作人员点击“签到/签退”并扫码后 | Toast 成功 + 显示状态卡 + 刷新列表 | Toast：后端 message（如二维码失效、活动已完成） |
-| `GET /api/staff/activities/{id}` | `api.getStaffActivityDetail` | `activity-detail` 页 onLoad/onShow | 展示活动详情字段（名称/类型/时间/地点/人数/描述） | Toast：`活动详情加载失败` |
+| `GET /api/staff/activities/{id}` | `api.getStaffActivityDetail` | `activity-detail` 页 onLoad/onShow | 展示活动详情字段（名称/类型/时间/地点/人数/描述）；普通用户显示“我的状态” | Toast：`活动详情加载失败`，或无权限提示并返回上一页 |
 | `POST /api/checkin/verify` | `api.verifyCheckin` | 当前版本 UI 未直接使用（历史能力保留） | N/A | N/A |
 | `GET /api/checkin/records` | `api.getRecords` | 当前版本 UI 未直接使用（历史能力保留） | N/A | N/A |
 | `GET /api/checkin/records/{id}` | `api.getRecordDetail` | 当前版本 UI 未直接使用（历史能力保留） | N/A | N/A |
@@ -203,9 +203,17 @@
 ### 请求
 ```json
 {
-  "session_token": "string"
+  "session_token": "string",
+  "role_hint": "normal",
+  "visibility_scope": "joined_or_participated"
 }
 ```
+
+说明：
+- `role_hint` 为前端传递的角色提示字段（后端应以会话鉴权结果为准）。
+- `visibility_scope` 推荐值：
+  - `normal`：`joined_or_participated`
+  - `staff`：`all`
 
 ### 响应
 ```json
@@ -222,6 +230,7 @@
       "has_detail": true,
       "progress_status": "ongoing",
       "description": "string",
+      "my_registered": true,
       "my_checked_in": false
     }
   ]
@@ -237,7 +246,8 @@
 | `start_time` | 排序 + 展示 | 时间行 |
 | `location` | 展示 | 地点行 |
 | `checkin_count` | 工作人员视角统计 | `已签到 xx 人` |
-| `my_checked_in` | 普通用户视角状态 | `我的签到: 已签到/未签到` |
+| `my_registered` | 普通用户活动可见性 + 状态 | `我的状态: 已报名/已参加` |
+| `my_checked_in` | 普通用户活动可见性 + 状态 | `我的状态: 已报名/已参加` |
 | `support_checkout` | 控制签退按钮显示 | 进行中且 staff 时才生效 |
 | `has_detail` | 控制详情按钮显示 | 任意分组可显示 |
 | `progress_status` | 分组依据 | ongoing / completed |
@@ -245,7 +255,8 @@
 ### 关键前端规则（后端必须知晓）
 1. 分组顺序固定: `正在进行` 在上，`已完成` 在下。
 2. 组内排序: `start_time` 倒序（新的在上）。
-3. 按钮规则:
+3. 普通用户可见性: 仅展示 `my_registered=true` 或 `my_checked_in=true` 的活动。
+4. 按钮规则:
    - `staff + ongoing`：显示签到
    - `staff + ongoing + support_checkout=true`：显示签退
    - 任意角色 + `has_detail=true`：显示详情
@@ -307,7 +318,7 @@
 | `status` | 推荐 message | 前端表现 |
 |----------|--------------|----------|
 | `invalid_qr` | 二维码失效，请重新扫码 | Toast message |
-| `forbidden` | 该活动未开放签退 / 已完成活动仅支持查看详情 | Toast message |
+| `forbidden` | 该活动未开放签退 / 已完成活动仅支持查看详情 / 仅工作人员可执行签到签退 | Toast message |
 | `invalid_activity` | 活动不存在或已下线 | Toast message |
 | 其他或空 | 任意 | Toast `操作失败` |
 
@@ -334,7 +345,17 @@
   "support_checkout": false,
   "has_detail": true,
   "progress_status": "ongoing",
-  "description": "院系联合路演，含评审打分环节。"
+  "description": "院系联合路演，含评审打分环节。",
+  "my_registered": true,
+  "my_checked_in": false
+}
+```
+
+普通用户禁止访问未报名未参加活动时，建议响应：
+```json
+{
+  "status": "forbidden",
+  "message": "你未报名或参加该活动，无法查看详情"
 }
 ```
 
@@ -345,9 +366,11 @@
 - `location` -> 活动地点
 - `checkin_count` -> 已签到人数
 - `description` -> 详情描述
+- `my_registered/my_checked_in` -> 普通用户“我的状态（已报名/已参加）”
 
 ### 失败表现
 - 请求异常: Toast `活动详情加载失败`
+- `status=forbidden`: Toast message + 返回上一页
 - 无网: 页面顶部 banner 提示“当前无网络，活动详情可能不是最新”
 
 ---
@@ -377,7 +400,7 @@
 - 定位页：`pages/index/index`
 
 2. `normal` 登录 + 已绑定
-- 预期：活动页仅详情，不显示签到/签退；显示“我的签到状态”
+- 预期：活动页仅返回“已报名/已参加”活动；仅详情，不显示签到/签退；显示“我的状态（已报名/已参加）”
 - 定位页：`pages/index/index`
 
 3. 返回 `progress_status=completed`
@@ -392,11 +415,15 @@
 - 预期：前后端均拒绝，Toast `已完成活动仅支持查看详情`
 - 定位页：`pages/index/index`
 
-6. 活动详情接口返回完整字段
+6. `normal` 访问未报名未参加活动详情
+- 预期：接口返回 `forbidden`，前端提示并返回上一页
+- 定位页：`pages/activity-detail/activity-detail`
+
+7. 活动详情接口返回完整字段
 - 预期：详情页字段全部展示
 - 定位页：`pages/activity-detail/activity-detail`
 
-7. 注册接口返回成功
+8. 注册接口返回成功
 - 预期：`has_bound` 置为 true，按角色跳转 tab
 - 定位页：`pages/register/register`
 
@@ -406,3 +433,4 @@
 - 2026-02-04：初版接口说明
 - 2026-02-06：补充角色分流字段
 - 2026-02-07：重写为“前端联调版”，新增接口到页面功能的逐项映射、按钮规则、分组规则、排障与测试清单
+- 2026-02-08：新增普通用户“已报名或已参加”可见性约束，补充 `my_registered` 字段与详情鉴权口径

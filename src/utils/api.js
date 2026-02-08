@@ -83,6 +83,18 @@ const mockStore = {
     act_research_roadshow_20260220: false,
     act_safety_training_20260207: true
   },
+  normalRegistrationStatus: {
+    act_tech_talk_20260112: true,
+    act_meetup_20260114: true,
+    act_open_day_20260128: true,
+    act_ui_salon_20260201: false,
+    act_product_forum_20260208: true,
+    act_ai_workshop_20260210: true,
+    act_hackathon_20260215: true,
+    act_research_roadshow_20260220: false,
+    act_safety_training_20260207: true,
+    act_ops_review_20251230: false
+  },
   staffActivities: [
     {
       activity_id: "act_research_roadshow_20260220",
@@ -215,6 +227,28 @@ const getCurrentMockUser = () => {
   return mockUsers[getMockRoleKey()];
 };
 
+const getNormalActivityRelation = (activityId) => {
+  return {
+    my_registered: !!mockStore.normalRegistrationStatus[activityId],
+    my_checked_in: !!mockStore.normalCheckinStatus[activityId]
+  };
+};
+
+const normalizeActivityForNormal = (activity) => {
+  if (!activity) {
+    return {};
+  }
+  return {
+    ...activity,
+    ...getNormalActivityRelation(activity.activity_id)
+  };
+};
+
+const canNormalViewActivity = (activityId) => {
+  const relation = getNormalActivityRelation(activityId);
+  return relation.my_registered || relation.my_checked_in;
+};
+
 const createRecord = (activity, actionType) => {
   const recordId = `rec_${Date.now()}`;
   const label = actionType === "checkout" ? "签退完成" : "签到完成";
@@ -297,10 +331,9 @@ const mockRequest = (url, data) => {
 
       if (url === "/api/staff/activities") {
         const role = getCurrentMockUser().role;
-        const activities = mockStore.staffActivities.map((item) => ({
-          ...item,
-          my_checked_in: !!mockStore.normalCheckinStatus[item.activity_id]
-        }));
+        const activities = mockStore.staffActivities
+          .map((item) => normalizeActivityForNormal(item))
+          .filter((item) => item.my_registered || item.my_checked_in);
         resolve({
           activities: role === "normal" ? activities : mockStore.staffActivities
         });
@@ -308,17 +341,34 @@ const mockRequest = (url, data) => {
       }
 
       if (url.startsWith("/api/staff/activities/")) {
+        const role = getCurrentMockUser().role;
         const activityId = url.split("/").pop();
         const detail = mockStore.staffActivities.find((item) => item.activity_id === activityId);
-        resolve(detail || {});
+        if (!detail) {
+          resolve({ status: "invalid_activity", message: "活动不存在或已下线" });
+          return;
+        }
+
+        if (role === "normal" && !canNormalViewActivity(activityId)) {
+          resolve({ status: "forbidden", message: "你未报名或参加该活动，无法查看详情" });
+          return;
+        }
+
+        resolve(role === "normal" ? normalizeActivityForNormal(detail) : detail);
         return;
       }
 
       if (url === "/api/staff/activity-action") {
+        const role = getCurrentMockUser().role;
         const activityId = data.activity_id || "";
         const actionType = data.action_type || "checkin";
         const qrToken = data.qr_token || "";
         const activity = mockStore.staffActivities.find((item) => item.activity_id === activityId);
+
+        if (role !== "staff") {
+          resolve({ status: "forbidden", message: "仅工作人员可执行签到/签退" });
+          return;
+        }
 
         if (!activity) {
           resolve({ status: "invalid_activity", message: "活动不存在或已下线" });
@@ -458,21 +508,27 @@ const getActivityCurrent = () => {
 };
 
 const getStaffActivities = (sessionToken) => {
+  const role = storage.getRole();
   return request({
     url: "/api/staff/activities",
     method: "GET",
     data: {
-      session_token: sessionToken || storage.getSessionToken()
+      session_token: sessionToken || storage.getSessionToken(),
+      role_hint: role,
+      visibility_scope: role === "normal" ? "joined_or_participated" : "all"
     }
   });
 };
 
 const getStaffActivityDetail = (activityId, sessionToken) => {
+  const role = storage.getRole();
   return request({
     url: `/api/staff/activities/${activityId}`,
     method: "GET",
     data: {
-      session_token: sessionToken || storage.getSessionToken()
+      session_token: sessionToken || storage.getSessionToken(),
+      role_hint: role,
+      visibility_scope: role === "normal" ? "joined_or_participated" : "all"
     }
   });
 };

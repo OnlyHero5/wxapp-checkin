@@ -6,7 +6,7 @@
       <text class="title">活动页面</text>
       <view class="title-line"></view>
       <text wx:if="{{role === 'staff'}}" class="subtitle">工作人员可执行签到、签退和详情查看</text>
-      <text wx:else class="subtitle">普通用户可查看活动卡片与详情</text>
+      <text wx:else class="subtitle">普通用户仅可查看已报名或已参加活动</text>
     </view>
 
     <view wx:if="{{loading}}" class="hint">正在加载活动列表...</view>
@@ -60,8 +60,8 @@
             <text class="meta-value">{{activity.checkin_count}} 人</text>
           </view>
           <view class="meta-item" wx:else>
-            <text class="meta-label">我的签到</text>
-            <text class="meta-value">{{activity.my_checked_in ? '已签到' : '未签到'}}</text>
+            <text class="meta-label">我的状态</text>
+            <text class="meta-value">{{activity.my_join_status || '未报名'}}</text>
           </view>
         </view>
 

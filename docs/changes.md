@@ -56,3 +56,16 @@
 - 文档体系重写与对齐：
   - `docs/API_SPEC.md` 重写为前端联调版（接口 -> 页面功能 -> UI 呈现 -> 排障）
   - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md` 全量同步当前实现
+
+## 2026-02-08
+- 普通用户活动可见性收敛：
+  - `normal` 仅可见“已报名或已参加”活动（`my_registered || my_checked_in`）
+  - 未报名且未参加活动不再出现在普通用户活动列表
+- 活动详情权限加固：
+  - 普通用户访问未报名未参加活动详情时，接口返回 `forbidden`
+  - 前端详情页收到 `forbidden` 后提示并返回上一页
+- API 字段升级：
+  - 活动列表/详情新增并使用 `my_registered`
+  - 前端普通用户状态文案统一为“我的状态（已报名/已参加）”
+- 文档同步更新：
+  - `docs/API_SPEC.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md`

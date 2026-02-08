@@ -76,9 +76,26 @@ const resolveActivityTypeTone = (typeText) => {
   return matched ? matched.tone : "default";
 };
 
-const buildActivityGroups = (activities) => {
-  const normalized = (activities || []).map((item) => ({
+const resolveNormalJoinStatus = (activity) => {
+  if (activity.my_checked_in) {
+    return "已参加";
+  }
+  if (activity.my_registered) {
+    return "已报名";
+  }
+  return "未报名";
+};
+
+const buildActivityGroups = (activities, role) => {
+  const roleFilteredActivities = role === "normal"
+    ? (activities || []).filter((item) => item.my_registered || item.my_checked_in)
+    : (activities || []);
+
+  const normalized = roleFilteredActivities.map((item) => ({
     ...item,
+    my_registered: !!item.my_registered,
+    my_checked_in: !!item.my_checked_in,
+    my_join_status: resolveNormalJoinStatus(item),
     progress_status: resolveActivityProgress(item),
     type_tone: resolveActivityTypeTone(item.activity_type)
   }));
@@ -175,7 +192,7 @@ Page({
     this.setData({ loading: true });
     try {
       const result = await api.getStaffActivities(this.data.sessionToken);
-      const grouped = buildActivityGroups((result && result.activities) || []);
+      const grouped = buildActivityGroups((result && result.activities) || [], this.data.role);
       this.setData(grouped);
     } catch (err) {
       ui.showToast("活动信息加载失败");

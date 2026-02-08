@@ -30,6 +30,10 @@
         <text class="label">已签到人数</text>
         <text class="value">{{detail.checkin_count || 0}} 人</text>
       </view>
+      <view class="info-row" wx:if="{{role === 'normal'}}">
+        <text class="label">我的状态</text>
+        <text class="value">{{detail.my_join_status || '未报名'}}</text>
+      </view>
       <view class="divider"></view>
       <text class="hint">{{detail.description || '暂无更多活动描述'}}</text>
       <view class="btn-center">
