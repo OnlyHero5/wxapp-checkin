@@ -39,6 +39,40 @@
   background: rgba(148, 163, 184, 0.24);
 }
 
+.scan-entry-card {
+  margin-bottom: 22rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(101, 240, 194, 0.26);
+  background: linear-gradient(130deg, rgba(22, 50, 58, 0.72), rgba(16, 31, 37, 0.92));
+  box-shadow: 0 12rpx 24rpx rgba(0, 0, 0, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.scan-entry-title {
+  display: block;
+  color: rgba(228, 255, 246, 0.95);
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.scan-entry-desc {
+  display: block;
+  margin-top: 6rpx;
+  color: rgba(202, 227, 221, 0.8);
+  font-size: 22rpx;
+  line-height: 1.45;
+}
+
+.scan-entry-btn {
+  flex: 0 0 152rpx;
+  min-height: 64rpx;
+  border-radius: 14rpx;
+}
+
 .activity-section {
   margin-bottom: 30rpx;
 }

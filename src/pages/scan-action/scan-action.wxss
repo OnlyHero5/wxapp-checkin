@@ -1,0 +1,54 @@
+.page-scan-action .subtitle {
+  margin-bottom: 6rpx;
+}
+
+.scan-card {
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(101, 240, 194, 0.24);
+  background: radial-gradient(circle at 92% 0%, rgba(85, 200, 160, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(17, 32, 42, 0.96), rgba(12, 23, 31, 0.99));
+}
+
+.scan-title {
+  display: block;
+  color: var(--text);
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.scan-desc {
+  display: block;
+  margin-top: 8rpx;
+  color: rgba(231, 237, 245, 0.7);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.scan-btn {
+  width: 72%;
+}
+
+.result-card {
+  margin-top: 22rpx;
+}
+
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.result-title {
+  color: var(--text);
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.result-actions {
+  margin-top: 20rpx;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12rpx;
+}

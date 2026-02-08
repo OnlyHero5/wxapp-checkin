@@ -165,10 +165,27 @@
   - `src/utils/api.js` 的 `/api/staff/activities/{id}` 未做普通用户归属校验，存在通过活动 ID 查看任意活动详情的风险（mock 侧）。
 - 现有字段现状：
   - 已有 `my_checked_in`，但缺少“已报名”显式字段。
-  - 需求“已报名 或 已参加”可抽象为 `my_registered || my_checked_in`。
+  - 需求“已报名 或 已参加”可抽象为 `my_registered || my_checked_in`（后续已扩展到含 `my_checked_out`）。
 - 实施决策：
   - 新增活动字段 `my_registered`（后端返回，普通用户可见性判定主字段之一）。
   - 后端列表 API 在 `normal` 角色下仅返回 `my_registered=true` 或 `my_checked_in=true` 的活动。
   - 后端详情 API 在 `normal` 角色下对不满足可见性条件的活动返回 `forbidden`（并附带 message）。
   - 前端详情页兼容 `forbidden` 响应，展示友好提示并返回上一页。
   - 文档统一改写“普通用户活动可见范围”与新增字段说明，避免联调歧义。
+
+## 2026-02-08 新需求研究结果（动态二维码签到/签退）
+- 当前问题确认：
+  - 工作人员侧原流程为“工作人员自己扫码提交”，不满足“管理员展示码、普通用户扫码”的新业务。
+  - 前端缺少独立扫码页，普通用户无法在统一入口执行签到/签退提交。
+  - 后端 mock 缺少“二维码会话”抽象（展示过期与提交宽限是两套时间窗）。
+- 关键设计决策：
+  - 新增二维码会话接口：`POST /api/staff/activities/{id}/qr-session`。
+  - 会话字段拆分为 `display_expire_at`（显示有效）与 `accept_expire_at`（提交宽限）。
+  - 默认窗口：`rotate=10s`、`grace=20s`，前端按后端时间戳倒计时。
+  - 新增普通用户提交接口：`POST /api/checkin/consume`，支持 `qr_payload/path/raw_result` 多来源解析。
+  - 普通用户状态扩展：`my_checked_out`，状态文案统一为 `已报名/已签到/已签退`。
+  - 管理员二维码页轮询详情接口，实时展示 `checkin_count/checkout_count`。
+- UI/交互决策：
+  - `index` 页工作人员按钮改为“签到码/签退码”，点击后跳转二维码页。
+  - 新增 `pages/staff-qr`：二维码 + 倒计时 + 自动换码 + 手动刷新 + 实时统计。
+  - 新增 `pages/scan-action`：摄像头扫码按钮 + 提交结果卡 + 返回活动页入口。

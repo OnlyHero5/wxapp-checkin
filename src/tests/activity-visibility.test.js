@@ -16,7 +16,7 @@ const run = async () => {
 
     assert(activities.length > 0, "普通用户活动列表应有至少一条可见活动");
 
-    const hasInvisibleItem = activities.some((item) => !item.my_registered && !item.my_checked_in);
+    const hasInvisibleItem = activities.some((item) => !item.my_registered && !item.my_checked_in && !item.my_checked_out);
     assert.strictEqual(
       hasInvisibleItem,
       false,

@@ -1,0 +1,126 @@
+.page-staff-qr .subtitle {
+  margin-bottom: 6rpx;
+}
+
+.qr-card {
+  border-radius: 24rpx;
+  background: radial-gradient(circle at 92% 0%, rgba(92, 164, 255, 0.17), transparent 40%),
+    linear-gradient(180deg, rgba(18, 30, 45, 0.96), rgba(13, 21, 32, 0.99));
+  border: 1rpx solid rgba(120, 173, 255, 0.2);
+}
+
+.qr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+}
+
+.refreshing-text {
+  color: rgba(196, 230, 255, 0.85);
+  font-size: 22rpx;
+}
+
+.qr-box {
+  margin-top: 18rpx;
+  padding: 26rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(148, 163, 184, 0.2);
+  background: rgba(11, 17, 26, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-image {
+  width: 360rpx;
+  height: 360rpx;
+  border-radius: 14rpx;
+  background: #ffffff;
+}
+
+.countdown-panel {
+  margin-top: 18rpx;
+  display: flex;
+  gap: 14rpx;
+}
+
+.countdown-item {
+  flex: 1;
+  padding: 14rpx 16rpx;
+  border-radius: 16rpx;
+  border: 1rpx solid rgba(148, 163, 184, 0.2);
+  background: rgba(18, 30, 45, 0.72);
+}
+
+.countdown-label {
+  display: block;
+  color: rgba(231, 237, 245, 0.62);
+  font-size: 22rpx;
+}
+
+.countdown-value {
+  display: block;
+  margin-top: 8rpx;
+  color: rgba(227, 246, 255, 0.98);
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.btn-row {
+  margin-top: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12rpx;
+}
+
+.stats-card {
+  margin-top: 22rpx;
+}
+
+.stats-head {
+  margin-bottom: 14rpx;
+}
+
+.stats-title {
+  display: block;
+  color: var(--text);
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.stats-subtitle {
+  display: block;
+  margin-top: 6rpx;
+  color: rgba(231, 237, 245, 0.58);
+  font-size: 22rpx;
+}
+
+.stats-grid {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.stats-item {
+  flex: 1;
+  padding: 18rpx 16rpx;
+  border-radius: 16rpx;
+  border: 1rpx solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(160deg, rgba(20, 31, 47, 0.8), rgba(15, 22, 34, 0.94));
+}
+
+.stats-label {
+  display: block;
+  color: rgba(231, 237, 245, 0.6);
+  font-size: 22rpx;
+}
+
+.stats-value {
+  display: block;
+  margin-top: 10rpx;
+  color: var(--text);
+  font-size: 36rpx;
+  font-weight: 700;
+}

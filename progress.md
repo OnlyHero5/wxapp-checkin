@@ -316,8 +316,8 @@
   - 完成代码调研：定位活动列表与详情链路（`src/pages/index`、`src/pages/activity-detail`、`src/utils/api.js`）。
   - 明确需求差距：普通用户当前仍可见未报名未参加活动，详情接口缺少普通用户可见性鉴权。
   - 按 TDD 新增失败测试 `src/tests/activity-visibility.test.js`，先验证旧逻辑不满足需求，再实现修复并转绿。
-  - 改造 mock API：新增 `my_registered`，普通用户列表按 `my_registered || my_checked_in` 过滤，详情接口补充普通用户可见性鉴权，动作接口补充角色鉴权。
-  - 改造前端：普通用户活动卡片改为“我的状态（已报名/已参加）”，详情页处理 `forbidden` 并回退页面。
+  - 改造 mock API：新增 `my_registered`，普通用户列表按 `my_registered || my_checked_in || my_checked_out` 过滤，详情接口补充普通用户可见性鉴权，动作接口补充角色鉴权。
+  - 改造前端：普通用户活动卡片改为“我的状态（已报名/已签到/已签退）”，详情页处理 `forbidden` 并回退页面。
   - 全量更新文档：`README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`、`docs/changes.md`、`changes.md`。
   - 验证通过：`node src/tests/activity-visibility.test.js`、`node --check src/utils/api.js`、`node --check src/pages/index/index.js`、`node --check src/pages/activity-detail/activity-detail.js`。
 - Files created/modified:
@@ -327,6 +327,62 @@
   - src/pages/index/index.wxml (updated)
   - src/pages/activity-detail/activity-detail.js (updated)
   - src/pages/activity-detail/activity-detail.wxml (updated)
+  - README.md (updated)
+  - docs/REQUIREMENTS.md (updated)
+  - docs/FUNCTIONAL_SPEC.md (updated)
+  - docs/API_SPEC.md (updated)
+  - docs/changes.md (updated)
+  - changes.md (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
+### 动态二维码签到/签退（完成）
+- **Status:** complete
+- Actions taken:
+  - 执行并修复 superpowers 启动方式：`node .../superpowers-codex bootstrap`。
+  - 加载并应用技能：`planning-with-files`、`superpowers:test-driven-development`、`ui-ux-pro-max`、`frontend-design`、`superpowers:brainstorming`。
+  - 先测后改：新增/扩展 `src/tests/qr-checkin-flow.test.js`，覆盖二维码会话、10 秒轮换、20 秒宽限、签到签退状态同步、管理员计数同步。
+  - 扩展 mock API：
+    - 新增 `POST /api/staff/activities/{id}/qr-session`
+    - 新增 `POST /api/checkin/consume`
+    - 新增 `my_checked_out`、`checkout_count` 字段与状态流转
+  - 新增页面：
+    - `pages/staff-qr`：管理员二维码展示页（倒计时/自动换码/手动刷新/实时统计）
+    - `pages/scan-action`：普通用户扫码提交页（摄像头扫码 + 结果反馈）
+  - 活动页改造：
+    - 工作人员按钮改为“签到码/签退码”并跳转二维码页
+    - 普通用户新增“去扫码”入口
+  - 详情与状态文案改造：
+    - 普通用户状态统一为“已报名/已签到/已签退”
+  - 全量文档更新：
+    - `README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`、`docs/changes.md`、`changes.md`
+  - 验证通过：
+    - `node --check src/pages/staff-qr/staff-qr.js`
+    - `node --check src/pages/scan-action/scan-action.js`
+    - `node --check src/pages/index/index.js`
+    - `node --check src/pages/activity-detail/activity-detail.js`
+    - `node --check src/utils/api.js`
+    - `node src/tests/activity-visibility.test.js`
+    - `node src/tests/qr-checkin-flow.test.js`
+- Files created/modified:
+  - src/pages/staff-qr/staff-qr.js (created)
+  - src/pages/staff-qr/staff-qr.json (created)
+  - src/pages/staff-qr/staff-qr.wxml (created)
+  - src/pages/staff-qr/staff-qr.wxss (created)
+  - src/pages/scan-action/scan-action.js (created)
+  - src/pages/scan-action/scan-action.json (created)
+  - src/pages/scan-action/scan-action.wxml (created)
+  - src/pages/scan-action/scan-action.wxss (created)
+  - src/app.json (updated)
+  - src/pages/index/index.js (updated)
+  - src/pages/index/index.wxml (updated)
+  - src/pages/index/index.wxss (updated)
+  - src/pages/index/index.json (updated)
+  - src/pages/activity-detail/activity-detail.js (updated)
+  - src/utils/api.js (updated)
+  - src/tests/activity-visibility.test.js (updated)
+  - src/tests/qr-checkin-flow.test.js (updated)
   - README.md (updated)
   - docs/REQUIREMENTS.md (updated)
   - docs/FUNCTIONAL_SPEC.md (updated)

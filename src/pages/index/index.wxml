@@ -6,7 +6,7 @@
       <text class="title">活动页面</text>
       <view class="title-line"></view>
       <text wx:if="{{role === 'staff'}}" class="subtitle">工作人员可执行签到、签退和详情查看</text>
-      <text wx:else class="subtitle">普通用户仅可查看已报名或已参加活动</text>
+      <text wx:else class="subtitle">普通用户仅可查看已报名、已签到或已签退活动</text>
     </view>
 
     <view wx:if="{{loading}}" class="hint">正在加载活动列表...</view>
@@ -20,6 +20,14 @@
         <text class="overview-value">{{completedActivities.length}}</text>
         <text class="overview-label">已完成</text>
       </view>
+    </view>
+
+    <view wx:if="{{role === 'normal'}}" class="scan-entry-card">
+      <view>
+        <text class="scan-entry-title">签到/签退</text>
+        <text class="scan-entry-desc">前往扫码页面完成签到或签退，结果会同步回活动状态</text>
+      </view>
+      <t-button theme="primary" size="small" class="scan-entry-btn" bindtap="onGoScanPage">去扫码</t-button>
     </view>
 
     <view wx:for="{{activitySections}}" wx:key="key" wx:for-item="section" class="activity-section" wx:if="{{section.items.length > 0}}">
@@ -75,24 +83,20 @@
               size="small"
               theme="primary"
               class="action-btn"
-              loading="{{actionLoadingId === activity.activity_id && actionLoadingType === 'checkin'}}"
-              disabled="{{actionLoadingId === activity.activity_id}}"
               data-id="{{activity.activity_id}}"
               bindtap="onTapCheckin"
             >
-              签到
+              签到码
             </t-button>
             <t-button
               wx:if="{{role === 'staff' && section.key === 'ongoing' && activity.support_checkout}}"
               size="small"
               theme="default"
               class="action-btn"
-              loading="{{actionLoadingId === activity.activity_id && actionLoadingType === 'checkout'}}"
-              disabled="{{actionLoadingId === activity.activity_id}}"
               data-id="{{activity.activity_id}}"
               bindtap="onTapCheckout"
             >
-              签退
+              签退码
             </t-button>
             <t-button
               wx:if="{{activity.has_detail}}"

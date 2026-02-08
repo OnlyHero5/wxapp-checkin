@@ -70,7 +70,10 @@ Page({
         ...detail,
         my_registered: !!detail.my_registered,
         my_checked_in: !!detail.my_checked_in,
-        my_join_status: detail.my_checked_in ? "已参加" : (detail.my_registered ? "已报名" : "未报名")
+        my_checked_out: !!detail.my_checked_out,
+        my_join_status: detail.my_checked_out
+          ? "已签退"
+          : (detail.my_checked_in ? "已签到" : (detail.my_registered ? "已报名" : "未报名"))
       };
 
       this.setData({ detail: normalizedDetail });

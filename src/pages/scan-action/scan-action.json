@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "签到/签退",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-tag": "tdesign-miniprogram/tag/tag"
+  }
+}

@@ -1,0 +1,75 @@
+<view class="page page-staff-qr">
+  <view class="content">
+    <view wx:if="{{!isOnline}}" class="network-banner">当前无网络，二维码与人数不会自动刷新</view>
+
+    <view class="header">
+      <text class="title">{{actionLabel}}二维码</text>
+      <view class="title-line"></view>
+      <text class="subtitle">{{activityTitle || '当前活动'}}</text>
+    </view>
+
+    <view class="card info-card qr-card">
+      <view class="qr-head">
+        <t-tag theme="{{actionType === 'checkout' ? 'warning' : 'primary'}}" variant="light">
+          {{actionType === 'checkout' ? '签退模式' : '签到模式'}}
+        </t-tag>
+        <text class="refreshing-text" wx:if="{{refreshing}}">更新中...</text>
+      </view>
+
+      <view class="qr-box">
+        <image
+          wx:if="{{qrImageUrl}}"
+          class="qr-image"
+          src="{{qrImageUrl}}"
+          mode="aspectFit"
+          show-menu-by-longpress="true"
+        />
+        <t-qrcode
+          wx:else
+          value="{{qrPayload}}"
+          size="{{360}}"
+          status="{{qrStatus}}"
+          bindrefresh="onTapRefresh"
+        />
+      </view>
+
+      <view class="countdown-panel">
+        <view class="countdown-item">
+          <text class="countdown-label">本码剩余</text>
+          <text class="countdown-value">{{displayRemainingSeconds}} 秒</text>
+        </view>
+        <view class="countdown-item">
+          <text class="countdown-label">提交宽限</text>
+          <text class="countdown-value">{{acceptRemainingSeconds}} 秒</text>
+        </view>
+      </view>
+
+      <text class="hint">二维码每 {{rotateSeconds}} 秒自动换新，扫码后 {{graceSeconds}} 秒内仍可提交。</text>
+      <text class="hint subtle" wx:if="{{lastGeneratedAt}}">最近生成：{{lastGeneratedAt}}</text>
+
+      <view class="btn-row">
+        <t-button size="small" theme="default" bindtap="onTapRefresh" loading="{{refreshing}}">
+          立即刷新
+        </t-button>
+        <t-button size="small" theme="default" bindtap="goBack">返回</t-button>
+      </view>
+    </view>
+
+    <view class="card info-card stats-card">
+      <view class="stats-head">
+        <text class="stats-title">实时统计</text>
+        <text class="stats-subtitle">{{activityTitle || '当前活动'}}</text>
+      </view>
+      <view class="stats-grid">
+        <view class="stats-item">
+          <text class="stats-label">已签到</text>
+          <text class="stats-value">{{checkinCount}}</text>
+        </view>
+        <view class="stats-item">
+          <text class="stats-label">已签退</text>
+          <text class="stats-value">{{checkoutCount}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

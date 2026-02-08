@@ -182,10 +182,10 @@ Phase 4
 ### Current Phase
 - `Completed`
 
-## 2026-02-08 普通用户活动可见性收敛（仅已报名/已参加）
+## 2026-02-08 普通用户活动可见性收敛（仅已报名/已签到/已签退）
 
 ### Goal
-- 普通用户只能看到“自己已报名的活动”与“自己已参加过的活动”。
+- 普通用户只能看到“自己已报名的活动”与“自己已签到/已签退过的活动”。
 - 普通用户不能看到“未报名且未参加”的活动。
 - 活动详情接口同样按上述规则做后端鉴权，防止通过活动 ID 越权查看。
 - 前后端 API 与全部文档保持一致。
@@ -199,3 +199,29 @@ Phase 4
 
 ### Current Phase
 - `Completed`
+
+## 2026-02-08 动态二维码签到/签退（管理员换码 + 普通用户扫码）
+
+### Goal
+- 管理员在活动页点击“签到码/签退码”后，进入二维码展示页并显示倒计时。
+- 二维码每 10 秒自动换新，普通用户扫码后允许 20 秒宽限提交。
+- 普通用户新增“签到/签退”页面，点击按钮打开摄像头扫码并提交。
+- 扫码成功后给出即时反馈，活动页“我的状态”更新为已签到/已签退。
+- 管理员二维码页实时更新已签到/已签退人数。
+- 前后端 API 与全部文档同步更新。
+
+### Phases
+- [x] Phase A: 先补测试（二维码会话 + 宽限提交 + 状态同步）
+- [x] Phase B: 改造 mock API（`qr-session` / `checkin-consume` / 统计字段）
+- [x] Phase C: 新增页面 `staff-qr` 与 `scan-action` 并接入路由
+- [x] Phase D: 适配活动页/详情页状态文案（已报名/已签到/已签退）
+- [x] Phase E: 全量更新文档（README/REQUIREMENTS/FUNCTIONAL/API_SPEC/changes）
+- [x] Phase F: 语法 + 测试验证，更新 planning 文件
+
+### Current Phase
+- `Completed`
+
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| `superpowers-codex` 在 PowerShell 直接执行失败（文件关联错误） | 1 | 改为 `node C:\\Users\\Lenovo\\.codex\\superpowers\\.codex\\superpowers-codex ...` |

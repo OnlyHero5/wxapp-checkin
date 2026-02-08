@@ -1,0 +1,64 @@
+<view class="page page-scan-action">
+  <view class="content">
+    <view wx:if="{{!isOnline}}" class="network-banner">当前无网络，暂时无法提交扫码结果</view>
+
+    <view class="header">
+      <text class="title">签到/签退</text>
+      <view class="title-line"></view>
+      <text class="subtitle">扫描管理员展示的动态二维码完成签到或签退</text>
+    </view>
+
+    <view class="card info-card scan-card">
+      <text class="scan-title">摄像头扫码</text>
+      <text class="scan-desc">点击按钮打开摄像头，扫描活动页面展示的二维码</text>
+
+      <view class="btn-center">
+        <t-button
+          theme="primary"
+          class="btn-primary scan-btn"
+          loading="{{submitting}}"
+          disabled="{{submitting || !isOnline || role !== 'normal'}}"
+          bindtap="onTapScan"
+        >
+          {{submitting ? '提交中...' : '扫码签到/签退'}}
+        </t-button>
+      </view>
+
+      <text class="hint subtle" wx:if="{{role !== 'normal'}}">当前账号为工作人员，仅普通用户可在此页面提交扫码。</text>
+      <text class="hint subtle" wx:if="{{role === 'normal'}}">二维码每 10 秒自动换新，过期后请重新扫码。</text>
+    </view>
+
+    <view class="card info-card result-card" wx:if="{{lastResult}}">
+      <view class="result-head">
+        <text class="result-title">{{lastResult.title}}</text>
+        <t-tag theme="{{lastResult.tagTheme}}" variant="light">{{lastResult.statusLabel}}</t-tag>
+      </view>
+
+      <view class="info-row" wx:if="{{lastResult.activityTitle}}">
+        <text class="label">活动</text>
+        <text class="value">{{lastResult.activityTitle}}</text>
+      </view>
+      <view class="info-row" wx:if="{{lastResult.actionLabel}}">
+        <text class="label">动作</text>
+        <text class="value">{{lastResult.actionLabel}}</text>
+      </view>
+      <view class="info-row">
+        <text class="label">结果</text>
+        <text class="value">{{lastResult.message}}</text>
+      </view>
+      <view class="info-row" wx:if="{{lastResult.checkedAt}}">
+        <text class="label">时间</text>
+        <text class="value">{{lastResult.checkedAt}}</text>
+      </view>
+
+      <text class="hint" wx:if="{{lastResult.detailHint}}">{{lastResult.detailHint}}</text>
+
+      <view class="result-actions">
+        <t-button size="small" theme="default" bindtap="onTapScan" disabled="{{submitting || role !== 'normal'}}">
+          继续扫码
+        </t-button>
+        <t-button size="small" theme="default" bindtap="goActivities">返回活动页</t-button>
+      </view>
+    </view>
+  </view>
+</view>

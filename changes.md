@@ -39,7 +39,7 @@
 
 ## 2026-02-08
 - 普通用户活动可见性收敛为“已报名或已参加”：
-  - 列表仅返回 `my_registered=true` 或 `my_checked_in=true` 的活动
+  - 列表仅返回 `my_registered=true` 或 `my_checked_in=true` 或 `my_checked_out=true` 的活动
   - 未报名未参加活动对普通用户不可见
 - 普通用户活动详情鉴权补齐：
   - 访问不可见活动详情返回 `forbidden`
@@ -47,3 +47,7 @@
 - 活动字段补充：
   - 新增 `my_registered` 并与 `my_checked_in` 共同驱动“我的状态”
 - 已同步更新主文档：`docs/API_SPEC.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md`。
+- 新增动态二维码签到/签退流程：
+  - 管理员在活动页点击“签到码/签退码”进入二维码页（10 秒自动换码，20 秒宽限）
+  - 普通用户新增“签到/签退”扫码页，摄像头扫码后即时反馈
+  - 后端新增二维码会话接口与扫码消费接口，管理员端实时更新已签到/已签退人数

@@ -3,6 +3,8 @@
     "pages/index/index",
     "pages/register/register",
     "pages/activity-detail/activity-detail",
+    "pages/scan-action/scan-action",
+    "pages/staff-qr/staff-qr",
     "pages/profile/profile"
   ],
   "window": {

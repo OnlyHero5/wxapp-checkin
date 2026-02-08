@@ -59,7 +59,7 @@
 
 ## 2026-02-08
 - 普通用户活动可见性收敛：
-  - `normal` 仅可见“已报名或已参加”活动（`my_registered || my_checked_in`）
+  - `normal` 仅可见“已报名/已签到/已签退”活动（`my_registered || my_checked_in || my_checked_out`）
   - 未报名且未参加活动不再出现在普通用户活动列表
 - 活动详情权限加固：
   - 普通用户访问未报名未参加活动详情时，接口返回 `forbidden`
@@ -69,3 +69,12 @@
   - 前端普通用户状态文案统一为“我的状态（已报名/已参加）”
 - 文档同步更新：
   - `docs/API_SPEC.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md`
+- 动态二维码签到/签退链路上线：
+  - 新增工作人员二维码页 `src/pages/staff-qr/*`（10 秒自动换码、20 秒宽限倒计时、实时人数轮询）
+  - 新增普通用户扫码页 `src/pages/scan-action/*`（摄像头扫码 + 结果反馈）
+  - 活动页工作人员动作改为“签到码/签退码”跳转二维码页；普通用户新增“去扫码”入口
+- API 升级：
+  - 新增 `POST /api/staff/activities/{activity_id}/qr-session`
+  - 新增 `POST /api/checkin/consume`
+  - 活动字段补充 `my_checked_out`、`checkout_count`
+  - 普通用户状态文案升级为“已报名/已签到/已签退”

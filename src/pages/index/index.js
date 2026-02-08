@@ -77,8 +77,11 @@ const resolveActivityTypeTone = (typeText) => {
 };
 
 const resolveNormalJoinStatus = (activity) => {
+  if (activity.my_checked_out) {
+    return "已签退";
+  }
   if (activity.my_checked_in) {
-    return "已参加";
+    return "已签到";
   }
   if (activity.my_registered) {
     return "已报名";
@@ -88,13 +91,14 @@ const resolveNormalJoinStatus = (activity) => {
 
 const buildActivityGroups = (activities, role) => {
   const roleFilteredActivities = role === "normal"
-    ? (activities || []).filter((item) => item.my_registered || item.my_checked_in)
+    ? (activities || []).filter((item) => item.my_registered || item.my_checked_in || item.my_checked_out)
     : (activities || []);
 
   const normalized = roleFilteredActivities.map((item) => ({
     ...item,
     my_registered: !!item.my_registered,
     my_checked_in: !!item.my_checked_in,
+    my_checked_out: !!item.my_checked_out,
     my_join_status: resolveNormalJoinStatus(item),
     progress_status: resolveActivityProgress(item),
     type_tone: resolveActivityTypeTone(item.activity_type)
@@ -201,11 +205,11 @@ Page({
   },
   onTapCheckin(e) {
     const activityId = e.currentTarget.dataset.id;
-    this.scanAndSubmit(activityId, "checkin");
+    this.openStaffQrPage(activityId, "checkin");
   },
   onTapCheckout(e) {
     const activityId = e.currentTarget.dataset.id;
-    this.scanAndSubmit(activityId, "checkout");
+    this.openStaffQrPage(activityId, "checkout");
   },
   onTapDetail(e) {
     const activityId = e.currentTarget.dataset.id;
@@ -214,7 +218,15 @@ Page({
     }
     wx.navigateTo({ url: `/pages/activity-detail/activity-detail?id=${activityId}` });
   },
-  scanAndSubmit(activityId, actionType) {
+  onGoScanPage() {
+    wx.navigateTo({ url: "/pages/scan-action/scan-action" });
+  },
+  openStaffQrPage(activityId, actionType) {
+    if (this.data.role !== "staff") {
+      ui.showToast("仅工作人员可展示二维码");
+      return;
+    }
+
     if (!this.data.isOnline) {
       ui.showToast("当前无网络");
       return;
@@ -233,31 +245,9 @@ Page({
       return;
     }
 
-    this.setData({
-      actionLoadingId: activityId,
-      actionLoadingType: actionType,
-      lastStatus: null
-    });
-
-    wx.scanCode({
-      onlyFromCamera: true,
-      success: async (res) => {
-        try {
-          const result = await api.staffActivityAction({
-            sessionToken: this.data.sessionToken,
-            activityId,
-            actionType,
-            qrToken: res.result,
-          });
-          this.handleActionResult(result, actionType, activity.activity_title);
-        } catch (err) {
-          ui.showToast(`${actionType === "checkout" ? "签退" : "签到"}失败，请重试`);
-        }
-        this.setData({ actionLoadingId: "", actionLoadingType: "" });
-      },
-      fail: () => {
-        this.setData({ actionLoadingId: "", actionLoadingType: "" });
-      }
+    const encodedTitle = encodeURIComponent(activity.activity_title || "");
+    wx.navigateTo({
+      url: `/pages/staff-qr/staff-qr?id=${activityId}&actionType=${actionType}&title=${encodedTitle}`
     });
   },
   handleActionResult(result, actionType, activityTitle) {
