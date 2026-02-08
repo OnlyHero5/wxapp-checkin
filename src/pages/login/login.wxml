@@ -1,0 +1,16 @@
+<view class="login-page">
+  <view class="panel">
+    <view class="title">登录状态已失效</view>
+    <view class="desc" wx:if="{{loading}}">正在重新登录，请稍候...</view>
+    <view class="desc error" wx:if="{{!loading && errorMessage}}">{{errorMessage}}</view>
+    <button
+      class="retry-button"
+      type="primary"
+      loading="{{submitting}}"
+      wx:if="{{!loading}}"
+      bindtap="onTapRetry"
+    >
+      重新登录
+    </button>
+  </view>
+</view>

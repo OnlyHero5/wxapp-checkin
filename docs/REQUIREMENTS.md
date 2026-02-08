@@ -1,6 +1,6 @@
 # 微信小程序活动二维码签到需求文档
 
-文档版本: v1.3  
+文档版本: v1.4  
 状态: 持续迭代  
 更新日期: 2026-02-08  
 项目: wxapp-checkin
@@ -52,6 +52,8 @@
 - FR-001 前端需通过微信登录换取 `session_token`
 - FR-002 登录返回需包含 `role` 与 `permissions`
 - FR-003 登录返回需包含 `user_profile`（含积分字段）
+- FR-003A 会话失效时（`status=forbidden` 且 `error_code=session_expired`），前端必须清理本地登录态并切换到登录页重新登录
+- FR-003B 后端在 `session_token` 无效或过期时，必须返回机器可识别错误码 `error_code=session_expired`（兼容 `token_expired`）
 
 ### 6.2 注册绑定
 - FR-004 提供绑定表单（学号、姓名、学院/部门、社团/组织）
@@ -127,6 +129,7 @@
 - 活动列表接口: `progress_status`, `support_checkout`, `has_detail`, `checkin_count`, `checkout_count`, `my_registered`, `my_checked_in`, `my_checked_out`
 - 二维码配置接口: `rotate_seconds`, `grace_seconds`, `server_time`（二维码内容由前端本地生成）
 - 扫码提交接口: `status`, `message`, `action_type`, `checkin_record_id`, `in_grace_window`
+- 会话失效信号: `status=forbidden`, `error_code=session_expired`, `message=会话失效，请重新登录`
 
 > 详细字段与前端页面映射见 `docs/API_SPEC.md`。
 
@@ -138,6 +141,7 @@
 - 普通用户在 20 秒宽限内扫码可成功提交，超时返回过期
 - 注册绑定后可正确跳转并刷新资料显示
 - 关键错误场景（无网/二维码失效/权限不足）有明确提示
+- 关键错误场景（会话失效）必须触发跳转登录页并自动重登流程
 
 ## 10. 未决问题
 - 历史记录页面是否在后续版本重新上线
@@ -152,3 +156,4 @@
 - 2026-02-08：新增管理员动态二维码流程（10 秒轮换 + 20 秒宽限），新增普通用户“签到/签退”扫码页。
 - 2026-02-08：二维码职责切换为前端本地生成与轮换，后端仅保留业务校验与统计更新。
 - 2026-02-08：注册绑定新增“学号+姓名命中管理员名册”角色判定，命中后直接进入管理员页面。
+- 2026-02-08：新增会话失效标准信号与前端登录页重登要求（`forbidden + error_code=session_expired`）。

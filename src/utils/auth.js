@@ -40,14 +40,12 @@ const applyLoginProfile = (data) => {
   storage.setBound(isRegistered);
 };
 
-const ensureSession = async () => {
-  const cached = storage.getSessionToken();
-  if (cached) {
-    if (!storage.getRole()) {
-      storage.setRole("normal");
-    }
-    return cached;
-  }
+const clearSession = () => {
+  storage.clearAuthState();
+};
+
+const performLogin = async (options = {}) => {
+  const { silent = false } = options;
   try {
     const loginRes = await wxLogin();
     const data = await api.login(loginRes.code);
@@ -57,12 +55,33 @@ const ensureSession = async () => {
       applyLoginProfile(data);
       return data.session_token;
     }
+    if (!silent) {
+      ui.showToast((data && data.message) || "登录失败，请重试");
+    }
   } catch (err) {
-    ui.showToast("登录失败，请重试");
+    if (!silent) {
+      ui.showToast("登录失败，请重试");
+    }
   }
   return "";
 };
 
+const ensureSession = async (options = {}) => {
+  const { forceRefresh = false, silent = false } = options;
+  const cached = storage.getSessionToken();
+  if (cached && !forceRefresh) {
+    if (!storage.getRole()) {
+      storage.setRole("normal");
+    }
+    return cached;
+  }
+  if (forceRefresh) {
+    storage.setSessionToken("");
+  }
+  return performLogin({ silent });
+};
+
 module.exports = {
-  ensureSession
+  ensureSession,
+  clearSession
 };

@@ -120,6 +120,20 @@ const storage = {
   },
   setBound(value) {
     set(KEYS.hasBound, value ? "1" : "");
+  },
+  clearAuthState() {
+    this.setSessionToken("");
+    this.setWxIdentity("");
+    this.setStudentId("");
+    this.setName("");
+    this.setDepartment("");
+    this.setClub("");
+    this.setAvatarUrl("");
+    this.setSocialScore(0);
+    this.setLectureScore(0);
+    this.setRole("normal");
+    this.setPermissions([]);
+    this.setBound(false);
   }
 };
 

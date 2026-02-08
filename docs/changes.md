@@ -58,6 +58,15 @@
   - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md` 全量同步当前实现
 
 ## 2026-02-08
+- 会话失效恢复链路上线：
+  - 前端新增 `pages/login` 统一重登页，收到会话失效后自动切换并触发 `wx.login`
+  - API 层新增会话失效统一识别：`status=forbidden` + `error_code=session_expired`
+  - 本地登录态清理统一下沉到 `storage.clearAuthState()`
+- 文档口径补齐：
+  - `docs/API_SPEC.md` 升级到 v4.4，新增“会话失效信号约定（强制）”
+  - `docs/FUNCTIONAL_SPEC.md` 升级到 v1.5，新增登录页与会话失效恢复流程
+  - `docs/REQUIREMENTS.md` 升级到 v1.4，新增会话失效强制需求与验收项
+  - `README.md` 同步补充会话失效处理闭环
 - 普通用户活动可见性收敛：
   - `normal` 仅可见“已报名/已签到/已签退”活动（`my_registered || my_checked_in || my_checked_out`）
   - 未报名且未参加活动不再出现在普通用户活动列表

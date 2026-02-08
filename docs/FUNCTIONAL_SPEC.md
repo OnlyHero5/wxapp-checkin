@@ -1,6 +1,6 @@
 # 微信小程序活动二维码签到功能说明书
 
-文档版本: v1.4  
+文档版本: v1.5  
 状态: 进行中  
 更新日期: 2026-02-08  
 项目: wxapp-checkin  
@@ -94,6 +94,12 @@
 - 调用注册接口成功后更新本地绑定状态
 - 以后端返回的 `role/permissions` 覆盖本地缓存并按角色跳转（`staff -> 活动页`，`normal -> 我的`）
 
+### 4.7 登录页（`pages/login`）
+- 触发条件：业务接口返回会话失效信号（`status=forbidden` 且 `error_code=session_expired`）。
+- 页面行为：自动发起重新登录（`wx.login -> POST /api/auth/wx-login`）。
+- 失败处理：显示“重新登录”按钮，用户手动重试。
+- 成功处理：跳转回主 tab（当前实现为 `pages/index`）。
+
 ## 5. 关键流程
 
 ### 5.1 登录初始化流程
@@ -101,6 +107,12 @@
 2. 前端执行 `wx.login`，请求 `POST /api/auth/wx-login`
 3. 缓存 `session_token/role/permissions/user_profile`
 4. 页面继续拉取业务数据
+
+### 5.1A 会话失效恢复流程
+1. 任意业务接口返回 `status=forbidden` 且 `error_code=session_expired`。
+2. 前端清理本地登录态（`session_token/wx_identity/role/permissions/绑定信息`）。
+3. 前端 `reLaunch` 到 `pages/login`。
+4. 登录页自动重新登录，成功后回到主 tab；失败则提示重试。
 
 ### 5.2 工作人员动态二维码流程
 1. 在“正在进行”卡片点击 `签到` 或 `签退`
@@ -142,6 +154,11 @@
 - 说明:
   - 对未注册用户，登录返回的角色可为默认值。
   - 角色最终归一以注册接口（管理员名册校验）返回为准。
+
+会话失效统一信号（A-02~A-06）:
+- `status=forbidden`
+- `error_code=session_expired`（建议兼容 `token_expired`）
+- `message=会话失效，请重新登录`
 
 ### 6.1B 注册绑定接口
 - `POST /api/register`
@@ -215,7 +232,8 @@
   - 详情页显示“可能不是最新”提示
 - `invalid_qr`: 提示二维码失效
 - `expired`: 提示二维码已过期，需重新扫码
-- `forbidden`: 提示无权限或当前活动状态不允许操作
+- `forbidden + error_code=session_expired`: 清理登录态并跳转登录页自动重登
+- `forbidden`（无 `session_expired`）: 提示无权限或当前活动状态不允许操作
 - 其他异常: 统一提示重试
 
 ## 8. 验收要点
@@ -227,8 +245,10 @@
 - 普通用户活动详情禁止越权查看（未报名未参加活动）
 - 工作人员活动卡片显示 `checkin_count`
 - 普通用户“我的”页显示积分，不显示“曾参加活动”模块
+- 会话失效时前端必须跳转登录页并重新登录，成功后可继续业务操作
 
 ## 9. 更新记录
+- 2026-02-08：新增会话失效恢复机制文档：`forbidden + error_code=session_expired` 触发登录页重登流程。
 - 2026-02-04：完成 TDesign 化与深色主题升级。
 - 2026-02-06：切换角色分流活动卡片模型，新增普通用户积分与“我的签到状态”。
 - 2026-02-07：活动页升级为双分组模型；已完成活动仅详情；同步 API 协作规则。

@@ -27,6 +27,7 @@
 - 已完成活动仅支持“查看详情”，不再允许签到/签退动作。
 - 管理员二维码由前端本地动态生成：`10 秒换码` + `20 秒宽限提交`（后端仅做业务校验）。
 - 注册绑定时后端会用 `学号+姓名` 查询管理员名册，命中后返回 `staff` 角色并直接进入管理员页面。
+- 会话失效时（`forbidden + error_code=session_expired`）前端会清理本地登录态并跳转登录页自动重登。
 - 普通用户在独立“签到/签退”页面调用摄像头扫码并即时收到成功/失败反馈。
 - 普通用户只可见与自己有关的活动：`已报名 / 已签到 / 已签退`，不可见无关活动。
 - 管理员可看到全量活动与实时统计字段：`checkin_count` / `checkout_count`。
@@ -83,6 +84,7 @@ src/pages/
 | 获取换码配置 | `POST /api/staff/activities/{activity_id}/qr-session` | `rotate_seconds`, `grace_seconds`, `server_time` |
 | 扫码提交动作 | `POST /api/checkin/consume` | `status`, `message`, `action_type`, `checkin_record_id`, `in_grace_window` |
 | 拉取活动详情 | `GET /api/staff/activities/{activity_id}` | `has_detail` 及详情字段 |
+| 会话失效处理 | A-02~A-06 | `status=forbidden`, `error_code=session_expired`（前端跳 `pages/login` 重登） |
 
 > 完整字段与错误码映射见 `docs/API_SPEC.md`。
 

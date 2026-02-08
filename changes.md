@@ -38,6 +38,10 @@
 - 同步更新 `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md`。
 
 ## 2026-02-08
+- 会话失效恢复能力补齐：
+  - 统一约定后端返回 `status=forbidden + error_code=session_expired`
+  - 前端收到后清理本地登录态并跳转 `pages/login` 自动重登
+  - `README.md` / `docs/API_SPEC.md` / `docs/FUNCTIONAL_SPEC.md` / `docs/REQUIREMENTS.md` 同步更新
 - 普通用户活动可见性收敛为“已报名或已参加”：
   - 列表仅返回 `my_registered=true` 或 `my_checked_in=true` 或 `my_checked_out=true` 的活动
   - 未报名未参加活动对普通用户不可见

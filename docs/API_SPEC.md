@@ -1,9 +1,9 @@
 # API 协议规范（后端实施手册）
 
-文档版本: v4.3  
+文档版本: v4.4  
 更新日期: 2026-02-08  
 适用分支: `main`  
-代码对齐基线: `src/utils/api.js`、`src/utils/auth.js`、`src/pages/index/index.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`、`src/pages/activity-detail/activity-detail.js`、`src/pages/register/register.js`
+代码对齐基线: `src/utils/api.js`、`src/utils/auth.js`、`src/pages/login/login.js`、`src/pages/index/index.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`、`src/pages/activity-detail/activity-detail.js`、`src/pages/register/register.js`
 
 ---
 
@@ -85,6 +85,24 @@
 }
 ```
 
+### 3.3A 会话失效信号约定（强制）
+
+当 `session_token` 无效或过期时，后端必须返回可机器识别的失效信号，避免前端误把所有 `forbidden` 当作会话问题：
+
+```json
+{
+  "status": "forbidden",
+  "error_code": "session_expired",
+  "message": "会话失效，请重新登录"
+}
+```
+
+约束：
+1. `error_code` 建议固定为 `session_expired`（兼容值可保留 `token_expired`）。
+2. `status=forbidden` 仅表示“被拒绝”，最终是否触发重登以 `error_code` 为准。
+3. 前端收到该信号后必须执行：清理本地登录态 -> 跳转 `pages/login/login` -> 发起重新登录。
+4. 登录接口 `POST /api/auth/wx-login` 本身不适用该规则。
+
 ## 3.4 通用业务状态字典
 
 | 字段 | 类型 | 可选值 | 业务含义 |
@@ -93,6 +111,7 @@
 | `action_type` | string | `checkin` / `checkout` | 动作类型 |
 | `progress_status` | string | `ongoing` / `completed` | 活动进度 |
 | `status` | string | `success` / `forbidden` / `invalid_qr` / `expired` / `duplicate` / `invalid_activity` / `invalid_param` / `student_already_bound` / `wx_already_bound` / `failed` | 业务处理结果 |
+| `error_code` | string | `session_expired` / `token_expired`（建议） | 机器可读错误码；会话失效时必须返回 |
 
 ## 3.5 payload 协议（A-06 核心）
 
@@ -1026,6 +1045,7 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 
 ## 9. 版本记录
 
+- 2026-02-08 v4.4：新增“3.3A 会话失效信号约定（强制）”，明确 `status=forbidden + error_code=session_expired` 为会话过期标准返回；补充前端收到后必须清理会话并跳转 `pages/login/login` 重登。
 - 2026-02-08 v4.3：补充“参数解释总则（3.7）”；为 A-01~A-06 增加参数落地详解（前端来源/后端解析/失败码）；新增 A-06 一致性校验详解（矩阵 + 伪代码）；新增全局参数速查表。
 - 2026-02-08 v4.2：A-02 新增“学号+姓名命中管理员名册 -> staff 角色”后端处理步骤；补齐 `role/permissions/admin_verified` 注册响应字段与管理员命中示例；明确 A-01 到 A-02 的角色最终归一关系。
 - 2026-02-08 v4.1：补齐 6 个主链路 API 的请求传参示例；明确 `wx_login_code`、`session_token`、`payload_encrypted` 的后端解析技术建议；新增 `is_registered` 字段与注册冲突状态（`student_already_bound`、`wx_already_bound`）。

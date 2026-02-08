@@ -250,6 +250,105 @@ const normalizeTextValue = (value) => {
   return `${value || ""}`.trim();
 };
 
+const SESSION_EXPIRED_ERROR_CODES = [
+  "session_expired",
+  "token_expired",
+  "invalid_session",
+  "invalid_session_token",
+  "session_invalid"
+];
+
+const SESSION_EXPIRED_MESSAGE_KEYWORDS = [
+  "会话失效",
+  "重新登录",
+  "session expired",
+  "token expired",
+  "invalid session"
+];
+
+let sessionExpiredRedirecting = false;
+
+const shouldCheckSessionExpiryForUrl = (url) => {
+  return normalizeTextValue(url) !== "/api/auth/wx-login";
+};
+
+const isSessionExpiredResponse = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  const errorCode = normalizeTextValue(payload.error_code || payload.code).toLowerCase();
+  if (SESSION_EXPIRED_ERROR_CODES.includes(errorCode)) {
+    return true;
+  }
+
+  const status = normalizeTextValue(payload.status).toLowerCase();
+  if (status !== "forbidden" && status !== "unauthorized") {
+    return false;
+  }
+  const message = normalizeTextValue(payload.message).toLowerCase();
+  if (!message) {
+    return false;
+  }
+  return SESSION_EXPIRED_MESSAGE_KEYWORDS.some((keyword) => message.includes(keyword.toLowerCase()));
+};
+
+const redirectToLoginForExpiredSession = (payload = {}) => {
+  if (sessionExpiredRedirecting) {
+    return;
+  }
+  sessionExpiredRedirecting = true;
+  storage.clearAuthState();
+
+  const tip = normalizeTextValue(payload.message) || "登录状态已失效，请重新登录";
+  if (typeof wx !== "undefined" && wx && typeof wx.showToast === "function") {
+    wx.showToast({
+      title: tip,
+      icon: "none",
+      duration: 1800
+    });
+  }
+
+  if (typeof wx !== "undefined" && wx && typeof wx.reLaunch === "function") {
+    wx.reLaunch({
+      url: "/pages/login/login",
+      complete: () => {
+        setTimeout(() => {
+          sessionExpiredRedirecting = false;
+        }, 300);
+      }
+    });
+    return;
+  }
+  sessionExpiredRedirecting = false;
+};
+
+const isExplicitMockExpiredToken = (sessionToken) => {
+  const token = normalizeTextValue(sessionToken).toLowerCase();
+  if (!token) {
+    return false;
+  }
+  return token === "expired_token"
+    || token === "token_expired"
+    || token === "session_expired"
+    || token.includes("expired");
+};
+
+const shouldMockReturnSessionExpired = (url, data) => {
+  const protectedEndpoint = url === "/api/register"
+    || url === "/api/checkin/verify"
+    || url === "/api/checkin/consume"
+    || url === "/api/checkin/records"
+    || url.startsWith("/api/checkin/records/")
+    || url === "/api/staff/activities"
+    || url.startsWith("/api/staff/activities/")
+    || url === "/api/staff/activity-action";
+
+  if (!protectedEndpoint) {
+    return false;
+  }
+  return isExplicitMockExpiredToken(data && data.session_token);
+};
+
 const normalizeStudentId = (value) => {
   return normalizeTextValue(value);
 };
@@ -510,6 +609,15 @@ const createRecord = (activity, actionType) => {
 const mockRequest = (url, data) => {
   return new Promise((resolve) => {
     setTimeout(() => {
+      if (shouldMockReturnSessionExpired(url, data)) {
+        resolve({
+          status: "forbidden",
+          message: "会话失效，请重新登录",
+          error_code: "session_expired"
+        });
+        return;
+      }
+
       if (url === "/api/auth/wx-login") {
         const wxLoginCode = normalizeTextValue(data.wx_login_code);
         if (!wxLoginCode) {
@@ -891,21 +999,35 @@ const mockRequest = (url, data) => {
 };
 
 const request = (options) => {
+  const requestUrl = normalizeTextValue(options && options.url);
+  const shouldCheckSessionExpiry = shouldCheckSessionExpiryForUrl(requestUrl);
+
   if (config.mock) {
-    return mockRequest(options.url, options.data || {});
+    return mockRequest(requestUrl, options.data || {}).then((data) => {
+      if (shouldCheckSessionExpiry && isSessionExpiredResponse(data)) {
+        redirectToLoginForExpiredSession(data);
+      }
+      return data;
+    });
   }
 
   return new Promise((resolve, reject) => {
     wx.request({
-      url: `${config.baseUrl}${options.url}`,
+      url: `${config.baseUrl}${requestUrl}`,
       method: options.method || "GET",
       data: options.data || {},
       header: {
         "content-type": "application/json"
       },
       success: (res) => {
+        const payload = res ? res.data : {};
+        const httpUnauthorized = res && (res.statusCode === 401 || res.statusCode === 403);
+        if (shouldCheckSessionExpiry && (isSessionExpiredResponse(payload) || httpUnauthorized)) {
+          redirectToLoginForExpiredSession(payload);
+        }
+
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(res.data);
+          resolve(payload);
         } else {
           reject(res);
         }

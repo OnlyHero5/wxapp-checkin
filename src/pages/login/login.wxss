@@ -1,0 +1,41 @@
+.login-page {
+  min-height: 100vh;
+  background: #0b0d12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  box-sizing: border-box;
+}
+
+.panel {
+  width: 100%;
+  max-width: 640rpx;
+  background: #111620;
+  border-radius: 24rpx;
+  padding: 48rpx 40rpx;
+  box-sizing: border-box;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.title {
+  color: #f5f7fb;
+  font-size: 36rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.desc {
+  margin-top: 20rpx;
+  color: #c6ced9;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.desc.error {
+  color: #ff8e8e;
+}
+
+.retry-button {
+  margin-top: 36rpx;
+}
