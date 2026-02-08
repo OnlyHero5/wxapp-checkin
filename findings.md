@@ -265,3 +265,44 @@
   - 增补解析优先级、字段一致性校验、状态机约束、事务一致性、并发/防重放要求。
 - 协议关键结论：
   - 为保证前端能拿到业务错误文案，建议业务失败保持 HTTP 2xx，并通过响应体 `status/message` 表达。
+
+## 2026-02-08 登录注册绑定补齐（首次登录 + 防重复绑定）
+- 代码现状问题确认：
+  - mock 登录接口一直返回带学号姓名的 `user_profile`，导致“首次登录未注册”分支几乎不可触发。
+  - 注册接口未校验“学号+姓名唯一”与“微信唯一绑定”，无法阻止多微信重复绑定同一身份。
+  - `auth.applyLoginProfile` 仅在命中学号姓名时设为已绑定，但未对未注册返回做清理，存在旧缓存误判风险。
+- 实施决策：
+  - 登录返回新增 `is_registered`（后端主判断字段），未注册用户允许返回空 `student_id/name`。
+  - mock 注册新增两类冲突状态：
+    - `student_already_bound`：同学号姓名已被其他微信绑定。
+    - `wx_already_bound`：同一微信已绑定其他学号姓名。
+  - 注册建议以数据库唯一索引兜底并发：`UNIQUE(wx_identity)` + `UNIQUE(student_id, name)`（或 `UNIQUE(student_id)`）。
+  - 前端以 `is_registered` 为准维护本地 `has_bound`，未注册时主动清空学号姓名缓存。
+- 测试与验证结论：
+  - 新增 `src/tests/auth-register-binding.test.js`（覆盖首次未注册、绑定成功、双向冲突拦截）。
+  - 新增 `src/tests/auth-session-registration-state.test.js`（覆盖 `ensureSession` 未注册状态写入）。
+  - 新增/既有测试全部通过，行为符合预期。
+
+## 2026-02-08 API 文档升级（v4.1）
+- 文档升级点：
+  - 为 A-01~A-06 全部补齐“请求示例（传参示例）”。
+  - 新增“3.6 后端解析技术建议”，明确 Node.js / Spring Boot 在 JSON 解析、参数校验、`wx_login_code` 兑换、会话、解密验签、防重放上的推荐技术。
+  - A-01 新增 `is_registered` 字段说明与“未注册成功登录”示例。
+  - A-02 新增 `student_already_bound`、`wx_already_bound` 的触发条件与冲突响应示例。
+
+## 2026-02-08 管理员注册判定补齐（student_id + name）
+- 业务缺口确认：
+  - 注册流程之前只做“绑定唯一性”检查，未把 `student_id + name` 映射到管理员名册。
+  - 注册页成功后未使用后端返回角色刷新本地 `role/permissions`，可能导致管理员注册后仍走普通用户页面。
+- 实施决策：
+  - 在 `POST /api/register` 中新增管理员名册判定：
+    - 命中名册 -> `role=staff`, 下发管理员权限。
+    - 未命中 -> `role=normal`, 权限为空。
+  - 注册成功响应新增：
+    - `role`
+    - `permissions`
+    - `admin_verified`
+  - 注册页成功分支改为“以后端返回角色为准”进行本地落盘与跳转。
+- 校验结论：
+  - 新增/更新测试覆盖管理员命中与未命中两条路径，回归通过。
+  - API 文档升级到 v4.2，并同步 README / REQUIREMENTS / FUNCTIONAL 口径。

@@ -26,6 +26,7 @@
 - 活动列表双分组：`正在进行`（上）+ `已完成`（下），两组均按时间倒序。
 - 已完成活动仅支持“查看详情”，不再允许签到/签退动作。
 - 管理员二维码由前端本地动态生成：`10 秒换码` + `20 秒宽限提交`（后端仅做业务校验）。
+- 注册绑定时后端会用 `学号+姓名` 查询管理员名册，命中后返回 `staff` 角色并直接进入管理员页面。
 - 普通用户在独立“签到/签退”页面调用摄像头扫码并即时收到成功/失败反馈。
 - 普通用户只可见与自己有关的活动：`已报名 / 已签到 / 已签退`，不可见无关活动。
 - 管理员可看到全量活动与实时统计字段：`checkin_count` / `checkout_count`。
@@ -42,6 +43,12 @@
 | 查看总签到/签退人数 | `No` | `Yes` |
 | 查看个人状态 | `Yes`（`my_registered/my_checked_in/my_checked_out`） | 可选 |
 | 查看个人积分 | `Yes`（`social_score/lecture_score`） | 可选 |
+
+角色判定规则:
+- 首次登录后若未注册，用户先进入绑定流程。
+- 绑定提交 `student_id + name` 后，后端查询管理员名册：
+  - 命中 -> 返回 `staff` + 管理员权限，前端跳转活动页。
+  - 未命中 -> 返回 `normal`，前端跳转“我的”页。
 
 ## 签到/签退流程
 ### 管理员端
@@ -71,7 +78,7 @@ src/pages/
 | 目的 | 接口 | 关键返回字段 |
 |------|------|--------------|
 | 登录建会话 | `POST /api/auth/wx-login` | `role`, `permissions`, `user_profile` |
-| 绑定注册 | `POST /api/register` | `role`, `permissions`, `user_profile` |
+| 绑定注册 | `POST /api/register` | `role`, `permissions`, `admin_verified`, `user_profile` |
 | 拉取活动列表 | `GET /api/staff/activities` | `progress_status`, `my_*`, `checkin_count`, `checkout_count` |
 | 获取换码配置 | `POST /api/staff/activities/{activity_id}/qr-session` | `rotate_seconds`, `grace_seconds`, `server_time` |
 | 扫码提交动作 | `POST /api/checkin/consume` | `status`, `message`, `action_type`, `checkin_record_id`, `in_grace_window` |

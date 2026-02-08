@@ -297,3 +297,45 @@ Phase 4
 - [x] 补齐逐字段出参语义与 A-06 事务/并发/防重放要求
 - [x] 更新变更日志与 planning 文件
 - `Current Phase` -> `Completed (ready to commit/push)`
+
+## 2026-02-08 登录注册绑定补齐 + API 文档 v4.1
+
+### Goal
+- 完整支持“微信首次登录识别未注册 -> 引导注册绑定 -> 防止同学号姓名多微信绑定”。
+- 在 `docs/API_SPEC.md` 中补齐高可读传参示例与后端解析技术说明。
+
+### Phases
+- [x] Phase A: 以测试定义行为（未注册识别、重复绑定拦截、前端会话绑定状态）
+- [x] Phase B: 改造 `src/utils/api.js` mock 登录/注册鉴权与唯一性约束
+- [x] Phase C: 改造 `src/utils/auth.js`，按 `is_registered` 严格维护本地绑定状态
+- [x] Phase D: 升级 `docs/API_SPEC.md` 到 v4.1（请求示例 + 解析技术 + 新状态码）
+- [x] Phase E: 回归测试与语法校验，更新 planning 文件
+
+### Current Phase
+- `Completed`
+
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| `superpowers-codex` 在 PowerShell 直接执行失败（文件关联问题） | 1 | 改用 `node C:\\Users\\Lenovo\\.codex\\superpowers\\.codex\\superpowers-codex ...` 方式执行 |
+
+## 2026-02-08 管理员注册名册校验 + 页面分流 + 文档全量同步
+
+### Goal
+- 注册时后端按 `student_id + name` 查询管理员名册，命中后返回 `staff` 并进入管理员页面。
+- 同步更新全部核心文档并推送到 GitHub。
+
+### Phases
+- [x] Phase A: 先补失败测试（管理员注册角色判定与返回字段）
+- [x] Phase B: 改造 `src/utils/api.js` 注册逻辑（名册校验 -> 角色归一）
+- [x] Phase C: 改造 `src/pages/register/register.js`（按后端返回角色即时跳转）
+- [x] Phase D: 更新文档（README/REQUIREMENTS/FUNCTIONAL/API_SPEC/changes）
+- [x] Phase E: 回归验证并准备提交推送
+
+### Current Phase
+- `Completed`
+
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| PowerShell 下 `rg` 含括号/引号模式导致正则解析失败 | 1 | 改为 `--fixed-strings` 与分步检索 |

@@ -15,31 +15,29 @@ const applyLoginProfile = (data) => {
   const profile = (data && data.user_profile) || {};
   const role = (data && data.role) || "normal";
   const permissions = (data && data.permissions) || [];
+  const hasExplicitRegisterFlag = data && Object.prototype.hasOwnProperty.call(data, "is_registered");
+  const isRegistered = hasExplicitRegisterFlag
+    ? !!data.is_registered
+    : !!(profile.student_id && profile.name);
 
   storage.setRole(role);
   storage.setPermissions(permissions);
 
-  if (profile.student_id) {
-    storage.setStudentId(profile.student_id);
+  if (isRegistered) {
+    storage.setStudentId(profile.student_id || "");
+    storage.setName(profile.name || "");
+    storage.setDepartment(profile.department || "");
+    storage.setClub(profile.club || "");
+  } else {
+    storage.setStudentId("");
+    storage.setName("");
+    storage.setDepartment("");
+    storage.setClub("");
   }
-  if (profile.name) {
-    storage.setName(profile.name);
-  }
-  if (profile.department) {
-    storage.setDepartment(profile.department);
-  }
-  if (profile.club) {
-    storage.setClub(profile.club);
-  }
-  if (profile.avatar_url) {
-    storage.setAvatarUrl(profile.avatar_url);
-  }
+  storage.setAvatarUrl(profile.avatar_url || "");
   storage.setSocialScore(profile.social_score || 0);
   storage.setLectureScore(profile.lecture_score || 0);
-
-  if (storage.getStudentId() && storage.getName()) {
-    storage.setBound(true);
-  }
+  storage.setBound(isRegistered);
 };
 
 const ensureSession = async () => {

@@ -57,7 +57,11 @@
 - FR-004 提供绑定表单（学号、姓名、学院/部门、社团/组织）
 - FR-005 学号与姓名必填
 - FR-006 绑定成功后缓存用户资料并更新绑定状态
-- FR-007 绑定成功后按角色跳转首页（staff->活动、normal->我的）
+- FR-007 后端必须使用 `student_id + name` 查询管理员名册/权限表，确定最终角色
+- FR-007A 命中管理员名册时，注册返回 `staff` 与权限集，前端直接进入管理员活动页
+- FR-007B 未命中管理员名册时，注册返回 `normal`，前端进入“我的”页
+- FR-007C 同一学号姓名不可被多微信绑定（唯一约束）
+- FR-007D 同一微信不可重复绑定其他学号姓名（唯一约束）
 
 ### 6.3 活动页（核心）
 - FR-008 活动卡片分为 `正在进行` 与 `已完成` 两组
@@ -119,6 +123,7 @@
 
 ### 8.3 关键字段要求
 - 登录接口: `session_token`, `role`, `permissions`, `user_profile.*`
+- 注册接口: `role`, `permissions`, `admin_verified`, `is_registered`, `user_profile.*`
 - 活动列表接口: `progress_status`, `support_checkout`, `has_detail`, `checkin_count`, `checkout_count`, `my_registered`, `my_checked_in`, `my_checked_out`
 - 二维码配置接口: `rotate_seconds`, `grace_seconds`, `server_time`（二维码内容由前端本地生成）
 - 扫码提交接口: `status`, `message`, `action_type`, `checkin_record_id`, `in_grace_window`
@@ -146,3 +151,4 @@
 - 2026-02-08：普通用户活动可见性收敛为“已报名/已签到/已签退”，详情接口增加同口径鉴权。
 - 2026-02-08：新增管理员动态二维码流程（10 秒轮换 + 20 秒宽限），新增普通用户“签到/签退”扫码页。
 - 2026-02-08：二维码职责切换为前端本地生成与轮换，后端仅保留业务校验与统计更新。
+- 2026-02-08：注册绑定新增“学号+姓名命中管理员名册”角色判定，命中后直接进入管理员页面。

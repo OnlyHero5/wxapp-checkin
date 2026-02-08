@@ -1,6 +1,6 @@
 # API 协议规范（后端实施手册）
 
-文档版本: v4.0  
+文档版本: v4.2  
 更新日期: 2026-02-08  
 适用分支: `main`  
 代码对齐基线: `src/utils/api.js`、`src/utils/auth.js`、`src/pages/index/index.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`、`src/pages/activity-detail/activity-detail.js`、`src/pages/register/register.js`
@@ -92,7 +92,7 @@
 | `role` | string | `normal` / `staff` | 用户角色 |
 | `action_type` | string | `checkin` / `checkout` | 动作类型 |
 | `progress_status` | string | `ongoing` / `completed` | 活动进度 |
-| `status` | string | `success` / `forbidden` / `invalid_qr` / `expired` / `duplicate` / `invalid_activity` / `invalid_param` / `failed` | 业务处理结果 |
+| `status` | string | `success` / `forbidden` / `invalid_qr` / `expired` / `duplicate` / `invalid_activity` / `invalid_param` / `student_already_bound` / `wx_already_bound` / `failed` | 业务处理结果 |
 
 ## 3.5 payload 协议（A-06 核心）
 
@@ -118,6 +118,24 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 4. `now < display_start_at` -> future（无效）
 5. `now > accept_expire_at` -> expired（过期）
 
+## 3.6 后端解析技术建议（必须明确）
+
+以下是本项目推荐的后端解析技术栈，目标是保证 `wx_login_code`、`session_token`、`payload_encrypted` 等字段可稳定解析、校验、审计。
+
+| 解析环节 | Node.js（Express/NestJS） | Java（Spring Boot） |
+|---|---|---|
+| JSON 解析 | `express.json()` / Nest 内置 body parser | `@RequestBody` + Jackson |
+| 参数校验 | `zod` / `joi` / `class-validator` | `jakarta.validation`（`@NotBlank`、`@Pattern`） |
+| 微信登录 code 换 openid | 服务端 `axios/fetch` 调微信 `jscode2session` | `RestTemplate/WebClient` 调微信 `jscode2session` |
+| 会话鉴权 | Redis + JWT/随机 token | Redis + Spring Security / JWT |
+| `payload_encrypted` 解密验签 | `crypto`（AES-GCM + HMAC） | JCE（AES-GCM + HMAC） |
+| 并发防重放 | Redis 原子命令（`SET NX EX`） | RedisTemplate + Lua / Redisson |
+
+`wx_login_code` 解析的后端关键点：
+1. 必须在服务端调用微信 `jscode2session`，不能在前端直接换 openid。
+2. `code` 只可使用一次，建议服务端记录短期防重复消费日志。
+3. 将 `openid/unionid` 映射为内部 `wx_identity` 后再签发业务 `session_token`。
+
 ---
 
 ## 4. 主链路 API 详细规范
@@ -132,14 +150,42 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 |---|---|---|---|---|---|
 | `wx_login_code` | body | 是 | string | 非空；建议长度 8~128；不可包含空白字符 | `wx.login` 返回的一次性临时 code，用于换取微信身份 |
 
+### 请求示例（传参示例）
+
+前端调用示例（小程序）：
+```js
+wx.login({
+  success(res) {
+    wx.request({
+      url: "https://api.example.com/api/auth/wx-login",
+      method: "POST",
+      data: {
+        wx_login_code: res.code
+      }
+    });
+  }
+});
+```
+
+等价 `curl` 示例：
+```bash
+curl -X POST "https://api.example.com/api/auth/wx-login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wx_login_code": "0c5wYQ100abcXYZ1dE100xYQ000wYQ1j"
+  }'
+```
+
 ### 4.1.2 后端处理步骤（必须按序）
 1. 校验 `wx_login_code` 非空，非法则返回 `invalid_param`。
 2. 调用微信登录态校验接口，换取微信身份主键（如 openId/unionId）。
 3. 以微信身份查用户表；不存在则创建最小用户记录。
 4. 生成 `session_token`，写入会话存储（含过期时间、用户 ID、角色快照）。
 5. 读取用户角色与权限集（`role`、`permissions`）。
-6. 读取用户资料并组装 `user_profile`。
-7. 返回登录成功结果。
+   - 若用户尚未注册绑定，角色可先返回默认值（通常 `normal`），最终角色以 A-02 注册校验后的结果为准。
+6. 读取用户资料并判断是否已绑定（`is_registered`）。
+7. 组装 `user_profile`：未绑定用户允许返回空学号/空姓名。
+8. 返回登录成功结果。
 
 ### 4.1.3 成功响应示例
 
@@ -151,6 +197,7 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
   "wx_identity": "wx_staff_identity",
   "role": "staff",
   "permissions": ["activity:checkin", "activity:checkout", "activity:detail"],
+  "is_registered": true,
   "user_profile": {
     "student_id": "2025000007",
     "name": "刘洋",
@@ -173,6 +220,7 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 | `wx_identity` | string | 建议 | 微信身份映射标识 | 微信身份映射表 |
 | `role` | string | 是 | 用户角色 | 用户权限表 |
 | `permissions` | string[] | 建议 | 权限列表 | 用户权限表 |
+| `is_registered` | boolean | 是 | 当前微信是否已完成“学号+姓名”绑定 | 用户绑定关系表 |
 | `user_profile.student_id` | string | 建议 | 学号 | 用户表 |
 | `user_profile.name` | string | 建议 | 姓名 | 用户表 |
 | `user_profile.department` | string | 建议 | 院系/部门 | 用户表 |
@@ -188,6 +236,28 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 | `invalid_param` | 登录参数不合法 | `wx_login_code` 为空或格式非法 |
 | `failed` | 微信登录校验失败 | 调用微信接口失败或 code 无效 |
 | `forbidden` | 账号受限，无法登录 | 账号被封禁或角色禁用 |
+
+未注册用户成功登录示例（关键）：
+```json
+{
+  "status": "success",
+  "message": "登录成功",
+  "session_token": "sess_new_001",
+  "wx_identity": "wx_normal_identity",
+  "role": "normal",
+  "permissions": [],
+  "is_registered": false,
+  "user_profile": {
+    "student_id": "",
+    "name": "",
+    "department": "信息工程学院",
+    "club": "开源技术社",
+    "avatar_url": "",
+    "social_score": 0,
+    "lecture_score": 0
+  }
+}
+```
 
 ---
 
@@ -206,6 +276,38 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 | `club` | body | 否 | string | 可空；建议最大长度 128 | 社团/组织 |
 | `payload_encrypted` | body | 否 | string | 可空；若使用需可验签/可解密 | 前端提交的加密补充载荷 |
 
+### 请求示例（传参示例）
+
+前端调用示例（小程序）：
+```js
+await wx.request({
+  url: "https://api.example.com/api/register",
+  method: "POST",
+  data: {
+    session_token: "sess_xxx",
+    student_id: "2025000007",
+    name: "刘洋",
+    department: "学生工作部",
+    club: "活动执行组",
+    payload_encrypted: "base64:xxxx"
+  }
+});
+```
+
+等价 `curl` 示例：
+```bash
+curl -X POST "https://api.example.com/api/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_token": "sess_xxx",
+    "student_id": "2025000007",
+    "name": "刘洋",
+    "department": "学生工作部",
+    "club": "活动执行组",
+    "payload_encrypted": "base64:xxxx"
+  }'
+```
+
 ### 4.2.2 后端处理步骤（必须按序）
 1. 校验 `session_token`，解析用户 ID。
 2. 校验 `student_id`、`name` 必填且格式合法。
@@ -213,8 +315,21 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
    - 执行解密/验签。
    - 校验解密结果与明文字段是否冲突。
    - 冲突时返回 `invalid_param`。
-4. 更新用户资料字段（学号、姓名、部门、社团）。
-5. 持久化后重新读取用户资料，作为返回值。
+4. 查询当前微信是否已有绑定：
+   - 已绑定同一学号姓名：视为幂等更新（可更新部门/社团）。
+   - 已绑定其他学号姓名：返回 `wx_already_bound`。
+5. 校验学号姓名唯一性：
+   - 若该 `student_id + name` 已被其他微信绑定，返回 `student_already_bound`。
+6. 使用 `student_id + name` 查询“管理员名册/权限表”（数据库）：
+   - 命中管理员记录 -> 角色设为 `staff`，并下发管理员权限集。
+   - 未命中 -> 角色设为 `normal`，权限集为空。
+7. 更新用户资料字段（学号、姓名、部门、社团）与角色权限。
+8. 持久化后重新读取用户资料，作为返回值。
+
+数据库约束建议（强制）：
+1. `UNIQUE(wx_identity)`。
+2. `UNIQUE(student_id, name)` 或更严格 `UNIQUE(student_id)`（按学校规则选择）。
+3. 在并发下依赖唯一索引兜底，捕获重复键后映射为 `student_already_bound` / `wx_already_bound`。
 
 ### 4.2.3 成功响应示例
 
@@ -222,6 +337,10 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 {
   "status": "success",
   "message": "绑定成功",
+  "role": "staff",
+  "permissions": ["activity:checkin", "activity:checkout", "activity:detail"],
+  "admin_verified": true,
+  "is_registered": true,
   "user_profile": {
     "student_id": "2025000007",
     "name": "刘洋",
@@ -237,6 +356,10 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 |---|---|---|---|---|
 | `status` | string | 是 | 绑定操作结果 | 业务层固定值 |
 | `message` | string | 是 | 可读提示文案 | 业务层 |
+| `role` | string | 建议 | 绑定后最终角色（`normal/staff`） | 角色权限表 / 管理员名册 |
+| `permissions` | string[] | 建议 | 绑定后权限列表 | 角色权限表 |
+| `admin_verified` | boolean | 建议 | 是否命中管理员名册校验 | 管理员名册表 |
+| `is_registered` | boolean | 建议 | 绑定后是否已注册 | 用户绑定关系表 |
 | `user_profile.student_id` | string | 是 | 绑定后的学号 | 用户表 |
 | `user_profile.name` | string | 是 | 绑定后的姓名 | 用户表 |
 | `user_profile.department` | string | 建议 | 绑定后的院系/部门 | 用户表 |
@@ -248,7 +371,35 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 |---|---|---|
 | `forbidden` | 会话失效，请重新登录 | `session_token` 无效或过期 |
 | `invalid_param` | 学号或姓名不合法 | 必填字段缺失/格式错误/解密冲突 |
+| `student_already_bound` | 该学号姓名已绑定其他微信，禁止重复绑定 | 命中学号姓名唯一约束 |
+| `wx_already_bound` | 当前微信已绑定其他学号姓名，请勿重复绑定 | 命中微信唯一约束 |
 | `failed` | 绑定失败，请稍后重试 | 数据库更新异常 |
+
+冲突响应示例（同学号姓名多微信绑定）：
+```json
+{
+  "status": "student_already_bound",
+  "message": "该学号姓名已绑定其他微信，禁止重复绑定"
+}
+```
+
+管理员命中响应示例（关键）：
+```json
+{
+  "status": "success",
+  "message": "绑定成功",
+  "role": "staff",
+  "permissions": ["activity:checkin", "activity:checkout", "activity:detail"],
+  "admin_verified": true,
+  "is_registered": true,
+  "user_profile": {
+    "student_id": "2025000007",
+    "name": "刘洋",
+    "department": "学生工作部",
+    "club": "活动执行组"
+  }
+}
+```
 
 ---
 
@@ -263,6 +414,15 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 | `session_token` | query/body | 是 | string | 非空且有效 | 会话令牌 |
 | `role_hint` | query/body | 否 | string | 可选值 `normal`/`staff` | 客户端角色提示，后端不可作为权限依据 |
 | `visibility_scope` | query/body | 否 | string | 可选；如 `joined_or_participated` / `all` | 客户端视图提示，后端按真实权限处理 |
+
+### 请求示例（传参示例）
+
+```bash
+curl -G "https://api.example.com/api/staff/activities" \
+  --data-urlencode "session_token=sess_xxx" \
+  --data-urlencode "role_hint=normal" \
+  --data-urlencode "visibility_scope=joined_or_participated"
+```
 
 ### 4.3.2 后端处理步骤（必须按序）
 1. 校验会话并获取真实角色 `real_role`。
@@ -344,6 +504,15 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 | `session_token` | query/body | 是 | string | 非空且有效 | 会话令牌 |
 | `role_hint` | query/body | 否 | string | 可选值 `normal`/`staff` | 客户端提示，后端不可据此授权 |
 | `visibility_scope` | query/body | 否 | string | 可选 | 客户端提示字段，后端可忽略 |
+
+### 请求示例（传参示例）
+
+```bash
+curl -G "https://api.example.com/api/staff/activities/act_hackathon_20260215" \
+  --data-urlencode "session_token=sess_xxx" \
+  --data-urlencode "role_hint=normal" \
+  --data-urlencode "visibility_scope=joined_or_participated"
+```
 
 ### 4.4.2 后端处理步骤（必须按序）
 1. 校验 `session_token`，获取 `user_id` 与 `real_role`。
@@ -429,6 +598,19 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 | `rotate_seconds` | body | 否 | number | 整数；建议范围 `1~30`；非法值回退默认 | 希望的轮换秒数 |
 | `grace_seconds` | body | 否 | number | 整数；建议范围 `1~120`；非法值回退默认 | 希望的宽限秒数 |
 
+### 请求示例（传参示例）
+
+```bash
+curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_20260215/qr-session" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_token": "sess_staff_xxx",
+    "action_type": "checkin",
+    "rotate_seconds": 10,
+    "grace_seconds": 20
+  }'
+```
+
 ### 4.5.2 后端处理步骤（必须按序）
 1. 校验 `session_token`，确认 `role = staff`。
 2. 校验 `activity_id` 格式并查询活动。
@@ -500,6 +682,24 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 | `action_type` | body | 建议 | string | 若传入，必须与 payload 解析一致 | 结构化动作类型冗余字段 |
 | `slot` | body | 建议 | integer | 若传入，必须与 payload 一致且 `>=0` | 结构化时间片冗余字段 |
 | `nonce` | body | 建议 | string | 若传入，必须与 payload 一致 | 结构化随机串冗余字段 |
+
+### 请求示例（传参示例）
+
+```bash
+curl -X POST "https://api.example.com/api/checkin/consume" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_token": "sess_normal_xxx",
+    "qr_payload": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:n100001",
+    "scan_type": "QR_CODE",
+    "raw_result": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:n100001",
+    "path": "",
+    "activity_id": "act_hackathon_20260215",
+    "action_type": "checkin",
+    "slot": 177051839,
+    "nonce": "n100001"
+  }'
+```
 
 ### 4.6.2 后端解析规则
 
@@ -650,4 +850,6 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 
 ## 8. 版本记录
 
+- 2026-02-08 v4.2：A-02 新增“学号+姓名命中管理员名册 -> staff 角色”后端处理步骤；补齐 `role/permissions/admin_verified` 注册响应字段与管理员命中示例；明确 A-01 到 A-02 的角色最终归一关系。
+- 2026-02-08 v4.1：补齐 6 个主链路 API 的请求传参示例；明确 `wx_login_code`、`session_token`、`payload_encrypted` 的后端解析技术建议；新增 `is_registered` 字段与注册冲突状态（`student_already_bound`、`wx_already_bound`）。
 - 2026-02-08 v4.0：重构为后端实施视角；完整覆盖 6 个主链路 API；逐字段参数/返回语义与逐步骤后端处理流程；重写 4.4 与 4.5 可读性。

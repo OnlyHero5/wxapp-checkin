@@ -98,13 +98,17 @@ Page({
       });
       if (result && result.status === "success") {
         const profile = result.user_profile || {};
+        const role = `${result.role || storage.getRole() || "normal"}`.trim() === "staff" ? "staff" : "normal";
+        const permissions = Array.isArray(result.permissions) ? result.permissions : [];
         storage.setStudentId(profile.student_id || studentId);
         storage.setName(profile.name || name);
         storage.setDepartment(profile.department || department);
         storage.setClub(profile.club || club);
+        storage.setRole(role || "normal");
+        storage.setPermissions(permissions);
         storage.setBound(true);
         ui.showToast("绑定成功", "success");
-        if (storage.getRole() === "staff") {
+        if (role === "staff") {
           wx.switchTab({ url: "/pages/index/index" });
         } else {
           wx.switchTab({ url: "/pages/profile/profile" });

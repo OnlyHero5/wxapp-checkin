@@ -66,3 +66,11 @@
   - 所有接口补齐“入参逐字段说明 + 后端处理步骤 + 出参逐字段说明 + 错误触发条件”
   - A-06 增补事务一致性、并发与防重放要求，后端可直接按文档实现
   - 明确业务错误通过响应体 `status` 返回，减少前端误判为网络异常
+- 注册绑定管理员识别补齐：
+  - `POST /api/register` 新增 `student_id + name` 管理员名册判定
+  - 命中管理员名册返回 `role=staff` 与权限集，注册后直接进入管理员页面
+  - 未命中返回 `role=normal`，进入“我的”页面
+  - 注册响应新增 `admin_verified`，用于联调定位管理员判定结果
+- 文档同步升级：
+  - `docs/API_SPEC.md` 升级到 v4.2（管理员名册判定步骤 + 响应示例）
+  - `README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md` 同步新口径

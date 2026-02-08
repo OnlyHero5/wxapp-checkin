@@ -4,6 +4,14 @@ const qrPayload = require("./qr-payload");
 
 const DEFAULT_ROTATE_SECONDS = qrPayload.DEFAULT_ROTATE_SECONDS;
 const DEFAULT_GRACE_SECONDS = qrPayload.DEFAULT_GRACE_SECONDS;
+const STAFF_PERMISSIONS = ["activity:checkin", "activity:checkout", "activity:detail"];
+
+const mockAdminDirectory = [
+  {
+    student_id: "2025000007",
+    name: "刘洋"
+  }
+];
 
 const formatTime = (date) => {
   const pad = (num) => (num < 10 ? `0${num}` : `${num}`);
@@ -18,11 +26,12 @@ const formatTime = (date) => {
 
 const mockUsers = {
   normal: {
+    wx_identity: "wx_normal_identity",
     role: "normal",
     permissions: [],
     profile: {
-      student_id: "2025011001",
-      name: "李晨",
+      student_id: "",
+      name: "",
       department: "信息工程学院",
       club: "开源技术社",
       avatar_url: "",
@@ -31,11 +40,12 @@ const mockUsers = {
     }
   },
   staff: {
+    wx_identity: "wx_staff_identity",
     role: "staff",
-    permissions: ["activity:checkin", "activity:checkout", "activity:detail"],
+    permissions: STAFF_PERMISSIONS.slice(),
     profile: {
-      student_id: "2025000007",
-      name: "刘洋",
+      student_id: "",
+      name: "",
       department: "学生工作部",
       club: "活动执行组",
       avatar_url: "",
@@ -102,6 +112,8 @@ const mockStore = {
   },
   consumeReplayGuard: {},
   consumeRateWindow: {},
+  sessions: {},
+  studentBindingIndex: {},
   staffActivities: [
     {
       activity_id: "act_research_roadshow_20260220",
@@ -234,6 +246,147 @@ const getCurrentMockUser = () => {
   return mockUsers[getMockRoleKey()];
 };
 
+const normalizeTextValue = (value) => {
+  return `${value || ""}`.trim();
+};
+
+const normalizeStudentId = (value) => {
+  return normalizeTextValue(value);
+};
+
+const normalizeName = (value) => {
+  return normalizeTextValue(value);
+};
+
+const normalizeScoreValue = (value) => {
+  const num = Number(value);
+  if (Number.isNaN(num) || num < 0) {
+    return 0;
+  }
+  return num;
+};
+
+const copyUserProfile = (profile) => {
+  return {
+    student_id: normalizeStudentId(profile && profile.student_id),
+    name: normalizeName(profile && profile.name),
+    department: normalizeTextValue(profile && profile.department),
+    club: normalizeTextValue(profile && profile.club),
+    avatar_url: normalizeTextValue(profile && profile.avatar_url),
+    social_score: normalizeScoreValue(profile && profile.social_score),
+    lecture_score: normalizeScoreValue(profile && profile.lecture_score)
+  };
+};
+
+const isRegisteredProfile = (profile) => {
+  if (!profile) {
+    return false;
+  }
+  return !!(normalizeStudentId(profile.student_id) && normalizeName(profile.name));
+};
+
+const buildStudentBindingKey = (studentId, name) => {
+  const normalizedStudentId = normalizeStudentId(studentId).toLowerCase();
+  const normalizedName = normalizeName(name).toLowerCase();
+  if (!normalizedStudentId || !normalizedName) {
+    return "";
+  }
+  return `${normalizedStudentId}::${normalizedName}`;
+};
+
+const resolveRoleByDirectory = (studentId, name) => {
+  const bindingKey = buildStudentBindingKey(studentId, name);
+  const hasAdminRecord = mockAdminDirectory.some((item) => {
+    return buildStudentBindingKey(item.student_id, item.name) === bindingKey;
+  });
+
+  if (hasAdminRecord) {
+    return {
+      role: "staff",
+      permissions: STAFF_PERMISSIONS.slice(),
+      admin_verified: true
+    };
+  }
+
+  return {
+    role: "normal",
+    permissions: [],
+    admin_verified: false
+  };
+};
+
+const isValidStudentId = (studentId) => {
+  return /^[0-9A-Za-z_-]{4,32}$/.test(normalizeStudentId(studentId));
+};
+
+const isValidName = (name) => {
+  const normalized = normalizeName(name);
+  return normalized.length >= 1 && normalized.length <= 64;
+};
+
+const syncBindingIndexForUser = (user) => {
+  if (!user || !isRegisteredProfile(user.profile)) {
+    return;
+  }
+  const key = buildStudentBindingKey(user.profile.student_id, user.profile.name);
+  if (key) {
+    mockStore.studentBindingIndex[key] = user.wx_identity;
+  }
+};
+
+const resolveMockUserByWxIdentity = (wxIdentity) => {
+  const normalizedIdentity = normalizeTextValue(wxIdentity);
+  if (!normalizedIdentity) {
+    return null;
+  }
+  const users = Object.values(mockUsers);
+  return users.find((item) => item.wx_identity === normalizedIdentity) || null;
+};
+
+const issueMockSessionToken = (user) => {
+  const token = `mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  mockStore.sessions[token] = {
+    wx_identity: user.wx_identity,
+    role: user.role,
+    issued_at: Date.now()
+  };
+  return token;
+};
+
+const resolveSessionUser = (sessionToken, options = {}) => {
+  const { allowFallback = true } = options;
+  const token = normalizeTextValue(sessionToken);
+  if (token && mockStore.sessions[token]) {
+    const user = resolveMockUserByWxIdentity(mockStore.sessions[token].wx_identity);
+    if (user) {
+      return user;
+    }
+  }
+  return allowFallback ? getCurrentMockUser() : null;
+};
+
+const buildLoginProfile = (user) => {
+  const profile = copyUserProfile(user && user.profile);
+  if (!isRegisteredProfile(profile)) {
+    return {
+      ...profile,
+      student_id: "",
+      name: ""
+    };
+  }
+  return profile;
+};
+
+const getMockUserUniqueKey = (user) => {
+  return normalizeStudentId(user && user.profile && user.profile.student_id)
+    || normalizeTextValue(user && user.wx_identity)
+    || "unknown";
+};
+
+Object.values(mockUsers).forEach((user) => {
+  syncBindingIndexForUser(user);
+});
+
 const normalizeCounterValue = (value) => {
   const parsed = Number(value);
   if (Number.isNaN(parsed) || parsed < 0) {
@@ -358,27 +511,87 @@ const mockRequest = (url, data) => {
   return new Promise((resolve) => {
     setTimeout(() => {
       if (url === "/api/auth/wx-login") {
+        const wxLoginCode = normalizeTextValue(data.wx_login_code);
+        if (!wxLoginCode) {
+          resolve({ status: "invalid_param", message: "wx_login_code 不能为空" });
+          return;
+        }
+
         const user = getCurrentMockUser();
+        const sessionToken = issueMockSessionToken(user);
+        const loginProfile = buildLoginProfile(user);
         resolve({
-          wx_identity: `wx_${user.role}_identity`,
-          session_token: `mock_${Date.now()}`,
+          status: "success",
+          message: "登录成功",
+          wx_identity: user.wx_identity,
+          session_token: sessionToken,
           role: user.role,
           permissions: user.permissions,
-          user_profile: user.profile
+          is_registered: isRegisteredProfile(loginProfile),
+          user_profile: loginProfile
         });
         return;
       }
 
       if (url === "/api/register") {
-        const user = getCurrentMockUser();
-        user.profile.student_id = data.student_id || user.profile.student_id;
-        user.profile.name = data.name || user.profile.name;
-        user.profile.department = data.department || user.profile.department;
-        user.profile.club = data.club || user.profile.club;
+        const user = resolveSessionUser(data.session_token, { allowFallback: false });
+        if (!user) {
+          resolve({ status: "forbidden", message: "会话失效，请重新登录" });
+          return;
+        }
+
+        const studentId = normalizeStudentId(data.student_id);
+        const name = normalizeName(data.name);
+        const department = normalizeTextValue(data.department);
+        const club = normalizeTextValue(data.club);
+
+        if (!isValidStudentId(studentId) || !isValidName(name)) {
+          resolve({ status: "invalid_param", message: "学号或姓名不合法" });
+          return;
+        }
+
+        const currentBound = isRegisteredProfile(user.profile);
+        const currentBindingKey = currentBound
+          ? buildStudentBindingKey(user.profile.student_id, user.profile.name)
+          : "";
+        const incomingBindingKey = buildStudentBindingKey(studentId, name);
+
+        if (currentBound && currentBindingKey !== incomingBindingKey) {
+          resolve({ status: "wx_already_bound", message: "当前微信已绑定其他学号姓名，请勿重复绑定" });
+          return;
+        }
+
+        const boundWxIdentity = mockStore.studentBindingIndex[incomingBindingKey];
+        if (boundWxIdentity && boundWxIdentity !== user.wx_identity) {
+          resolve({ status: "student_already_bound", message: "该学号姓名已绑定其他微信，禁止重复绑定" });
+          return;
+        }
+
+        user.profile.student_id = studentId;
+        user.profile.name = name;
+        user.profile.department = department || user.profile.department;
+        user.profile.club = club || user.profile.club;
+        const roleResult = resolveRoleByDirectory(studentId, name);
+        user.role = roleResult.role;
+        user.permissions = roleResult.permissions;
+
+        if (currentBindingKey && currentBindingKey !== incomingBindingKey && mockStore.studentBindingIndex[currentBindingKey] === user.wx_identity) {
+          delete mockStore.studentBindingIndex[currentBindingKey];
+        }
+        mockStore.studentBindingIndex[incomingBindingKey] = user.wx_identity;
+        const normalizedSessionToken = normalizeTextValue(data.session_token);
+        if (normalizedSessionToken && mockStore.sessions[normalizedSessionToken]) {
+          mockStore.sessions[normalizedSessionToken].role = user.role;
+        }
+
         resolve({
           status: "success",
           message: "绑定成功",
-          user_profile: user.profile
+          role: user.role,
+          permissions: user.permissions,
+          admin_verified: roleResult.admin_verified,
+          is_registered: true,
+          user_profile: buildLoginProfile(user)
         });
         return;
       }
@@ -410,7 +623,7 @@ const mockRequest = (url, data) => {
       }
 
       if (url === "/api/checkin/consume") {
-        const currentUser = getCurrentMockUser();
+        const currentUser = resolveSessionUser(data.session_token);
         const role = currentUser.role;
         const now = Date.now();
         const context = resolveConsumeContext(data);
@@ -420,7 +633,7 @@ const mockRequest = (url, data) => {
           return;
         }
 
-        if (checkConsumeRateLimit(currentUser.profile.student_id, now)) {
+        if (checkConsumeRateLimit(getMockUserUniqueKey(currentUser), now)) {
           resolve({ status: "forbidden", message: "提交过于频繁，请稍后再试" });
           return;
         }
@@ -478,7 +691,7 @@ const mockRequest = (url, data) => {
           return;
         }
 
-        const replayKey = `${currentUser.profile.student_id}:${context.activityId}:${context.actionType}:${context.slot}`;
+        const replayKey = `${getMockUserUniqueKey(currentUser)}:${context.activityId}:${context.actionType}:${context.slot}`;
         if (mockStore.consumeReplayGuard[replayKey]) {
           resolve({ status: "duplicate", message: "当前时段已提交，请勿重复扫码" });
           return;
@@ -536,7 +749,7 @@ const mockRequest = (url, data) => {
       }
 
       if (url === "/api/staff/activities") {
-        const role = getCurrentMockUser().role;
+        const role = resolveSessionUser(data.session_token).role;
         const activities = mockStore.staffActivities
           .map((item) => normalizeActivityForNormal(item))
           .filter((item) => item.my_registered || item.my_checked_in || item.my_checked_out);
@@ -550,7 +763,7 @@ const mockRequest = (url, data) => {
 
       const qrSessionMatch = url.match(/^\/api\/staff\/activities\/([^/]+)\/qr-session$/);
       if (qrSessionMatch) {
-        const role = getCurrentMockUser().role;
+        const role = resolveSessionUser(data.session_token).role;
         const activityId = qrSessionMatch[1];
         const actionType = data.action_type === "checkout" ? "checkout" : "checkin";
         const rotateSeconds = clampWindowSeconds(data.rotate_seconds, DEFAULT_ROTATE_SECONDS, 1, 30);
@@ -589,7 +802,7 @@ const mockRequest = (url, data) => {
       }
 
       if (url.startsWith("/api/staff/activities/")) {
-        const role = getCurrentMockUser().role;
+        const role = resolveSessionUser(data.session_token).role;
         const activityId = url.split("/").pop();
         const detail = mockStore.staffActivities.find((item) => item.activity_id === activityId);
         if (!detail) {
@@ -614,7 +827,7 @@ const mockRequest = (url, data) => {
       }
 
       if (url === "/api/staff/activity-action") {
-        const role = getCurrentMockUser().role;
+        const role = resolveSessionUser(data.session_token).role;
         const activityId = data.activity_id || "";
         const actionType = data.action_type || "checkin";
         const qrToken = data.qr_token || "";

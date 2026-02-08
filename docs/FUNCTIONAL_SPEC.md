@@ -28,6 +28,7 @@
 
 角色来源:
 - `POST /api/auth/wx-login` 返回 `role` 与 `permissions`
+- `POST /api/register` 使用 `student_id + name` 校验管理员名册后返回最终 `role` 与 `permissions`
 
 ## 4. 页面与功能模块
 
@@ -90,7 +91,8 @@
 ### 4.6 注册绑定页（`pages/register`）
 - 展示微信身份识别状态
 - 输入学号、姓名、学院/部门、社团/组织
-- 调用注册接口成功后更新本地绑定状态并按角色跳转
+- 调用注册接口成功后更新本地绑定状态
+- 以后端返回的 `role/permissions` 覆盖本地缓存并按角色跳转（`staff -> 活动页`，`normal -> 我的`）
 
 ## 5. 关键流程
 
@@ -122,7 +124,8 @@
 ### 5.5 注册绑定流程
 1. 填写表单并提交
 2. 调用 `POST /api/register`
-3. 成功后更新缓存并跳转:
+3. 后端使用 `student_id + name` 查询管理员名册，返回最终角色
+4. 前端按返回值更新 `role/permissions` 并跳转:
    - `staff` -> 活动 tab
    - `normal` -> 我的 tab
 
@@ -136,6 +139,19 @@
   - `permissions`
   - `user_profile.student_id/name/department/club/avatar_url`
   - `user_profile.social_score/lecture_score`
+- 说明:
+  - 对未注册用户，登录返回的角色可为默认值。
+  - 角色最终归一以注册接口（管理员名册校验）返回为准。
+
+### 6.1B 注册绑定接口
+- `POST /api/register`
+- 必需字段:
+  - 入参 `student_id`, `name`, `session_token`
+  - 出参 `role`, `permissions`, `admin_verified`, `is_registered`, `user_profile.*`
+- 关键规则:
+  - 后端必须按 `student_id + name` 查询管理员名册。
+  - 命中管理员名册返回 `staff`，否则返回 `normal`。
+  - 前端必须以后端返回角色作为注册后跳转依据。
 
 ### 6.2 活动列表接口
 - `GET /api/staff/activities`
@@ -219,3 +235,4 @@
 - 2026-02-08：普通用户活动可见范围收敛为“已报名/已签到/已签退”，并补齐详情接口鉴权规则。
 - 2026-02-08：新增管理员动态二维码与普通用户扫码提交链路（10 秒轮换 + 20 秒宽限）。
 - 2026-02-08：二维码生成职责切换为前端本地换码，后端仅返回配置并执行业务校验。
+- 2026-02-08：注册绑定新增管理员名册校验（`student_id + name`），注册成功后按后端返回角色即时分流页面。

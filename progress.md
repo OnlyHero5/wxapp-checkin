@@ -464,3 +464,84 @@
   - 重点重写 4.4 与 4.5 的后端步骤描述，去除可能误导后端的前端实现细节。
   - 在 A-06 增补事务一致性、并发控制与防重放键要求，提升后端落地可执行性。
   - 同步更新 `docs/changes.md`、`changes.md`、`findings.md` 记录本次深化重构。
+
+## Session: 2026-02-08
+
+### 登录注册绑定补齐 + API 文档 v4.1
+- **Status:** complete
+- Actions taken:
+  - 执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap`）并加载技能：`superpowers:brainstorming`、`planning-with-files`、`superpowers:writing-plans`、`superpowers:test-driven-development`。
+  - 以 TDD 先新增失败测试：
+    - `src/tests/auth-register-binding.test.js`
+    - `src/tests/auth-session-registration-state.test.js`
+  - 改造 `src/utils/api.js`：
+    - 登录接口返回 `status/message/is_registered` 并基于 `wx_login_code`、`wx_identity` 生成会话。
+    - 注册接口新增唯一性约束行为：`student_already_bound`、`wx_already_bound`。
+    - 增加 mock 会话解析与用户标识键，避免未绑定用户限流/防重放键冲突。
+  - 改造 `src/utils/auth.js`：
+    - `applyLoginProfile` 以 `is_registered` 为主判定绑定状态。
+    - 未注册登录时清空学号姓名与组织信息，防止旧缓存误判。
+  - 升级 `docs/API_SPEC.md` 到 v4.1：
+    - 6 个主链路接口全部补齐请求传参示例。
+    - 新增后端解析技术建议（Node.js / Spring Boot）。
+    - 明确 `wx_login_code` 解析路径、`is_registered` 字段语义、重复绑定冲突状态。
+- Files created/modified:
+  - src/utils/api.js (updated)
+  - src/utils/auth.js (updated)
+  - src/tests/auth-register-binding.test.js (created)
+  - src/tests/auth-session-registration-state.test.js (created)
+  - docs/API_SPEC.md (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+- Verification:
+  - `node --check src/utils/api.js` -> PASS
+  - `node --check src/utils/auth.js` -> PASS
+  - `node src/tests/auth-register-binding.test.js` -> PASS
+  - `node src/tests/auth-session-registration-state.test.js` -> PASS
+  - `node src/tests/activity-visibility.test.js` -> PASS
+  - `node src/tests/qr-checkin-flow.test.js` -> PASS
+
+## Session: 2026-02-08
+
+### 管理员注册名册校验 + 页面分流 + 文档全量同步
+- **Status:** complete
+- Actions taken:
+  - 执行并应用技能：`superpowers:brainstorming`、`superpowers:test-driven-development`、`planning-with-files`。
+  - 先改测试（红）：更新 `src/tests/auth-register-binding.test.js`，新增断言：
+    - 注册命中管理员名册返回 `role=staff` + 权限。
+    - 未命中管理员名册返回 `role=normal` + 空权限。
+  - 改造 `src/utils/api.js`：
+    - 新增 mock 管理员名册。
+    - `register` 接口增加 `student_id + name` 管理员判定逻辑。
+    - 注册响应新增 `role`、`permissions`、`admin_verified`。
+    - 同步更新会话角色快照，保持同会话后续接口行为一致。
+  - 改造 `src/pages/register/register.js`：
+    - 注册成功后按后端返回 `role/permissions` 更新本地缓存。
+    - 按最终角色即时跳转（`staff -> /pages/index/index`，`normal -> /pages/profile/profile`）。
+  - 全量文档同步：
+    - `docs/API_SPEC.md` 升级 v4.2（A-02 管理员名册查询步骤、响应字段与示例）
+    - `README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`
+    - `docs/changes.md`、`changes.md`
+  - 更新 planning 文件：`task_plan.md`、`findings.md`、`progress.md`。
+- Files created/modified:
+  - src/utils/api.js (updated)
+  - src/pages/register/register.js (updated)
+  - src/tests/auth-register-binding.test.js (updated)
+  - docs/API_SPEC.md (updated)
+  - README.md (updated)
+  - docs/REQUIREMENTS.md (updated)
+  - docs/FUNCTIONAL_SPEC.md (updated)
+  - docs/changes.md (updated)
+  - changes.md (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+- Verification:
+  - `node src/tests/auth-register-binding.test.js` -> PASS
+  - `node src/tests/auth-session-registration-state.test.js` -> PASS
+  - `node src/tests/activity-visibility.test.js` -> PASS
+  - `node src/tests/qr-checkin-flow.test.js` -> PASS
+  - `node --check src/utils/api.js` -> PASS
+  - `node --check src/pages/register/register.js` -> PASS
+  - `node --check src/utils/auth.js` -> PASS
