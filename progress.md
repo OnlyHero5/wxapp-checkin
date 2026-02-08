@@ -545,3 +545,30 @@
   - `node --check src/utils/api.js` -> PASS
   - `node --check src/pages/register/register.js` -> PASS
   - `node --check src/utils/auth.js` -> PASS
+
+## Session: 2026-02-08
+
+### API 文档参数语义细化（v4.3）
+- **Status:** complete
+- Actions taken:
+  - 执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap`）并按流程读取技能：
+    - `superpowers:brainstorming`
+    - `planning-with-files`
+  - 回答用户对 A-06 “一致性校验”的疑问，并将解释固化到 API 文档。
+  - 升级 `docs/API_SPEC.md` 到 v4.3，新增：
+    - `3.7 参数解释总则（后端必须统一）`
+    - A-01~A-06 参数落地详解（前端来源/后端解析/不合法返回）
+    - `4.6.2A 一致性校验详解（重点）`
+    - `8. 参数速查表（后端实现清单）`
+  - 运行回归测试确认注册绑定、管理员命中、扫码链路行为保持稳定。
+  - 同步更新 `task_plan.md`、`findings.md`、`progress.md`。
+- Files created/modified:
+  - docs/API_SPEC.md (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+- Verification:
+  - `node tests/auth-register-binding.test.js`（workdir=`src/`） -> PASS
+  - `node tests/activity-visibility.test.js`（workdir=`src/`） -> PASS
+  - `node tests/qr-checkin-flow.test.js`（workdir=`src/`） -> PASS
+  - `node tests/auth-session-registration-state.test.js`（workdir=`src/`） -> PASS

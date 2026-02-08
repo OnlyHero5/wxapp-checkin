@@ -339,3 +339,23 @@ Phase 4
 | Error | Attempt | Resolution |
 |-------|---------|------------|
 | PowerShell 下 `rg` 含括号/引号模式导致正则解析失败 | 1 | 改为 `--fixed-strings` 与分步检索 |
+
+## 2026-02-08 API 文档参数语义细化（v4.3）
+
+### Goal
+- 解决“后端看不懂字段语义与传参来源”的问题。
+- 将 `docs/API_SPEC.md` 提升到“后端按文档可直接实现”的细粒度。
+
+### Phases
+- [x] Phase A: 收敛用户疑问点（尤其 4.6 一致性校验）
+- [x] Phase B: 为 A-01~A-06 增加参数落地解释（前端来源/后端解析/错误返回）
+- [x] Phase C: 补充全局参数总则与参数速查表
+- [x] Phase D: 回归验证并更新 planning 文件
+
+### Current Phase
+- `Completed`
+
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| `~/.codex/.../superpowers-codex bootstrap` 在 PowerShell 直接执行失败 | 1 | 改为 `node C:\\Users\\Lenovo\\.codex\\superpowers\\.codex\\superpowers-codex bootstrap` |

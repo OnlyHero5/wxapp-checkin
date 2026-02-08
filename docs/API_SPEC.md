@@ -1,6 +1,6 @@
 # API 协议规范（后端实施手册）
 
-文档版本: v4.2  
+文档版本: v4.3  
 更新日期: 2026-02-08  
 适用分支: `main`  
 代码对齐基线: `src/utils/api.js`、`src/utils/auth.js`、`src/pages/index/index.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`、`src/pages/activity-detail/activity-detail.js`、`src/pages/register/register.js`
@@ -136,6 +136,32 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 2. `code` 只可使用一次，建议服务端记录短期防重复消费日志。
 3. 将 `openid/unionid` 映射为内部 `wx_identity` 后再签发业务 `session_token`。
 
+## 3.7 参数解释总则（后端必须统一）
+
+为避免“字段名看得懂但实现口径不一致”，本节定义统一解析规则，适用于 A-01 ~ A-06：
+
+1. **字段存在性判定**：
+   - `缺失`：请求体里没有该 key。
+   - `空值`：存在 key，但值为 `""`、`null`、仅空白。
+   - `非法值`：类型错、格式错、取值不在允许集合。
+2. **建议字段（非必填）处理**：
+   - 缺失可接受。
+   - 只要传入，就必须通过类型和格式校验。
+   - 传入但非法时，返回 `invalid_param`（或该接口定义的更具体状态）。
+3. **字符串归一化**：
+   - 默认做 `trim`。
+   - 对 ID 类字段（如 `student_id`、`activity_id`）禁止内部空格。
+4. **枚举字段归一化**：
+   - `action_type` 仅允许 `checkin` / `checkout`。
+   - `role` 仅允许 `normal` / `staff`（前端 `role_hint` 仅作提示，不参与授权）。
+5. **类型转换策略**：
+   - 数字字段（如 `slot`、`rotate_seconds`）允许字符串数字转整数。
+   - 转换失败按非法值处理，不做静默纠错。
+6. **错误码优先级**（推荐）：
+   - 先鉴权（`forbidden`）-> 再参数合法性（`invalid_param`/`invalid_qr`）-> 再业务状态（`invalid_activity`/`duplicate`/`expired`）。
+7. **日志建议**：
+   - 每次失败至少记录：`trace_id`、`user_id`（若有）、接口名、失败阶段、失败字段、原始值摘要（脱敏）。
+
 ---
 
 ## 4. 主链路 API 详细规范
@@ -149,6 +175,16 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 | 字段 | 位置 | 必填 | 类型 | 约束 | 字段语义 |
 |---|---|---|---|---|---|
 | `wx_login_code` | body | 是 | string | 非空；建议长度 8~128；不可包含空白字符 | `wx.login` 返回的一次性临时 code，用于换取微信身份 |
+
+### 4.1.1A 参数落地详解（后端怎么写）
+
+| 字段 | 前端来源 | 后端解析动作 | 推荐实现 | 不合法返回 |
+|---|---|---|---|---|
+| `wx_login_code` | `wx.login().code` | `trim` 后判空、长度、字符合法性 | 调微信 `jscode2session`，拿 `openid/unionid`；再映射内部 `wx_identity` | `invalid_param` / `failed` |
+
+实现注意：
+1. 一个 `wx_login_code` 只能消费一次，建议在 Redis 做短期去重（例如 3~5 分钟）。
+2. 微信接口失败与参数非法要分开返回，便于前端提示和后端排查。
 
 ### 请求示例（传参示例）
 
@@ -275,6 +311,23 @@ curl -X POST "https://api.example.com/api/auth/wx-login" \
 | `department` | body | 否 | string | 可空；建议最大长度 128 | 院系/部门 |
 | `club` | body | 否 | string | 可空；建议最大长度 128 | 社团/组织 |
 | `payload_encrypted` | body | 否 | string | 可空；若使用需可验签/可解密 | 前端提交的加密补充载荷 |
+
+### 4.2.1A 参数落地详解（后端怎么写）
+
+| 字段 | 前端来源 | 后端解析动作 | 推荐实现 | 不合法返回 |
+|---|---|---|---|---|
+| `session_token` | 登录后缓存 | 查会话 -> 取 `user_id/wx_identity` | Redis/DB 会话表；过期即失效 | `forbidden` |
+| `student_id` | 注册表单 | `trim`、正则校验 | 建议正则 `^[0-9A-Za-z_-]{4,32}$` | `invalid_param` |
+| `name` | 注册表单 | `trim`、长度校验 | 建议长度 1~64，禁止全空白 | `invalid_param` |
+| `department` | 注册表单（选填） | `trim`、长度限制 | 最大长度建议 128 | `invalid_param` |
+| `club` | 注册表单（选填） | `trim`、长度限制 | 最大长度建议 128 | `invalid_param` |
+| `payload_encrypted` | 前端加密附加包 | 解密 + 验签 + 与明文字段比对 | AES-GCM/HMAC 或服务端统一解密器 | `invalid_param` |
+
+管理员判定落地（本期关键）：
+1. 先通过 `student_id + name` 查询管理员名册（或管理员权限关系表）。
+2. 命中：`role=staff`，下发管理员权限（如 `activity:checkin`）。
+3. 未命中：`role=normal`，权限为空。
+4. 将最终角色与用户绑定信息同事务写入，避免“绑定成功但角色未更新”的脏状态。
 
 ### 请求示例（传参示例）
 
@@ -415,6 +468,18 @@ curl -X POST "https://api.example.com/api/register" \
 | `role_hint` | query/body | 否 | string | 可选值 `normal`/`staff` | 客户端角色提示，后端不可作为权限依据 |
 | `visibility_scope` | query/body | 否 | string | 可选；如 `joined_or_participated` / `all` | 客户端视图提示，后端按真实权限处理 |
 
+### 4.3.1A 参数落地详解（后端怎么写）
+
+| 字段 | 前端来源 | 后端解析动作 | 推荐实现 | 不合法返回 |
+|---|---|---|---|---|
+| `session_token` | 登录后缓存 | 鉴权并取真实角色 | 真实角色必须来自会话，不可信任客户端 | `forbidden` |
+| `role_hint` | 前端本地角色缓存 | 可记录日志，不参与鉴权 | 可用于比对“前后端角色是否一致”排查问题 | 通常忽略 |
+| `visibility_scope` | 前端固定值 | 可记录日志 | 建议只作观测字段，不驱动授权逻辑 | 通常忽略 |
+
+实现注意：
+1. `role_hint=staff` 但真实角色是 `normal` 时，必须按 `normal` 过滤可见活动。
+2. 列表接口应在 SQL 层过滤可见性，避免“先查全量再内存过滤”导致越权风险。
+
 ### 请求示例（传参示例）
 
 ```bash
@@ -504,6 +569,19 @@ curl -G "https://api.example.com/api/staff/activities" \
 | `session_token` | query/body | 是 | string | 非空且有效 | 会话令牌 |
 | `role_hint` | query/body | 否 | string | 可选值 `normal`/`staff` | 客户端提示，后端不可据此授权 |
 | `visibility_scope` | query/body | 否 | string | 可选 | 客户端提示字段，后端可忽略 |
+
+### 4.4.1A 参数落地详解（后端怎么写）
+
+| 字段 | 前端来源 | 后端解析动作 | 推荐实现 | 不合法返回 |
+|---|---|---|---|---|
+| `activity_id` | 页面路由参数 `id` | 正则校验、查活动表 | 未命中或下线统一返回 `invalid_activity` | `invalid_activity` / `invalid_param` |
+| `session_token` | 登录后缓存 | 鉴权并取 `user_id/role` | 角色只信会话 | `forbidden` |
+| `role_hint` | 前端缓存 | 仅日志 | 不参与权限判断 | 通常忽略 |
+| `visibility_scope` | 前端提示 | 仅日志 | 不参与权限判断 | 通常忽略 |
+
+实现注意：
+1. `normal` 用户要先过“可见性关系校验”（报名/签到/签退任一成立）再返回详情。
+2. 建议详情接口与列表接口复用同一可见性规则函数，避免规则漂移。
 
 ### 请求示例（传参示例）
 
@@ -598,6 +676,20 @@ curl -G "https://api.example.com/api/staff/activities/act_hackathon_20260215" \
 | `rotate_seconds` | body | 否 | number | 整数；建议范围 `1~30`；非法值回退默认 | 希望的轮换秒数 |
 | `grace_seconds` | body | 否 | number | 整数；建议范围 `1~120`；非法值回退默认 | 希望的宽限秒数 |
 
+### 4.5.1A 参数落地详解（后端怎么写）
+
+| 字段 | 前端来源 | 后端解析动作 | 推荐实现 | 不合法返回 |
+|---|---|---|---|---|
+| `activity_id` | staff 活动卡片 | 路径参数校验 | 先查活动是否存在/是否已结束 | `invalid_activity` / `forbidden` |
+| `session_token` | staff 登录态 | 鉴权 + 角色校验 | 必须是 `staff` | `forbidden` |
+| `action_type` | 页面按钮（签到/签退） | 枚举校验 | 仅 `checkin/checkout` | `invalid_param` |
+| `rotate_seconds` | 前端可选配置 | 转整数并限幅 | 非法回退默认值（建议 10） | 不建议报错 |
+| `grace_seconds` | 前端可选配置 | 转整数并限幅 | 非法回退默认值（建议 20） | 不建议报错 |
+
+实现注意：
+1. 该接口是“策略配置接口”，不是二维码内容接口。
+2. 后端返回的 `server_time` 用于前端时钟对齐，避免用户设备时间漂移导致误判。
+
 ### 请求示例（传参示例）
 
 ```bash
@@ -683,6 +775,25 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
 | `slot` | body | 建议 | integer | 若传入，必须与 payload 一致且 `>=0` | 结构化时间片冗余字段 |
 | `nonce` | body | 建议 | string | 若传入，必须与 payload 一致 | 结构化随机串冗余字段 |
 
+### 4.6.1A 参数落地详解（后端怎么写）
+
+| 字段 | 前端来源 | 后端解析动作 | 推荐实现 | 不合法返回 |
+|---|---|---|---|---|
+| `session_token` | 登录后缓存 | 鉴权 + 角色校验 | 只允许 `normal` 消费 | `forbidden` |
+| `qr_payload` | 扫码结果主文本 | 按协议解析 | 优先使用 | `invalid_qr` |
+| `scan_type` | `wx.scanCode` 返回 | 仅日志 | 不参与业务判定 | 通常忽略 |
+| `raw_result` | 扫码原始值 | 兜底解析源 | 仅 `qr_payload` 不可用时使用 | `invalid_qr` |
+| `path` | 小程序码 path | 兜底解析源 | 仅 `qr_payload` 不可用时使用 | `invalid_qr` |
+| `activity_id` | 前端冗余字段 | 与解析结果做一致性比对 | 存在即必须一致 | `invalid_qr` |
+| `action_type` | 前端冗余字段 | 与解析结果做一致性比对 | 存在即必须一致 | `invalid_qr` |
+| `slot` | 前端冗余字段 | 转整数后比对 | 存在即必须一致且 `>=0` | `invalid_qr` |
+| `nonce` | 前端冗余字段 | 字符串比对 | 存在即必须一致 | `invalid_qr` |
+
+字段关系解释（你截图那条）：
+1. `qr_payload` 是主真值来源，结构化字段是“冗余校验字段”。
+2. 若结构化字段存在但与 `qr_payload` 解析结果不一致，说明请求可能被篡改、前端组包错误或扫码结果污染，必须拒绝。
+3. 这就是“**一致性校验**”的业务含义。
+
 ### 请求示例（传参示例）
 
 ```bash
@@ -708,12 +819,51 @@ curl -X POST "https://api.example.com/api/checkin/consume" \
 3. 只要结构化冗余字段存在，必须与最终解析结果一致。
 4. 任一关键字段缺失（`activity_id`、`action_type`、`slot`）即 `invalid_qr`。
 
+### 4.6.2A 一致性校验详解（重点）
+
+一致性校验对象：
+- 解析结果：`parsed.activity_id`、`parsed.action_type`、`parsed.slot`、`parsed.nonce`
+- 请求冗余字段：`activity_id`、`action_type`、`slot`、`nonce`
+
+校验规则：
+1. 冗余字段**缺失**：跳过该字段比对。
+2. 冗余字段**存在**：必须与解析结果完全一致（`slot` 按整数一致性比对）。
+3. 任一字段不一致：立刻返回 `invalid_qr`，不进入后续业务流程。
+
+场景矩阵：
+
+| 场景 | `qr_payload` 解析值 | 冗余字段值 | 结果 |
+|---|---|---|---|
+| 合法 | `activity_id=act_1` | `activity_id=act_1` | 通过 |
+| 篡改 | `action_type=checkin` | `action_type=checkout` | `invalid_qr` |
+| 类型错 | `slot=177051839` | `slot=\"abc\"` | `invalid_qr` |
+| 缺字段 | `nonce=n001` | 未传 `nonce` | 通过（跳过 nonce 比对） |
+
+推荐实现伪代码：
+```js
+function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
+  if (requestValue === undefined || requestValue === null || requestValue === "") {
+    return;
+  }
+
+  const left = fieldName === "slot" ? Number(requestValue) : String(requestValue).trim();
+  const right = fieldName === "slot" ? Number(parsedValue) : String(parsedValue).trim();
+
+  if (!Number.isFinite(left) && fieldName === "slot") {
+    throw { status: "invalid_qr", message: "slot 非法" };
+  }
+  if (left !== right) {
+    throw { status: "invalid_qr", message: `${fieldName} 与二维码不一致` };
+  }
+}
+```
+
 ### 4.6.3 后端处理步骤（必须按序执行）
 
 1. **鉴权**: 校验 `session_token`，确认角色是 `normal`。
 2. **限流**: 按用户做短窗限流（当前建议: 5 秒窗口最多 6 次）。命中返回 `forbidden`。
 3. **解析载荷**: 按 4.6.2 规则得到标准上下文：`activity_id`、`action_type`、`slot`、`nonce`。
-4. **一致性校验**: 若请求里有结构化字段，必须与解析结果一致；不一致返回 `invalid_qr`。
+4. **一致性校验**: 按 4.6.2A 对 `activity_id/action_type/slot/nonce` 做逐字段比对；任一不一致立即返回 `invalid_qr`。
 5. **活动校验**: 查询活动，不存在返回 `invalid_activity`。
 6. **可见性校验**: 用户未报名且无参与记录（签到/签退）则返回 `forbidden`。
 7. **活动状态校验**: 活动已完成返回 `forbidden`。
@@ -848,8 +998,35 @@ curl -X POST "https://api.example.com/api/checkin/consume" \
 
 ---
 
-## 8. 版本记录
+## 8. 参数速查表（后端实现清单）
 
+> 本节用于后端同学“按字段找实现位置”，避免反复翻页。
+
+| 字段 | 所属接口 | 必填 | 类型 | 后端处理关键词 | 失败状态 |
+|---|---|---|---|---|---|
+| `wx_login_code` | A-01 | 是 | string | 调微信 `jscode2session` | `invalid_param` / `failed` |
+| `session_token` | A-02~A-06 | 是 | string | 会话鉴权、取 `user_id/role` | `forbidden` |
+| `student_id` | A-02 | 是 | string | 正则校验 + 唯一性校验 + 名册匹配 | `invalid_param` / `student_already_bound` |
+| `name` | A-02 | 是 | string | 长度校验 + 唯一性校验 + 名册匹配 | `invalid_param` / `student_already_bound` |
+| `department` | A-02 | 否 | string | 长度校验，合法则更新 | `invalid_param` |
+| `club` | A-02 | 否 | string | 长度校验，合法则更新 | `invalid_param` |
+| `payload_encrypted` | A-02 | 否 | string | 解密验签 + 明文一致性 | `invalid_param` |
+| `role_hint` | A-03/A-04 | 否 | string | 仅日志，不参与授权 | 无 |
+| `visibility_scope` | A-03/A-04 | 否 | string | 仅日志，不参与授权 | 无 |
+| `activity_id` | A-04/A-05/A-06 | 是/建议 | string | 活动存在性校验 | `invalid_activity` / `invalid_qr` |
+| `action_type` | A-05/A-06 | 是/建议 | string | 枚举校验 + 能力校验 | `invalid_param` / `forbidden` / `invalid_qr` |
+| `rotate_seconds` | A-05 | 否 | integer | 归一化（限幅） | 通常回退默认 |
+| `grace_seconds` | A-05 | 否 | integer | 归一化（限幅） | 通常回退默认 |
+| `qr_payload` | A-06 | 建议 | string | 主解析源 | `invalid_qr` |
+| `scan_type` | A-06 | 否 | string | 日志字段 | 无 |
+| `raw_result` | A-06 | 否 | string | 兜底解析源 | `invalid_qr` |
+| `path` | A-06 | 否 | string | 兜底解析源 | `invalid_qr` |
+| `slot` | A-06 | 建议 | integer | 时效校验 + 防重放键组成 | `invalid_qr` / `expired` / `duplicate` |
+| `nonce` | A-06 | 建议 | string | 一致性比对与审计 | `invalid_qr` |
+
+## 9. 版本记录
+
+- 2026-02-08 v4.3：补充“参数解释总则（3.7）”；为 A-01~A-06 增加参数落地详解（前端来源/后端解析/失败码）；新增 A-06 一致性校验详解（矩阵 + 伪代码）；新增全局参数速查表。
 - 2026-02-08 v4.2：A-02 新增“学号+姓名命中管理员名册 -> staff 角色”后端处理步骤；补齐 `role/permissions/admin_verified` 注册响应字段与管理员命中示例；明确 A-01 到 A-02 的角色最终归一关系。
 - 2026-02-08 v4.1：补齐 6 个主链路 API 的请求传参示例；明确 `wx_login_code`、`session_token`、`payload_encrypted` 的后端解析技术建议；新增 `is_registered` 字段与注册冲突状态（`student_already_bound`、`wx_already_bound`）。
 - 2026-02-08 v4.0：重构为后端实施视角；完整覆盖 6 个主链路 API；逐字段参数/返回语义与逐步骤后端处理流程；重写 4.4 与 4.5 可读性。
