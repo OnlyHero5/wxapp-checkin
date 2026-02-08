@@ -120,7 +120,7 @@
 ### 8.3 关键字段要求
 - 登录接口: `session_token`, `role`, `permissions`, `user_profile.*`
 - 活动列表接口: `progress_status`, `support_checkout`, `has_detail`, `checkin_count`, `checkout_count`, `my_registered`, `my_checked_in`, `my_checked_out`
-- 二维码接口: `qr_payload`, `display_expire_at`, `accept_expire_at`, `rotate_seconds`, `grace_seconds`
+- 二维码配置接口: `rotate_seconds`, `grace_seconds`, `server_time`（二维码内容由前端本地生成）
 - 扫码提交接口: `status`, `message`, `action_type`, `checkin_record_id`, `in_grace_window`
 
 > 详细字段与前端页面映射见 `docs/API_SPEC.md`。
@@ -129,7 +129,7 @@
 - 活动页分组与排序规则正确
 - 已完成活动仅详情，不能签到/签退
 - 普通用户与工作人员展示内容按角色正确分流
-- 工作人员二维码页可见倒计时，且每 10 秒自动换码
+- 工作人员二维码页可见倒计时，且每 10 秒前端本地自动换码
 - 普通用户在 20 秒宽限内扫码可成功提交，超时返回过期
 - 注册绑定后可正确跳转并刷新资料显示
 - 关键错误场景（无网/二维码失效/权限不足）有明确提示

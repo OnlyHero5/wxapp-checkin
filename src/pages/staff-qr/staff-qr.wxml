@@ -17,15 +17,7 @@
       </view>
 
       <view class="qr-box">
-        <image
-          wx:if="{{qrImageUrl}}"
-          class="qr-image"
-          src="{{qrImageUrl}}"
-          mode="aspectFit"
-          show-menu-by-longpress="true"
-        />
         <t-qrcode
-          wx:else
           value="{{qrPayload}}"
           size="{{360}}"
           status="{{qrStatus}}"

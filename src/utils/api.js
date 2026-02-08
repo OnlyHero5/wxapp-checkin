@@ -1,8 +1,9 @@
 const config = require("./config");
 const storage = require("./storage");
+const qrPayload = require("./qr-payload");
 
-const DEFAULT_ROTATE_SECONDS = 10;
-const DEFAULT_GRACE_SECONDS = 20;
+const DEFAULT_ROTATE_SECONDS = qrPayload.DEFAULT_ROTATE_SECONDS;
+const DEFAULT_GRACE_SECONDS = qrPayload.DEFAULT_GRACE_SECONDS;
 
 const formatTime = (date) => {
   const pad = (num) => (num < 10 ? `0${num}` : `${num}`);
@@ -99,7 +100,8 @@ const mockStore = {
     act_safety_training_20260207: true,
     act_ops_review_20251230: false
   },
-  qrSessions: {},
+  consumeReplayGuard: {},
+  consumeRateWindow: {},
   staffActivities: [
     {
       activity_id: "act_research_roadshow_20260220",
@@ -306,71 +308,37 @@ const clampWindowSeconds = (value, fallbackValue, minValue, maxValue) => {
   return Math.max(minValue, Math.min(maxValue, Math.floor(parsed)));
 };
 
-const createQrSession = (activityId, actionType, rotateSeconds, graceSeconds) => {
-  const now = Date.now();
-  const randomSuffix = Math.random().toString(36).slice(2, 8);
-  const sessionId = `${now.toString(36)}${randomSuffix}`;
-  const displayExpireAt = now + rotateSeconds * 1000;
-  const acceptExpireAt = displayExpireAt + graceSeconds * 1000;
-  const scene = `s.${sessionId}`;
+const resolveConsumeContext = (data) => {
+  const rawPayload = `${data.qr_payload || data.path || data.raw_result || ""}`.trim();
+  const parsedPayload = qrPayload.parseQrPayload(rawPayload);
+  const activityId = `${data.activity_id || (parsedPayload && parsedPayload.activity_id) || ""}`.trim();
+  const actionTypeRaw = `${data.action_type || (parsedPayload && parsedPayload.action_type) || ""}`.trim();
+  const actionType = actionTypeRaw === "checkout" ? "checkout" : actionTypeRaw === "checkin" ? "checkin" : "";
+  const slotRaw = data.slot !== undefined && data.slot !== null && data.slot !== ""
+    ? data.slot
+    : (parsedPayload && parsedPayload.slot);
+  const slot = Number(slotRaw);
+  const nonce = `${data.nonce || (parsedPayload && parsedPayload.nonce) || ""}`.trim();
 
-  mockStore.qrSessions[sessionId] = {
-    session_id: sessionId,
-    scene,
-    activity_id: activityId,
-    action_type: actionType,
-    rotate_seconds: rotateSeconds,
-    grace_seconds: graceSeconds,
-    created_at: now,
-    display_expire_at: displayExpireAt,
-    accept_expire_at: acceptExpireAt,
-    consumed: false
-  };
-
-  return mockStore.qrSessions[sessionId];
-};
-
-const getQrSessionByPayload = (payloadText) => {
-  const payload = `${payloadText || ""}`.trim();
-  if (!payload) {
-    return null;
-  }
-
-  const sceneFromPayload = payload.startsWith("s.") ? payload : "";
-  if (sceneFromPayload) {
-    const sessionId = sceneFromPayload.slice(2);
-    return mockStore.qrSessions[sessionId] || null;
-  }
-
-  const pathMatch = payload.match(/[?&]scene=([^&]+)/);
-  if (pathMatch && pathMatch[1]) {
-    const decoded = decodeURIComponent(pathMatch[1]);
-    if (decoded.startsWith("s.")) {
-      const sessionId = decoded.slice(2);
-      return mockStore.qrSessions[sessionId] || null;
-    }
-  }
-
-  return null;
-};
-
-const buildQrSessionResponse = (session) => {
-  const now = Date.now();
   return {
-    status: "success",
-    session_id: session.session_id,
-    qr_scene: session.scene,
-    qr_payload: session.scene,
-    qr_image_url: "",
-    qr_fallback_path: `/pages/scan-action/scan-action?scene=${encodeURIComponent(session.scene)}`,
-    rotate_seconds: session.rotate_seconds,
-    grace_seconds: session.grace_seconds,
-    display_expire_at: session.display_expire_at,
-    accept_expire_at: session.accept_expire_at,
-    display_remaining_seconds: Math.max(0, Math.ceil((session.display_expire_at - now) / 1000)),
-    accept_remaining_seconds: Math.max(0, Math.ceil((session.accept_expire_at - now) / 1000)),
-    server_time: now
+    rawPayload,
+    parsedPayload,
+    activityId,
+    actionType,
+    slot: Number.isInteger(slot) ? slot : -1,
+    nonce
   };
+};
+
+const checkConsumeRateLimit = (studentId, now) => {
+  const key = `${studentId || "unknown"}`;
+  const windowMs = 5000;
+  const maxHits = 6;
+  const history = Array.isArray(mockStore.consumeRateWindow[key]) ? mockStore.consumeRateWindow[key] : [];
+  const recentHistory = history.filter((item) => now - item < windowMs);
+  recentHistory.push(now);
+  mockStore.consumeRateWindow[key] = recentHistory;
+  return recentHistory.length > maxHits;
 };
 
 const createRecord = (activity, actionType) => {
@@ -442,41 +410,83 @@ const mockRequest = (url, data) => {
       }
 
       if (url === "/api/checkin/consume") {
-        const role = getCurrentMockUser().role;
-        const qrPayload = `${data.qr_payload || data.path || data.raw_result || ""}`.trim();
-        const session = getQrSessionByPayload(qrPayload);
+        const currentUser = getCurrentMockUser();
+        const role = currentUser.role;
         const now = Date.now();
+        const context = resolveConsumeContext(data);
 
         if (role !== "normal") {
           resolve({ status: "forbidden", message: "仅普通用户可扫码签到/签退" });
           return;
         }
 
-        if (!session) {
-          resolve({ status: "invalid_qr", message: "二维码无法识别，请重新扫码" });
+        if (checkConsumeRateLimit(currentUser.profile.student_id, now)) {
+          resolve({ status: "forbidden", message: "提交过于频繁，请稍后再试" });
           return;
         }
 
-        const activity = mockStore.staffActivities.find((item) => item.activity_id === session.activity_id);
+        if (!context.activityId || !context.actionType || context.slot < 0) {
+          resolve({ status: "invalid_qr", message: "二维码无法识别，请重新扫码" });
+          return;
+        }
+        if (
+          context.parsedPayload
+          && (
+            (data.activity_id && `${data.activity_id}` !== context.parsedPayload.activity_id)
+            || (data.action_type && `${data.action_type}` !== context.parsedPayload.action_type)
+            || (data.slot !== undefined && data.slot !== null && data.slot !== "" && Number(data.slot) !== context.parsedPayload.slot)
+          )
+        ) {
+          resolve({ status: "invalid_qr", message: "二维码数据不一致，请重新扫码" });
+          return;
+        }
+
+        const activity = mockStore.staffActivities.find((item) => item.activity_id === context.activityId);
         if (!activity) {
           resolve({ status: "invalid_activity", message: "活动不存在或已下线" });
           return;
         }
         ensureActivityCounters(activity);
 
-        if (!canNormalViewActivity(session.activity_id)) {
+        if (!canNormalViewActivity(context.activityId)) {
           resolve({ status: "forbidden", message: "你未报名该活动，无法签到/签退" });
           return;
         }
 
-        if (now > session.accept_expire_at) {
+        if (activity.progress_status === "completed") {
+          resolve({ status: "forbidden", message: "活动已结束，无法再签到/签退" });
+          return;
+        }
+
+        if (context.actionType === "checkout" && !activity.support_checkout) {
+          resolve({ status: "forbidden", message: "该活动暂不支持签退" });
+          return;
+        }
+
+        const slotState = qrPayload.resolveSlotState({
+          slot: context.slot,
+          nowMs: now,
+          rotateSeconds: DEFAULT_ROTATE_SECONDS,
+          graceSeconds: DEFAULT_GRACE_SECONDS
+        });
+        if (slotState.is_future) {
+          resolve({ status: "invalid_qr", message: "二维码时间异常，请重新扫码" });
+          return;
+        }
+        if (slotState.is_expired) {
           resolve({ status: "expired", message: "二维码已过期，请重新获取" });
           return;
         }
 
-        const inGraceWindow = now > session.display_expire_at && now <= session.accept_expire_at;
-        const previousState = getNormalAttendanceState(session.activity_id);
-        const actionType = session.action_type;
+        const replayKey = `${currentUser.profile.student_id}:${context.activityId}:${context.actionType}:${context.slot}`;
+        if (mockStore.consumeReplayGuard[replayKey]) {
+          resolve({ status: "duplicate", message: "当前时段已提交，请勿重复扫码" });
+          return;
+        }
+
+        const inGraceWindow = slotState.in_grace_window;
+        const previousState = getNormalAttendanceState(context.activityId);
+        const actionType = context.actionType;
 
         if (actionType === "checkin" && previousState === "checked_in") {
           resolve({ status: "duplicate", message: "你已签到，请勿重复提交" });
@@ -491,23 +501,24 @@ const mockRequest = (url, data) => {
         if (actionType === "checkout") {
           activity.checkin_count = Math.max(0, activity.checkin_count - 1);
           activity.checkout_count += 1;
-          mockStore.normalAttendanceStatus[session.activity_id] = "checked_out";
+          mockStore.normalAttendanceStatus[context.activityId] = "checked_out";
         } else {
           activity.checkin_count += 1;
-          mockStore.normalAttendanceStatus[session.activity_id] = "checked_in";
+          mockStore.normalAttendanceStatus[context.activityId] = "checked_in";
         }
 
+        mockStore.consumeReplayGuard[replayKey] = now;
         const recordId = createRecord(activity, actionType);
-        session.consumed = true;
 
         resolve({
           status: "success",
           message: actionType === "checkout" ? "签退成功" : "签到成功",
           action_type: actionType,
-          activity_id: session.activity_id,
+          activity_id: context.activityId,
           activity_title: activity.activity_title,
           checkin_record_id: recordId,
-          in_grace_window: inGraceWindow
+          in_grace_window: inGraceWindow,
+          slot: context.slot
         });
         return;
       }
@@ -547,7 +558,7 @@ const mockRequest = (url, data) => {
         const activity = mockStore.staffActivities.find((item) => item.activity_id === activityId);
 
         if (role !== "staff") {
-          resolve({ status: "forbidden", message: "仅工作人员可生成二维码" });
+          resolve({ status: "forbidden", message: "仅工作人员可获取二维码配置" });
           return;
         }
 
@@ -566,8 +577,14 @@ const mockRequest = (url, data) => {
           return;
         }
 
-        const session = createQrSession(activityId, actionType, rotateSeconds, graceSeconds);
-        resolve(buildQrSessionResponse(session));
+        resolve({
+          status: "success",
+          activity_id: activityId,
+          action_type: actionType,
+          rotate_seconds: rotateSeconds,
+          grace_seconds: graceSeconds,
+          server_time: Date.now()
+        });
         return;
       }
 
@@ -586,7 +603,13 @@ const mockRequest = (url, data) => {
           return;
         }
 
-        resolve(role === "normal" ? normalizeActivityForNormal(detail) : normalizeActivityCounters(detail));
+        const normalized = role === "normal" ? normalizeActivityForNormal(detail) : normalizeActivityCounters(detail);
+        resolve({
+          ...normalized,
+          rotate_seconds: DEFAULT_ROTATE_SECONDS,
+          grace_seconds: DEFAULT_GRACE_SECONDS,
+          server_time: Date.now()
+        });
         return;
       }
 
@@ -717,7 +740,17 @@ const verifyCheckin = ({ sessionToken, qrToken, studentId, name }) => {
   });
 };
 
-const consumeCheckinAction = ({ sessionToken, qrPayload, scanType, rawResult, path }) => {
+const consumeCheckinAction = ({
+  sessionToken,
+  qrPayload,
+  scanType,
+  rawResult,
+  path,
+  activityId,
+  actionType,
+  slot,
+  nonce
+}) => {
   return request({
     url: "/api/checkin/consume",
     method: "POST",
@@ -726,7 +759,11 @@ const consumeCheckinAction = ({ sessionToken, qrPayload, scanType, rawResult, pa
       qr_payload: qrPayload || "",
       scan_type: scanType || "",
       raw_result: rawResult || "",
-      path: path || ""
+      path: path || "",
+      activity_id: activityId || "",
+      action_type: actionType || "",
+      slot: slot !== undefined && slot !== null ? slot : "",
+      nonce: nonce || ""
     }
   });
 };

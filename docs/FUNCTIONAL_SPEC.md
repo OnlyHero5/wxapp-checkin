@@ -102,9 +102,9 @@
 
 ### 5.2 工作人员动态二维码流程
 1. 在“正在进行”卡片点击 `签到` 或 `签退`
-2. 跳转二维码页，调用 `POST /api/staff/activities/{id}/qr-session`
-3. 展示二维码与倒计时（10 秒轮换）
-4. 倒计时结束自动获取新二维码；二维码页实时更新人数统计
+2. 跳转二维码页，调用 `POST /api/staff/activities/{id}/qr-session` 获取换码配置与服务端时间
+3. 前端本地生成二维码 payload 并展示倒计时（10 秒轮换）
+4. 倒计时结束前端本地换码；二维码页实时更新人数统计
 
 ### 5.3 普通用户扫码提交流程
 1. 进入 `pages/scan-action` 并点击“扫码签到/签退”
@@ -160,7 +160,7 @@
   - 入参 `action_type`（`checkin/checkout`）
   - 入参 `rotate_seconds`（默认 10）
   - 入参 `grace_seconds`（默认 20）
-  - 出参 `qr_payload`、`display_expire_at`、`accept_expire_at`
+  - 出参 `rotate_seconds`、`grace_seconds`、`server_time`
 - 推荐错误状态:
   - `forbidden`
   - `invalid_activity`
@@ -168,7 +168,7 @@
 ### 6.4 普通用户扫码提交接口
 - `POST /api/checkin/consume`
 - 必需字段:
-  - 入参 `qr_payload`（或 `path/raw_result`）
+  - 入参 `qr_payload`（或 `path/raw_result`），推荐同时传 `activity_id/action_type/slot/nonce`
   - 出参 `status`、`message`、`action_type`
   - 出参 `checkin_record_id`、`in_grace_window`
 - 推荐错误状态:

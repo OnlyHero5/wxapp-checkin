@@ -2,8 +2,7 @@ const assert = require("assert");
 
 const config = require("../utils/config");
 const api = require("../utils/api");
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const qrPayload = require("../utils/qr-payload");
 
 const run = async () => {
   const originalMock = config.mock;
@@ -28,23 +27,41 @@ const run = async () => {
       rotateSeconds: 10,
       graceSeconds: 20
     });
-    assert.strictEqual(sessionRes && sessionRes.status, "success", "管理员应可创建二维码会话");
-    assert(sessionRes.qr_payload, "二维码会话应返回 qr_payload");
-    assert.strictEqual(sessionRes.rotate_seconds, 10, "二维码会话应返回 10 秒轮换");
-    assert.strictEqual(sessionRes.grace_seconds, 20, "二维码会话应返回 20 秒宽限");
+    assert.strictEqual(sessionRes && sessionRes.status, "success", "管理员应可获取前端换码配置");
+    assert.strictEqual(sessionRes.qr_payload, undefined, "后端不应再返回二维码内容");
+    assert.strictEqual(sessionRes.rotate_seconds, 10, "换码配置应返回 10 秒轮换");
+    assert.strictEqual(sessionRes.grace_seconds, 20, "换码配置应返回 20 秒宽限");
+    assert(typeof sessionRes.server_time === "number", "换码配置应包含服务端时间");
+
+    const checkinSlot = qrPayload.getCurrentSlot(sessionRes.server_time, sessionRes.rotate_seconds);
+    const checkinPayload = qrPayload.buildQrPayload({
+      activityId: targetActivityId,
+      actionType: "checkin",
+      slot: checkinSlot,
+      nonce: "n100001"
+    });
 
     config.mockUserRole = "normal";
     const normalSession = "normal-session-token";
     const consumeRes = await api.consumeCheckinAction({
       sessionToken: normalSession,
-      qrPayload: sessionRes.qr_payload,
+      qrPayload: checkinPayload,
       scanType: "QR_CODE",
-      rawResult: sessionRes.qr_payload,
+      rawResult: checkinPayload,
       path: ""
     });
     assert.strictEqual(consumeRes && consumeRes.status, "success", "普通用户扫码应成功消费二维码");
     assert.strictEqual(consumeRes.action_type, "checkin", "消费结果应返回签到动作");
     assert.strictEqual(consumeRes.activity_id, targetActivityId, "消费结果应返回目标活动");
+
+    const duplicateRes = await api.consumeCheckinAction({
+      sessionToken: normalSession,
+      qrPayload: checkinPayload,
+      scanType: "QR_CODE",
+      rawResult: checkinPayload,
+      path: ""
+    });
+    assert.strictEqual(duplicateRes.status, "duplicate", "同动作重复提交应返回 duplicate");
 
     const normalList = await api.getStaffActivities(normalSession);
     const normalTarget = ((normalList && normalList.activities) || []).find((item) => item.activity_id === targetActivityId);
@@ -59,23 +76,20 @@ const run = async () => {
       "普通用户扫码成功后管理员侧签到人数应实时增加"
     );
 
-    const graceSession = await api.createStaffQrSession({
-      sessionToken: staffSession,
+    const graceSlot = qrPayload.getCurrentSlot(Date.now(), sessionRes.rotate_seconds) - 1;
+    const checkoutGracePayload = qrPayload.buildQrPayload({
       activityId: targetActivityId,
       actionType: "checkout",
-      rotateSeconds: 5,
-      graceSeconds: 2
+      slot: graceSlot,
+      nonce: "n100002"
     });
-    assert.strictEqual(graceSession.status, "success", "应可创建短时会话用于宽限验证");
-
-    await sleep(5300);
 
     config.mockUserRole = "normal";
     const graceConsume = await api.consumeCheckinAction({
       sessionToken: normalSession,
-      qrPayload: graceSession.qr_payload,
+      qrPayload: checkoutGracePayload,
       scanType: "QR_CODE",
-      rawResult: graceSession.qr_payload,
+      rawResult: checkoutGracePayload,
       path: ""
     });
     assert.strictEqual(graceConsume.status, "success", "展示窗口结束后，宽限期内仍应可提交成功");
@@ -101,26 +115,32 @@ const run = async () => {
       "签退成功后管理员侧签退人数应实时增加"
     );
 
-    const expiredSession = await api.createStaffQrSession({
-      sessionToken: staffSession,
+    const expiredSlot = qrPayload.getCurrentSlot(Date.now(), sessionRes.rotate_seconds) - 4;
+    const expiredPayload = qrPayload.buildQrPayload({
       activityId: targetActivityId,
       actionType: "checkin",
-      rotateSeconds: 5,
-      graceSeconds: 1
+      slot: expiredSlot,
+      nonce: "n100003"
     });
-    assert.strictEqual(expiredSession.status, "success", "应可创建用于过期验证的会话");
-
-    await sleep(6500);
 
     config.mockUserRole = "normal";
     const expiredConsume = await api.consumeCheckinAction({
       sessionToken: normalSession,
-      qrPayload: expiredSession.qr_payload,
+      qrPayload: expiredPayload,
       scanType: "QR_CODE",
-      rawResult: expiredSession.qr_payload,
+      rawResult: expiredPayload,
       path: ""
     });
     assert.strictEqual(expiredConsume.status, "expired", "超过宽限期后应返回 expired");
+
+    const invalidConsume = await api.consumeCheckinAction({
+      sessionToken: normalSession,
+      qrPayload: "hello-world",
+      scanType: "QR_CODE",
+      rawResult: "hello-world",
+      path: ""
+    });
+    assert.strictEqual(invalidConsume.status, "invalid_qr", "无效二维码文本应返回 invalid_qr");
   } finally {
     config.mock = originalMock;
     config.mockUserRole = originalRole;

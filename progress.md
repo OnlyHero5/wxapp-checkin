@@ -392,3 +392,51 @@
   - task_plan.md (updated)
   - findings.md (updated)
   - progress.md (updated)
+
+## Session: 2026-02-08
+
+### 二维码前端主导改造调研（进行中）
+- **Status:** in_progress
+- Actions taken:
+  - 执行 superpowers bootstrap（使用 `node .../superpowers-codex bootstrap`）。
+  - 加载技能：`superpowers:brainstorming`、`superpowers:writing-plans`、`planning-with-files`。
+  - 读取并复盘历史 planning 文件，定位当前二维码实现上下文。
+  - 检查二维码相关代码：`src/utils/api.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`、`src/pages/index/index.js`。
+  - 确认当前耦合：二维码会话生成与扫码提交判定都在后端接口侧。
+  - 启动外网调研，优先检索微信小程序官方能力边界与可替代前端方案。
+- Files created/modified:
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+- 联网调研新增证据：
+  - `wx.scanCode`：小程序码可返回 `path`，可在前端提取 `scene`。
+  - `wxacode.getUnlimited`：文档注明应服务端调用，且 `scene` 有长度约束。
+  - OWASP/Android：硬编码密钥与仅前端授权控制存在高风险。
+  - RFC 4226/6238：可用于定义本地轮换口令与防重放窗口。
+  - 小程序二维码绘制库：`weapp-qrcode`、`weapp-qrcode-canvas-2d` 可直接在前端绘制。
+- 产出计划文件：`docs/plans/2026-02-08-qr-frontend-first-plan.md`（二维码前端主导改造方案对比 + 推荐路线）。
+- 当前状态：等待用户确认关键决策点后进入实现阶段。
+- 新增计划文件：`docs/plans/2026-02-08-qr-all-frontend-plan.md`。
+- 已按用户最新约束切换方案：二维码全前端实现，后端仅业务计算。
+- 下一步：等待用户确认“是否接受业务级防伪最小集合”后进入实现。
+
+### 二维码全前端化实现（完成）
+- **Status:** complete
+- Actions taken:
+  - 按 TDD 先改 `src/tests/qr-checkin-flow.test.js`，验证“后端不返回二维码内容、前端本地 payload 提交”的行为。
+  - 新增 `src/utils/qr-payload.js`（payload 构建/解析、slot 与宽限窗口计算）。
+  - 重构 `src/pages/staff-qr/staff-qr.js`：前端本地换码 + 服务端时钟校准 + 低频配置拉取。
+  - 调整 `src/pages/staff-qr/staff-qr.wxml`/`src/pages/staff-qr/staff-qr.wxss`：移除后端图片二维码分支。
+  - 重构 `src/pages/scan-action/scan-action.js`：扫码解析结构化字段并提交。
+  - 改造 `src/utils/api.js`：
+    - `/api/staff/activities/{id}/qr-session` 仅返回配置与时间
+    - `/api/checkin/consume` 改为业务校验 + 防重放 + 限流
+    - `consumeCheckinAction` 支持结构化入参
+  - 文档同步更新：`README.md`、`docs/API_SPEC.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`docs/changes.md`、`changes.md`。
+- Verification:
+  - `node src/tests/qr-checkin-flow.test.js` -> PASS
+  - `node src/tests/activity-visibility.test.js` -> PASS
+  - `node --check src/utils/qr-payload.js` -> PASS
+  - `node --check src/utils/api.js` -> PASS
+  - `node --check src/pages/staff-qr/staff-qr.js` -> PASS
+  - `node --check src/pages/scan-action/scan-action.js` -> PASS

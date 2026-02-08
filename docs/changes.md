@@ -78,3 +78,7 @@
   - 新增 `POST /api/checkin/consume`
   - 活动字段补充 `my_checked_out`、`checkout_count`
   - 普通用户状态文案升级为“已报名/已签到/已签退”
+- 二维码架构调整（后端减负）：
+  - `staff-qr` 改为前端本地生成二维码 payload（`wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>`）
+  - `qr-session` 接口改为仅返回 `rotate_seconds/grace_seconds/server_time`，不再返回二维码内容
+  - `checkin/consume` 增加结构化入参（`activity_id/action_type/slot/nonce`）与业务防重放校验

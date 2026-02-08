@@ -225,3 +225,48 @@ Phase 4
 | Error | Attempt | Resolution |
 |-------|---------|------------|
 | `superpowers-codex` 在 PowerShell 直接执行失败（文件关联错误） | 1 | 改为 `node C:\\Users\\Lenovo\\.codex\\superpowers\\.codex\\superpowers-codex ...` |
+
+## 2026-02-08 二维码前端主导改造调研与规划
+
+### Goal
+- 在不增加后端负担的前提下，重构二维码相关能力为“前端主导”，并先输出可确认的实施计划。
+
+### Phases
+- [x] Phase A: 复盘现有二维码链路与后端耦合点（`api.js`/`staff-qr`/`scan-action`）
+- [ ] Phase B: 联网调研微信小程序能力边界与前端可行实现
+- [ ] Phase C: 形成方案对比、推荐路线与实施计划（待用户确认）
+
+### Current Phase
+- `Phase B in_progress`
+
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| `web` 工具直连 `developers.weixin.qq.com` 失败 | 1 | 切换为可访问镜像/官方同源文档继续调研 |
+
+### Update (2026-02-08)
+- [x] Phase B: 联网调研微信小程序能力边界与前端可行实现
+- [x] Phase C: 形成方案对比、推荐路线与实施计划（待用户确认）
+- `docs/plans/2026-02-08-qr-frontend-first-plan.md` 已生成。
+- `Current Phase` -> `Waiting for user confirmation`
+
+### Update (2026-02-08, 用户新约束)
+- [x] 方案重写为“二维码全前端化（后端仅业务计算）”。
+- 新计划文档：`docs/plans/2026-02-08-qr-all-frontend-plan.md`。
+- `Current Phase` -> `Waiting for user confirmation (business-level anti-forgery minimum set)`。
+
+## 2026-02-08 二维码全前端化实现（后端仅业务计算）
+
+### Goal
+- 二维码生成、轮换、渲染、扫码解析主流程迁移到前端。
+- 后端仅承担业务校验（时间窗/权限/状态流转/防重放/计数）。
+
+### Phases
+- [x] Phase A: 新增统一 payload 工具（build/parse/slot 窗口计算）
+- [x] Phase B: 重构 staff-qr（前端本地换码，移除高频后端换码依赖）
+- [x] Phase C: 重构 scan-action 与 consume 入参（结构化字段）
+- [x] Phase D: 改造 mock API 为业务校验模式（不再返回二维码内容）
+- [x] Phase E: 测试与文档更新
+
+### Current Phase
+- `Completed`

@@ -32,13 +32,6 @@
   justify-content: center;
 }
 
-.qr-image {
-  width: 360rpx;
-  height: 360rpx;
-  border-radius: 14rpx;
-  background: #ffffff;
-}
-
 .countdown-panel {
   margin-top: 18rpx;
   display: flex;

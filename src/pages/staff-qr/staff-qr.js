@@ -2,9 +2,10 @@ const auth = require("../../utils/auth");
 const api = require("../../utils/api");
 const storage = require("../../utils/storage");
 const ui = require("../../utils/ui");
+const qrPayload = require("../../utils/qr-payload");
 
-const DEFAULT_ROTATE_SECONDS = 10;
-const DEFAULT_GRACE_SECONDS = 20;
+const DEFAULT_ROTATE_SECONDS = qrPayload.DEFAULT_ROTATE_SECONDS;
+const DEFAULT_GRACE_SECONDS = qrPayload.DEFAULT_GRACE_SECONDS;
 const DETAIL_POLL_INTERVAL = 3000;
 
 const formatDateTime = (input) => {
@@ -39,6 +40,10 @@ const decodeTitle = (value) => {
   }
 };
 
+const randomNonce = () => {
+  return Math.random().toString(36).slice(2, 8);
+};
+
 Page({
   data: {
     isOnline: true,
@@ -48,15 +53,14 @@ Page({
     activityTitle: "",
     actionType: "checkin",
     actionLabel: "签到",
+    actionBlocked: false,
     loading: true,
     refreshing: false,
     qrStatus: "loading",
     qrPayload: "",
-    qrImageUrl: "",
-    qrFallbackPath: "",
-    sessionId: "",
     rotateSeconds: DEFAULT_ROTATE_SECONDS,
     graceSeconds: DEFAULT_GRACE_SECONDS,
+    currentSlot: -1,
     displayExpireAt: 0,
     acceptExpireAt: 0,
     displayRemainingSeconds: 0,
@@ -89,9 +93,7 @@ Page({
     this.init();
   },
   onShow() {
-    if (this.data.sessionId) {
-      this.syncCountdown();
-    }
+    this.syncCountdown();
   },
   onUnload() {
     this.clearTimers();
@@ -104,8 +106,9 @@ Page({
     this.setData({ isOnline: app.globalData.isOnline });
     this.unsubNetwork = app.onNetworkChange((res) => {
       this.setData({ isOnline: res.isOnline });
-      if (res.isOnline && this.data.role === "staff" && this.data.activityId && !this.data.sessionId) {
-        this.refreshQrSession();
+      if (res.isOnline && this.data.role === "staff" && this.data.activityId) {
+        this.loadQrConfig({ silent: true });
+        this.loadActivitySnapshot();
       }
     });
   },
@@ -121,9 +124,12 @@ Page({
       this.goBack();
       return;
     }
+
     await this.loadActivitySnapshot();
-    await this.refreshQrSession();
+    await this.loadQrConfig();
+    this.generateLocalPayload({ force: true });
     this.startTimers();
+    this.setData({ loading: false });
   },
   startTimers() {
     this.clearTimers();
@@ -144,94 +150,122 @@ Page({
       this.detailPollTimer = null;
     }
   },
-  syncCountdown() {
-    if (!this.data.displayExpireAt || !this.data.acceptExpireAt) {
-      return;
-    }
-    const now = Date.now() + (this.data.serverOffsetMs || 0);
-    const displayRemainingSeconds = Math.max(0, Math.ceil((this.data.displayExpireAt - now) / 1000));
-    const acceptRemainingSeconds = Math.max(0, Math.ceil((this.data.acceptExpireAt - now) / 1000));
-    this.setData({
-      displayRemainingSeconds,
-      acceptRemainingSeconds
-    });
-    if (displayRemainingSeconds <= 1 && this.data.role === "staff" && !this.data.refreshing) {
-      this.refreshQrSession({ auto: true });
-      return;
-    }
-    if (acceptRemainingSeconds <= 0 && !this.data.refreshing) {
-      this.setData({ qrStatus: "expired" });
-    }
+  getServerNow() {
+    return Date.now() + (this.data.serverOffsetMs || 0);
   },
-  async refreshQrSession(options = {}) {
-    const auto = !!options.auto;
-    if (this.data.refreshing || !this.data.activityId || !this.data.sessionToken) {
+  generateLocalPayload(options = {}) {
+    if (this.activityCompleted || this.data.actionBlocked || this.data.role !== "staff" || !this.data.activityId) {
       return;
     }
-    if (!this.data.isOnline) {
-      if (!auto) {
-        ui.showToast("当前无网络");
+
+    const now = this.getServerNow();
+    const targetSlot = Number.isInteger(options.slot)
+      ? options.slot
+      : qrPayload.getCurrentSlot(now, this.data.rotateSeconds);
+    if (!options.force && targetSlot === this.data.currentSlot) {
+      return;
+    }
+
+    const payload = qrPayload.buildQrPayload({
+      activityId: this.data.activityId,
+      actionType: this.data.actionType,
+      slot: targetSlot,
+      nonce: randomNonce()
+    });
+    if (!payload) {
+      this.setData({ qrStatus: "expired" });
+      return;
+    }
+
+    const slotState = qrPayload.resolveSlotState({
+      slot: targetSlot,
+      nowMs: now,
+      rotateSeconds: this.data.rotateSeconds,
+      graceSeconds: this.data.graceSeconds
+    });
+    this.setData({
+      qrStatus: "active",
+      qrPayload: payload,
+      currentSlot: targetSlot,
+      displayExpireAt: slotState.display_expire_at,
+      acceptExpireAt: slotState.accept_expire_at,
+      displayRemainingSeconds: slotState.display_remaining_seconds,
+      acceptRemainingSeconds: slotState.accept_remaining_seconds,
+      lastGeneratedAt: formatDateTime(now)
+    });
+  },
+  syncCountdown() {
+    if (this.activityCompleted || this.data.currentSlot < 0) {
+      return;
+    }
+
+    const now = this.getServerNow();
+    const currentSlot = qrPayload.getCurrentSlot(now, this.data.rotateSeconds);
+    if (currentSlot !== this.data.currentSlot) {
+      this.generateLocalPayload({ slot: currentSlot, force: true });
+      return;
+    }
+
+    const slotState = qrPayload.resolveSlotState({
+      slot: this.data.currentSlot,
+      nowMs: now,
+      rotateSeconds: this.data.rotateSeconds,
+      graceSeconds: this.data.graceSeconds
+    });
+    this.setData({
+      displayRemainingSeconds: slotState.display_remaining_seconds,
+      acceptRemainingSeconds: slotState.accept_remaining_seconds
+    });
+  },
+  async loadQrConfig(options = {}) {
+    if (this.activityCompleted || this.data.role !== "staff") {
+      return;
+    }
+    if (!this.data.isOnline || !this.data.sessionToken || !this.data.activityId) {
+      if (!options.silent) {
+        ui.showToast("当前无网络，已切换本地换码");
       }
       return;
     }
+    if (this.data.refreshing) {
+      return;
+    }
 
-    const shouldShowLoadingMask = !this.data.sessionId;
-    this.setData({
-      refreshing: true,
-      loading: shouldShowLoadingMask,
-      qrStatus: shouldShowLoadingMask ? "loading" : this.data.qrStatus
-    });
-
+    this.setData({ refreshing: true });
     try {
       const result = await api.createStaffQrSession({
         sessionToken: this.data.sessionToken,
         activityId: this.data.activityId,
         actionType: this.data.actionType,
-        rotateSeconds: DEFAULT_ROTATE_SECONDS,
-        graceSeconds: DEFAULT_GRACE_SECONDS
+        rotateSeconds: this.data.rotateSeconds,
+        graceSeconds: this.data.graceSeconds
       });
       if (!result || result.status !== "success") {
-        if (!auto) {
-          ui.showToast((result && result.message) || "二维码生成失败");
+        if (!options.silent) {
+          ui.showToast((result && result.message) || "二维码配置加载失败");
         }
-        this.setData({
-          loading: false,
-          qrStatus: this.data.sessionId ? "active" : "expired"
-        });
+        if (result && result.status === "forbidden") {
+          this.setData({
+            actionBlocked: true,
+            qrStatus: "expired"
+          });
+          this.clearTimers();
+        }
         return;
       }
+
       const serverTime = Number(result.server_time || Date.now());
-      const serverOffsetMs = serverTime - Date.now();
-      const displayExpireAt = Number(result.display_expire_at || (serverTime + DEFAULT_ROTATE_SECONDS * 1000));
-      const acceptExpireAt = Number(result.accept_expire_at || (displayExpireAt + DEFAULT_GRACE_SECONDS * 1000));
       const rotateSeconds = parseWindowSeconds(result.rotate_seconds, DEFAULT_ROTATE_SECONDS);
       const graceSeconds = parseWindowSeconds(result.grace_seconds, DEFAULT_GRACE_SECONDS);
-      const qrPayload = result.qr_payload || result.qr_scene || result.qr_fallback_path || "";
-      const now = Date.now() + serverOffsetMs;
       this.setData({
-        loading: false,
-        qrStatus: "active",
-        qrPayload,
-        qrImageUrl: result.qr_image_url || "",
-        qrFallbackPath: result.qr_fallback_path || "",
-        sessionId: result.session_id || "",
         rotateSeconds,
         graceSeconds,
-        displayExpireAt,
-        acceptExpireAt,
-        serverOffsetMs,
-        displayRemainingSeconds: Math.max(0, Math.ceil((displayExpireAt - now) / 1000)),
-        acceptRemainingSeconds: Math.max(0, Math.ceil((acceptExpireAt - now) / 1000)),
-        lastGeneratedAt: formatDateTime(serverTime)
+        serverOffsetMs: serverTime - Date.now()
       });
     } catch (err) {
-      if (!auto) {
-        ui.showToast("二维码生成失败");
+      if (!options.silent) {
+        ui.showToast("二维码配置加载失败");
       }
-      this.setData({
-        loading: false,
-        qrStatus: this.data.sessionId ? "active" : "expired"
-      });
     } finally {
       this.setData({ refreshing: false });
     }
@@ -248,29 +282,57 @@ Page({
           ui.showToast((detail && detail.message) || "活动不可用");
           this.detailInvalidShown = true;
         }
+        this.activityCompleted = true;
         this.clearTimers();
         this.setData({ qrStatus: "expired" });
         return;
       }
 
       const isCompleted = `${detail.progress_status || ""}`.toLowerCase() === "completed";
+      const isUnsupportedCheckout = this.data.actionType === "checkout" && !detail.support_checkout;
+      const serverTime = Number(detail.server_time || Date.now());
       this.setData({
         activityTitle: this.data.activityTitle || detail.activity_title || "",
         checkinCount: Number(detail.checkin_count || 0),
-        checkoutCount: Number(detail.checkout_count || 0)
+        checkoutCount: Number(detail.checkout_count || 0),
+        rotateSeconds: parseWindowSeconds(detail.rotate_seconds, this.data.rotateSeconds),
+        graceSeconds: parseWindowSeconds(detail.grace_seconds, this.data.graceSeconds),
+        serverOffsetMs: serverTime - Date.now()
       });
-      if (isCompleted) {
+      if (isCompleted || isUnsupportedCheckout) {
+        this.activityCompleted = true;
         this.clearTimers();
-        this.setData({ qrStatus: "expired" });
+        this.setData({
+          actionBlocked: isUnsupportedCheckout,
+          qrStatus: "expired"
+        });
+        if (isUnsupportedCheckout && !this.unsupportedCheckoutShown) {
+          ui.showToast("该活动暂不支持签退二维码");
+          this.unsupportedCheckoutShown = true;
+        }
+        return;
+      }
+
+      if (!this.data.qrPayload || this.data.currentSlot < 0) {
+        this.generateLocalPayload({ force: true });
       }
     } catch (err) {
-      // ignore polling error, wait next poll cycle
+      // wait next poll cycle
     } finally {
       this.activityLoading = false;
     }
   },
-  onTapRefresh() {
-    this.refreshQrSession();
+  async onTapRefresh() {
+    if (this.activityCompleted) {
+      ui.showToast("活动已结束");
+      return;
+    }
+    if (this.data.actionBlocked) {
+      ui.showToast("当前动作不可用");
+      return;
+    }
+    await this.loadQrConfig();
+    this.generateLocalPayload({ force: true });
   },
   goBack() {
     const pages = getCurrentPages();

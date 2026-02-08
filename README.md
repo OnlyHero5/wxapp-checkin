@@ -25,7 +25,7 @@
 ## 快速预览
 - 活动列表双分组：`正在进行`（上）+ `已完成`（下），两组均按时间倒序。
 - 已完成活动仅支持“查看详情”，不再允许签到/签退动作。
-- 管理员二维码为动态会话：`10 秒换码` + `20 秒宽限提交`（兼顾安全与弱网体验）。
+- 管理员二维码由前端本地动态生成：`10 秒换码` + `20 秒宽限提交`（后端仅做业务校验）。
 - 普通用户在独立“签到/签退”页面调用摄像头扫码并即时收到成功/失败反馈。
 - 普通用户只可见与自己有关的活动：`已报名 / 已签到 / 已签退`，不可见无关活动。
 - 管理员可看到全量活动与实时统计字段：`checkin_count` / `checkout_count`。
@@ -47,7 +47,7 @@
 ### 管理员端
 1. 在活动页点击“签到”或“签退”动作，跳转 `staff-qr` 页面。
 2. 页面展示动态二维码 + 倒计时（剩余秒数可见）。
-3. 倒计时归零后自动请求新会话，页面无闪烁切换到新二维码。
+3. 倒计时归零后前端本地换码，页面无闪烁切换到新二维码。
 4. 统计人数通过活动列表与活动详情接口回流并实时更新。
 
 ### 普通用户端
@@ -73,7 +73,7 @@ src/pages/
 | 登录建会话 | `POST /api/auth/wx-login` | `role`, `permissions`, `user_profile` |
 | 绑定注册 | `POST /api/register` | `role`, `permissions`, `user_profile` |
 | 拉取活动列表 | `GET /api/staff/activities` | `progress_status`, `my_*`, `checkin_count`, `checkout_count` |
-| 生成动态码 | `POST /api/staff/activities/{activity_id}/qr-session` | `qr_payload`, `display_expire_at`, `accept_expire_at`, `rotate_seconds`, `grace_seconds` |
+| 获取换码配置 | `POST /api/staff/activities/{activity_id}/qr-session` | `rotate_seconds`, `grace_seconds`, `server_time` |
 | 扫码提交动作 | `POST /api/checkin/consume` | `status`, `message`, `action_type`, `checkin_record_id`, `in_grace_window` |
 | 拉取活动详情 | `GET /api/staff/activities/{activity_id}` | `has_detail` 及详情字段 |
 
@@ -101,7 +101,7 @@ npm install
 
 ## 联调校验清单
 - 普通用户活动列表不出现未报名、未签到、未签退的无关活动。
-- 管理员二维码每 `10s` 自动换码，倒计时展示连续无卡顿。
+- 管理员二维码每 `10s` 前端本地自动换码，倒计时展示连续无卡顿。
 - 普通用户扫码后在 `20s` 宽限期内可正常提交并获得正向反馈。
 - 活动页状态与管理员统计人数在动作后可见更新。
 
@@ -113,5 +113,5 @@ npm install
 - 根目录变更摘要：`changes.md`
 
 ## 版本信息
-- 当前文档覆盖能力：活动可见性收敛、管理员动态二维码、普通用户扫码签到/签退、角色分流与积分展示。
+- 当前文档覆盖能力：活动可见性收敛、二维码前端本地换码、普通用户扫码签到/签退、角色分流与积分展示。
 - 历史发布标签：`v2026.02.04`（以最新提交与文档为准）。

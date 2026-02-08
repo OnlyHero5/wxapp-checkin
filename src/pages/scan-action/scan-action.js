@@ -1,5 +1,6 @@
 const auth = require("../../utils/auth");
 const api = require("../../utils/api");
+const qrPayload = require("../../utils/qr-payload");
 const storage = require("../../utils/storage");
 const ui = require("../../utils/ui");
 
@@ -12,35 +13,60 @@ const formatDateTime = (input) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
-const parseSceneFromText = (text) => {
+const parsePayloadFromText = (text) => {
   const value = `${text || ""}`.trim();
   if (!value) {
     return "";
   }
+  if (qrPayload.parseQrPayload(value)) {
+    return value;
+  }
   if (value.startsWith("s.")) {
     return value;
   }
+
   const match = value.match(/[?&]scene=([^&]+)/);
   if (!match || !match[1]) {
     return "";
   }
   try {
     const decoded = decodeURIComponent(match[1]);
+    if (qrPayload.parseQrPayload(decoded)) {
+      return decoded;
+    }
     return decoded.startsWith("s.") ? decoded : "";
   } catch (err) {
     return "";
   }
 };
 
+const parsePayloadMeta = (payloadText) => {
+  const parsed = qrPayload.parseQrPayload(payloadText);
+  if (!parsed) {
+    return {
+      activityId: "",
+      actionType: "",
+      slot: "",
+      nonce: ""
+    };
+  }
+  return {
+    activityId: parsed.activity_id,
+    actionType: parsed.action_type,
+    slot: parsed.slot,
+    nonce: parsed.nonce
+  };
+};
+
 const extractPayloadFromScanResult = (scanResult) => {
   const path = `${(scanResult && scanResult.path) || ""}`.trim();
   const rawResult = `${(scanResult && scanResult.result) || ""}`.trim();
 
-  const sceneFromPath = parseSceneFromText(path);
+  const sceneFromPath = parsePayloadFromText(path);
   if (sceneFromPath) {
     return sceneFromPath;
   }
-  const sceneFromResult = parseSceneFromText(rawResult);
+  const sceneFromResult = parsePayloadFromText(rawResult);
   if (sceneFromResult) {
     return sceneFromResult;
   }
@@ -156,7 +182,7 @@ Page({
       return;
     }
 
-    const pendingScene = parseSceneFromText(this.data.pendingScenePayload);
+    const pendingScene = parsePayloadFromText(this.data.pendingScenePayload);
     if (pendingScene) {
       this.consumePayload(pendingScene, {
         scanType: "WX_CODE",
@@ -213,6 +239,7 @@ Page({
       this.setData({ submitting: false });
       return;
     }
+    const payloadMeta = parsePayloadMeta(qrPayload);
     this.setData({ submitting: true });
     try {
       const result = await api.consumeCheckinAction({
@@ -220,7 +247,11 @@ Page({
         qrPayload,
         scanType: scanMeta.scanType || "",
         rawResult: scanMeta.rawResult || "",
-        path: scanMeta.path || ""
+        path: scanMeta.path || "",
+        activityId: payloadMeta.activityId,
+        actionType: payloadMeta.actionType,
+        slot: payloadMeta.slot,
+        nonce: payloadMeta.nonce
       });
 
       if (result && result.status === "success") {
