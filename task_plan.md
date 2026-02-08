@@ -290,3 +290,10 @@ Phase 4
 - [x] Phase C: 全量重写 API 文档正文
 - [x] Phase D: 对齐变更记录并准备推送
 - `Current Phase` -> `Completed`
+
+### Update (2026-02-08, v4.0 深化)
+- [x] 对齐真实调用链，确认主链路 API 覆盖完整（6/6）
+- [x] 二次重构 4.4/4.5，提高后端可执行性与可读性
+- [x] 补齐逐字段出参语义与 A-06 事务/并发/防重放要求
+- [x] 更新变更日志与 planning 文件
+- `Current Phase` -> `Completed (ready to commit/push)`
