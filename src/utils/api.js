@@ -560,6 +560,11 @@ const clampWindowSeconds = (value, fallbackValue, minValue, maxValue) => {
   return Math.max(minValue, Math.min(maxValue, Math.floor(parsed)));
 };
 
+const createBackendNonce = () => {
+  const randomPart = Math.random().toString(36).slice(2, 10);
+  return `n${randomPart || Date.now().toString(36)}`;
+};
+
 const resolveConsumeContext = (data) => {
   const rawPayload = `${data.qr_payload || data.path || data.raw_result || ""}`.trim();
   const parsedPayload = qrPayload.parseQrPayload(rawPayload);
@@ -756,6 +761,7 @@ const mockRequest = (url, data) => {
             (data.activity_id && `${data.activity_id}` !== context.parsedPayload.activity_id)
             || (data.action_type && `${data.action_type}` !== context.parsedPayload.action_type)
             || (data.slot !== undefined && data.slot !== null && data.slot !== "" && Number(data.slot) !== context.parsedPayload.slot)
+            || (data.nonce && `${data.nonce}` !== context.parsedPayload.nonce)
           )
         ) {
           resolve({ status: "invalid_qr", message: "二维码数据不一致，请重新扫码" });
@@ -873,9 +879,9 @@ const mockRequest = (url, data) => {
       if (qrSessionMatch) {
         const role = resolveSessionUser(data.session_token).role;
         const activityId = qrSessionMatch[1];
-        const actionType = data.action_type === "checkout" ? "checkout" : "checkin";
-        const rotateSeconds = clampWindowSeconds(data.rotate_seconds, DEFAULT_ROTATE_SECONDS, 1, 30);
-        const graceSeconds = clampWindowSeconds(data.grace_seconds, DEFAULT_GRACE_SECONDS, 1, 120);
+        const actionType = normalizeTextValue(data.action_type);
+        const rotateSeconds = DEFAULT_ROTATE_SECONDS;
+        const graceSeconds = DEFAULT_GRACE_SECONDS;
         const activity = mockStore.staffActivities.find((item) => item.activity_id === activityId);
 
         if (role !== "staff") {
@@ -885,6 +891,11 @@ const mockRequest = (url, data) => {
 
         if (!activity) {
           resolve({ status: "invalid_activity", message: "活动不存在或已下线" });
+          return;
+        }
+
+        if (actionType !== "checkin" && actionType !== "checkout") {
+          resolve({ status: "invalid_param", message: "action_type 参数不合法" });
           return;
         }
 
@@ -898,13 +909,33 @@ const mockRequest = (url, data) => {
           return;
         }
 
+        const serverTime = Date.now();
+        const slot = qrPayload.getCurrentSlot(serverTime, rotateSeconds);
+        const nonce = createBackendNonce();
+        const qrPayloadText = qrPayload.buildQrPayload({
+          activityId,
+          actionType,
+          slot,
+          nonce
+        });
+        const slotWindow = qrPayload.getSlotWindow({
+          slot,
+          rotateSeconds,
+          graceSeconds
+        });
+
         resolve({
           status: "success",
+          message: "二维码签发成功",
           activity_id: activityId,
           action_type: actionType,
+          qr_payload: qrPayloadText,
+          slot,
           rotate_seconds: rotateSeconds,
           grace_seconds: graceSeconds,
-          server_time: Date.now()
+          display_expire_at: slotWindow.display_expire_at,
+          accept_expire_at: slotWindow.accept_expire_at,
+          server_time: serverTime
         });
         return;
       }
@@ -1077,7 +1108,7 @@ const verifyCheckin = ({ sessionToken, qrToken, studentId, name }) => {
 
 const consumeCheckinAction = ({
   sessionToken,
-  qrPayload,
+  qrPayload: qrPayloadText,
   scanType,
   rawResult,
   path,
@@ -1086,20 +1117,38 @@ const consumeCheckinAction = ({
   slot,
   nonce
 }) => {
+  const requestData = {
+    session_token: sessionToken || storage.getSessionToken(),
+    qr_payload: qrPayloadText || "",
+    scan_type: scanType || "",
+    raw_result: rawResult || "",
+    path: path || ""
+  };
+
+  const activityIdValue = `${activityId || ""}`.trim();
+  if (activityIdValue) {
+    requestData.activity_id = activityIdValue;
+  }
+
+  const actionTypeValue = `${actionType || ""}`.trim();
+  if (actionTypeValue) {
+    requestData.action_type = actionTypeValue;
+  }
+
+  const slotValue = Number(slot);
+  if (slot !== undefined && slot !== null && slot !== "" && Number.isInteger(slotValue) && slotValue >= 0) {
+    requestData.slot = slotValue;
+  }
+
+  const nonceValue = `${nonce || ""}`.trim();
+  if (nonceValue) {
+    requestData.nonce = nonceValue;
+  }
+
   return request({
     url: "/api/checkin/consume",
     method: "POST",
-    data: {
-      session_token: sessionToken || storage.getSessionToken(),
-      qr_payload: qrPayload || "",
-      scan_type: scanType || "",
-      raw_result: rawResult || "",
-      path: path || "",
-      activity_id: activityId || "",
-      action_type: actionType || "",
-      slot: slot !== undefined && slot !== null ? slot : "",
-      nonce: nonce || ""
-    }
+    data: requestData
   });
 };
 
@@ -1160,15 +1209,25 @@ const createStaffQrSession = ({
   rotateSeconds,
   graceSeconds
 }) => {
+  const requestData = {
+    session_token: sessionToken || storage.getSessionToken(),
+    action_type: actionType === "checkout" ? "checkout" : "checkin"
+  };
+
+  const rotateValue = Number(rotateSeconds);
+  if (Number.isInteger(rotateValue) && rotateValue > 0) {
+    requestData.rotate_seconds = rotateValue;
+  }
+
+  const graceValue = Number(graceSeconds);
+  if (Number.isInteger(graceValue) && graceValue > 0) {
+    requestData.grace_seconds = graceValue;
+  }
+
   return request({
     url: `/api/staff/activities/${activityId}/qr-session`,
     method: "POST",
-    data: {
-      session_token: sessionToken || storage.getSessionToken(),
-      action_type: actionType || "checkin",
-      rotate_seconds: rotateSeconds,
-      grace_seconds: graceSeconds
-    }
+    data: requestData
   });
 };
 

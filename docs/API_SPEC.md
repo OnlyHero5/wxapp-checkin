@@ -1,7 +1,7 @@
 # API 协议规范（后端实施手册）
 
-文档版本: v4.4  
-更新日期: 2026-02-08  
+文档版本: v4.5  
+更新日期: 2026-02-09  
 适用分支: `main`  
 代码对齐基线: `src/utils/api.js`、`src/utils/auth.js`、`src/pages/login/login.js`、`src/pages/index/index.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`、`src/pages/activity-detail/activity-detail.js`、`src/pages/register/register.js`
 
@@ -28,18 +28,19 @@
 ## 2. 职责边界（必须统一）
 
 ### 2.1 小程序端职责
-- 根据后端返回的策略参数，本地生成二维码 payload 文本。
-- 本地执行二维码轮换（默认 10 秒）。
-- 扫码后将 payload（及可选冗余字段）提交给后端。
+- 调用 A-05 获取后端签发的 `qr_payload`、`display_expire_at`、`accept_expire_at` 并展示二维码。
+- 仅做倒计时展示与刷新触发，不在前端本地拼装或签名业务二维码 payload。
+- 扫码后将 `qr_payload`（及可选 `scan_type/raw_result/path`）提交给 A-06。
 
 ### 2.2 后端职责
-- 仅返回二维码策略配置，不生成二维码图片，不返回二维码文本内容。
+- 负责二维码票据签发（`qr_payload`）及展示/提交时效窗口计算（`display_expire_at`、`accept_expire_at`）。
 - 在 `consume` 接口内完成：鉴权、权限、活动有效性、时效校验、防重放、状态流转、计数更新、记录落库。
 - 保证同一业务状态在并发提交下的一致性与幂等性。
 
 ### 2.3 严格约束
 - 后端不得依赖“微信官方二维码接口”生成业务二维码。
-- 后端必须接受并校验小程序端生成的 payload 协议字符串。
+- 当前前端页面不再本地组装二维码 payload，统一由 A-05 返回 `qr_payload`。
+- 时效与防重放判定必须以后端时间与后端规则为准。
 
 ---
 
@@ -53,7 +54,7 @@
 | A-02 | POST | `/api/register` | `pages/register/register` | 用户身份绑定 |
 | A-03 | GET | `/api/staff/activities` | `pages/index/index` | 活动列表 |
 | A-04 | GET | `/api/staff/activities/{activity_id}` | `pages/activity-detail/activity-detail`、`pages/staff-qr/staff-qr` | 活动详情与统计 |
-| A-05 | POST | `/api/staff/activities/{activity_id}/qr-session` | `pages/staff-qr/staff-qr` | staff 获取二维码策略配置 |
+| A-05 | POST | `/api/staff/activities/{activity_id}/qr-session` | `pages/staff-qr/staff-qr` | staff 获取后端签发二维码票据 |
 | A-06 | POST | `/api/checkin/consume` | `pages/scan-action/scan-action` | normal 扫码提交签到/签退 |
 
 ## 3.2 通用请求约定
@@ -113,29 +114,27 @@
 | `status` | string | `success` / `forbidden` / `invalid_qr` / `expired` / `duplicate` / `invalid_activity` / `invalid_param` / `student_already_bound` / `wx_already_bound` / `failed` | 业务处理结果 |
 | `error_code` | string | `session_expired` / `token_expired`（建议） | 机器可读错误码；会话失效时必须返回 |
 
-## 3.5 payload 协议（A-06 核心）
+## 3.5 二维码票据协议（A-05/A-06 核心）
 
-字符串格式：
+`qr_payload` 由 A-05 返回，前端只做展示与透传。
+
+当前项目使用的 payload 协议：
 ```text
 wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 ```
 
 字段说明：
-- `activity_id`: 活动唯一标识。
-- `action_type`: `checkin` 或 `checkout`。
-- `slot`: 时间片编号，整数，`>=0`。
-- `nonce`: 随机串，提升载荷不可预测性。
+- `activity_id`
+- `action_type`（`checkin` / `checkout`）
+- `slot`（时间片，防重放键组成）
+- `nonce`
 
-时间窗口定义（默认配置）：
-- `rotate_seconds = 10`（显示窗口）。
-- `grace_seconds = 20`（提交宽限）。
-
-计算规则（后端用于校验）：
+后端时效规则：
 1. `display_start_at = slot * rotate_seconds * 1000`
 2. `display_expire_at = display_start_at + rotate_seconds * 1000`
 3. `accept_expire_at = display_expire_at + grace_seconds * 1000`
-4. `now < display_start_at` -> future（无效）
-5. `now > accept_expire_at` -> expired（过期）
+4. `now < display_start_at` -> `invalid_qr`（时间异常）
+5. `now > accept_expire_at` -> `expired`
 
 ## 3.6 后端解析技术建议（必须明确）
 
@@ -681,7 +680,7 @@ curl -G "https://api.example.com/api/staff/activities/act_hackathon_20260215" \
 
 ---
 
-## 4.5 A-05 staff 二维码策略配置（重点重构）
+## 4.5 A-05 staff 二维码签发（重点重构）
 
 **方法/路径**: `POST /api/staff/activities/{activity_id}/qr-session`
 
@@ -692,8 +691,6 @@ curl -G "https://api.example.com/api/staff/activities/act_hackathon_20260215" \
 | `activity_id` | path | 是 | string | 非空；建议正则 `^[0-9A-Za-z_-]{1,64}$` | 目标活动主键 |
 | `session_token` | body | 是 | string | 非空且有效；角色必须为 `staff` | staff 会话令牌 |
 | `action_type` | body | 是 | string | 仅允许 `checkin` / `checkout` | 当前要生成哪种动作二维码 |
-| `rotate_seconds` | body | 否 | number | 整数；建议范围 `1~30`；非法值回退默认 | 希望的轮换秒数 |
-| `grace_seconds` | body | 否 | number | 整数；建议范围 `1~120`；非法值回退默认 | 希望的宽限秒数 |
 
 ### 4.5.1A 参数落地详解（后端怎么写）
 
@@ -702,12 +699,11 @@ curl -G "https://api.example.com/api/staff/activities/act_hackathon_20260215" \
 | `activity_id` | staff 活动卡片 | 路径参数校验 | 先查活动是否存在/是否已结束 | `invalid_activity` / `forbidden` |
 | `session_token` | staff 登录态 | 鉴权 + 角色校验 | 必须是 `staff` | `forbidden` |
 | `action_type` | 页面按钮（签到/签退） | 枚举校验 | 仅 `checkin/checkout` | `invalid_param` |
-| `rotate_seconds` | 前端可选配置 | 转整数并限幅 | 非法回退默认值（建议 10） | 不建议报错 |
-| `grace_seconds` | 前端可选配置 | 转整数并限幅 | 非法回退默认值（建议 20） | 不建议报错 |
 
 实现注意：
-1. 该接口是“策略配置接口”，不是二维码内容接口。
-2. 后端返回的 `server_time` 用于前端时钟对齐，避免用户设备时间漂移导致误判。
+1. 该接口必须完成“二维码票据签发”，不是纯配置接口。
+2. 当前链路要求返回可解析的 `qr_payload`（`wxcheckin:v1` 协议字符串）。
+3. 后端返回 `server_time` 用于前端时钟对齐，避免用户设备时间漂移导致误判。
 
 ### 请求示例（传参示例）
 
@@ -716,9 +712,7 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
   -H "Content-Type: application/json" \
   -d '{
     "session_token": "sess_staff_xxx",
-    "action_type": "checkin",
-    "rotate_seconds": 10,
-    "grace_seconds": 20
+    "action_type": "checkin"
   }'
 ```
 
@@ -728,21 +722,25 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
 3. 活动不存在 -> `invalid_activity`。
 4. 活动 `progress_status = completed` -> `forbidden`。
 5. 若 `action_type = checkout` 且活动不支持签退 -> `forbidden`。
-6. 归一化窗口参数：
-   - `rotate_seconds` 非法则回退默认。
-   - `grace_seconds` 非法则回退默认。
-7. 返回策略配置及 `server_time`。
+6. 读取活动配置（或系统默认）得到 `rotate_seconds` 与 `grace_seconds`。
+7. 使用后端时间计算当前 `slot`，生成 `nonce`。
+8. 组装 `qr_payload`（`wxcheckin:v1` 协议），写入 `display_expire_at` 与 `accept_expire_at`。
+9. 返回签发结果与 `server_time`。
 
 ### 4.5.3 成功响应示例
 
 ```json
 {
   "status": "success",
-  "message": "配置获取成功",
+  "message": "二维码签发成功",
   "activity_id": "act_hackathon_20260215",
   "action_type": "checkin",
+  "qr_payload": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:n100001",
+  "slot": 177051839,
   "rotate_seconds": 10,
   "grace_seconds": 20,
+  "display_expire_at": 1770518400000,
+  "accept_expire_at": 1770518420000,
   "server_time": 1770518390000
 }
 ```
@@ -755,8 +753,12 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
 | `message` | string | 建议 | 可读提示文案 | 业务层 |
 | `activity_id` | string | 是 | 活动主键回显 | 入参回显/活动表 |
 | `action_type` | string | 是 | 动作类型回显 | 入参归一化结果 |
+| `qr_payload` | string | 是 | 后端生成的二维码文本，供前端渲染二维码 | 后端生成逻辑 |
+| `slot` | integer | 建议 | 票据时间片，用于审计与防重放 | 后端时间窗口计算 |
 | `rotate_seconds` | number | 是 | 前端换码周期 | 入参归一化结果/系统默认 |
 | `grace_seconds` | number | 是 | 提交宽限周期 | 入参归一化结果/系统默认 |
+| `display_expire_at` | number | 是 | 二维码展示截止时间（毫秒） | 后端时间窗口计算 |
+| `accept_expire_at` | number | 是 | 二维码提交截止时间（毫秒） | 后端时间窗口计算 |
 | `server_time` | number | 是 | 服务端当前毫秒时间 | 系统时钟 |
 
 ### 4.5.5 失败响应定义
@@ -770,9 +772,9 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
 | `invalid_param` | 参数不合法 | `action_type` 非法且无法归一 |
 
 ### 4.5.6 强制约束（必须执行）
-- 本接口只返回“策略配置”，不返回二维码图片。
-- 本接口不返回二维码 payload 文本。
-- payload 文本由小程序端本地生成，后端只负责在 A-06 校验与消费。
+- 本接口必须返回 `qr_payload`，且前端可直接用于二维码渲染。
+- 本接口返回的 `display_expire_at`、`accept_expire_at` 必须与 A-06 校验口径一致。
+- 前端不得本地生成业务二维码 payload；扫码提交以 A-05 返回内容为准。
 
 ---
 
@@ -789,29 +791,29 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
 | `scan_type` | body | 否 | string | 可空；建议长度 <= 32 | 扫码来源类型（日志字段） |
 | `raw_result` | body | 否 | string | 可空；建议长度 <= 2048 | 原始扫码结果（审计/兜底解析） |
 | `path` | body | 否 | string | 可空；建议长度 <= 2048 | 小程序码 path（审计/兜底解析） |
-| `activity_id` | body | 建议 | string | 若传入，必须与 payload 解析一致 | 结构化活动 ID 冗余字段 |
-| `action_type` | body | 建议 | string | 若传入，必须与 payload 解析一致 | 结构化动作类型冗余字段 |
-| `slot` | body | 建议 | integer | 若传入，必须与 payload 一致且 `>=0` | 结构化时间片冗余字段 |
-| `nonce` | body | 建议 | string | 若传入，必须与 payload 一致 | 结构化随机串冗余字段 |
+| `activity_id` | body | 否 | string | 兼容字段；若传入需与票据一致 | 冗余活动 ID |
+| `action_type` | body | 否 | string | 兼容字段；若传入需与票据一致 | 冗余动作类型 |
+| `slot` | body | 否 | integer | 兼容字段；若传入需与票据一致且 `>=0` | 冗余时间片 |
+| `nonce` | body | 否 | string | 兼容字段；若传入需与票据一致 | 冗余随机串 |
 
 ### 4.6.1A 参数落地详解（后端怎么写）
 
 | 字段 | 前端来源 | 后端解析动作 | 推荐实现 | 不合法返回 |
 |---|---|---|---|---|
 | `session_token` | 登录后缓存 | 鉴权 + 角色校验 | 只允许 `normal` 消费 | `forbidden` |
-| `qr_payload` | 扫码结果主文本 | 按协议解析 | 优先使用 | `invalid_qr` |
+| `qr_payload` | 扫码结果主文本 | 按协议解析 | 作为主真值来源 | `invalid_qr` |
 | `scan_type` | `wx.scanCode` 返回 | 仅日志 | 不参与业务判定 | 通常忽略 |
-| `raw_result` | 扫码原始值 | 兜底解析源 | 仅 `qr_payload` 不可用时使用 | `invalid_qr` |
-| `path` | 小程序码 path | 兜底解析源 | 仅 `qr_payload` 不可用时使用 | `invalid_qr` |
-| `activity_id` | 前端冗余字段 | 与解析结果做一致性比对 | 存在即必须一致 | `invalid_qr` |
-| `action_type` | 前端冗余字段 | 与解析结果做一致性比对 | 存在即必须一致 | `invalid_qr` |
-| `slot` | 前端冗余字段 | 转整数后比对 | 存在即必须一致且 `>=0` | `invalid_qr` |
+| `raw_result` | 扫码原始值 | 兜底审计字段 | 仅用于日志与排障 | 通常忽略 |
+| `path` | 小程序码 path | 兜底审计字段 | 仅用于日志与排障 | 通常忽略 |
+| `activity_id` | 前端冗余字段 | 与解析结果比对 | 存在即必须一致 | `invalid_qr` |
+| `action_type` | 前端冗余字段 | 与解析结果比对 | 存在即必须一致 | `invalid_qr` |
+| `slot` | 前端冗余字段 | 转整数后与解析结果比对 | 存在即必须一致且 `>=0` | `invalid_qr` |
 | `nonce` | 前端冗余字段 | 字符串比对 | 存在即必须一致 | `invalid_qr` |
 
 字段关系解释（你截图那条）：
-1. `qr_payload` 是主真值来源，结构化字段是“冗余校验字段”。
-2. 若结构化字段存在但与 `qr_payload` 解析结果不一致，说明请求可能被篡改、前端组包错误或扫码结果污染，必须拒绝。
-3. 这就是“**一致性校验**”的业务含义。
+1. `qr_payload` 是主真值来源。
+2. 结构化冗余字段仅用于兼容与审计，若存在且不一致必须拒绝。
+3. 前端不应依赖冗余字段完成业务，后端必须以 payload 解析结果为准。
 
 ### 请求示例（传参示例）
 
@@ -823,20 +825,16 @@ curl -X POST "https://api.example.com/api/checkin/consume" \
     "qr_payload": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:n100001",
     "scan_type": "QR_CODE",
     "raw_result": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:n100001",
-    "path": "",
-    "activity_id": "act_hackathon_20260215",
-    "action_type": "checkin",
-    "slot": 177051839,
-    "nonce": "n100001"
+    "path": ""
   }'
 ```
 
 ### 4.6.2 后端解析规则
 
 1. 解析优先级：`qr_payload` > `path` > `raw_result`。
-2. 若 `qr_payload` 不可解析，尝试从 `path` 或 `raw_result` 中提取。
-3. 只要结构化冗余字段存在，必须与最终解析结果一致。
-4. 任一关键字段缺失（`activity_id`、`action_type`、`slot`）即 `invalid_qr`。
+2. 解析 payload 得到标准上下文：`activity_id`、`action_type`、`slot`、`nonce`。
+3. 只要结构化冗余字段存在，必须与解析结果一致。
+4. 任一关键字段缺失即 `invalid_qr`。
 
 ### 4.6.2A 一致性校验详解（重点）
 
@@ -881,7 +879,7 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 
 1. **鉴权**: 校验 `session_token`，确认角色是 `normal`。
 2. **限流**: 按用户做短窗限流（当前建议: 5 秒窗口最多 6 次）。命中返回 `forbidden`。
-3. **解析载荷**: 按 4.6.2 规则得到标准上下文：`activity_id`、`action_type`、`slot`、`nonce`。
+3. **解析载荷**: 按 4.6.2 规则解析 payload，得到标准上下文：`activity_id`、`action_type`、`slot`、`nonce`。
 4. **一致性校验**: 按 4.6.2A 对 `activity_id/action_type/slot/nonce` 做逐字段比对；任一不一致立即返回 `invalid_qr`。
 5. **活动校验**: 查询活动，不存在返回 `invalid_activity`。
 6. **可见性校验**: 用户未报名且无参与记录（签到/签退）则返回 `forbidden`。
@@ -889,7 +887,7 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 8. **动作能力校验**: `checkout` 但活动不支持签退返回 `forbidden`。
 9. **时效校验**:
    - `slot` 在未来 -> `invalid_qr`
-   - 超过宽限 -> `expired`
+   - 超过宽限时间 -> `expired`
 10. **防重放校验**: 幂等键 `user_id + activity_id + action_type + slot`，已消费则 `duplicate`。
 11. **业务状态机校验**:
    - 已 `checked_in` 再执行 `checkin` -> `duplicate`
@@ -1005,7 +1003,7 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 
 ## 7. 联调验收清单（后端）
 
-1. A-05 正常返回策略配置，且响应中不包含二维码内容字段。
+1. A-05 正常返回 `qr_payload`、`display_expire_at`、`accept_expire_at`，并且三者时间关系正确。
 2. A-06 合法 payload 提交返回 `success`，并正确生成记录与更新计数。
 3. A-06 使用未来 slot 返回 `invalid_qr`。
 4. A-06 使用过期 slot 返回 `expired`。
@@ -1032,19 +1030,22 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 | `payload_encrypted` | A-02 | 否 | string | 解密验签 + 明文一致性 | `invalid_param` |
 | `role_hint` | A-03/A-04 | 否 | string | 仅日志，不参与授权 | 无 |
 | `visibility_scope` | A-03/A-04 | 否 | string | 仅日志，不参与授权 | 无 |
-| `activity_id` | A-04/A-05/A-06 | 是/建议 | string | 活动存在性校验 | `invalid_activity` / `invalid_qr` |
-| `action_type` | A-05/A-06 | 是/建议 | string | 枚举校验 + 能力校验 | `invalid_param` / `forbidden` / `invalid_qr` |
-| `rotate_seconds` | A-05 | 否 | integer | 归一化（限幅） | 通常回退默认 |
-| `grace_seconds` | A-05 | 否 | integer | 归一化（限幅） | 通常回退默认 |
-| `qr_payload` | A-06 | 建议 | string | 主解析源 | `invalid_qr` |
+| `activity_id` | A-04/A-05/A-06 | 是/否 | string | 活动存在性校验 / 一致性校验 | `invalid_activity` / `invalid_qr` |
+| `action_type` | A-05/A-06 | 是/否 | string | 枚举校验 + 能力校验 + 一致性校验 | `invalid_param` / `forbidden` / `invalid_qr` |
+| `qr_payload` | A-05/A-06 | 是/建议 | string | A-05 生成 / A-06 解析 | `invalid_qr` / `expired` |
+| `rotate_seconds` | A-05（响应） | 是 | integer | 活动窗口配置回传 | 无 |
+| `grace_seconds` | A-05（响应） | 是 | integer | 活动宽限配置回传 | 无 |
+| `display_expire_at` | A-05（响应） | 是 | integer | 二维码展示截止时间 | 无 |
+| `accept_expire_at` | A-05（响应）/A-06（校验） | 是 | integer | 二维码提交截止时间 | `expired` |
 | `scan_type` | A-06 | 否 | string | 日志字段 | 无 |
 | `raw_result` | A-06 | 否 | string | 兜底解析源 | `invalid_qr` |
 | `path` | A-06 | 否 | string | 兜底解析源 | `invalid_qr` |
-| `slot` | A-06 | 建议 | integer | 时效校验 + 防重放键组成 | `invalid_qr` / `expired` / `duplicate` |
-| `nonce` | A-06 | 建议 | string | 一致性比对与审计 | `invalid_qr` |
+| `slot` | A-05（响应）/A-06（防重放） | 否 | integer | 防重放键组成 + 审计 | `invalid_qr` / `duplicate` |
+| `nonce` | A-05（签发）/A-06（一致性） | 否 | string | 防重放随机因子 + 一致性比对 | `invalid_qr` |
 
 ## 9. 版本记录
 
+- 2026-02-09 v4.5：二维码链路切换为“后端接口返回二维码 payload”口径；重写职责边界与 3.5；A-05 增加 `qr_payload/display_expire_at/accept_expire_at`；A-06 补齐与当前 payload 协议一致的解析与校验示例。
 - 2026-02-08 v4.4：新增“3.3A 会话失效信号约定（强制）”，明确 `status=forbidden + error_code=session_expired` 为会话过期标准返回；补充前端收到后必须清理会话并跳转 `pages/login/login` 重登。
 - 2026-02-08 v4.3：补充“参数解释总则（3.7）”；为 A-01~A-06 增加参数落地详解（前端来源/后端解析/失败码）；新增 A-06 一致性校验详解（矩阵 + 伪代码）；新增全局参数速查表。
 - 2026-02-08 v4.2：A-02 新增“学号+姓名命中管理员名册 -> staff 角色”后端处理步骤；补齐 `role/permissions/admin_verified` 注册响应字段与管理员命中示例；明确 A-01 到 A-02 的角色最终归一关系。

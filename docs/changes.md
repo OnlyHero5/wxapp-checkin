@@ -87,13 +87,6 @@
   - 新增 `POST /api/checkin/consume`
   - 活动字段补充 `my_checked_out`、`checkout_count`
   - 普通用户状态文案升级为“已报名/已签到/已签退”
-- 二维码架构调整（后端减负）：
-  - `staff-qr` 改为前端本地生成二维码 payload（`wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>`）
-  - `qr-session` 接口改为仅返回 `rotate_seconds/grace_seconds/server_time`，不再返回二维码内容
-  - `checkin/consume` 增加结构化入参（`activity_id/action_type/slot/nonce`）与业务防重放校验
-- 文档对齐：
-  - `docs/API_SPEC.md` 升级为 v2.4，重点补齐“二维码前端本地生成、后端仅返回配置与业务校验”的联调口径
-  - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 同步上述职责边界
 - API 文档重构（v3.0）：
   - `docs/API_SPEC.md` 按“后端实现视角”全量重写
   - 重构 4.4/4.5：明确 `qr-session` 只返回配置，`consume` 专注业务校验链路
@@ -113,3 +106,12 @@
   - A-02 增加管理员名册查询步骤与管理员命中响应示例
   - A-01 明确“登录默认角色可在注册后归一”
   - README / REQUIREMENTS / FUNCTIONAL_SPEC 同步管理员注册判定口径
+
+## 2026-02-09
+- 二维码后端化前端先行改造（本次）：
+  - `src/pages/staff-qr/staff-qr.js` 收敛为后端签发调用，移除前端主动传 `rotate_seconds/grace_seconds`。
+  - `src/pages/scan-action/scan-action.js` 改为以扫码原文直传后端为主，减少前端解析与组包逻辑。
+  - `src/utils/api.js` 对齐后端口径：A-05 mock 补齐 `qr_payload/display_expire_at/accept_expire_at`；A-06 仅按需传冗余字段。
+  - `docs/API_SPEC.md` 升级到 v4.5，重写 A-05/A-06 与当前项目行为保持一致。
+  - `README.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 删除与当前项目不一致描述。
+  - 删除与当前实现冲突的二维码方案文档：`docs/plans/2026-02-08-qr-frontend-first-plan.md`、`docs/plans/2026-02-08-qr-all-frontend-plan.md`、`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`。

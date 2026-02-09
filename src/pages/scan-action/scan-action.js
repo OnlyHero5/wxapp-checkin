@@ -1,6 +1,5 @@
 const auth = require("../../utils/auth");
 const api = require("../../utils/api");
-const qrPayload = require("../../utils/qr-payload");
 const storage = require("../../utils/storage");
 const ui = require("../../utils/ui");
 
@@ -13,16 +12,10 @@ const formatDateTime = (input) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
-const parsePayloadFromText = (text) => {
+const parseSceneValue = (text) => {
   const value = `${text || ""}`.trim();
   if (!value) {
     return "";
-  }
-  if (qrPayload.parseQrPayload(value)) {
-    return value;
-  }
-  if (value.startsWith("s.")) {
-    return value;
   }
 
   const match = value.match(/[?&]scene=([^&]+)/);
@@ -30,51 +23,46 @@ const parsePayloadFromText = (text) => {
     return "";
   }
   try {
-    const decoded = decodeURIComponent(match[1]);
-    if (qrPayload.parseQrPayload(decoded)) {
-      return decoded;
-    }
-    return decoded.startsWith("s.") ? decoded : "";
+    return `${decodeURIComponent(match[1])}`.trim();
   } catch (err) {
     return "";
   }
 };
 
-const parsePayloadMeta = (payloadText) => {
-  const parsed = qrPayload.parseQrPayload(payloadText);
-  if (!parsed) {
-    return {
-      activityId: "",
-      actionType: "",
-      slot: "",
-      nonce: ""
-    };
+const tryDecodeUriText = (text) => {
+  const value = `${text || ""}`.trim();
+  if (!value) {
+    return "";
   }
-  return {
-    activityId: parsed.activity_id,
-    actionType: parsed.action_type,
-    slot: parsed.slot,
-    nonce: parsed.nonce
-  };
+  try {
+    return `${decodeURIComponent(value)}`.trim();
+  } catch (err) {
+    return value;
+  }
+};
+
+const normalizePayloadText = (text) => {
+  const value = tryDecodeUriText(text);
+  if (!value) {
+    return "";
+  }
+  const sceneValue = parseSceneValue(value);
+  return sceneValue || value;
 };
 
 const extractPayloadFromScanResult = (scanResult) => {
   const path = `${(scanResult && scanResult.path) || ""}`.trim();
   const rawResult = `${(scanResult && scanResult.result) || ""}`.trim();
 
-  const sceneFromPath = parsePayloadFromText(path);
+  const sceneFromPath = parseSceneValue(path);
   if (sceneFromPath) {
     return sceneFromPath;
   }
-  const sceneFromResult = parsePayloadFromText(rawResult);
-  if (sceneFromResult) {
-    return sceneFromResult;
-  }
   if (rawResult) {
-    return rawResult;
+    return normalizePayloadText(rawResult);
   }
   if (path) {
-    return path;
+    return normalizePayloadText(path);
   }
   return "";
 };
@@ -182,7 +170,7 @@ Page({
       return;
     }
 
-    const pendingScene = parsePayloadFromText(this.data.pendingScenePayload);
+    const pendingScene = normalizePayloadText(this.data.pendingScenePayload);
     if (pendingScene) {
       this.consumePayload(pendingScene, {
         scanType: "WX_CODE",
@@ -239,7 +227,6 @@ Page({
       this.setData({ submitting: false });
       return;
     }
-    const payloadMeta = parsePayloadMeta(qrPayload);
     this.setData({ submitting: true });
     try {
       const result = await api.consumeCheckinAction({
@@ -247,11 +234,7 @@ Page({
         qrPayload,
         scanType: scanMeta.scanType || "",
         rawResult: scanMeta.rawResult || "",
-        path: scanMeta.path || "",
-        activityId: payloadMeta.activityId,
-        actionType: payloadMeta.actionType,
-        slot: payloadMeta.slot,
-        nonce: payloadMeta.nonce
+        path: scanMeta.path || ""
       });
 
       if (result && result.status === "success") {

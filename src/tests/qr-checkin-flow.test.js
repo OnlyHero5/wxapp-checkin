@@ -27,19 +27,16 @@ const run = async () => {
       rotateSeconds: 10,
       graceSeconds: 20
     });
-    assert.strictEqual(sessionRes && sessionRes.status, "success", "管理员应可获取前端换码配置");
-    assert.strictEqual(sessionRes.qr_payload, undefined, "后端不应再返回二维码内容");
+    assert.strictEqual(sessionRes && sessionRes.status, "success", "管理员应可获取后端签发二维码票据");
+    assert(typeof sessionRes.qr_payload === "string" && sessionRes.qr_payload, "后端应返回二维码 payload");
     assert.strictEqual(sessionRes.rotate_seconds, 10, "换码配置应返回 10 秒轮换");
     assert.strictEqual(sessionRes.grace_seconds, 20, "换码配置应返回 20 秒宽限");
     assert(typeof sessionRes.server_time === "number", "换码配置应包含服务端时间");
+    assert(typeof sessionRes.display_expire_at === "number", "后端应返回展示过期时间");
+    assert(typeof sessionRes.accept_expire_at === "number", "后端应返回提交过期时间");
+    assert(sessionRes.accept_expire_at > sessionRes.display_expire_at, "提交过期时间应晚于展示过期时间");
 
-    const checkinSlot = qrPayload.getCurrentSlot(sessionRes.server_time, sessionRes.rotate_seconds);
-    const checkinPayload = qrPayload.buildQrPayload({
-      activityId: targetActivityId,
-      actionType: "checkin",
-      slot: checkinSlot,
-      nonce: "n100001"
-    });
+    const checkinPayload = sessionRes.qr_payload;
 
     config.mockUserRole = "normal";
     const normalSession = "normal-session-token";

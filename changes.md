@@ -55,13 +55,6 @@
   - 管理员在活动页点击“签到码/签退码”进入二维码页（10 秒自动换码，20 秒宽限）
   - 普通用户新增“签到/签退”扫码页，摄像头扫码后即时反馈
   - 后端新增二维码会话接口与扫码消费接口，管理员端实时更新已签到/已签退人数
-- 二维码链路按“前端主导”重构：
-  - 管理员二维码改为前端本地换码生成，不再依赖后端按 10 秒高频返回二维码内容
-  - `qr-session` 接口仅返回换码配置（`rotate_seconds/grace_seconds/server_time`）
-  - `checkin/consume` 支持结构化字段并加入业务级防重放与时间窗校验
-- 文档同步：
-  - `docs/API_SPEC.md` 升级到 v2.4，新增“`qr-session` 不返回二维码内容”与最新联调示例
-  - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 同步二维码职责边界
 - API 文档可读性重构：
   - `docs/API_SPEC.md` 重写为 v3.0（后端实现版）
   - 重点重构 4.4/4.5，避免前端实现细节干扰后端联调
@@ -78,3 +71,12 @@
 - 文档同步升级：
   - `docs/API_SPEC.md` 升级到 v4.2（管理员名册判定步骤 + 响应示例）
   - `README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md` 同步新口径
+
+## 2026-02-09
+- 二维码后端化前端先行改造（本次）：
+  - `src/pages/staff-qr/staff-qr.js` 仅请求 A-05 获取二维码，不再前端本地组码。
+  - `src/pages/scan-action/scan-action.js` 改为“扫码原文直传 A-06”为主，减少前端解析耦合。
+  - `src/utils/api.js` 对齐当前接口口径：A-05 mock 返回 `qr_payload/display_expire_at/accept_expire_at`；A-06 冗余字段按需传递。
+  - `docs/API_SPEC.md` 升级到 v4.5，A-05/A-06 与当前代码行为对齐。
+  - `README.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 全量清理旧口径并同步当前实现。
+  - 删除过时二维码方案文档：`docs/plans/2026-02-08-qr-frontend-first-plan.md`、`docs/plans/2026-02-08-qr-all-frontend-plan.md`、`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`。
