@@ -359,3 +359,74 @@ Phase 4
 | Error | Attempt | Resolution |
 |-------|---------|------------|
 | `~/.codex/.../superpowers-codex bootstrap` 在 PowerShell 直接执行失败 | 1 | 改为 `node C:\\Users\\Lenovo\\.codex\\superpowers\\.codex\\superpowers-codex bootstrap` |
+
+## 2026-02-09 新需求：后端完整实现方案评审（先讨论）
+
+### Goal
+- 梳理当前 `docs/API_SPEC.md` 的完整后端能力边界（A-01~A-06）。
+- 对照 `d:\\软件\\QQ\\suda_union.sql` 评估数据库设计是否可直接承载现有接口。
+- 评估后端语言与技术栈，形成推荐方案与待确认决策。
+
+### Phases
+- [x] Phase A: 提取主链路接口、字段与事务要求
+- [x] Phase B: 审查现有数据库结构并识别缺口（含 `user.wx_token`）
+- [x] Phase C: 对比后端实现栈（Node.js / Java）并给出推荐
+- [ ] Phase D: 与用户确认落地范围与技术选型
+
+### Current Phase
+- `Waiting for user decision`
+
+## 2026-02-09 新需求：二维码后端主导实现（进行中）
+
+### Goal
+- 将二维码签发、时效校验、防重放与状态流转从前端迁移到真实后端服务。
+- 前端仅负责展示二维码与扫码提交，降低前端可篡改风险。
+
+### Phases
+- [x] Phase A: 现状梳理（确认 `src/utils/api.js` 承担了 mock 后端职责）
+- [x] Phase B: 制定实施计划（`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`）
+- [ ] Phase C: 按 TDD 建立后端测试并落地 backend 服务
+- [ ] Phase D: 前端 API/页面改造为后端驱动二维码
+- [ ] Phase E: 全量验证与文档更新
+
+### Current Phase
+- `Phase C in_progress`
+
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| `superpowers-codex` 在 PowerShell 直接执行失败（文件关联） | 1 | 改用 `node C:\Users\Lenovo\.codex\superpowers\.codex\superpowers-codex ...` |
+
+### Update (2026-02-09, 完成)
+- [x] Phase C: 按 TDD 建立后端测试并落地 backend 服务
+- [x] Phase D: 前端 API/页面改造为后端驱动二维码
+- [x] Phase E: 全量验证与文档更新
+- `Current Phase` -> `Completed`
+
+### Errors Encountered (This Task)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| 并行写入 `backend/tests` 时目录尚未创建 | 1 | 改为串行先建目录再写文件 |
+| Node `fetch` 不允许 `GET` 携带 `body`（后端测试） | 1 | 测试请求器改为 `GET` 自动拼 query string |
+
+## 2026-02-09 新需求：二维码后端化前端先行改造（仅前端 + API 文档）
+
+### Goal
+- 不落地后端实现代码，仅先完成小程序前端改造与 API 文档对齐。
+- 将二维码职责明确为“后端签发 + 后端验签”，前端仅负责展示、刷新触发与扫码提交。
+
+### Phases
+- [x] Phase A: 盘点现状差异（`staff-qr` 已按后端票据实现，但 mock 与文档仍是前端组码口径）
+- [x] Phase B: 改造前端调用链（`api.js` / `staff-qr.js` / `scan-action.js`）
+- [x] Phase C: 升级 `docs/API_SPEC.md` 为后端签发票据口径（v4.5）
+- [x] Phase D: 回归验证并同步变更记录
+
+### Current Phase
+- `Completed`
+
+### Update (2026-02-09, 文档全量对齐 + 清理)
+- [x] 全量核对 README/API/FUNCTIONAL/REQUIREMENTS 与当前代码一致性
+- [x] 删除不再适用的二维码旧方案文档（docs/plans 下 3 个文件）
+- [x] 清理 changes 文档中的不一致描述（如不存在的 backend 目录）
+- [x] 准备提交并推送到 GitHub
+- `Current Phase` -> `Ready for commit/push`

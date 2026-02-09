@@ -572,3 +572,123 @@
   - `node tests/activity-visibility.test.js`（workdir=`src/`） -> PASS
   - `node tests/qr-checkin-flow.test.js`（workdir=`src/`） -> PASS
   - `node tests/auth-session-registration-state.test.js`（workdir=`src/`） -> PASS
+
+## Session: 2026-02-09
+
+### 后端完整实现前置分析（先讨论不编码）
+- **Status:** complete
+- Actions taken:
+  - 执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap`）并加载技能：
+    - `superpowers:brainstorming`
+    - `planning-with-files`
+  - 读取并提炼后端需求文档：
+    - `docs/API_SPEC.md`（A-01~A-06 主链路、A-06 事务与防重放要求）
+    - `docs/REQUIREMENTS.md`（FR-007/FR-011/FR-016/FR-018/FR-020/FR-026 等关键约束）
+  - 审查现有数据库设计：`d:\\软件\\QQ\\suda_union.sql`
+    - 识别现有表结构可复用点与缺失点（会话、微信身份、防重放、消费记录、配置字段等）
+    - 评估 `suda_user` 增加 `wx_token varchar(255)` 的适配方式与风险
+  - 输出后端语言与技术栈对比结论（Node/NestJS vs Java/Spring Boot）
+  - 更新 planning 文件，准备与用户做方案确认讨论。
+- Files created/modified:
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+- Notes:
+  - 本轮按你的要求只做分析与讨论准备，未开始后端编码实现。
+
+## Session: 2026-02-09
+
+### 二维码后端主导改造（进行中）
+- **Status:** in_progress
+- Actions taken:
+  - 按要求执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap`）。
+  - 加载技能：`superpowers:brainstorming`、`planning-with-files`、`superpowers:writing-plans`、`superpowers:test-driven-development`。
+  - 审查当前实现：`src/utils/api.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`。
+  - 识别问题：二维码业务仍是前端主导（本地组包 + 前端 mock 校验）。
+  - 输出后端改造计划：`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`。
+- Files created/modified:
+  - docs/plans/2026-02-09-qr-backend-first-implementation-plan.md (created)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
+### 二维码后端主导改造（完成）
+- **Status:** complete
+- Actions taken:
+  - 按 TDD 新增后端失败测试：`backend/tests/qr-backend.test.js`、`backend/tests/auth-and-visibility.test.js`。
+  - 新建后端实现：`backend/src/server.js`、`backend/src/store.js`、`backend/src/auth.js`、`backend/src/qr.js`、`backend/package.json`。
+  - 调整前端：`src/pages/staff-qr/staff-qr.js` 改为后端签发二维码驱动，移除本地组码主流程。
+  - 默认配置改为真实后端：`src/utils/config.js`。
+  - 同步文档：`README.md`、`docs/API_SPEC.md`、`docs/changes.md`、`changes.md`。
+- Verification:
+  - `node --test backend/tests/qr-backend.test.js backend/tests/auth-and-visibility.test.js` -> PASS (8/8)
+  - `node --check backend/src/server.js` -> PASS
+  - `node --check src/pages/staff-qr/staff-qr.js` -> PASS
+  - `node tests/auth-register-binding.test.js`（workdir=`src/`） -> PASS
+  - `node tests/auth-session-registration-state.test.js`（workdir=`src/`） -> PASS
+  - `node tests/activity-visibility.test.js`（workdir=`src/`） -> PASS
+  - `node tests/qr-checkin-flow.test.js`（workdir=`src/`） -> PASS
+
+## Session: 2026-02-09
+
+### 二维码后端化前端先行改造（仅前端 + API 文档）
+- **Status:** complete
+- Actions taken:
+  - 执行 superpowers bootstrap（`node C:\Users\Lenovo\.codex\superpowers\.codex\superpowers-codex bootstrap`）。
+  - 使用技能：`superpowers:brainstorming`、`planning-with-files`。
+  - 改造 `src/utils/api.js`：
+    - A-05 mock 补齐 `qr_payload/slot/display_expire_at/accept_expire_at`。
+    - A-06 一致性校验补充 `nonce`。
+    - `consumeCheckinAction` 改为仅按需传冗余字段。
+    - `createStaffQrSession` 改为可选传窗口参数，默认仅传 `session_token + action_type`。
+  - 改造 `src/pages/staff-qr/staff-qr.js`：
+    - 请求 A-05 时不再上传前端 `rotate_seconds/grace_seconds`。
+  - 改造 `src/pages/scan-action/scan-action.js`：
+    - 去除前端二维码结构强依赖，改为“扫码原文直传后端”为主。
+  - 更新文档：
+    - `docs/API_SPEC.md` 升级到 v4.5，重写二维码职责边界与 A-05/A-06。
+    - `README.md`、`changes.md`、`docs/changes.md` 同步后端签发口径。
+  - 更新测试：
+    - `src/tests/qr-checkin-flow.test.js` 改为断言 A-05 返回后端签发二维码票据。
+- Files created/modified:
+  - src/utils/api.js (updated)
+  - src/pages/staff-qr/staff-qr.js (updated)
+  - src/pages/scan-action/scan-action.js (updated)
+  - src/tests/qr-checkin-flow.test.js (updated)
+  - docs/API_SPEC.md (updated)
+  - README.md (updated)
+  - changes.md (updated)
+  - docs/changes.md (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+- Verification:
+  - `node --check src/utils/api.js` -> PASS
+  - `node --check src/pages/staff-qr/staff-qr.js` -> PASS
+  - `node --check src/pages/scan-action/scan-action.js` -> PASS
+  - `node src/tests/qr-checkin-flow.test.js` -> PASS
+  - `node src/tests/auth-register-binding.test.js` -> PASS
+  - `node src/tests/activity-visibility.test.js` -> PASS
+  - `node src/tests/auth-session-registration-state.test.js` -> PASS
+
+## Session: 2026-02-09
+
+### 文档全量对齐 + 删除不一致内容 + 提交 GitHub
+- **Status:** in_progress
+- Actions taken:
+  - 全量扫描 `README.md` 与 `docs/*.md`，核对与 `src/app.json`、`src/pages/*`、`src/utils/api.js` 的一致性。
+  - 发现并修复不一致：
+    - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 仍保留“前端本地组码”旧口径。
+    - `docs/changes.md`、`changes.md` 存在“已新增 backend 目录/后端测试通过”的不实描述。
+  - 文档修正：
+    - 重写 `docs/FUNCTIONAL_SPEC.md`（v1.6）。
+    - 重写 `docs/REQUIREMENTS.md`（v1.5）。
+    - 更新 `docs/API_SPEC.md`（v4.5）为当前 payload 协议与 A-05/A-06 行为。
+    - 更新 `README.md`（补充当前默认 mock 配置与仓库无 backend 目录说明）。
+    - 清理 `docs/changes.md` 与 `changes.md` 中不一致描述。
+  - 删除过时方案文档：
+    - `docs/plans/2026-02-08-qr-frontend-first-plan.md`
+    - `docs/plans/2026-02-08-qr-all-frontend-plan.md`
+    - `docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`
+- Pending:
+  - 运行最终校验并执行 `git add/commit/push`。

@@ -324,3 +324,59 @@
     - 冗余字段存在即必须与解析结果一致，不一致返回 `invalid_qr`
     - 提供场景矩阵与伪代码
   - 新增 `8. 参数速查表`，将跨接口关键字段汇总，降低后端落地成本。
+
+## 2026-02-09 后端完整实现前置分析（接口 + 数据库 + 技术栈）
+
+### 接口需求基线（后端必须覆盖）
+- 主链路接口固定为 6 个：`A-01~A-06`（登录、注册、活动列表、活动详情、二维码策略、扫码消费）。
+- `A-06` 是实现难点：要求一致性校验、限流、防重放、事务内状态流转与计数更新。
+- 会话失效需统一返回 `status=forbidden + error_code=session_expired`，前端依赖该信号自动重登。
+- 普通用户活动可见性与详情鉴权必须按“已报名/已签到/已签退”同口径执行。
+
+### 现有数据库（`suda_union.sql`）匹配度结论
+- 现有表能覆盖“活动主数据 + 报名关系”的一部分基础能力：`suda_activity`、`suda_activity_apply`。
+- 明显缺失会话与微信身份层：无 `wx_identity/openid/unionid` 持久字段，无独立会话表。
+- `suda_user` 结构偏账号密码后台，不直接匹配小程序登录与注册链路；缺少 `student_id` 显式字段、`avatar/social_score/lecture_score`、`permissions` 结构化存储。
+- 缺少可审计的扫码消费记录表与防重放持久层（当前仅有通用 `suda_log`，不足以承载幂等键与并发控制）。
+- `suda_activity` 缺少 `support_checkout/has_detail/rotate_seconds/grace_seconds` 等配置字段（可通过新增字段或配置表补齐）。
+- `suda_activity_apply.check_out` 语义注释与默认值存在歧义（注释写 0=已签退，默认却为 0），需要先统一业务定义。
+- 全库未声明外键约束，后端需靠应用层保证数据完整性；建议在改造时补关键 FK 或最少补一致性校验任务。
+
+### `user.wx_token` 变更影响
+- 需求“`user` 表新增 `wx_token varchar(255)`”可执行，但建议明确语义：
+  - 若表示“微信身份唯一标识”（例如 openid/unionid），应命名为 `wx_identity` 并加唯一索引。
+  - 若表示“业务会话 token”，不建议长期放在用户表，建议迁移到独立 `user_session` 表（支持多设备、过期、吊销）。
+- 仅新增 `wx_token` 字段不足以支撑完整后端，仍需配套会话、防重放、记录与权限模型改造。
+
+### 技术栈对比结论（先行）
+- **Node.js + TypeScript + NestJS**：和当前前端 JS 契约一致，开发效率高，适合你这个“先快速打通完整后端再迭代”的阶段。
+- **Java + Spring Boot**：并发与工程治理强，长期更稳，但首版开发成本与联调节奏会更重。
+- 当前项目阶段建议先用 Node/NestJS 打通主链路，数据库采用 MySQL + Redis（会话/限流/防重放），后续如有规模压力再考虑演进。
+
+## 2026-02-09 二维码后端主导实现发现
+- 当前二维码核心逻辑（payload 构造、slot 计算、校验、防重放）主要位于 `src/utils/api.js` 与 `src/pages/staff-qr/staff-qr.js`，属于前端主导。
+- `src/utils/config.js` 目前默认 `mock=true`，真实后端链路未默认启用。
+- 现有测试（尤其 `src/tests/qr-checkin-flow.test.js`）依赖前端 mock 行为，需要迁移到“后端为主”的验证路径。
+- 已新增实施计划文档：`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`，明确后端签发二维码与消费校验闭环。
+
+## 2026-02-09 实现结果补充（二维码后端主导）
+- 新增后端服务目录 `backend/`，主文件 `backend/src/server.js` 覆盖登录、注册、活动列表/详情、二维码签发、扫码消费与兼容接口。
+- 二维码签发由后端执行：`qr-session` 直接返回签名后的 `qr_payload` 与 `display_expire_at/accept_expire_at`。
+- 扫码消费由后端执行：签名校验、时间窗校验、角色鉴权、可见性校验、防重放、状态机更新、计数更新。
+- 前端 `staff-qr` 改为后端驱动：仅展示与倒计时，不再本地拼接二维码 payload。
+- `src/utils/config.js` 默认切换到真实后端（`mock=false`，`baseUrl=http://127.0.0.1:3000`）。
+- 后端自动化测试新增并通过：`backend/tests/qr-backend.test.js`、`backend/tests/auth-and-visibility.test.js`。
+
+## 2026-02-09 二维码后端化前端先行改造发现
+- `src/pages/staff-qr/staff-qr.js` 当前实现已经要求 A-05 返回 `qr_payload/display_expire_at/accept_expire_at`。
+- `src/utils/api.js` 的 mock A-05 仍只返回 `rotate_seconds/grace_seconds/server_time`，与页面预期不一致，会导致二维码无法展示。
+- `src/pages/scan-action/scan-action.js` 仍存在前端解析二维码结构并拼冗余字段的强依赖，不利于后端票据改造。
+- `docs/API_SPEC.md`（v4.4）仍以“前端本地组码 + 后端仅校验”为主，与当前后端化方向冲突。
+- 推荐收敛方案：前端仅透传扫码原文；A-05 必返后端签发票据和过期窗口；A-06 以后端验签结果为准。
+
+## 2026-02-09 文档全量对齐发现（当前项目基线）
+- `src/utils/config.js` 当前默认 `mock=true`，并非真实后端联调模式。
+- 当前仓库不存在 `backend/` 目录，文档里“已新增后端服务/后端测试通过”的描述与仓库实际不一致。
+- `staff-qr` 现行为：调用 A-05 获取 `qr_payload` + `display_expire_at/accept_expire_at`，不再前端本地组码。
+- `scan-action` 现行为：以扫码原文直传 A-06 为主，冗余字段按需附带。
+- 需清理的主要不一致文档：`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`docs/changes.md`、`changes.md`、部分过时 `docs/plans/*`。
