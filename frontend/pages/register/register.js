@@ -42,6 +42,25 @@ Page({
       club: storage.getClub()
     });
   },
+  async ensureIdentityReady() {
+    if (this.data.sessionToken && this.data.wxIdentity) {
+      return true;
+    }
+
+    const forceRefresh = !this.data.sessionToken || !this.data.wxIdentity;
+    const sessionToken = await auth.ensureSession({
+      forceRefresh,
+      silent: true
+    });
+    const wxIdentity = storage.getWxIdentity();
+
+    this.setData({
+      sessionToken,
+      wxIdentity
+    });
+
+    return !!sessionToken && !!wxIdentity;
+  },
   onInputStudent(e) {
     const value = (e.detail && e.detail.value) ? e.detail.value : "";
     this.setData({ studentId: value.trim() });
@@ -71,8 +90,9 @@ Page({
       ui.showToast("请填写学号与姓名");
       return;
     }
-    if (!this.data.sessionToken) {
-      ui.showToast("身份获取失败，请重试");
+    const identityReady = await this.ensureIdentityReady();
+    if (!identityReady) {
+      ui.showToast("登录态未建立，请确认后端已启动并可访问");
       return;
     }
 

@@ -1,6 +1,6 @@
 const config = {
-  baseUrl: "https://api.example.com",
-  mock: true,
+  baseUrl: "http://192.168.31.94:1455",
+  mock: false,
   // "staff" | "normal"
   mockUserRole: "normal"
 };
