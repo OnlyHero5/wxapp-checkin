@@ -4,7 +4,7 @@
 Deliver a production-grade Java backend for the WeChat check-in miniapp with extension-first database design, Linux-oriented deployment support, and frontend/backend directory split (`frontend/` + `backend/`).
 
 ## Current Phase
-Phase 7
+Phase 8
 
 ## Phases
 
@@ -54,6 +54,13 @@ Phase 7
 - [x] Implement session + ownership validation for `GET /api/checkin/records/{recordId}`
 - [x] Update backend docs to Chinese and align API/spec docs with security constraint
 - [x] Re-run frontend/backend verification commands after code/doc changes
+- [ ] Commit and push to GitHub
+- **Status:** in_progress
+
+### Phase 8: Root README Enhancement + Push (2026-02-10)
+- [x] Enhance root README visual badges and full-stack positioning copy
+- [x] Add architecture and repository-structure sections for readability
+- [x] Keep README Chinese-first and consistent with backend-included repo state
 - [ ] Commit and push to GitHub
 - **Status:** in_progress
 

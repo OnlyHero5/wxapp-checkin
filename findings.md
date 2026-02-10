@@ -77,3 +77,8 @@
 - Docs aligned with implementation:
   - `backend/README.md` converted to Chinese.
   - `docs/API_SPEC.md`, `docs/FUNCTIONAL_SPEC.md`, `docs/REQUIREMENTS.md` now explicitly require C-03 ownership restriction.
+
+## 2026-02-10 README Visual Upgrade Findings
+- Root `README.md` now explicitly highlights full-stack structure (`frontend/` + `backend/`) in top summary.
+- Added richer badge/icon set (WeChat, TDesign, Java, Spring Boot, MySQL, Redis, Docs) to improve first-screen visual quality.
+- Added `系统架构` and `仓库结构` sections to improve onboarding readability.

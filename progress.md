@@ -141,3 +141,19 @@
   - `npm test` (frontend) -> exit `0`, 5/5 passed
   - `.\mvnw.cmd -q test` (backend) -> exit `0`
   - `.\mvnw.cmd -q -DskipTests package` (backend) -> exit `0`
+
+## Session: 2026-02-10 (Root README Enhancement)
+
+### Phase J: README Visual and Structure Upgrade
+- **Status:** complete
+- Actions taken:
+  - Enhanced root `README.md` header badges to include backend stack icons (Java/Spring Boot/MySQL/Redis) and docs badge.
+  - Added explicit full-stack statement (`frontend/` + `backend/`) in quick preview.
+  - Added `系统架构` section (text diagram) and `仓库结构` section (table).
+  - Kept content Chinese-first to align with project documentation direction.
+
+### Phase K: Verification for README Change
+- **Status:** complete
+- Executed commands:
+  - `git diff -- README.md` (manual diff verification)
+  - `rg -n "系统架构|仓库结构|Java 17|Spring_Boot|后端代码已正式纳入" README.md` (anchor/content spot check)

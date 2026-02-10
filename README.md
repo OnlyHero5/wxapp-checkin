@@ -8,12 +8,19 @@
 
 [![WeChat MiniProgram](https://img.shields.io/badge/WeChat-MiniProgram-07C160?style=for-the-badge&logo=wechat&logoColor=white)](https://developers.weixin.qq.com/miniprogram/dev/framework/)
 [![TDesign MiniProgram](https://img.shields.io/badge/UI-TDesign-0052D9?style=for-the-badge)](https://tdesign.tencent.com/miniprogram)
+[![Java 17](https://img.shields.io/badge/Java-17-ff7f50?style=for-the-badge&logo=openjdk&logoColor=white)](backend/pom.xml)
+[![Spring Boot 3.5](https://img.shields.io/badge/Spring_Boot-3.5-6db33f?style=for-the-badge&logo=springboot&logoColor=white)](backend/pom.xml)
+[![MySQL 8](https://img.shields.io/badge/MySQL-8-4479a1?style=for-the-badge&logo=mysql&logoColor=white)](backend/docker-compose.yml)
+[![Redis 7](https://img.shields.io/badge/Redis-7-dc382d?style=for-the-badge&logo=redis&logoColor=white)](backend/docker-compose.yml)
 [![Role Based Access](https://img.shields.io/badge/Auth-RBAC-0F766E?style=for-the-badge)](docs/FUNCTIONAL_SPEC.md)
 [![API Contract](https://img.shields.io/badge/API-Contract-2563EB?style=for-the-badge)](docs/API_SPEC.md)
 [![Dynamic QR](https://img.shields.io/badge/QR-10s_Rotation-1D4ED8?style=for-the-badge)](docs/API_SPEC.md)
+[![Docs](https://img.shields.io/badge/Docs-Chinese-0ea5e9?style=for-the-badge)](docs/REQUIREMENTS.md)
 
 <p>
   <a href="#快速预览">快速预览</a> ·
+  <a href="#系统架构">系统架构</a> ·
+  <a href="#仓库结构">仓库结构</a> ·
   <a href="#角色与可见性">角色与可见性</a> ·
   <a href="#签到签退流程">签到签退流程</a> ·
   <a href="#快速开始">快速开始</a> ·
@@ -23,6 +30,7 @@
 </div>
 
 ## 快速预览
+- 当前仓库是前后端一体化工程：`frontend/`（微信小程序）+ `backend/`（Java Spring Boot）。
 - 活动列表双分组：`正在进行`（上）+ `已完成`（下），两组均按时间倒序。
 - 已完成活动仅支持“查看详情”，不再允许签到/签退动作。
 - 管理员二维码由后端接口签发：`10 秒展示窗口` + `20 秒提交宽限`（前端仅展示与刷新；默认 `mock=true`，可切换到真实后端）。
@@ -31,6 +39,31 @@
 - 普通用户在独立“签到/签退”页面调用摄像头扫码并即时收到成功/失败反馈。
 - 普通用户只可见与自己有关的活动：`已报名 / 已签到 / 已签退`，不可见无关活动。
 - 管理员可看到全量活动与实时统计字段：`checkin_count` / `checkout_count`。
+
+> 仓库状态说明：后端代码已正式纳入本仓库并持续维护，默认与前端同仓协作。
+
+## 系统架构
+```text
+┌────────────────────────────┐
+│ 微信小程序前端 (frontend/)  │
+│  pages + utils + tests     │
+└──────────────┬─────────────┘
+               │ HTTPS JSON API
+┌──────────────▼─────────────┐
+│ Spring Boot 后端 (backend/) │
+│  A-01~A-06 + 兼容接口       │
+└───────┬──────────┬─────────┘
+        │          │
+     MySQL 8     Redis 7
+```
+
+## 仓库结构
+| 目录 | 说明 | 技术栈 |
+|------|------|--------|
+| `frontend/` | 微信小程序前端，含页面逻辑与 Node 测试脚本 | WeChat MiniProgram + TDesign |
+| `backend/` | 业务后端、数据库迁移、测试与部署脚本 | Java 17 + Spring Boot + Flyway |
+| `docs/` | 需求、功能、接口与变更文档（中文） | Markdown |
+| `changes.md` | 根目录变更摘要 | Markdown |
 
 ## 角色与可见性
 | 能力 | 普通用户 (`normal`) | 工作人员 (`staff`) |
