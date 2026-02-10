@@ -101,3 +101,18 @@
   - `ProductionDatabaseSafetyGuardTest`
   - `ProdProfileSafetyConfigTest` now validates production sync defaults and no-DDL/Flyway behavior.
 - Docs now describe `suda_union` as active primary schema and extension DB as sidecar schema with bidirectional sync.
+
+## 2026-02-10 Backend Test Environment Findings
+- Current environment is WSL2 (`Ubuntu 24.04.3 LTS`) with host-level localhost port occupation; default dev ports had conflicts.
+- Installed backend runtime prerequisites successfully:
+  - Java 17
+  - Docker + Compose v2
+  - MySQL 8
+  - Redis 7
+- To keep this as a test/staging-like local setup (non-production), service ports were adjusted:
+  - MySQL server: `3307` (instead of `3306`)
+  - MySQL X protocol: `33061` (instead of `33060`)
+  - Redis: `16379` (instead of `6379`)
+- Java network behavior in this environment requires explicit Maven proxy configuration for stable dependency download; shell proxy env alone is insufficient for Maven resolution.
+- Backend test suite is green after environment provisioning (`11` tests, `0` failures) and dev runtime health endpoint returns `UP`.
+- Docker daemon is available; current shell may require a new login session to directly use docker group without `sudo`.

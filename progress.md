@@ -191,3 +191,48 @@
   - `.\mvnw.cmd -q "-Dtest=ProductionDatabaseSafetyGuardTest,LegacyJdbcTemplateConfigTest,ProdProfileSafetyConfigTest" test` -> exit `0`
   - `.\mvnw.cmd -q test` -> exit `0`
   - `.\mvnw.cmd -q -DskipTests package` -> exit `0`
+
+## Session: 2026-02-10 (Backend Test Environment Provisioning)
+
+### Phase O: System Dependency Installation and Runtime Configuration
+- **Status:** complete
+- Actions taken:
+  - Installed required software on Ubuntu 24.04 WSL test environment:
+    - `openjdk-17-jdk`
+    - `docker.io` + `docker-compose-v2`
+    - `mysql-server`
+    - `redis-server`
+  - Fixed `mysql-server` post-install failure by resolving local port conflicts:
+    - configured MySQL server port to `3307`
+    - configured MySQL X Protocol port to `33061`
+  - Fixed Redis startup failure by resolving local port conflicts:
+    - configured Redis port to `16379`
+  - Started and enabled runtime services:
+    - `docker` active
+    - `mysql` active
+    - `redis-server` active
+  - Granted current user docker group membership (`docker`).
+  - Created local MySQL test databases and app account:
+    - `wxcheckin_ext`
+    - `suda_union`
+    - user `wxcheckin` / password `wxcheckin_test` with local privileges
+  - Added user-level test env file:
+    - `~/.wxapp-checkin-test-env.sh`
+    - sourced from `~/.bashrc`
+  - Configured Maven proxy settings in `~/.m2/settings.xml` to route Java dependency downloads via local proxy (`127.0.0.1:7890`) and eliminate Java HTTPS timeout issue.
+
+### Phase P: Backend Verification in Test Environment
+- **Status:** complete
+- Executed commands:
+  - `./mvnw -B -ntp test` -> exit `0`
+    - `Tests run: 11, Failures: 0, Errors: 0, Skipped: 0`
+  - Dev runtime smoke start + health check:
+    - `SPRING_PROFILES_ACTIVE=dev ./scripts/start-dev.sh`
+    - `curl http://127.0.0.1:8080/actuator/health` -> `{"status":"UP","groups":["liveness","readiness"]}`
+
+### Error Log Addendum
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-02-10 | `mysql-server-8.0` post-install script failed | 1 | Root-caused to port conflicts (`3306`, `33060`) and moved MySQL to `3307` / `33061` |
+| 2026-02-10 | `redis-server` failed to start repeatedly | 1 | Root-caused to local port conflict and moved Redis to `16379` |
+| 2026-02-10 | Maven/Java HTTPS downloads hung during dependency resolution | 1 | Root-caused to Java proxy path in this environment; fixed via `~/.m2/settings.xml` proxy config |

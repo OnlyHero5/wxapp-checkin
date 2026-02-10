@@ -4,7 +4,7 @@
 Deliver a production-grade Java backend for the WeChat check-in miniapp with extension-first database design, Linux-oriented deployment support, and frontend/backend directory split (`frontend/` + `backend/`).
 
 ## Current Phase
-Phase 10
+Phase 11
 
 ## Phases
 
@@ -80,6 +80,14 @@ Phase 10
 - [x] Re-run backend full verification after guard changes
 - **Status:** complete
 
+### Phase 11: Backend Test Environment Provisioning (2026-02-10)
+- [x] Audit missing local runtime dependencies in current WSL environment
+- [x] Install Java 17, Docker/Compose, MySQL 8, Redis 7
+- [x] Resolve local port conflicts for MySQL/Redis in test environment
+- [x] Configure Maven proxy for Java dependency resolution
+- [x] Run backend test suite and dev runtime health verification
+- **Status:** complete
+
 ## Key Decisions
 | Decision | Rationale |
 |----------|-----------|
@@ -101,6 +109,9 @@ Phase 10
 | `mvnw ... -Dspring-boot.run.profiles=test` parsed incorrectly in PowerShell | 1 | Re-ran with quoted `-D` arguments |
 | `spring-boot:run` startup failed with `Access denied for user 'root'@'localhost'` | 1 | Confirmed local runtime still depends on reachable MySQL credentials/environment |
 | New security regression test failed as expected before fix (`expected forbidden but was success`) | 1 | Added endpoint token extraction + ownership check; reran test to green |
+| `mysql-server-8.0` post-install script failed in WSL test env | 1 | Root cause was local port conflict (`3306`, `33060`); moved MySQL to `3307` / `33061` and reconfigured dpkg successfully |
+| `redis-server` failed to start in WSL test env | 1 | Root cause was local port conflict (`6379`/`6380`/`6381` busy); moved Redis to `16379` and restarted service successfully |
+| Maven dependency resolution hung at HTTPS response read | 1 | Root cause was Java/Maven proxy path in this environment; added Maven proxy config in `~/.m2/settings.xml` |
 
 ## Notes
 - Current `main` working tree is clean.
