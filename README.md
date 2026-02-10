@@ -8,6 +8,7 @@
 
 [![WeChat MiniProgram](https://img.shields.io/badge/WeChat-MiniProgram-07C160?style=for-the-badge&logo=wechat&logoColor=white)](https://developers.weixin.qq.com/miniprogram/dev/framework/)
 [![TDesign MiniProgram](https://img.shields.io/badge/UI-TDesign-0052D9?style=for-the-badge)](https://tdesign.tencent.com/miniprogram)
+[![Liquid Glass UI](https://img.shields.io/badge/UI-Liquid_Glass-6366F1?style=for-the-badge)](frontend/app.wxss)
 [![Java 17](https://img.shields.io/badge/Java-17-ff7f50?style=for-the-badge&logo=openjdk&logoColor=white)](backend/pom.xml)
 [![Spring Boot 3.5](https://img.shields.io/badge/Spring_Boot-3.5-6db33f?style=for-the-badge&logo=springboot&logoColor=white)](backend/pom.xml)
 [![MySQL 8](https://img.shields.io/badge/MySQL-8-4479a1?style=for-the-badge&logo=mysql&logoColor=white)](backend/docker-compose.yml)
@@ -31,6 +32,7 @@
 
 ## 快速预览
 - 当前仓库是前后端一体化工程：`frontend/`（微信小程序）+ `backend/`（Java Spring Boot）。
+- 前端已引入 **拟态玻璃（Liquid Glass）全新 UI**，统一暗色渐变背景、玻璃卡片和动态光晕视觉。
 - 活动列表双分组：`正在进行`（上）+ `已完成`（下），两组均按时间倒序。
 - 已完成活动仅支持“查看详情”，不再允许签到/签退动作。
 - 管理员二维码由后端接口签发：`10 秒展示窗口` + `20 秒提交宽限`（前端仅展示与刷新；默认 `mock=true`，可切换到真实后端）。
@@ -193,6 +195,6 @@ npm test
 - 根目录变更摘要：`changes.md`
 
 ## 版本信息
-- 当前文档覆盖能力：前后端一体化、二维码后端签发、普通用户扫码签到/签退、角色分流与积分展示、`suda_union` 主库与扩展库双向同步。
+- 当前文档覆盖能力：前后端一体化、拟态玻璃（Liquid Glass）全新 UI、二维码后端签发、普通用户扫码签到/签退、角色分流与积分展示、`suda_union` 主库与扩展库双向同步。
 - 最新发布标签：`v2026.02.10`（2026-02-10）。
 - 历史发布标签：`v2026.02.07`、`v2026.02.04`。
