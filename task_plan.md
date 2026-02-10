@@ -4,7 +4,7 @@
 Deliver a production-grade Java backend for the WeChat check-in miniapp with extension-first database design, Linux-oriented deployment support, and frontend/backend directory split (`frontend/` + `backend/`).
 
 ## Current Phase
-Phase 9
+Phase 10
 
 ## Phases
 
@@ -66,11 +66,19 @@ Phase 9
 
 ### Phase 9: Legacy Schema Compatibility Hardening (2026-02-10)
 - [x] Confirm current DB bootstrap strategy (`ddl-auto`, Flyway, profile behavior)
-- [ ] Enforce production-safe mode (no auto create/alter on existing legacy schema)
-- [ ] Keep test/dev runnable with isolated/local schema option
-- [ ] Update backend docs to clearly separate test vs production DB behavior
-- [ ] Re-run backend verification after config changes
-- **Status:** in_progress
+- [x] Enforce production-safe mode (no auto create/alter on existing legacy schema)
+- [x] Keep test/dev runnable with isolated/local schema option
+- [x] Update backend docs to clearly separate test vs production DB behavior
+- [x] Re-run backend verification after config changes
+- **Status:** complete
+
+### Phase 10: Active `suda_union` Positioning & Sync Guard (2026-02-10)
+- [x] Align terminology: `suda_union` is active Web management primary schema, not deprecated
+- [x] Add production startup guard for dual-schema deployment safety
+- [x] Add tests for production guard and dedicated cross-schema datasource
+- [x] Update backend/requirement docs to Chinese wording with primary-schema semantics
+- [x] Re-run backend full verification after guard changes
+- **Status:** complete
 
 ## Key Decisions
 | Decision | Rationale |
@@ -82,6 +90,7 @@ Phase 9
 | Linux-first scripts + Docker support | Match production deployment target while keeping Windows development support |
 | Project review must separate "test/build passed" from "full runtime verified" | Avoid over-claiming completion when DB/container runtime prerequisites are unavailable |
 | Production startup must not mutate legacy tables | Production profile should disable ORM DDL and Flyway auto-migration, only read/write business data |
+| `suda_union` is active Web management primary schema | Extension schema must stay isolated; cross-schema sync must be enabled in production |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

@@ -89,3 +89,15 @@
 - Test profile (`backend/src/test/resources/application-test.yml`) explicitly uses `ddl-auto=update` and H2; this is acceptable for CI/testing only.
 - Current architecture already follows extension-first approach and sync strategy (legacy pull + outbox relay), matching coexistence with `suda_union.sql`.
 - Legacy read/write services (`LegacyUserLookupService`, `LegacySyncService`, `OutboxRelayService`) currently use default `JdbcTemplate`, i.e., same datasource as JPA extension tables. This supports same-DB mode but does not explicitly model dual-database production deployment.
+
+## 2026-02-10 Active `suda_union` Clarification Findings
+- User clarified: `suda_union` is the active Web 管理系统主库, not a deprecated legacy DB.
+- Backend updated to enforce production dual-schema safety:
+  - Primary datasource must not point to `suda_union`.
+  - `LEGACY_DB_URL` must point to `suda_union`.
+  - Production requires both sync directions enabled (`LEGACY_SYNC_ENABLED`, `OUTBOX_RELAY_ENABLED`).
+- Added dedicated guard + tests:
+  - `ProductionDatabaseSafetyGuard`
+  - `ProductionDatabaseSafetyGuardTest`
+  - `ProdProfileSafetyConfigTest` now validates production sync defaults and no-DDL/Flyway behavior.
+- Docs now describe `suda_union` as active primary schema and extension DB as sidecar schema with bidirectional sync.

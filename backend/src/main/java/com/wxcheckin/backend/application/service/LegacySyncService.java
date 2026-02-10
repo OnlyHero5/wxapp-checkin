@@ -14,6 +14,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
  * can start without coupling startup health to legacy DB readiness.</p>
  */
 @Service
+@ConditionalOnProperty(name = "app.sync.scheduler-enabled", havingValue = "true", matchIfMissing = true)
 public class LegacySyncService {
   private static final Logger log = LoggerFactory.getLogger(LegacySyncService.class);
 

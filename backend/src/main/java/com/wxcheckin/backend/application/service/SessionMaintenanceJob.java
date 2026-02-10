@@ -2,6 +2,7 @@ package com.wxcheckin.backend.application.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
  * Periodic cleanup task for expired sessions.
  */
 @Component
+@ConditionalOnProperty(name = "app.session.cleanup-enabled", havingValue = "true", matchIfMissing = true)
 public class SessionMaintenanceJob {
 
   private static final Logger log = LoggerFactory.getLogger(SessionMaintenanceJob.class);

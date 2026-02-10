@@ -17,7 +17,7 @@ public class LegacyJdbcTemplateConfiguration {
   public JdbcTemplate legacyJdbcTemplate(DataSource primaryDataSource, AppProperties appProperties) {
     AppProperties.LegacyDatasourceProperties legacyDatasource = appProperties.getLegacy().getDatasource();
     if (isBlank(legacyDatasource.getUrl())) {
-      log.info("Legacy JDBC uses primary datasource (LEGACY_DB_URL is empty).");
+      log.info("Cross-system JDBC uses primary datasource (LEGACY_DB_URL is empty).");
       return new JdbcTemplate(primaryDataSource);
     }
 
@@ -26,7 +26,7 @@ public class LegacyJdbcTemplateConfiguration {
     dedicatedDataSource.setUrl(legacyDatasource.getUrl());
     dedicatedDataSource.setUsername(legacyDatasource.getUsername());
     dedicatedDataSource.setPassword(legacyDatasource.getPassword());
-    log.info("Legacy JDBC uses dedicated datasource: {}", safeUrl(legacyDatasource.getUrl()));
+    log.info("Cross-system JDBC uses dedicated datasource: {}", safeUrl(legacyDatasource.getUrl()));
     return new JdbcTemplate(dedicatedDataSource);
   }
 

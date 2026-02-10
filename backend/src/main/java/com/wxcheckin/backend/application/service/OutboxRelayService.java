@@ -13,6 +13,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Relays pending outbox events to legacy tables.
  */
 @Service
+@ConditionalOnProperty(name = "app.sync.scheduler-enabled", havingValue = "true", matchIfMissing = true)
 public class OutboxRelayService {
   private static final Logger log = LoggerFactory.getLogger(OutboxRelayService.class);
 
@@ -58,8 +60,14 @@ public class OutboxRelayService {
     if (!appProperties.getSync().getOutbox().isEnabled()) {
       return;
     }
-    List<WxSyncOutboxEntity> events = outboxRepository
-        .findTop100ByStatusAndAvailableAtLessThanEqualOrderByIdAsc("pending", Instant.now(clock));
+    List<WxSyncOutboxEntity> events;
+    try {
+      events = outboxRepository
+          .findTop100ByStatusAndAvailableAtLessThanEqualOrderByIdAsc("pending", Instant.now(clock));
+    } catch (DataAccessException ex) {
+      log.debug("Outbox relay skipped due to extension DB access error: {}", ex.getMessage());
+      return;
+    }
     for (WxSyncOutboxEntity event : events) {
       relayOne(event);
     }

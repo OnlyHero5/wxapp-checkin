@@ -7,3 +7,18 @@ spring:
       ddl-auto: none
   flyway:
     enabled: false
+
+app:
+  legacy:
+    datasource:
+      url: ${LEGACY_DB_URL:jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
+      username: ${LEGACY_DB_USER:${DB_USER:root}}
+      password: ${LEGACY_DB_PASSWORD:${DB_PASSWORD:root}}
+      driver-class-name: ${LEGACY_DB_DRIVER:com.mysql.cj.jdbc.Driver}
+  sync:
+    legacy:
+      enabled: ${LEGACY_SYNC_ENABLED:true}
+      pull-interval-ms: ${LEGACY_SYNC_INTERVAL_MS:2000}
+    outbox:
+      enabled: ${OUTBOX_RELAY_ENABLED:true}
+      relay-interval-ms: ${OUTBOX_RELAY_INTERVAL_MS:1000}

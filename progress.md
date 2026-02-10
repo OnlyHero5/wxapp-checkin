@@ -170,3 +170,24 @@
     - Test profile keeps `ddl-auto=update` for isolated test runtime.
   - Confirmed existing design is extension-first (`wx_*` tables + legacy sync services).
   - Confirmed legacy SQL access currently reuses primary datasource via default `JdbcTemplate` (not yet explicit dual-datasource split).
+
+## Session: 2026-02-10 (suda_union 主库语义修正)
+
+### Phase M: Requirement Clarification to Code Constraints
+- **Status:** complete
+- Actions taken:
+  - Accepted user correction that `suda_union` is active Web 管理系统主库 (not deprecated).
+  - Added production safety guard (`ProductionDatabaseSafetyGuard`) to fail fast when:
+    - primary datasource points to `suda_union`
+    - `LEGACY_DB_URL` is missing or not pointing to `suda_union`
+    - production sync switches are not both enabled.
+  - Added new guard unit tests and updated prod config test.
+  - Updated `application-prod.yml` defaults for same-MySQL dual-schema deployment and near real-time sync cadence.
+  - Updated docs wording to Chinese primary-schema semantics (`backend/README.md`, `docs/REQUIREMENTS.md`, `docs/changes.md`).
+
+### Phase N: Verification
+- **Status:** complete
+- Executed commands:
+  - `.\mvnw.cmd -q "-Dtest=ProductionDatabaseSafetyGuardTest,LegacyJdbcTemplateConfigTest,ProdProfileSafetyConfigTest" test` -> exit `0`
+  - `.\mvnw.cmd -q test` -> exit `0`
+  - `.\mvnw.cmd -q -DskipTests package` -> exit `0`

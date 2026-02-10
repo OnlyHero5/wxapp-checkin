@@ -117,7 +117,7 @@
   - 删除与当前实现冲突的二维码方案文档：`docs/plans/2026-02-08-qr-frontend-first-plan.md`、`docs/plans/2026-02-08-qr-all-frontend-plan.md`、`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`。
 - Java 后端完整交付（本次）：
   - 新增 `backend/` Spring Boot 全量实现，覆盖 A-01~A-06 主链路与兼容接口。
-  - 新增扩展库表迁移（`wx_*`）与数据同步能力（旧库拉取 + outbox 回写）。
+  - 新增扩展库表迁移（`wx_*`）与数据同步能力（`suda_union` 拉取 + outbox 回写）。
   - `wx_token` 需求已在扩展用户表中落地：`wx_user_auth_ext.wx_token VARCHAR(255)`。
   - 新增 Linux 优先部署/测试脚本与容器配置（`Dockerfile`、`docker-compose.yml`、`scripts/*.sh`）。
   - 新增 Windows 开发辅助脚本（`scripts/*.ps1`）。

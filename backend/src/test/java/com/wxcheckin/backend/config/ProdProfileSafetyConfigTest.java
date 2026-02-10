@@ -15,7 +15,8 @@ import org.springframework.test.context.ActiveProfiles;
     "spring.datasource.password=",
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.data.redis.repositories.enabled=false",
-    "spring.task.scheduling.enabled=false"
+    "app.sync.scheduler-enabled=false",
+    "app.session.cleanup-enabled=false"
 })
 class ProdProfileSafetyConfigTest {
 
@@ -26,5 +27,7 @@ class ProdProfileSafetyConfigTest {
   void shouldDisableSchemaMutationInProdProfile() {
     assertEquals("none", environment.getProperty("spring.jpa.hibernate.ddl-auto"));
     assertEquals("false", environment.getProperty("spring.flyway.enabled"));
+    assertEquals("true", environment.getProperty("app.sync.legacy.enabled"));
+    assertEquals("true", environment.getProperty("app.sync.outbox.enabled"));
   }
 }
