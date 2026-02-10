@@ -1,3 +1,45 @@
+/** activity-detail.wxss **/
+.page-activity-detail {
+  display: flex;
+  flex-direction: column;
+}
+
+.card.info-card {
+  animation: slide-up 0.4s ease-out;
+  margin-bottom: 40rpx;
+}
+
+.info-row {
+  padding: 16rpx 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.label {
+  color: var(--text-muted);
+}
+
+.value {
+  color: var(--text-main);
+  text-align: right;
+  font-weight: 500;
+}
+
 .back-btn {
-  width: 46%;
+  width: 200rpx !important;
+  margin-top: 40rpx;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(40rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

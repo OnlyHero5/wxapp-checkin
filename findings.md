@@ -116,3 +116,12 @@
 - Java network behavior in this environment requires explicit Maven proxy configuration for stable dependency download; shell proxy env alone is insufficient for Maven resolution.
 - Backend test suite is green after environment provisioning (`11` tests, `0` failures) and dev runtime health endpoint returns `UP`.
 - Docker daemon is available; current shell may require a new login session to directly use docker group without `sudo`.
+
+## 2026-02-10 Liquid Glass Frontend Audit Findings
+- Current liquid-glass refactor introduced cross-page style regression risk by removing shared global utility classes from `frontend/app.wxss` while pages still reference them in WXML (`network-banner`, `hint`, `info-row`, `label`, `value`, `btn-center`, `content`).
+- Added compatibility-safe global utility styles back into `frontend/app.wxss` while keeping the new glassmorphism token system and visual direction.
+- Added missing index wrappers (`section-title-wrap`, `activity-title-wrap`) and meta text overflow handling in `frontend/pages/index/index.wxss`.
+- Added `page-profile/profile-card` wrappers in `frontend/pages/profile/profile.wxss` to align with existing WXML class usage and avoid orphan marker classes.
+- Verification evidence:
+  - page class coverage check script reports no missing class definitions across page WXML/WXSS.
+  - `npm test` (frontend) passed with all 6 scripts green.

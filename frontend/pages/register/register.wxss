@@ -1,1 +1,50 @@
-/* page specific styles */
+/** register.wxss **/
+.page-register .card {
+  padding: 40rpx;
+  /* 确保卡片本身有足够的玻璃感 */
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 24rpx;
+}
+
+/* 覆盖 TDesign 输入框样式 */
+.input {
+  margin-bottom: 24rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(0, 0, 0, 0.2) !important; /* 更深的背景以便输入可见 */
+  color: var(--text-main) !important;
+}
+
+.t-input__control {
+  color: var(--text-main) !important;
+}
+
+.t-input__placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* 标签样式 */
+.label {
+  color: var(--text-secondary);
+  font-size: 28rpx;
+  margin-right: 20rpx;
+}
+
+.divider {
+  margin: 30rpx 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-center {
+  margin-top: 40rpx;
+}
+
+.btn-primary {
+  width: 100%;
+  border-radius: 100px;
+}

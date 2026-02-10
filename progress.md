@@ -236,3 +236,25 @@
 | 2026-02-10 | `mysql-server-8.0` post-install script failed | 1 | Root-caused to port conflicts (`3306`, `33060`) and moved MySQL to `3307` / `33061` |
 | 2026-02-10 | `redis-server` failed to start repeatedly | 1 | Root-caused to local port conflict and moved Redis to `16379` |
 | 2026-02-10 | Maven/Java HTTPS downloads hung during dependency resolution | 1 | Root-caused to Java proxy path in this environment; fixed via `~/.m2/settings.xml` proxy config |
+
+## Session: 2026-02-10 (Liquid Glass Frontend Audit + Fix)
+
+### Phase Q: Frontend UI Audit and Regression Detection
+- **Status:** complete
+- Actions taken:
+  - Audited all modified liquid-glass files under `frontend/app.wxss` and `frontend/pages/*/*.wxss`.
+  - Cross-checked page WXML class usage against global/page WXSS definitions.
+  - Identified regression risk: shared utility classes removed from global stylesheet while still referenced by multiple pages.
+
+### Phase R: Regression Fix and Style Compatibility Recovery
+- **Status:** complete
+- Actions taken:
+  - Restored shared utility styles in `frontend/app.wxss` (`content`, `network-banner`, `hint`, `info-row`, `label`, `value`, `btn-center`, `input`, disabled button state).
+  - Added missing wrapper and overflow-safe styles in `frontend/pages/index/index.wxss`.
+  - Added profile page wrapper styles in `frontend/pages/profile/profile.wxss`.
+
+### Phase S: Verification
+- **Status:** complete
+- Executed commands:
+  - Page class coverage check (PowerShell script) -> `No missing class definitions detected for page-level wxml/wxss.`
+  - `npm test` (frontend) -> exit `0`, all 6 test scripts passed.

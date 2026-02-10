@@ -4,7 +4,7 @@
 Deliver a production-grade Java backend for the WeChat check-in miniapp with extension-first database design, Linux-oriented deployment support, and frontend/backend directory split (`frontend/` + `backend/`).
 
 ## Current Phase
-Phase 11
+Phase 12
 
 ## Phases
 
@@ -88,6 +88,13 @@ Phase 11
 - [x] Run backend test suite and dev runtime health verification
 - **Status:** complete
 
+### Phase 12: Liquid Glass Frontend Audit + Push (2026-02-10)
+- [x] Audit current liquid-glass frontend style changes and identify regressions
+- [x] Fix missing global class definitions causing cross-page style breakage
+- [x] Re-verify frontend tests and class-definition coverage checks
+- [ ] Commit and push to GitHub
+- **Status:** in_progress
+
 ## Key Decisions
 | Decision | Rationale |
 |----------|-----------|
@@ -99,6 +106,7 @@ Phase 11
 | Project review must separate "test/build passed" from "full runtime verified" | Avoid over-claiming completion when DB/container runtime prerequisites are unavailable |
 | Production startup must not mutate legacy tables | Production profile should disable ORM DDL and Flyway auto-migration, only read/write business data |
 | `suda_union` is active Web management primary schema | Extension schema must stay isolated; cross-schema sync must be enabled in production |
+| Liquid-glass UI migration must preserve legacy shared utility classes | Existing pages still depend on global `.hint/.network-banner/.info-row` helpers; deleting them causes visual regressions |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -114,5 +122,5 @@ Phase 11
 | Maven dependency resolution hung at HTTPS response read | 1 | Root cause was Java/Maven proxy path in this environment; added Maven proxy config in `~/.m2/settings.xml` |
 
 ## Notes
-- Current `main` working tree is clean.
+- Current `main` working tree contains pending liquid-glass frontend updates and awaits commit/push.
 - Review evidence must rely on fresh command outputs from this session.
