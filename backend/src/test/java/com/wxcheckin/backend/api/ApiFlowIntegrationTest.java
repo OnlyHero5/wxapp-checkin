@@ -149,6 +149,46 @@ class ApiFlowIntegrationTest {
         .andExpect(jsonPath("$.status", is("duplicate")));
   }
 
+  @Test
+  void shouldRejectRecordDetailAccessFromAnotherUser() throws Exception {
+    String staffSession = login("code-staff");
+    register(staffSession, "2025000007", "刘洋");
+
+    String ownerSession = login("code-normal-owner");
+    bindUserActivity(ownerSession, "act_hackathon_20260215");
+
+    String otherSession = login("code-normal-other");
+    bindUserActivity(otherSession, "act_hackathon_20260215");
+
+    String qrPayload = issueQr(staffSession, "act_hackathon_20260215", "checkin");
+
+    MvcResult consumeResult = mockMvc.perform(post("/api/checkin/consume")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "qr_payload":"%s"
+                }
+                """.formatted(ownerSession, qrPayload)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andReturn();
+
+    JsonNode consumeJson = objectMapper.readTree(consumeResult.getResponse().getContentAsString());
+    String recordId = consumeJson.get("checkin_record_id").asText();
+
+    mockMvc.perform(get("/api/checkin/records/{recordId}", recordId)
+            .param("session_token", ownerSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.record_id", is(recordId)));
+
+    mockMvc.perform(get("/api/checkin/records/{recordId}", recordId)
+            .param("session_token", otherSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")));
+  }
+
   private void register(String sessionToken, String studentId, String name) throws Exception {
     mockMvc.perform(post("/api/register")
             .contentType(MediaType.APPLICATION_JSON)

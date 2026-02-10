@@ -65,9 +65,13 @@
 |---|---|---|---|
 | C-01 | POST | `/api/checkin/verify` | 兼容旧签到校验入口 |
 | C-02 | GET | `/api/checkin/records` | 兼容记录列表 |
-| C-03 | GET | `/api/checkin/records/{record_id}` | 兼容记录详情 |
+| C-03 | GET | `/api/checkin/records/{record_id}` | 兼容记录详情（需会话鉴权且仅可访问本人记录） |
 | C-04 | GET | `/api/activity/current` | 兼容当前活动摘要 |
 | C-05 | POST | `/api/staff/activity-action` | 兼容旧工作人员动作入口 |
+
+兼容接口安全约束补充：
+- C-03 `GET /api/checkin/records/{record_id}` 必须校验 `session_token`。
+- C-03 只能返回当前会话用户自己的记录详情；跨用户访问必须返回 `forbidden`。
 
 ## 3.2 通用请求约定
 
@@ -1010,6 +1014,8 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 - `GET /api/activity/current`
 
 这 5 个接口可后续处理；本期上线阻塞项仅为第 3.1 节列出的 6 个主链路接口。
+
+说明：即便作为兼容接口，`GET /api/checkin/records/{record_id}` 也必须保留会话鉴权与记录归属校验，禁止跨用户读取。
 
 ---
 

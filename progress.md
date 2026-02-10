@@ -83,3 +83,61 @@
   - Updated `docs/FUNCTIONAL_SPEC.md` with compatibility API set and test acceptance items.
   - Updated `docs/API_SPEC.md` to v4.6 and added compatibility endpoint section.
   - Updated `changes.md` and `docs/changes.md` with backend full-delivery entries.
+
+## Session: 2026-02-10 (Independent Audit Re-check)
+
+### Phase D: Fresh Verification Commands
+- **Status:** complete
+- Executed commands:
+  - `npm ci` (frontend) -> exit `0`
+  - `npm test` (frontend) -> exit `0`, all 5 test scripts passed
+  - `.\mvnw.cmd -q test` (backend) -> exit `0`
+  - `.\mvnw.cmd -q -DskipTests package` (backend) -> exit `0`
+  - `.\scripts\run-tests.ps1` (backend) -> exit `0`, `Tests run: 5, Failures: 0, Errors: 0, Skipped: 0`
+
+### Phase E: Runtime/Integration Reality Check
+- **Status:** complete
+- Actions taken:
+  - Verified frontend default config remains mock-first (`frontend/utils/config.js` with `mock=true`).
+  - Attempted backend runtime startup (`spring-boot:run`) for local environment validation.
+  - Confirmed startup failure in this environment due DB credential/access dependency (`Access denied for user 'root'@'localhost'`), indicating runtime still requires proper MySQL setup.
+
+### Phase F: Code-level Risk Review
+- **Status:** complete
+- Actions taken:
+  - Checked frontend API wrappers vs backend route mappings: mainline and compatibility routes are present.
+  - Identified auth gap on compatibility record detail path: `GET /api/checkin/records/{recordId}` lacks session/ownership check.
+
+### Error Log Addendum
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-02-10 | Maven `-Dspring-boot.run.profiles=test` argument parsing failed in PowerShell | 1 | Re-ran with quoted `-D` arguments |
+| 2026-02-10 | `spring-boot:run` failed with MySQL access denied (`root@localhost`) | 1 | Recorded as runtime prerequisite issue (DB credential/environment not ready) |
+
+## Session: 2026-02-10 (Security Fix + Docs CN)
+
+### Phase G: TDD Red-Green for C-03 Record Detail Auth
+- **Status:** complete
+- Actions taken:
+  - Added integration regression test `shouldRejectRecordDetailAccessFromAnotherUser` in `ApiFlowIntegrationTest`.
+  - RED verification:
+    - `.\mvnw.cmd -q -Dtest=ApiFlowIntegrationTest#shouldRejectRecordDetailAccessFromAnotherUser test`
+    - failed as expected: expected `forbidden`, actual `success`.
+  - GREEN implementation:
+    - `CompatibilityController.recordDetail` now extracts `session_token`.
+    - `RecordQueryService.getRecordDetail` now requires session and enforces owner-only access.
+  - GREEN verification:
+    - reran same targeted test -> exit `0`.
+
+### Phase H: Documentation Localization and Alignment
+- **Status:** complete
+- Actions taken:
+  - Rewrote `backend/README.md` into Chinese.
+  - Updated `docs/API_SPEC.md`, `docs/FUNCTIONAL_SPEC.md`, `docs/REQUIREMENTS.md` to explicitly document C-03 session/ownership constraint.
+
+### Phase I: Final Verification (Post-change)
+- **Status:** complete
+- Executed commands:
+  - `npm test` (frontend) -> exit `0`, 5/5 passed
+  - `.\mvnw.cmd -q test` (backend) -> exit `0`
+  - `.\mvnw.cmd -q -DskipTests package` (backend) -> exit `0`

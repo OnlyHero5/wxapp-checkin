@@ -123,7 +123,7 @@
 - `POST /api/checkin/consume`
 - `POST /api/checkin/verify`（兼容）
 - `GET /api/checkin/records`（兼容）
-- `GET /api/checkin/records/{record_id}`（兼容）
+- `GET /api/checkin/records/{record_id}`（兼容，需会话鉴权且仅可查看本人记录）
 - `GET /api/activity/current`（兼容）
 - `POST /api/staff/activity-action`（兼容）
 

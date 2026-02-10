@@ -69,9 +69,13 @@ public class RecordQueryService {
   }
 
   @Transactional(readOnly = true)
-  public RecordDetailResponse getRecordDetail(String recordId) {
+  public RecordDetailResponse getRecordDetail(String sessionToken, String recordId) {
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
     WxCheckinEventEntity event = checkinEventRepository.findById(recordId)
         .orElseThrow(() -> new BusinessException("invalid_param", "记录不存在"));
+    if (event.getUser() == null || !event.getUser().getId().equals(principal.user().getId())) {
+      throw new BusinessException("forbidden", "无权查看该记录");
+    }
     WxActivityProjectionEntity activity = activityRepository.findById(event.getActivityId()).orElse(null);
     return new RecordDetailResponse(
         "success",

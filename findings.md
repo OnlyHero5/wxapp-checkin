@@ -61,3 +61,19 @@
 - `.\mvnw.cmd -q -DskipTests package` passed.
 - `.\scripts\run-tests.ps1` passed with 5 tests, 0 failures.
 - `docker compose ... config` could not be executed in this environment because Docker CLI is not installed.
+
+## 2026-02-10 Independent Audit Findings
+- Frontend API wrapper endpoints and backend controller routes are fully aligned for current calls used by pages.
+- Backend test/build chain passes on current workspace (`mvnw test`, `mvnw -DskipTests package`, script wrapper).
+- Frontend test chain passes on current workspace (`npm test`, 5 scripts).
+- Backend local startup still requires valid MySQL runtime credentials and reachable DB; startup failed in this environment with `Access denied for user 'root'@'localhost'`.
+- Security risk identified: compatibility endpoint `GET /api/checkin/records/{recordId}` returns record detail without session validation or ownership check (`CompatibilityController.recordDetail` + `RecordQueryService.getRecordDetail` path).
+
+## 2026-02-10 Fix Delivery Findings
+- TDD regression test added: cross-user access to `GET /api/checkin/records/{recordId}` now covered in `ApiFlowIntegrationTest`.
+- Security fix landed:
+  - Compatibility controller now extracts `session_token` for record detail.
+  - Record detail service now validates session and enforces "only record owner can read".
+- Docs aligned with implementation:
+  - `backend/README.md` converted to Chinese.
+  - `docs/API_SPEC.md`, `docs/FUNCTIONAL_SPEC.md`, `docs/REQUIREMENTS.md` now explicitly require C-03 ownership restriction.

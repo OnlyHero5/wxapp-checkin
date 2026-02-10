@@ -68,8 +68,13 @@ public class CompatibilityController {
   }
 
   @GetMapping("/checkin/records/{recordId}")
-  public RecordDetailResponse recordDetail(@PathVariable("recordId") String recordId) {
-    return recordQueryService.getRecordDetail(recordId);
+  public RecordDetailResponse recordDetail(
+      @PathVariable("recordId") String recordId,
+      @RequestParam(name = "session_token", required = false) String sessionToken,
+      HttpServletRequest request
+  ) {
+    String token = sessionTokenExtractor.extract(sessionToken, request);
+    return recordQueryService.getRecordDetail(token, recordId);
   }
 
   @GetMapping("/activity/current")

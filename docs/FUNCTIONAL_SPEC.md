@@ -144,7 +144,7 @@
 ### 6.3 兼容接口（当前前端仍保留调用封装）
 - `POST /api/checkin/verify`
 - `GET /api/checkin/records`
-- `GET /api/checkin/records/{record_id}`
+- `GET /api/checkin/records/{record_id}`（需 `session_token` 且仅可查看本人记录）
 - `GET /api/activity/current`
 - `POST /api/staff/activity-action`
 

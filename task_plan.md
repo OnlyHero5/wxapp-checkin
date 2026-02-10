@@ -4,7 +4,7 @@
 Deliver a production-grade Java backend for the WeChat check-in miniapp with extension-first database design, Linux-oriented deployment support, and frontend/backend directory split (`frontend/` + `backend/`).
 
 ## Current Phase
-Phase 5
+Phase 7
 
 ## Phases
 
@@ -42,6 +42,21 @@ Phase 5
 - [ ] Commit and push to GitHub
 - **Status:** in_progress
 
+### Phase 6: Independent Project Audit (2026-02-10)
+- [x] Re-verify frontend commands on current workspace
+- [x] Re-verify backend commands on current workspace
+- [x] Check frontend/backend API mapping and runtime prerequisites
+- [x] Identify security/consistency risks with file-line evidence
+- **Status:** complete
+
+### Phase 7: Security Fix + Chinese Docs + Push (2026-02-10)
+- [x] Add regression test for record detail cross-user access and verify RED failure
+- [x] Implement session + ownership validation for `GET /api/checkin/records/{recordId}`
+- [x] Update backend docs to Chinese and align API/spec docs with security constraint
+- [x] Re-run frontend/backend verification commands after code/doc changes
+- [ ] Commit and push to GitHub
+- **Status:** in_progress
+
 ## Key Decisions
 | Decision | Rationale |
 |----------|-----------|
@@ -50,6 +65,7 @@ Phase 5
 | `wx_token` stored in extension user table | Satisfies requirement without modifying legacy user table directly |
 | Sync as config-gated scheduled jobs | Safe rollout and rollback (`LEGACY_SYNC_ENABLED`, `OUTBOX_RELAY_ENABLED`) |
 | Linux-first scripts + Docker support | Match production deployment target while keeping Windows development support |
+| Project review must separate "test/build passed" from "full runtime verified" | Avoid over-claiming completion when DB/container runtime prerequisites are unavailable |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -57,7 +73,10 @@ Phase 5
 | `superpowers-codex` direct execution failed on Windows | 1 | Executed with `node .../superpowers-codex` |
 | `rg docs/*.md` pattern failed in PowerShell | 1 | Switched to `rg ... docs` directory search |
 | `docker compose` validation unavailable in local shell | 1 | Docker CLI not installed in current environment |
+| `mvnw ... -Dspring-boot.run.profiles=test` parsed incorrectly in PowerShell | 1 | Re-ran with quoted `-D` arguments |
+| `spring-boot:run` startup failed with `Access denied for user 'root'@'localhost'` | 1 | Confirmed local runtime still depends on reachable MySQL credentials/environment |
+| New security regression test failed as expected before fix (`expected forbidden but was success`) | 1 | Added endpoint token extraction + ownership check; reran test to green |
 
 ## Notes
-- The working tree includes a directory rename (`src/` -> `frontend/`), so git shows deletions/additions; this is expected.
-- Final completion claim must be based on fresh command outputs.
+- Current `main` working tree is clean.
+- Review evidence must rely on fresh command outputs from this session.
