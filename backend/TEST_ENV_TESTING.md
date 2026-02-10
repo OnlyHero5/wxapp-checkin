@@ -14,6 +14,14 @@
   - `OUTBOX_RELAY_ENABLED=true`
   - `OUTBOX_RELAY_INTERVAL_MS=2000`
 - **每次启动前强制执行** `scripts/reset-suda-union-test-data.sh`，覆盖测试数据。
+- 每次启动前还会清空扩展库中的微信身份绑定及关联测试数据（确保“新一轮测试从未绑定状态开始”）：
+  - `wx_user_auth_ext`
+  - `wx_session`
+  - `wx_user_activity_status`
+  - `wx_checkin_event`
+  - `wx_qr_issue_log`
+  - `wx_replay_guard`
+  - `wx_sync_outbox`
 - 如果 `1455` 端口被旧的本项目后端进程占用，会先自动停止旧进程后再启动新实例。
 - 最后调用 `scripts/start-dev.sh` 启动后端。
 
@@ -71,4 +79,5 @@ curl http://127.0.0.1:1455/actuator/health
 
 - 本脚本仅用于测试/联调环境，禁止用于生产环境。
 - 每次执行 `start-test-env.sh` 都会覆盖 `suda_union` 测试数据，请勿在该库保存手工数据。
+- 每次执行 `start-test-env.sh` 也会重置微信身份绑定；同一次脚本启动后的测试过程会保留你当次绑定数据。
 - 当前项目登录流程是“微信登录 + 学号姓名绑定”，不是“账号密码登录”。
