@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: wxcheckin-backend
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+  datasource:
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:suda_union}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2s
+  task:
+    scheduling:
+      pool:
+        size: 4
+      thread-name-prefix: sync-job-
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.wxcheckin.backend: INFO
+
+app:
+  session:
+    ttl-seconds: ${SESSION_TTL_SECONDS:7200}
+  qr:
+    default-rotate-seconds: ${QR_DEFAULT_ROTATE_SECONDS:10}
+    default-grace-seconds: ${QR_DEFAULT_GRACE_SECONDS:20}
+    replay-key-ttl-seconds: ${QR_REPLAY_TTL_SECONDS:90}
+    signing-key: ${QR_SIGNING_KEY:replace-with-a-strong-server-side-secret}
+  wechat:
+    enabled: ${WECHAT_API_ENABLED:false}
+    appid: ${WECHAT_APPID:}
+    secret: ${WECHAT_SECRET:}
+    jscode2session-url: https://api.weixin.qq.com/sns/jscode2session
+  sync:
+    legacy:
+      enabled: ${LEGACY_SYNC_ENABLED:false}
+      pull-interval-ms: ${LEGACY_SYNC_INTERVAL_MS:60000}
+    outbox:
+      enabled: ${OUTBOX_RELAY_ENABLED:false}
+      relay-interval-ms: ${OUTBOX_RELAY_INTERVAL_MS:10000}

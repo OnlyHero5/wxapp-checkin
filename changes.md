@@ -6,7 +6,7 @@
 - 切换至 `tdesign-miniprogram` 组件库并移除 AntD 依赖。
 - 完成 4 个核心页面的 TDesign 化（签到、记录、详情、注册）。
 - 新增“个人中心”页面与 TabBar 入口。
-- 将 NPM 配置迁移到 `src/` 以支持 DevTools 构建。
+- 将 NPM 配置迁移到 `frontend/` 以支持 DevTools 构建。
 - 视觉风格调整为“石墨雾”，降低黑白撞色的突兀感。
 - 主按钮色调整为深蓝，整体更稳重。
 - 统一主按钮为居中展示。
@@ -74,9 +74,16 @@
 
 ## 2026-02-09
 - 二维码后端化前端先行改造（本次）：
-  - `src/pages/staff-qr/staff-qr.js` 仅请求 A-05 获取二维码，不再前端本地组码。
-  - `src/pages/scan-action/scan-action.js` 改为“扫码原文直传 A-06”为主，减少前端解析耦合。
-  - `src/utils/api.js` 对齐当前接口口径：A-05 mock 返回 `qr_payload/display_expire_at/accept_expire_at`；A-06 冗余字段按需传递。
+  - `frontend/pages/staff-qr/staff-qr.js` 仅请求 A-05 获取二维码，不再前端本地组码。
+  - `frontend/pages/scan-action/scan-action.js` 改为“扫码原文直传 A-06”为主，减少前端解析耦合。
+  - `frontend/utils/api.js` 对齐当前接口口径：A-05 mock 返回 `qr_payload/display_expire_at/accept_expire_at`；A-06 冗余字段按需传递。
   - `docs/API_SPEC.md` 升级到 v4.5，A-05/A-06 与当前代码行为对齐。
   - `README.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 全量清理旧口径并同步当前实现。
   - 删除过时二维码方案文档：`docs/plans/2026-02-08-qr-frontend-first-plan.md`、`docs/plans/2026-02-08-qr-all-frontend-plan.md`、`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`。
+- Java 后端完整落地（本次）：
+  - 新增 `backend/` 全量 Spring Boot 代码（A-01~A-06 + 兼容接口）。
+  - 新增扩展表迁移与同步机制（含 `wx_token` 字段）。
+  - 新增 Linux 优先运维文件：`Dockerfile`、`docker-compose.yml`、`scripts/*.sh`。
+  - 新增 Windows 开发辅助脚本：`scripts/*.ps1`。
+  - 根目录 `src/` 重命名为 `frontend/`，并更新小程序根目录配置。
+  - 前端 `npm test` 接入 5 个真实测试脚本，替换原占位命令。

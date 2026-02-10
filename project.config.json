@@ -1,5 +1,5 @@
 {
-  "miniprogramRoot": "src/",
+  "miniprogramRoot": "frontend/",
   "projectname": "wxapp-checkin",
   "description": "活动二维码签到小程序",
   "appid": "wx973948495768f739",

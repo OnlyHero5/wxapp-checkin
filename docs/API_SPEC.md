@@ -1,9 +1,9 @@
 # API 协议规范（后端实施手册）
 
-文档版本: v4.5  
+文档版本: v4.6  
 更新日期: 2026-02-09  
 适用分支: `main`  
-代码对齐基线: `src/utils/api.js`、`src/utils/auth.js`、`src/pages/login/login.js`、`src/pages/index/index.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`、`src/pages/activity-detail/activity-detail.js`、`src/pages/register/register.js`
+代码对齐基线: `frontend/utils/api.js`、`frontend/utils/auth.js`、`frontend/pages/login/login.js`、`frontend/pages/index/index.js`、`frontend/pages/staff-qr/staff-qr.js`、`frontend/pages/scan-action/scan-action.js`、`frontend/pages/activity-detail/activity-detail.js`、`frontend/pages/register/register.js`
 
 ---
 
@@ -56,6 +56,18 @@
 | A-04 | GET | `/api/staff/activities/{activity_id}` | `pages/activity-detail/activity-detail`、`pages/staff-qr/staff-qr` | 活动详情与统计 |
 | A-05 | POST | `/api/staff/activities/{activity_id}/qr-session` | `pages/staff-qr/staff-qr` | staff 获取后端签发二维码票据 |
 | A-06 | POST | `/api/checkin/consume` | `pages/scan-action/scan-action` | normal 扫码提交签到/签退 |
+
+## 3.1B 兼容接口（建议保留）
+
+以下接口仍存在于当前前端 `frontend/utils/api.js` 调用封装中。若联调期移除这些接口，会导致旧调用路径报错：
+
+| 编号 | 方法 | 路径 | 用途 |
+|---|---|---|---|
+| C-01 | POST | `/api/checkin/verify` | 兼容旧签到校验入口 |
+| C-02 | GET | `/api/checkin/records` | 兼容记录列表 |
+| C-03 | GET | `/api/checkin/records/{record_id}` | 兼容记录详情 |
+| C-04 | GET | `/api/activity/current` | 兼容当前活动摘要 |
+| C-05 | POST | `/api/staff/activity-action` | 兼容旧工作人员动作入口 |
 
 ## 3.2 通用请求约定
 
@@ -990,7 +1002,7 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 
 ## 6. 非主链路接口说明（不作为本期上线阻塞）
 
-`src/utils/api.js` 仍保留以下封装，但当前主页面未直接依赖：
+`frontend/utils/api.js` 仍保留以下封装，但当前主页面未直接依赖：
 - `POST /api/checkin/verify`
 - `POST /api/staff/activity-action`
 - `GET /api/checkin/records`
@@ -1045,6 +1057,7 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 
 ## 9. 版本记录
 
+- 2026-02-09 v4.6：新增 3.1B 兼容接口清单（`/api/checkin/verify`、`/api/checkin/records*`、`/api/activity/current`、`/api/staff/activity-action`），明确当前前端封装仍依赖这些路径。
 - 2026-02-09 v4.5：二维码链路切换为“后端接口返回二维码 payload”口径；重写职责边界与 3.5；A-05 增加 `qr_payload/display_expire_at/accept_expire_at`；A-06 补齐与当前 payload 协议一致的解析与校验示例。
 - 2026-02-08 v4.4：新增“3.3A 会话失效信号约定（强制）”，明确 `status=forbidden + error_code=session_expired` 为会话过期标准返回；补充前端收到后必须清理会话并跳转 `pages/login/login` 重登。
 - 2026-02-08 v4.3：补充“参数解释总则（3.7）”；为 A-01~A-06 增加参数落地详解（前端来源/后端解析/失败码）；新增 A-06 一致性校验详解（矩阵 + 伪代码）；新增全局参数速查表。

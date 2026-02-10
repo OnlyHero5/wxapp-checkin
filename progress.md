@@ -1,694 +1,85 @@
 # Progress Log
 
-## Session: 2026-02-03
+## Session: 2026-02-09
 
-### Phase 1: Requirements & Discovery
-- **Status:** complete
-- **Started:** 2026-02-03 20:30
-- Actions taken:
-  - Read docs/REQUIREMENTS.md and docs/FUNCTIONAL_SPEC.md
-  - Reviewed existing WXML for index, records, record-detail, register
-  - Generated design system in design-system/moonshot-checkin/MASTER.md
-  - Initialized planning files (task_plan.md, findings.md, progress.md)
-- Files created/modified:
-  - design-system/moonshot-checkin/MASTER.md (created)
-  - task_plan.md (created)
-  - findings.md (created)
-  - progress.md (created)
-
-### Phase 2: Planning & Structure
+### Phase 1: Analysis and Stack Decision
 - **Status:** complete
 - Actions taken:
-  - Validated Obsidian Grid visual direction
-  - Defined IA + component mapping + data flow + error handling
-  - Wrote design doc: docs/plans/2026-02-03-moonshot-miniapp-design.md
-  - Committed design doc to git
-  - Created worktree branch: moonshot-ui
-  - Added .gitignore entry for .worktrees and committed
-  - Wrote implementation plan: docs/plans/2026-02-03-moonshot-ui-implementation-plan.md
-  - Committed implementation plan to git
-  - Added TDesign-based design doc after component library switch
-- Files created/modified:
-  - docs/plans/2026-02-03-moonshot-miniapp-design.md (created)
-  - docs/plans/2026-02-03-moonshot-ui-implementation-plan.md (created)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - .gitignore (created)
-  - docs/plans/2026-02-03-moonshot-tdesign-ui-design.md (created)
+  - Read API and functional requirement docs.
+  - Audited legacy `suda_union` schema.
+  - Confirmed Java backend direction and extension-first database approach.
 
-### Phase 3: Implementation
+### Phase 2: Repository Restructure and Backend Bootstrapping
 - **Status:** complete
 - Actions taken:
-  - Switched dependency to antd-mini and installed packages
-  - Applied Moonshot dark theme tokens and restyled shared UI classes in app.wxss
-  - Refactored index page WXML + JSON to AntD components
-  - User requested full switch to TDesign; AntD changes now considered temporary and will be replaced
-  - Wrote new TDesign implementation plan: docs/plans/2026-02-03-moonshot-tdesign-ui-implementation.md
-  - Switched dependency to tdesign-miniprogram and removed AntD
-  - Refactored index, records, record-detail, register pages to TDesign components
-  - Added 个人中心 page + TabBar entry
-  - Cleaned remaining AntD tags from src
-- Files created/modified:
-  - package.json (updated)
-  - package-lock.json (created)
-  - src/app.wxss (updated)
-  - src/pages/index/index.wxml (updated)
-  - src/pages/index/index.json (updated)
-  - findings.md (updated)
-  - docs/plans/2026-02-03-moonshot-tdesign-ui-implementation.md (created)
-  - src/pages/records/records.wxml (updated)
-  - src/pages/records/records.json (updated)
-  - src/pages/record-detail/record-detail.wxml (updated)
-  - src/pages/record-detail/record-detail.json (updated)
-  - src/pages/register/register.wxml (updated)
-  - src/pages/register/register.json (updated)
-  - src/pages/register/register.js (updated)
-  - src/pages/profile/profile.wxml (created)
-  - src/pages/profile/profile.json (created)
-  - src/pages/profile/profile.js (created)
-  - src/pages/profile/profile.wxss (created)
-  - src/app.json (updated)
-  - docs/changes.md (updated)
-  - changes.md (created)
+  - Moved frontend source directory from `src/` to `frontend/`.
+  - Updated miniapp config to point `miniprogramRoot` to `frontend/`.
+  - Bootstrapped Spring Boot backend project under `backend/`.
 
-### Phase 4: Testing & Verification
+### Phase 3: Core Backend Development
+- **Status:** complete
+- Actions taken:
+  - Added migration scripts for `wx_*` extension tables, including `wx_token`.
+  - Implemented entities/repositories/services/controllers for API contract A-01~A-06.
+  - Implemented compatibility controllers for existing frontend calls.
+  - Added sync-related services and scheduler jobs with config switches.
+  - Added tests for QR payload codec and API flow integration.
+
+### Phase 4: Ops + Docs Completion
+- **Status:** complete
+- Actions taken:
+  - Added Linux-first ops files:
+    - `backend/Dockerfile`
+    - `backend/docker-compose.yml`
+    - `backend/scripts/start-dev.sh`
+    - `backend/scripts/run-tests.sh`
+  - Added Windows fallback scripts:
+    - `backend/scripts/start-dev.ps1`
+    - `backend/scripts/run-tests.ps1`
+  - Added `backend/README.md` and `backend/.editorconfig`.
+  - Updated docs to reflect backend directory availability.
+
+### Phase 5: Final Verification
 - **Status:** in_progress
-- Actions taken:
-  - Verified TDesign tags present via rg checks
-  - Verified no AntD tags remain in src
-  - 定位 DevTools “NPM packages not found” 原因：package.json 不在 miniprogramRoot 下
-  - 已将 package.json/package-lock.json 移入 `src/` 并在 `src/` 下执行 `npm install`
-  - Manual WeChat DevTools “Tools → Build npm” pending
-  - Manual UI verification pending
-
-## Test Results
-| Test | Input | Expected | Actual | Status |
-|------|-------|----------|--------|--------|
-| Baseline tests | N/A | No test harness found | None run | N/A |
-| Dependency check | `npm list tdesign-miniprogram` | Package installed | tdesign-miniprogram@1.12.3 | Pass |
-| AntD cleanup | `rg -n "ant-" src` | No matches | No matches | Pass |
+- Executed commands:
+  - `.\mvnw.cmd -q test` -> exit `0`
+  - `.\mvnw.cmd -q -DskipTests package` -> exit `0`
+  - `.\scripts\run-tests.ps1` -> exit `0`, `Tests run: 5, Failures: 0, Errors: 0, Skipped: 0`
+  - `docker compose -f docker-compose.yml config` -> failed (Docker CLI not installed in current environment)
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
-| 2026-02-03 20:33 | session-catchup.py not found under .claude | 1 | Used .codex path to run script |
-| 2026-02-03 20:34 | Get-ChildItem -Recurse timeout | 1 | Narrowed search to .codex path |
-| 2026-02-03 22:46 | rg command failed on "--bg" (interpreted as flag) | 1 | Re-ran with `rg -n -- "--bg" src/app.wxss` |
+| 2026-02-09 | `superpowers-codex` direct run failed on Windows | 1 | Ran with `node .../superpowers-codex` |
+| 2026-02-09 | `rg docs/*.md` wildcard path invalid in PowerShell | 1 | Switched to directory-based search (`rg ... docs`) |
+| 2026-02-09 | `docker` command unavailable for compose config validation | 1 | Recorded as environment limitation; compose runtime verification deferred |
 
-## 5-Question Reboot Check
-| Question | Answer |
-|----------|--------|
-| Where am I? | Phase 4 (Testing & Verification) |
-| Where am I going? | Phase 5 (Delivery) |
-| What's the goal? | Redesign 4 pages + add minimal 个人中心 tab with Moonshot-like dark UI using TDesign |
-| What have I learned? | See findings.md |
-| What have I done? | See above |
+## Notes
+- Repository currently shows `src/` deletions and `frontend/` additions because of directory rename, which is expected.
+- Final success statement must follow fresh verification command results.
 
----
-*Update after completing each phase or encountering errors*
+## Session: 2026-02-10
 
-## Session: 2026-02-04
-
-### 发布收尾
-- **Status:** in_progress
-- Actions taken:
-  - 创建清理工作区 `ops/release-cleanup`
-  - 移除旧 worktree `.worktrees/moonshot-miniapp-design`
-  - 备份 `main` 未跟踪文件到 `.backup-untracked/20260204-1107`
-  - `main` 快进同步至 `origin/main`
-  - 更新执行计划 `docs/plans/2026-02-04-release-cleanup.md`
-  - 按要求补充根目录中文记录
-- Files created/modified:
-  - docs/plans/2026-02-04-release-cleanup.md (created)
-  - changes.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-  - task_plan.md (to update)
-- Notes:
-  - 测试按用户要求跳过
-
-### 发布收尾（完成）
+### Phase A: Comprehensive Audit (Frontend + Backend)
 - **Status:** complete
 - Actions taken:
-  - 推送文档提交：154ed4b、2c52c74
-  - 创建并推送 release tag：v2026.02.04（指向 154ed4b）
+  - Reviewed frontend API wrappers against backend controller mappings.
+  - Confirmed mainline A-01~A-06 and compatibility endpoints are all implemented in backend.
+  - Verified frontend real test scripts exist under `frontend/tests`.
+  - Fixed `frontend/package.json` test script to execute all real frontend tests.
 
-### 文档补齐（README）
+### Phase B: Full Verification
+- **Status:** complete
+- Executed commands:
+  - `npm test` (frontend) -> exit `0`, 5 test scripts passed
+  - `.\mvnw.cmd -q test` (backend) -> exit `0`
+  - `.\mvnw.cmd -q -DskipTests package` (backend) -> exit `0`
+
+### Phase C: Documentation Finalization
 - **Status:** complete
 - Actions taken:
-  - 更新 README.md，补充 TDesign、构建步骤、发布标签说明
-
-### 文档全量检查与补齐
-- **Status:** complete
-- Actions taken:
-  - 复核并更新 docs/REQUIREMENTS.md、docs/FUNCTIONAL_SPEC.md、docs/plans/2026-02-03-moonshot-miniapp-design.md
-  - 更新 docs/changes.md 与根目录 changes.md
-  - README 补充现状与构建步骤
-  - .gitignore 增加 `.backup-untracked/` 忽略
-
-### 标签重指向
-- **Status:** complete
-- Actions taken:
-  - 删除并重新创建 `v2026.02.04`，已指向 main 最新提交
-
-### 后端接口说明
-- **Status:** complete
-- Actions taken:
-  - 新建 docs/API_SPEC.md（统一 code/message/data）
-  - 与前端 src/utils/api.js 对齐接口字段与行为
-
-## Session: 2026-02-06
-
-### 角色分流与活动卡片需求实现
-- **Status:** complete
-- Actions taken:
-  - 执行 superpowers bootstrap 并加载 `planning-with-files`、`ui-ux-pro-max`、`frontend-design`、`superpowers:brainstorming`、`superpowers:writing-plans`
-  - 审查现有页面与数据流：`index/profile/register/records`、`auth/storage/api/app.json`
-  - 确认改造路径：先扩展角色与数据层，再改活动页/个人页/详情页与路由
-  - 扩展 `storage/auth/api/config`：支持角色权限、个人信息字段、工作人员活动列表与签到/签退动作接口（mock）
-  - 重构 `pages/index`：活动卡片 + 按钮操作（签到/签退/详情），普通用户自动跳转 `profile`
-  - 重构 `pages/profile`：个人信息字段展示 + 历史活动列表
-  - 新增 `pages/activity-detail`：承接活动详情按钮
-  - 调整 `app.json` tabBar 为“活动/我的”，并保留记录详情路由
-  - 完成 JS/JSON 语法验证与关键引用检查
-- Files created/modified:
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-  - src/utils/config.js (updated)
-  - src/utils/storage.js (updated)
-  - src/utils/auth.js (updated)
-  - src/utils/api.js (rewritten)
-  - src/pages/register/register.js (updated)
-  - src/pages/register/register.wxml (updated)
-  - src/pages/index/index.js (updated)
-  - src/pages/index/index.wxml (updated)
-  - src/pages/index/index.json (updated)
-  - src/pages/index/index.wxss (updated)
-  - src/pages/profile/profile.js (updated)
-  - src/pages/profile/profile.wxml (updated)
-  - src/pages/profile/profile.wxss (updated)
-  - src/pages/activity-detail/activity-detail.js (created)
-  - src/pages/activity-detail/activity-detail.wxml (created)
-  - src/pages/activity-detail/activity-detail.json (created)
-  - src/pages/activity-detail/activity-detail.wxss (created)
-  - src/app.json (updated)
-- Notes:
-  - bootstrap 在 PowerShell 下直接执行失败，已切换为 node 入口执行（记录于 task_plan.md）
-  - WeChat DevTools 真机/模拟器视觉验收未在 CLI 内执行，需要你本地打开 DevTools 再做一轮 UI 行为确认
-
-### 角色页面补充需求（社会分/讲座分 + 活动卡片）
-- **Status:** complete
-- Actions taken:
-  - `storage/auth/api` 增加 `social_score/lecture_score` 字段链路（mock 登录 -> 本地缓存 -> 页面展示）
-  - `profile` 页新增“成长积分”卡片（社会分、讲座分），仅普通用户展示
-  - `index` 页取消普通用户自动跳转，统一展示活动卡片
-  - 保留工作人员卡片操作按钮（签到、签退、详情），普通用户仅保留详情
-  - 完成静态校验：`node --check`（storage/auth/api/profile/index）
-- Files created/modified:
-  - src/utils/storage.js (updated)
-  - src/utils/auth.js (updated)
-  - src/utils/api.js (updated)
-  - src/pages/profile/profile.js (updated)
-  - src/pages/profile/profile.wxml (updated)
-  - src/pages/profile/profile.wxss (updated)
-  - src/pages/index/index.js (updated)
-  - src/pages/index/index.wxml (updated)
-
-### 普通用户视角二次调整
-- **Status:** complete
-- Actions taken:
-  - 普通用户“我的”页隐藏“曾参加活动”卡片，避免展示非必要模块
-  - 普通用户活动卡片改为显示“我的签到状态”，不显示活动总签到人数
-  - API mock 活动列表补充 `my_checked_in` 字段（模拟后端返回）
-  - 再次执行语法检查：`node --check` 通过
-- Files created/modified:
-  - src/pages/profile/profile.js (updated)
-  - src/pages/profile/profile.wxml (updated)
-  - src/pages/index/index.wxml (updated)
-  - src/utils/api.js (updated)
-
-## Session: 2026-02-07
-
-### 工作人员页去重 + 活动分组排序 + hack 数据扩充
-- **Status:** complete
-- Actions taken:
-  - 执行 superpowers bootstrap 并加载 `superpowers:brainstorming`、`ui-ux-pro-max`、`planning-with-files`
-  - 清理工作人员个人页“曾参加活动”模块（WXML/JS/WXSS）
-  - 移除旧路由入口并删除页面文件：`pages/records/records`、`pages/record-detail/record-detail`
-  - 活动页改为分组展示：`正在进行` 在上、`已完成` 在下
-  - 两个分组均按时间倒序（新的在上）
-  - hack/mock 活动与记录数据扩展为多场景集合（进行中/已完成、按钮组合、签到状态）
-  - 完成验证：`node --check`（index/profile/api）+ `app.json` 解析 + 引用扫描
-- Files created/modified:
-  - src/pages/profile/profile.js (updated)
-  - src/pages/profile/profile.wxml (updated)
-  - src/pages/profile/profile.wxss (updated)
-  - src/pages/index/index.js (updated)
-  - src/pages/index/index.wxml (updated)
-  - src/pages/index/index.wxss (updated)
-  - src/utils/api.js (updated)
-  - src/app.json (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-
-### 活动页反馈修正（已完成仅详情 + 页面美化）
-- **Status:** complete
-- Actions taken:
-  - 修复按钮逻辑：`已完成` 分组不再显示 `签到/签退`，仅保留 `详情`
-  - 前端动作保护：`scanAndSubmit` 拦截 completed 活动并提示
-  - mock 后端保护：`/api/staff/activity-action` 对 completed 活动返回 `forbidden`
-  - 重构活动页 UI：新增顶部概览卡、优化分组标题信息、卡片操作区移到底部、按钮形态与信息排版重做
-  - 完成检查：`node --check src/pages/index/index.js`、`node --check src/utils/api.js`
-- Files created/modified:
-  - src/pages/index/index.wxml (updated)
-  - src/pages/index/index.js (updated)
-  - src/pages/index/index.wxss (updated)
-  - src/utils/api.js (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-
-### 活动页色彩增强（联网样例驱动）
-- **Status:** complete
-- Actions taken:
-  - 联网检索活动卡片标签样式与主流设计系统标签规范（Material/MUI/Atlassian/Dribbble）
-  - 在 `index.js` 新增 `ACTIVITY_TYPE_TONES` 与 `resolveActivityTypeTone`
-  - 在 `index.wxml` 增加动态类型胶囊类名：`activity-type-{{activity.type_tone}}`
-  - 在 `index.wxss` 实现多色系圆角胶囊（路演/竞赛等）与分组卡片色调差异
-  - 完成校验：`node --check src/pages/index/index.js`、`node --check src/utils/api.js`
-- Files created/modified:
-  - src/pages/index/index.js (updated)
-  - src/pages/index/index.wxml (updated)
-  - src/pages/index/index.wxss (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-
-### 文档全量对齐（重点 API_SPEC）
-- **Status:** complete
-- Actions taken:
-  - 基于当前代码（`src/pages/*`、`src/utils/api.js`、`src/app.json`）做文档差异盘点
-  - 重写 `docs/API_SPEC.md`：增加接口到页面功能的逐项映射、字段来源与 UI 呈现、错误表现和联调测试清单
-  - 更新 `docs/FUNCTIONAL_SPEC.md`：同步双分组、已完成仅详情、记录页下线状态
-  - 更新 `docs/REQUIREMENTS.md`：将需求口径与当前实现对齐，保留接口能力单独标识
-  - 更新 `README.md`：页面结构与联调重点字段更新
-  - 更新 `docs/changes.md` 与根目录 `changes.md`：追加 2026-02-07 变更摘要
-- Files created/modified:
-  - docs/API_SPEC.md (rewritten)
-  - docs/FUNCTIONAL_SPEC.md (rewritten)
-  - docs/REQUIREMENTS.md (rewritten)
-  - README.md (updated)
-  - docs/changes.md (updated)
-  - changes.md (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-
-## Session: 2026-02-08
-
-### 普通用户活动可见性收敛（完成）
-- **Status:** complete
-- Actions taken:
-  - 执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap` 方式）。
-  - 加载并应用技能：`superpowers:brainstorming`、`superpowers:writing-plans`、`superpowers:test-driven-development`、`frontend-design`、`ui-ux-pro-max`、`planning-with-files`。
-  - 完成代码调研：定位活动列表与详情链路（`src/pages/index`、`src/pages/activity-detail`、`src/utils/api.js`）。
-  - 明确需求差距：普通用户当前仍可见未报名未参加活动，详情接口缺少普通用户可见性鉴权。
-  - 按 TDD 新增失败测试 `src/tests/activity-visibility.test.js`，先验证旧逻辑不满足需求，再实现修复并转绿。
-  - 改造 mock API：新增 `my_registered`，普通用户列表按 `my_registered || my_checked_in || my_checked_out` 过滤，详情接口补充普通用户可见性鉴权，动作接口补充角色鉴权。
-  - 改造前端：普通用户活动卡片改为“我的状态（已报名/已签到/已签退）”，详情页处理 `forbidden` 并回退页面。
-  - 全量更新文档：`README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`、`docs/changes.md`、`changes.md`。
-  - 验证通过：`node src/tests/activity-visibility.test.js`、`node --check src/utils/api.js`、`node --check src/pages/index/index.js`、`node --check src/pages/activity-detail/activity-detail.js`。
-- Files created/modified:
-  - src/tests/activity-visibility.test.js (created)
-  - src/utils/api.js (updated)
-  - src/pages/index/index.js (updated)
-  - src/pages/index/index.wxml (updated)
-  - src/pages/activity-detail/activity-detail.js (updated)
-  - src/pages/activity-detail/activity-detail.wxml (updated)
-  - README.md (updated)
-  - docs/REQUIREMENTS.md (updated)
-  - docs/FUNCTIONAL_SPEC.md (updated)
-  - docs/API_SPEC.md (updated)
-  - docs/changes.md (updated)
-  - changes.md (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-
-### 动态二维码签到/签退（完成）
-- **Status:** complete
-- Actions taken:
-  - 执行并修复 superpowers 启动方式：`node .../superpowers-codex bootstrap`。
-  - 加载并应用技能：`planning-with-files`、`superpowers:test-driven-development`、`ui-ux-pro-max`、`frontend-design`、`superpowers:brainstorming`。
-  - 先测后改：新增/扩展 `src/tests/qr-checkin-flow.test.js`，覆盖二维码会话、10 秒轮换、20 秒宽限、签到签退状态同步、管理员计数同步。
-  - 扩展 mock API：
-    - 新增 `POST /api/staff/activities/{id}/qr-session`
-    - 新增 `POST /api/checkin/consume`
-    - 新增 `my_checked_out`、`checkout_count` 字段与状态流转
-  - 新增页面：
-    - `pages/staff-qr`：管理员二维码展示页（倒计时/自动换码/手动刷新/实时统计）
-    - `pages/scan-action`：普通用户扫码提交页（摄像头扫码 + 结果反馈）
-  - 活动页改造：
-    - 工作人员按钮改为“签到码/签退码”并跳转二维码页
-    - 普通用户新增“去扫码”入口
-  - 详情与状态文案改造：
-    - 普通用户状态统一为“已报名/已签到/已签退”
-  - 全量文档更新：
-    - `README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`、`docs/changes.md`、`changes.md`
-  - 验证通过：
-    - `node --check src/pages/staff-qr/staff-qr.js`
-    - `node --check src/pages/scan-action/scan-action.js`
-    - `node --check src/pages/index/index.js`
-    - `node --check src/pages/activity-detail/activity-detail.js`
-    - `node --check src/utils/api.js`
-    - `node src/tests/activity-visibility.test.js`
-    - `node src/tests/qr-checkin-flow.test.js`
-- Files created/modified:
-  - src/pages/staff-qr/staff-qr.js (created)
-  - src/pages/staff-qr/staff-qr.json (created)
-  - src/pages/staff-qr/staff-qr.wxml (created)
-  - src/pages/staff-qr/staff-qr.wxss (created)
-  - src/pages/scan-action/scan-action.js (created)
-  - src/pages/scan-action/scan-action.json (created)
-  - src/pages/scan-action/scan-action.wxml (created)
-  - src/pages/scan-action/scan-action.wxss (created)
-  - src/app.json (updated)
-  - src/pages/index/index.js (updated)
-  - src/pages/index/index.wxml (updated)
-  - src/pages/index/index.wxss (updated)
-  - src/pages/index/index.json (updated)
-  - src/pages/activity-detail/activity-detail.js (updated)
-  - src/utils/api.js (updated)
-  - src/tests/activity-visibility.test.js (updated)
-  - src/tests/qr-checkin-flow.test.js (updated)
-  - README.md (updated)
-  - docs/REQUIREMENTS.md (updated)
-  - docs/FUNCTIONAL_SPEC.md (updated)
-  - docs/API_SPEC.md (updated)
-  - docs/changes.md (updated)
-  - changes.md (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-
-## Session: 2026-02-08
-
-### 二维码前端主导改造调研（进行中）
-- **Status:** in_progress
-- Actions taken:
-  - 执行 superpowers bootstrap（使用 `node .../superpowers-codex bootstrap`）。
-  - 加载技能：`superpowers:brainstorming`、`superpowers:writing-plans`、`planning-with-files`。
-  - 读取并复盘历史 planning 文件，定位当前二维码实现上下文。
-  - 检查二维码相关代码：`src/utils/api.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`、`src/pages/index/index.js`。
-  - 确认当前耦合：二维码会话生成与扫码提交判定都在后端接口侧。
-  - 启动外网调研，优先检索微信小程序官方能力边界与可替代前端方案。
-- Files created/modified:
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-- 联网调研新增证据：
-  - `wx.scanCode`：小程序码可返回 `path`，可在前端提取 `scene`。
-  - `wxacode.getUnlimited`：文档注明应服务端调用，且 `scene` 有长度约束。
-  - OWASP/Android：硬编码密钥与仅前端授权控制存在高风险。
-  - RFC 4226/6238：可用于定义本地轮换口令与防重放窗口。
-  - 小程序二维码绘制库：`weapp-qrcode`、`weapp-qrcode-canvas-2d` 可直接在前端绘制。
-- 产出计划文件：`docs/plans/2026-02-08-qr-frontend-first-plan.md`（二维码前端主导改造方案对比 + 推荐路线）。
-- 当前状态：等待用户确认关键决策点后进入实现阶段。
-- 新增计划文件：`docs/plans/2026-02-08-qr-all-frontend-plan.md`。
-- 已按用户最新约束切换方案：二维码全前端实现，后端仅业务计算。
-- 下一步：等待用户确认“是否接受业务级防伪最小集合”后进入实现。
-
-### 二维码全前端化实现（完成）
-- **Status:** complete
-- Actions taken:
-  - 按 TDD 先改 `src/tests/qr-checkin-flow.test.js`，验证“后端不返回二维码内容、前端本地 payload 提交”的行为。
-  - 新增 `src/utils/qr-payload.js`（payload 构建/解析、slot 与宽限窗口计算）。
-  - 重构 `src/pages/staff-qr/staff-qr.js`：前端本地换码 + 服务端时钟校准 + 低频配置拉取。
-  - 调整 `src/pages/staff-qr/staff-qr.wxml`/`src/pages/staff-qr/staff-qr.wxss`：移除后端图片二维码分支。
-  - 重构 `src/pages/scan-action/scan-action.js`：扫码解析结构化字段并提交。
-  - 改造 `src/utils/api.js`：
-    - `/api/staff/activities/{id}/qr-session` 仅返回配置与时间
-    - `/api/checkin/consume` 改为业务校验 + 防重放 + 限流
-    - `consumeCheckinAction` 支持结构化入参
-  - 文档同步更新：`README.md`、`docs/API_SPEC.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`docs/changes.md`、`changes.md`。
-- Verification:
-  - `node src/tests/qr-checkin-flow.test.js` -> PASS
-  - `node src/tests/activity-visibility.test.js` -> PASS
-  - `node --check src/utils/qr-payload.js` -> PASS
-  - `node --check src/utils/api.js` -> PASS
-  - `node --check src/pages/staff-qr/staff-qr.js` -> PASS
-  - `node --check src/pages/scan-action/scan-action.js` -> PASS
-
-### API 文档重构（进行中）
-- **Status:** in_progress
-- Actions taken:
-  - 加载技能：`superpowers:brainstorming`、`superpowers:writing-plans`、`planning-with-files`。
-  - 扫描现有文档关键词与冲突口径，确认 4.4/4.5 为主要可读性瓶颈。
-  - 启动 API 文档信息架构重建，准备全量改写。
-
-### API 文档重构（完成）
-- **Status:** complete
-- Actions taken:
-  - 全量重写 `docs/API_SPEC.md`，版本升级至 v3.0。
-  - 聚焦后端可执行信息：职责边界、请求/响应契约、校验顺序、错误码、联调清单。
-  - 重点修复 4.4/4.5 可读性：拆掉旧混写内容，改为后端实现规范化描述。
-  - 同步更新 `docs/changes.md` 与 `changes.md` 记录重构结果。
-
-### API 文档二次深化（完成）
-- **Status:** complete
-- Actions taken:
-  - 再次按真实调用链核对 `src/utils/auth.js` 与 `src/pages/**`，确认主链路后端 API 为 6 个。
-  - 将 `docs/API_SPEC.md` 升级至 v4.0，按 4.1~4.6 逐接口补齐“入参/处理/出参/错误”完整模板。
-  - 重点重写 4.4 与 4.5 的后端步骤描述，去除可能误导后端的前端实现细节。
-  - 在 A-06 增补事务一致性、并发控制与防重放键要求，提升后端落地可执行性。
-  - 同步更新 `docs/changes.md`、`changes.md`、`findings.md` 记录本次深化重构。
-
-## Session: 2026-02-08
-
-### 登录注册绑定补齐 + API 文档 v4.1
-- **Status:** complete
-- Actions taken:
-  - 执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap`）并加载技能：`superpowers:brainstorming`、`planning-with-files`、`superpowers:writing-plans`、`superpowers:test-driven-development`。
-  - 以 TDD 先新增失败测试：
-    - `src/tests/auth-register-binding.test.js`
-    - `src/tests/auth-session-registration-state.test.js`
-  - 改造 `src/utils/api.js`：
-    - 登录接口返回 `status/message/is_registered` 并基于 `wx_login_code`、`wx_identity` 生成会话。
-    - 注册接口新增唯一性约束行为：`student_already_bound`、`wx_already_bound`。
-    - 增加 mock 会话解析与用户标识键，避免未绑定用户限流/防重放键冲突。
-  - 改造 `src/utils/auth.js`：
-    - `applyLoginProfile` 以 `is_registered` 为主判定绑定状态。
-    - 未注册登录时清空学号姓名与组织信息，防止旧缓存误判。
-  - 升级 `docs/API_SPEC.md` 到 v4.1：
-    - 6 个主链路接口全部补齐请求传参示例。
-    - 新增后端解析技术建议（Node.js / Spring Boot）。
-    - 明确 `wx_login_code` 解析路径、`is_registered` 字段语义、重复绑定冲突状态。
-- Files created/modified:
-  - src/utils/api.js (updated)
-  - src/utils/auth.js (updated)
-  - src/tests/auth-register-binding.test.js (created)
-  - src/tests/auth-session-registration-state.test.js (created)
-  - docs/API_SPEC.md (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-- Verification:
-  - `node --check src/utils/api.js` -> PASS
-  - `node --check src/utils/auth.js` -> PASS
-  - `node src/tests/auth-register-binding.test.js` -> PASS
-  - `node src/tests/auth-session-registration-state.test.js` -> PASS
-  - `node src/tests/activity-visibility.test.js` -> PASS
-  - `node src/tests/qr-checkin-flow.test.js` -> PASS
-
-## Session: 2026-02-08
-
-### 管理员注册名册校验 + 页面分流 + 文档全量同步
-- **Status:** complete
-- Actions taken:
-  - 执行并应用技能：`superpowers:brainstorming`、`superpowers:test-driven-development`、`planning-with-files`。
-  - 先改测试（红）：更新 `src/tests/auth-register-binding.test.js`，新增断言：
-    - 注册命中管理员名册返回 `role=staff` + 权限。
-    - 未命中管理员名册返回 `role=normal` + 空权限。
-  - 改造 `src/utils/api.js`：
-    - 新增 mock 管理员名册。
-    - `register` 接口增加 `student_id + name` 管理员判定逻辑。
-    - 注册响应新增 `role`、`permissions`、`admin_verified`。
-    - 同步更新会话角色快照，保持同会话后续接口行为一致。
-  - 改造 `src/pages/register/register.js`：
-    - 注册成功后按后端返回 `role/permissions` 更新本地缓存。
-    - 按最终角色即时跳转（`staff -> /pages/index/index`，`normal -> /pages/profile/profile`）。
-  - 全量文档同步：
-    - `docs/API_SPEC.md` 升级 v4.2（A-02 管理员名册查询步骤、响应字段与示例）
-    - `README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`
-    - `docs/changes.md`、`changes.md`
-  - 更新 planning 文件：`task_plan.md`、`findings.md`、`progress.md`。
-- Files created/modified:
-  - src/utils/api.js (updated)
-  - src/pages/register/register.js (updated)
-  - src/tests/auth-register-binding.test.js (updated)
-  - docs/API_SPEC.md (updated)
-  - README.md (updated)
-  - docs/REQUIREMENTS.md (updated)
-  - docs/FUNCTIONAL_SPEC.md (updated)
-  - docs/changes.md (updated)
-  - changes.md (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-- Verification:
-  - `node src/tests/auth-register-binding.test.js` -> PASS
-  - `node src/tests/auth-session-registration-state.test.js` -> PASS
-  - `node src/tests/activity-visibility.test.js` -> PASS
-  - `node src/tests/qr-checkin-flow.test.js` -> PASS
-  - `node --check src/utils/api.js` -> PASS
-  - `node --check src/pages/register/register.js` -> PASS
-  - `node --check src/utils/auth.js` -> PASS
-
-## Session: 2026-02-08
-
-### API 文档参数语义细化（v4.3）
-- **Status:** complete
-- Actions taken:
-  - 执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap`）并按流程读取技能：
-    - `superpowers:brainstorming`
-    - `planning-with-files`
-  - 回答用户对 A-06 “一致性校验”的疑问，并将解释固化到 API 文档。
-  - 升级 `docs/API_SPEC.md` 到 v4.3，新增：
-    - `3.7 参数解释总则（后端必须统一）`
-    - A-01~A-06 参数落地详解（前端来源/后端解析/不合法返回）
-    - `4.6.2A 一致性校验详解（重点）`
-    - `8. 参数速查表（后端实现清单）`
-  - 运行回归测试确认注册绑定、管理员命中、扫码链路行为保持稳定。
-  - 同步更新 `task_plan.md`、`findings.md`、`progress.md`。
-- Files created/modified:
-  - docs/API_SPEC.md (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-- Verification:
-  - `node tests/auth-register-binding.test.js`（workdir=`src/`） -> PASS
-  - `node tests/activity-visibility.test.js`（workdir=`src/`） -> PASS
-  - `node tests/qr-checkin-flow.test.js`（workdir=`src/`） -> PASS
-  - `node tests/auth-session-registration-state.test.js`（workdir=`src/`） -> PASS
-
-## Session: 2026-02-09
-
-### 后端完整实现前置分析（先讨论不编码）
-- **Status:** complete
-- Actions taken:
-  - 执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap`）并加载技能：
-    - `superpowers:brainstorming`
-    - `planning-with-files`
-  - 读取并提炼后端需求文档：
-    - `docs/API_SPEC.md`（A-01~A-06 主链路、A-06 事务与防重放要求）
-    - `docs/REQUIREMENTS.md`（FR-007/FR-011/FR-016/FR-018/FR-020/FR-026 等关键约束）
-  - 审查现有数据库设计：`d:\\软件\\QQ\\suda_union.sql`
-    - 识别现有表结构可复用点与缺失点（会话、微信身份、防重放、消费记录、配置字段等）
-    - 评估 `suda_user` 增加 `wx_token varchar(255)` 的适配方式与风险
-  - 输出后端语言与技术栈对比结论（Node/NestJS vs Java/Spring Boot）
-  - 更新 planning 文件，准备与用户做方案确认讨论。
-- Files created/modified:
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-- Notes:
-  - 本轮按你的要求只做分析与讨论准备，未开始后端编码实现。
-
-## Session: 2026-02-09
-
-### 二维码后端主导改造（进行中）
-- **Status:** in_progress
-- Actions taken:
-  - 按要求执行 superpowers bootstrap（通过 `node .../superpowers-codex bootstrap`）。
-  - 加载技能：`superpowers:brainstorming`、`planning-with-files`、`superpowers:writing-plans`、`superpowers:test-driven-development`。
-  - 审查当前实现：`src/utils/api.js`、`src/pages/staff-qr/staff-qr.js`、`src/pages/scan-action/scan-action.js`。
-  - 识别问题：二维码业务仍是前端主导（本地组包 + 前端 mock 校验）。
-  - 输出后端改造计划：`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`。
-- Files created/modified:
-  - docs/plans/2026-02-09-qr-backend-first-implementation-plan.md (created)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-
-### 二维码后端主导改造（完成）
-- **Status:** complete
-- Actions taken:
-  - 按 TDD 新增后端失败测试：`backend/tests/qr-backend.test.js`、`backend/tests/auth-and-visibility.test.js`。
-  - 新建后端实现：`backend/src/server.js`、`backend/src/store.js`、`backend/src/auth.js`、`backend/src/qr.js`、`backend/package.json`。
-  - 调整前端：`src/pages/staff-qr/staff-qr.js` 改为后端签发二维码驱动，移除本地组码主流程。
-  - 默认配置改为真实后端：`src/utils/config.js`。
-  - 同步文档：`README.md`、`docs/API_SPEC.md`、`docs/changes.md`、`changes.md`。
-- Verification:
-  - `node --test backend/tests/qr-backend.test.js backend/tests/auth-and-visibility.test.js` -> PASS (8/8)
-  - `node --check backend/src/server.js` -> PASS
-  - `node --check src/pages/staff-qr/staff-qr.js` -> PASS
-  - `node tests/auth-register-binding.test.js`（workdir=`src/`） -> PASS
-  - `node tests/auth-session-registration-state.test.js`（workdir=`src/`） -> PASS
-  - `node tests/activity-visibility.test.js`（workdir=`src/`） -> PASS
-  - `node tests/qr-checkin-flow.test.js`（workdir=`src/`） -> PASS
-
-## Session: 2026-02-09
-
-### 二维码后端化前端先行改造（仅前端 + API 文档）
-- **Status:** complete
-- Actions taken:
-  - 执行 superpowers bootstrap（`node C:\Users\Lenovo\.codex\superpowers\.codex\superpowers-codex bootstrap`）。
-  - 使用技能：`superpowers:brainstorming`、`planning-with-files`。
-  - 改造 `src/utils/api.js`：
-    - A-05 mock 补齐 `qr_payload/slot/display_expire_at/accept_expire_at`。
-    - A-06 一致性校验补充 `nonce`。
-    - `consumeCheckinAction` 改为仅按需传冗余字段。
-    - `createStaffQrSession` 改为可选传窗口参数，默认仅传 `session_token + action_type`。
-  - 改造 `src/pages/staff-qr/staff-qr.js`：
-    - 请求 A-05 时不再上传前端 `rotate_seconds/grace_seconds`。
-  - 改造 `src/pages/scan-action/scan-action.js`：
-    - 去除前端二维码结构强依赖，改为“扫码原文直传后端”为主。
-  - 更新文档：
-    - `docs/API_SPEC.md` 升级到 v4.5，重写二维码职责边界与 A-05/A-06。
-    - `README.md`、`changes.md`、`docs/changes.md` 同步后端签发口径。
-  - 更新测试：
-    - `src/tests/qr-checkin-flow.test.js` 改为断言 A-05 返回后端签发二维码票据。
-- Files created/modified:
-  - src/utils/api.js (updated)
-  - src/pages/staff-qr/staff-qr.js (updated)
-  - src/pages/scan-action/scan-action.js (updated)
-  - src/tests/qr-checkin-flow.test.js (updated)
-  - docs/API_SPEC.md (updated)
-  - README.md (updated)
-  - changes.md (updated)
-  - docs/changes.md (updated)
-  - task_plan.md (updated)
-  - findings.md (updated)
-  - progress.md (updated)
-- Verification:
-  - `node --check src/utils/api.js` -> PASS
-  - `node --check src/pages/staff-qr/staff-qr.js` -> PASS
-  - `node --check src/pages/scan-action/scan-action.js` -> PASS
-  - `node src/tests/qr-checkin-flow.test.js` -> PASS
-  - `node src/tests/auth-register-binding.test.js` -> PASS
-  - `node src/tests/activity-visibility.test.js` -> PASS
-  - `node src/tests/auth-session-registration-state.test.js` -> PASS
-
-## Session: 2026-02-09
-
-### 文档全量对齐 + 删除不一致内容 + 提交 GitHub
-- **Status:** in_progress
-- Actions taken:
-  - 全量扫描 `README.md` 与 `docs/*.md`，核对与 `src/app.json`、`src/pages/*`、`src/utils/api.js` 的一致性。
-  - 发现并修复不一致：
-    - `docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 仍保留“前端本地组码”旧口径。
-    - `docs/changes.md`、`changes.md` 存在“已新增 backend 目录/后端测试通过”的不实描述。
-  - 文档修正：
-    - 重写 `docs/FUNCTIONAL_SPEC.md`（v1.6）。
-    - 重写 `docs/REQUIREMENTS.md`（v1.5）。
-    - 更新 `docs/API_SPEC.md`（v4.5）为当前 payload 协议与 A-05/A-06 行为。
-    - 更新 `README.md`（补充当前默认 mock 配置与仓库无 backend 目录说明）。
-    - 清理 `docs/changes.md` 与 `changes.md` 中不一致描述。
-  - 删除过时方案文档：
-    - `docs/plans/2026-02-08-qr-frontend-first-plan.md`
-    - `docs/plans/2026-02-08-qr-all-frontend-plan.md`
-    - `docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`
-- Pending:
-  - 运行最终校验并执行 `git add/commit/push`。
+  - Updated `README.md` with full-stack structure and test instructions.
+  - Updated `docs/REQUIREMENTS.md` to full-stack scope (backend + sync + Linux deployment).
+  - Updated `docs/FUNCTIONAL_SPEC.md` with compatibility API set and test acceptance items.
+  - Updated `docs/API_SPEC.md` to v4.6 and added compatibility endpoint section.
+  - Updated `changes.md` and `docs/changes.md` with backend full-delivery entries.

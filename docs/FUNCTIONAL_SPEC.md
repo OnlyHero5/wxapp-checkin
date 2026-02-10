@@ -1,6 +1,6 @@
 # 微信小程序活动二维码签到功能说明书
 
-文档版本: v1.6  
+文档版本: v1.7  
 状态: 进行中  
 更新日期: 2026-02-09  
 项目: wxapp-checkin  
@@ -10,9 +10,9 @@
 本文档描述当前版本小程序的页面行为、角色能力、接口协作和异常处理，用于产品确认、联调与测试验收。
 
 ## 2. 当前实现边界
-- 当前仓库以小程序前端为主，接口由 `src/utils/api.js` 封装。
-- 默认运行模式为 mock（`src/utils/config.js` 中 `mock=true`）。
-- 当前仓库未包含独立 `backend/` 服务目录。
+- 当前仓库为前后端一体结构：`frontend/`（小程序）+ `backend/`（Java Spring Boot）。
+- 默认运行模式为 mock（`frontend/utils/config.js` 中 `mock=true`）。
+- 当前仓库已包含独立 `backend/` 服务目录（Java Spring Boot）。
 - 二维码页面不再本地拼装 payload，统一调用 A-05 获取 `qr_payload` 后展示。
 
 ## 3. 角色定义
@@ -141,6 +141,13 @@
   - `checkin_record_id`
   - `in_grace_window`
 
+### 6.3 兼容接口（当前前端仍保留调用封装）
+- `POST /api/checkin/verify`
+- `GET /api/checkin/records`
+- `GET /api/checkin/records/{record_id}`
+- `GET /api/activity/current`
+- `POST /api/staff/activity-action`
+
 ## 7. 异常处理
 - 无网: 阻止关键动作并提示
 - `invalid_qr`: 提示二维码失效
@@ -157,8 +164,12 @@
 - 二维码页由 A-05 提供 payload 并自动轮换
 - 普通用户宽限期内可提交，超时返回过期
 - 会话失效自动跳登录页并可重登
+- 前端 `npm test` 可执行并通过
+- 后端 `mvn test` 可执行并通过
 
 ## 9. 更新记录
+- 2026-02-09：文档升级为 v1.7，补充兼容接口与前后端自动化测试验收项。
+- 2026-02-09：新增 `backend/` Java 后端目录与 Linux 友好部署脚本，文档边界描述同步更新。
 - 2026-02-09：二维码链路文档对齐当前实现（A-05 返回 `qr_payload`，二维码页不再前端本地组码）。
 - 2026-02-08：新增会话失效重登机制。
 - 2026-02-08：普通用户活动可见性收敛为“已报名/已签到/已签退”。

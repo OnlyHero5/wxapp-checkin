@@ -1,7 +1,7 @@
 # Changes Log
 
 ## 2026-02-03
-- 新增 `src/` 下完整微信小程序结构与页面代码（签到、注册、记录、详情）。
+- 新增 `frontend/` 下完整微信小程序结构与页面代码（签到、注册、记录、详情）。
 - 增加通用样式与极简科技风 UI 视觉方案，包含成功动画与无网提示。
 - 增加 API 封装、登录换取会话、数据加密占位实现与本地存储模块。
 - 提供 `project.config.json` 便于直接在微信开发者工具打开运行。
@@ -14,7 +14,7 @@
 
 思路说明：
 - 前端通过 `auth.ensureSession` 统一获取 `session_token`，避免各页重复逻辑。
-- API 层提供 mock 模式，确保无后端时也能直接运行和演示流程；上线时将 `src/utils/config.js` 的 `mock` 改为 `false` 并配置 `baseUrl`。
+- API 层提供 mock 模式，确保无后端时也能直接运行和演示流程；上线时将 `frontend/utils/config.js` 的 `mock` 改为 `false` 并配置 `baseUrl`。
 - 加密逻辑暂用 Base64 作为占位，后续可替换为后端指定的 AES/RSA 实现。
 
 ## 2026-02-04
@@ -22,7 +22,7 @@
 - 签到、记录、详情、注册页全面替换为 TDesign 组件（button/tag/cell/input）。
 - 新增“个人中心”页与 TabBar 入口，完善页面结构与导航。
 - 更新 `app.json` 页面列表与底部导航配置。
-- 将 `package.json`/`package-lock.json` 移入 `src/`，以符合 `miniprogramRoot` 的 NPM 构建要求。
+- 将 `package.json`/`package-lock.json` 移入 `frontend/`，以符合 `miniprogramRoot` 的 NPM 构建要求。
 - 主题优化为“石墨雾”风格，降低黑白对比，卡片/按钮更柔和。
 - 主按钮色调整为深蓝系，并居中呈现。
 - 修复主按钮在部分页面未居中的问题（新增统一居中容器）。
@@ -38,7 +38,7 @@
 - 个人中心优化：
   - 普通用户显示社会分/讲座分（后端返回）
   - 普通用户隐藏“曾参加活动”卡片
-- 新增活动详情页 `src/pages/activity-detail/*`
+- 新增活动详情页 `frontend/pages/activity-detail/*`
 - API 文档升级到角色分流版本（见 `docs/API_SPEC.md`）
 
 ## 2026-02-07
@@ -79,8 +79,8 @@
 - 文档同步更新：
   - `docs/API_SPEC.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md`、`README.md`
 - 动态二维码签到/签退链路上线：
-  - 新增工作人员二维码页 `src/pages/staff-qr/*`（10 秒自动换码、20 秒宽限倒计时、实时人数轮询）
-  - 新增普通用户扫码页 `src/pages/scan-action/*`（摄像头扫码 + 结果反馈）
+  - 新增工作人员二维码页 `frontend/pages/staff-qr/*`（10 秒自动换码、20 秒宽限倒计时、实时人数轮询）
+  - 新增普通用户扫码页 `frontend/pages/scan-action/*`（摄像头扫码 + 结果反馈）
   - 活动页工作人员动作改为“签到码/签退码”跳转二维码页；普通用户新增“去扫码”入口
 - API 升级：
   - 新增 `POST /api/staff/activities/{activity_id}/qr-session`
@@ -109,9 +109,17 @@
 
 ## 2026-02-09
 - 二维码后端化前端先行改造（本次）：
-  - `src/pages/staff-qr/staff-qr.js` 收敛为后端签发调用，移除前端主动传 `rotate_seconds/grace_seconds`。
-  - `src/pages/scan-action/scan-action.js` 改为以扫码原文直传后端为主，减少前端解析与组包逻辑。
-  - `src/utils/api.js` 对齐后端口径：A-05 mock 补齐 `qr_payload/display_expire_at/accept_expire_at`；A-06 仅按需传冗余字段。
+  - `frontend/pages/staff-qr/staff-qr.js` 收敛为后端签发调用，移除前端主动传 `rotate_seconds/grace_seconds`。
+  - `frontend/pages/scan-action/scan-action.js` 改为以扫码原文直传后端为主，减少前端解析与组包逻辑。
+  - `frontend/utils/api.js` 对齐后端口径：A-05 mock 补齐 `qr_payload/display_expire_at/accept_expire_at`；A-06 仅按需传冗余字段。
   - `docs/API_SPEC.md` 升级到 v4.5，重写 A-05/A-06 与当前项目行为保持一致。
   - `README.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/REQUIREMENTS.md` 删除与当前项目不一致描述。
   - 删除与当前实现冲突的二维码方案文档：`docs/plans/2026-02-08-qr-frontend-first-plan.md`、`docs/plans/2026-02-08-qr-all-frontend-plan.md`、`docs/plans/2026-02-09-qr-backend-first-implementation-plan.md`。
+- Java 后端完整交付（本次）：
+  - 新增 `backend/` Spring Boot 全量实现，覆盖 A-01~A-06 主链路与兼容接口。
+  - 新增扩展库表迁移（`wx_*`）与数据同步能力（旧库拉取 + outbox 回写）。
+  - `wx_token` 需求已在扩展用户表中落地：`wx_user_auth_ext.wx_token VARCHAR(255)`。
+  - 新增 Linux 优先部署/测试脚本与容器配置（`Dockerfile`、`docker-compose.yml`、`scripts/*.sh`）。
+  - 新增 Windows 开发辅助脚本（`scripts/*.ps1`）。
+  - 前端目录重构：`src/` -> `frontend/`；`project.config.json` 同步更新。
+  - 前端测试入口修正：`frontend/package.json` 的 `npm test` 现可执行 5 个真实测试脚本。

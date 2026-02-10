@@ -25,7 +25,7 @@
 ## 快速预览
 - 活动列表双分组：`正在进行`（上）+ `已完成`（下），两组均按时间倒序。
 - 已完成活动仅支持“查看详情”，不再允许签到/签退动作。
-- 管理员二维码由后端接口签发：`10 秒展示窗口` + `20 秒提交宽限`（前端仅展示与刷新；当前仓库默认以 mock API 模拟）。
+- 管理员二维码由后端接口签发：`10 秒展示窗口` + `20 秒提交宽限`（前端仅展示与刷新；默认 `mock=true`，可切换到真实后端）。
 - 注册绑定时后端会用 `学号+姓名` 查询管理员名册，命中后返回 `staff` 角色并直接进入管理员页面。
 - 会话失效时（`forbidden + error_code=session_expired`）前端会清理本地登录态并跳转登录页自动重登。
 - 普通用户在独立“签到/签退”页面调用摄像头扫码并即时收到成功/失败反馈。
@@ -66,7 +66,10 @@
 
 ## 页面结构
 ```text
-src/pages/
+backend/             # Java Spring Boot 后端服务
+  src/main/...
+frontend/            # 微信小程序前端
+frontend/pages/
   index/            # 活动页（双分组卡片）
   activity-detail/  # 活动详情页
   scan-action/      # 普通用户“签到/签退”扫码页
@@ -92,18 +95,45 @@ src/pages/
 ### 1. 导入工程
 使用微信开发者工具导入仓库根目录：`wxapp-checkin`。
 
-### 2. 安装依赖
+### 2. 启动后端（可选但推荐）
 ```bash
-cd src
+cd backend
+docker compose up -d mysql redis
+./scripts/start-dev.sh
+```
+
+Windows PowerShell:
+```powershell
+cd backend
+docker compose up -d mysql redis
+.\scripts\start-dev.ps1
+```
+
+### 3. 安装前端依赖
+```bash
+cd frontend
 npm install
 ```
 
-### 3. 构建并运行
+### 4. 构建并运行小程序
 1. 微信开发者工具执行 `工具 -> 构建 NPM`
 2. 编译并预览小程序
 
+### 5. 运行测试
+后端测试：
+```bash
+cd backend
+./scripts/run-tests.sh
+```
+
+前端测试（Node 脚本）：
+```bash
+cd frontend
+npm test
+```
+
 ## 配置说明
-文件：`src/utils/config.js`
+文件：`frontend/utils/config.js`
 - `mock`：是否启用 mock 数据
 - `mockUserRole`：本地验收角色（`normal` / `staff`）
 - `baseUrl`：后端 API 地址（仅 `mock=false` 时生效）
@@ -113,7 +143,7 @@ npm install
 - `baseUrl = https://api.example.com`
 
 说明:
-- 目前仓库未包含独立 `backend/` 服务目录。
+- 当前仓库已包含独立后端目录：`backend/`（Java Spring Boot）。
 - 若需对接真实后端，请将 `mock` 改为 `false` 并配置真实 `baseUrl`。
 
 ## 联调校验清单

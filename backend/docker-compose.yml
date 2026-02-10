@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: wxcheckin-mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: suda_union
+      MYSQL_USER: wxcheckin
+      MYSQL_PASSWORD: wxcheckin
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: wxcheckin-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wxcheckin-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: suda_union
+      DB_USER: wxcheckin
+      DB_PASSWORD: wxcheckin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QR_SIGNING_KEY: replace-this-before-prod
+      SESSION_TTL_SECONDS: 7200
+      WECHAT_API_ENABLED: "false"
+      LEGACY_SYNC_ENABLED: "false"
+      OUTBOX_RELAY_ENABLED: "false"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:

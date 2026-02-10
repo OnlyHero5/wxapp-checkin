@@ -1,26 +1,30 @@
 # 微信小程序活动二维码签到需求文档
 
-文档版本: v1.5  
+文档版本: v1.6  
 状态: 持续迭代  
 更新日期: 2026-02-09  
 项目: wxapp-checkin
 
 ## 1. 背景与目标
-项目是微信小程序前端，目标是在校园活动场景中完成签到/签退闭环：
+项目为“微信小程序前端 + Java 后端”一体化实现，目标是在校园活动场景中完成签到/签退闭环：
 - 登录与注册绑定
 - 角色分流（普通用户/工作人员）
 - 动态二维码展示与扫码提交
 - 活动可见性与权限控制
+- 新旧库扩展与同步（不破坏原有库结构）
 
 ## 2. 范围
 范围内:
 - 小程序页面与交互
 - 前后端 API 契约
 - 错误状态提示与重试
+- Java 后端服务与扩展库表（`wx_*`）
+- 同步任务（旧库 -> 新库投影、新库 outbox -> 旧库回写）
+- Linux 服务器部署与运行脚本
 
 范围外:
 - 后台管理系统
-- 服务端部署与运维
+- 复杂多集群运维编排（Kubernetes、Service Mesh）
 
 ## 3. 角色
 - `normal` 普通用户
@@ -28,9 +32,10 @@
 
 ## 4. 约束与假设
 - 运行环境: 微信小程序
+- 后端部署目标: Linux 服务器（Windows 仅开发环境）
 - 默认二维码周期: 10 秒展示 + 20 秒宽限
 - 网络异常时禁止关键动作并提示
-- 当前仓库默认 mock 模式（`src/utils/config.js` 的 `mock=true`）
+- 当前仓库默认 mock 模式（`frontend/utils/config.js` 的 `mock=true`）
 
 ## 5. 业务流程
 流程 A: 登录初始化  
@@ -93,11 +98,19 @@
 - FR-031 普通用户显示 `social_score`、`lecture_score`
 - FR-032 工作人员支持快捷回活动页
 
+### 6.8 后端与数据同步
+- FR-033 在不修改旧表主结构前提下，通过扩展表实现微信身份、会话、二维码和事件模型
+- FR-034 扩展用户表需支持 `wx_token` 字段（`VARCHAR(255)`）
+- FR-035 通过配置开关控制同步任务启停（`LEGACY_SYNC_ENABLED`、`OUTBOX_RELAY_ENABLED`）
+- FR-036 后端需保留兼容接口，避免前端历史调用在联调期中断
+
 ## 7. 非功能需求
 - NFR-001 二维码倒计时刷新应平滑
 - NFR-002 扫码提交有 loading 和结果反馈
 - NFR-003 错误提示可读、可定位
 - NFR-004 通信使用 HTTPS（mock 模式除外）
+- NFR-005 后端需支持 Linux 原生运行与容器化部署
+- NFR-006 前后端应具备可执行自动化测试入口
 
 ## 8. API 需求（主链路）
 
@@ -108,6 +121,11 @@
 - `GET /api/staff/activities/{activity_id}`
 - `POST /api/staff/activities/{activity_id}/qr-session`
 - `POST /api/checkin/consume`
+- `POST /api/checkin/verify`（兼容）
+- `GET /api/checkin/records`（兼容）
+- `GET /api/checkin/records/{record_id}`（兼容）
+- `GET /api/activity/current`（兼容）
+- `POST /api/staff/activity-action`（兼容）
 
 ### 8.2 关键字段
 - 登录: `session_token`, `role`, `permissions`, `user_profile.*`
@@ -124,8 +142,11 @@
 - 普通用户宽限期内提交成功，超时返回 `expired`
 - 普通用户不可越权查看无关活动详情
 - 会话失效触发登录页重登流程
+- 前端 `npm test` 能执行全部前端测试并通过
+- 后端 `mvn test` 能通过，且主链路接口可联调
 
 ## 10. 更新记录
+- 2026-02-09：升级为前后端一体化需求口径，纳入 Java 后端、扩展表与同步任务、Linux 部署要求。
 - 2026-02-09：删除与当前实现不一致的“前端本地组码”口径，统一为 A-05 返回二维码 payload。
 - 2026-02-08：新增会话失效标准信号与登录页重登。
 - 2026-02-08：普通用户活动可见性收敛。
