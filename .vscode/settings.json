@@ -1,0 +1,12 @@
+{
+  "remote.localPortHost": "allInterfaces",
+  "remote.restoreForwardedPorts": true,
+  "remote.autoForwardPorts": true,
+  "remote.portsAttributes": {
+    "1455": {
+      "label": "wxapp-checkin backend",
+      "onAutoForward": "notify",
+      "requireLocalPort": true
+    }
+  }
+}
