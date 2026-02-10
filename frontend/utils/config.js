@@ -1,5 +1,5 @@
 const config = {
-  baseUrl: "http://192.168.31.94:1455",
+  baseUrl: "http://192.168.10.201:9989",
   mock: false,
   // "staff" | "normal"
   mockUserRole: "normal"

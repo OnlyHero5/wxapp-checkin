@@ -218,6 +218,35 @@
     - user `wxcheckin` / password `wxcheckin_test` with local privileges
   - Added user-level test env file:
     - `~/.wxapp-checkin-test-env.sh`
+
+## Session: 2026-02-10 (Bind Failure Full-Chain Debugging)
+
+### Phase P: Frontend/Backend Runtime Alignment Check
+- **Status:** complete
+- Actions taken:
+  - Confirmed frontend effective config: `frontend/utils/config.js` now points to `http://192.168.10.201:9989`, `mock=false`.
+  - Confirmed bind request path from register page: `POST /api/register`.
+  - Reproduced backend startup and health checks on `9989` under `start-test-env.sh`.
+
+### Phase Q: Root-Cause Reproduction with API Evidence
+- **Status:** complete
+- Actions taken:
+  - Reproduced stale-session failure:
+    - login -> obtain `session_token`
+    - delete corresponding row in `wx_session`
+    - register call returns `{"status":"forbidden","error_code":"session_expired"}`
+  - Reproduced identity-drift failure in dev fallback mode:
+    - login(code A) -> bind student X succeeds
+    - login(code B) -> bind same student X fails with `student_already_bound`
+  - Verified fresh-path baseline:
+    - login + bind `2025000008 / 王敏` returns `success` and `role=staff`
+
+### Phase R: Code-Path Audit
+- **Status:** complete
+- Actions taken:
+  - Confirmed `start-test-env.sh` resets `wx_session` and `wx_user_auth_ext` on each run.
+  - Confirmed dev fallback identity source is `sha256(wx_login_code)` when `WECHAT_API_ENABLED=false`.
+  - Confirmed register page only shows generic failure text on request-level exceptions; backend business messages are surfaced only when request succeeds.
     - sourced from `~/.bashrc`
   - Configured Maven proxy settings in `~/.m2/settings.xml` to route Java dependency downloads via local proxy (`127.0.0.1:7890`) and eliminate Java HTTPS timeout issue.
 

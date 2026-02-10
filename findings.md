@@ -125,3 +125,13 @@
 - Verification evidence:
   - page class coverage check script reports no missing class definitions across page WXML/WXSS.
   - `npm test` (frontend) passed with all 6 scripts green.
+
+## 2026-02-10 Bind Failure End-to-End Investigation Findings
+- Frontend runtime config is now `baseUrl: "http://192.168.10.201:9989"` with `mock: false` (`frontend/utils/config.js`).
+- Binding API path is `POST /api/register` (`frontend/utils/api.js`); register page catches request-level failure as generic `"绑定失败，请重试"` and only shows backend business message when request itself succeeds (`frontend/pages/register/register.js`).
+- `start-test-env.sh` explicitly clears `wx_session` and `wx_user_auth_ext` on every start, so previously cached miniapp auth state becomes stale (`backend/scripts/start-test-env.sh`).
+- Dev-mode identity resolver currently derives `wx_identity` from `wx_login_code` hash when `WECHAT_API_ENABLED=false`; because `wx.login` code changes frequently, same person can be treated as a new identity after relogin (`backend/src/main/java/com/wxcheckin/backend/application/service/WeChatIdentityResolver.java`).
+- Live reproduction evidence:
+  - Stale token after session-table reset returns `{"status":"forbidden","error_code":"session_expired"}` on `/api/register`.
+  - Two different login codes in dev mode produce two different `wx_identity` values; first bind succeeds, second bind of same student returns `student_already_bound`.
+  - Fresh `wx-login + register(2025000008/王敏)` works and returns `role=staff`, proving core register flow itself is functional under clean session + first bind conditions.

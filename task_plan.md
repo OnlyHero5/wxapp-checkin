@@ -95,6 +95,14 @@ Phase 12
 - [ ] Commit and push to GitHub
 - **Status:** in_progress
 
+### Phase 13: Bind Failure Cross-Repo Root Cause Investigation (2026-02-10)
+- [x] Verify effective frontend runtime base URL and mock mode
+- [x] Reproduce backend startup and health status on target LAN port
+- [x] Reproduce bind flow with controlled API requests and inspect backend responses
+- [x] Audit session lifecycle and WeChat identity derivation behavior in dev mode
+- [ ] Implement and verify remediation
+- **Status:** in_progress
+
 ## Key Decisions
 | Decision | Rationale |
 |----------|-----------|
