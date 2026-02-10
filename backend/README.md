@@ -1,23 +1,31 @@
-# wxapp-checkin 后端服务
+# wxapp-checkin 后端部署与测试指南
 
-微信小程序活动签到平台后端（Java / Spring Boot）。
+这份文档面向第一次接手项目的人，目标是回答三件事：
+1. 要装哪些软件
+2. 数据库/Redis 账号密码到底填在哪里
+3. 如何本地测试、如何真实生产部署
 
-## 目录说明
-- `src/main/java`：业务代码
-- `src/main/resources/db/migration`：Flyway SQL 迁移脚本
-- `src/test/java`：自动化测试
-- `scripts/`：启动、测试、测试数据重置脚本
+## 0. 目录结构
+- `scripts/start-test-env.sh`：一键测试启动（会重置测试数据）
+- `scripts/reset-suda-union-test-data.sh`：只重置 `suda_union` 测试数据
+- `scripts/bootstrap-prod-schema.sql`：生产扩展库建表脚本（不含演示数据）
+- `scripts/start-dev.sh`：普通开发启动
+- `src/main/resources/application.yml`：基础配置
+- `src/main/resources/application-prod.yml`：生产覆盖配置
 
-## 1. 必装软件（交付给别人时先确认）
+## 1. 依赖软件（必须）
 
-Linux 环境建议最低版本：
-- Java 17（必须）
-- MySQL 8（必须）
-- Redis 7（必须）
-- Bash（必须）
-- Docker + Docker Compose v2（可选，用于容器方式）
+Linux 服务器或开发机至少需要：
+- Java 17
+- MySQL 8
+- Redis 7
+- Bash
 
-可用下面命令快速检查：
+可选：
+- Maven（如果用 `./mvnw`，无需全局安装）
+- Docker + Compose（仅容器方案需要）
+
+快速检查：
 
 ```bash
 java -version
@@ -25,13 +33,23 @@ mysql --version
 redis-cli --version
 ```
 
-## 2. 数据库与账号初始化（MySQL）
+## 2. 账号密码和连接信息填哪里
 
-后端使用两个 schema：
-- `wxcheckin_ext`：小程序扩展库（后端主写）
-- `suda_union`：遗留主库（同步读取/回写）
+后端读取环境变量，不是写死在代码里。  
+推荐放在一个环境文件里，比如：
+- 测试环境：`~/.wxapp-checkin-test-env.sh`
+- 生产环境：`/etc/wxcheckin/backend.prod.env`
 
-先用 MySQL 管理员执行以下 SQL（账号密码请按你自己的环境改）：
+关键变量（你最关心的账号密码）：
+- MySQL 扩展库：`DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD`
+- MySQL 遗留库：`LEGACY_DB_URL` `LEGACY_DB_USER` `LEGACY_DB_PASSWORD`
+- Redis：`REDIS_HOST` `REDIS_PORT` `REDIS_PASSWORD`
+
+## 3. 本地测试（给联调/验收）
+
+### 3.1 先创建 MySQL 库和用户
+
+用 MySQL 管理员执行：
 
 ```sql
 CREATE DATABASE IF NOT EXISTS wxcheckin_ext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -43,110 +61,198 @@ GRANT ALL PRIVILEGES ON suda_union.* TO 'wxcheckin'@'%';
 FLUSH PRIVILEGES;
 ```
 
-## 3. 环境变量文件（账号密码填这里）
-
-项目脚本默认读取：`~/.wxapp-checkin-test-env.sh`
-
-创建示例（把主机、端口、用户名、密码改成你的）：
+### 3.2 写测试环境变量文件
 
 ```bash
 cat > ~/.wxapp-checkin-test-env.sh <<'EOF'
-# Java
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH"
 
-# 扩展库连接（spring.datasource.*）
 export DB_HOST=127.0.0.1
 export DB_PORT=3307
 export DB_NAME=wxcheckin_ext
 export DB_USER=wxcheckin
 export DB_PASSWORD=wxcheckin_test
 
-# Redis 连接（spring.data.redis.*）
 export REDIS_HOST=127.0.0.1
 export REDIS_PORT=16379
 export REDIS_PASSWORD=
 
-# 遗留库连接（app.legacy.datasource.*）
 export LEGACY_DB_URL="jdbc:mysql://127.0.0.1:3307/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false"
 export LEGACY_DB_USER=wxcheckin
 export LEGACY_DB_PASSWORD=wxcheckin_test
 EOF
 ```
 
-生效方式：
-
-```bash
-source ~/.wxapp-checkin-test-env.sh
-```
-
-如果你不用默认路径，也可以改用：
-- `WXAPP_TEST_ENV_FILE=/path/to/your-env.sh`
-
-## 4. 启动方式
-
-### 4.1 普通开发启动
+### 3.3 一键启动测试后端
 
 ```bash
 cd /path/to/wxapp-checkin/backend
-source ~/.wxapp-checkin-test-env.sh
-./scripts/start-dev.sh
-```
-
-默认端口来自 `SERVER_PORT`，未设置时为 `8080`。
-
-### 4.2 一键测试启动（推荐联调）
-
-```bash
-cd /path/to/wxapp-checkin/backend
+chmod +x scripts/*.sh
 ./scripts/start-test-env.sh
 ```
 
-`start-test-env.sh` 会自动：
-1. 设置测试运行参数（`dev`、`1455`、同步开关）
-2. 覆写 `suda_union` 测试数据
-3. 清空微信身份绑定与会话等测试数据（新一轮测试从“未绑定”开始）
-4. 启动后端
+该脚本每次会自动：
+1. 覆写 `suda_union` 测试数据
+2. 清空微信身份绑定（`wx_user_auth_ext`、`wx_session` 等）
+3. 启动后端（端口 `1455`）
 
-详细行为见：`backend/TEST_ENV_TESTING.md`
-
-## 5. 启动后验证
+健康检查：
 
 ```bash
 curl http://127.0.0.1:1455/actuator/health
 ```
 
-返回 `{"status":"UP"...}` 即启动成功。
+详细测试账号见：`backend/TEST_ENV_TESTING.md`
 
-## 6. 前端联调配置
+## 4. 生产环境部署（真实上线）
 
-前端 `baseUrl` 填后端地址，不要带 `/api`。例如：
+下面是最直接、可交付给小白执行的“单机 Linux + systemd”流程。
 
-```text
-http://127.0.0.1:1455
+### 4.1 准备生产库和账号（MySQL）
+
+建议创建独立应用账号（不要用 root）：
+
+```sql
+CREATE DATABASE IF NOT EXISTS wxcheckin_ext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- suda_union 通常已经存在于现网
+-- 如果是新环境再建：
+-- CREATE DATABASE IF NOT EXISTS suda_union CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE USER IF NOT EXISTS 'wxcheckin_app'@'%' IDENTIFIED BY '请替换为强密码';
+GRANT SELECT,INSERT,UPDATE,DELETE ON wxcheckin_ext.* TO 'wxcheckin_app'@'%';
+GRANT SELECT,INSERT,UPDATE,DELETE ON suda_union.* TO 'wxcheckin_app'@'%';
+FLUSH PRIVILEGES;
 ```
 
-若真机需要局域网访问，请额外做端口暴露（VS Code Public/all interfaces 或 Windows `portproxy + firewall`）。
+### 4.2 初始化扩展库表结构（生产）
 
-## 7. 关键环境变量对照表
+生产 profile 默认关闭 Flyway/DDL 自动建表，所以要手动初始化：
 
-- `DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD`：扩展库连接（账号密码重点）
-- `LEGACY_DB_URL/LEGACY_DB_USER/LEGACY_DB_PASSWORD`：`suda_union` 连接（账号密码重点）
-- `REDIS_HOST/REDIS_PORT/REDIS_PASSWORD`：Redis 连接
-- `SPRING_PROFILES_ACTIVE`：`dev`/`prod`
-- `SERVER_PORT`：服务端口（测试默认 `1455`）
-- `LEGACY_SYNC_ENABLED`：是否启用 `suda_union -> 扩展库` 同步
-- `OUTBOX_RELAY_ENABLED`：是否启用扩展库 -> `suda_union` 回写
-- `WECHAT_API_ENABLED`、`WECHAT_APPID`、`WECHAT_SECRET`：微信真实接口配置
-- `QR_SIGNING_KEY`：二维码签名密钥（生产必须替换）
+```bash
+cd /path/to/wxapp-checkin/backend
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_ADMIN_USER> -p wxcheckin_ext < scripts/bootstrap-prod-schema.sql
+```
 
-## 8. 生产环境注意事项
+### 4.3 写生产环境变量文件（重点）
 
-1. `SPRING_PROFILES_ACTIVE=prod`
-2. `DB_NAME` 必须指向扩展库（例如 `wxcheckin_ext`），不要指向 `suda_union`
-3. `LEGACY_DB_URL` 指向 `suda_union`
-4. 生产下遵守“扩展库与遗留库分离 + 双向同步”策略
+新建 `/etc/wxcheckin/backend.prod.env`：
 
-## 9. 安全说明
+```bash
+SPRING_PROFILES_ACTIVE=prod
+SERVER_PORT=8080
 
-- `GET /api/checkin/records/{record_id}` 需要有效 `session_token`，并且仅允许访问当前会话用户自己的记录详情。
+# 扩展库（wxcheckin_ext）
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=wxcheckin_ext
+DB_USER=wxcheckin_app
+DB_PASSWORD=请填真实数据库密码
+
+# 遗留库（suda_union）
+LEGACY_DB_URL=jdbc:mysql://127.0.0.1:3306/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+LEGACY_DB_USER=wxcheckin_app
+LEGACY_DB_PASSWORD=请填真实数据库密码
+
+# Redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# 业务安全参数（必须替换）
+QR_SIGNING_KEY=请填32位以上随机强密钥
+SESSION_TTL_SECONDS=7200
+
+# 微信
+WECHAT_API_ENABLED=true
+WECHAT_APPID=请填微信小程序AppID
+WECHAT_SECRET=请填微信小程序Secret
+
+# 同步（生产建议开启）
+LEGACY_SYNC_ENABLED=true
+LEGACY_SYNC_INTERVAL_MS=2000
+OUTBOX_RELAY_ENABLED=true
+OUTBOX_RELAY_INTERVAL_MS=1000
+```
+
+生成强密钥示例：
+
+```bash
+openssl rand -hex 32
+```
+
+### 4.4 构建 Jar
+
+```bash
+cd /path/to/wxapp-checkin/backend
+./mvnw -DskipTests clean package
+```
+
+产物：
+- `target/backend-0.0.1-SNAPSHOT.jar`
+
+### 4.5 使用 systemd 托管
+
+创建 `/etc/systemd/system/wxcheckin-backend.service`：
+
+```ini
+[Unit]
+Description=wxcheckin backend
+After=network.target mysql.service redis.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/wxapp-checkin/backend
+EnvironmentFile=/etc/wxcheckin/backend.prod.env
+ExecStart=/usr/bin/java -jar /opt/wxapp-checkin/backend/backend-0.0.1-SNAPSHOT.jar
+Restart=always
+RestartSec=5
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启动：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable wxcheckin-backend
+sudo systemctl start wxcheckin-backend
+sudo systemctl status wxcheckin-backend
+```
+
+查看日志：
+
+```bash
+journalctl -u wxcheckin-backend -f
+```
+
+### 4.6 生产启动后检查
+
+```bash
+curl http://127.0.0.1:8080/actuator/health
+```
+
+返回 `{"status":"UP"...}` 表示服务正常。
+
+## 5. 前端如何连接
+
+前端 `baseUrl` 填后端地址，不要加 `/api`：
+
+- 本机测试：`http://127.0.0.1:1455`
+- 生产示例：`https://api.your-domain.com`（推荐挂 Nginx/HTTPS）
+
+## 6. 真实生产最容易踩坑的点
+
+1. `DB_NAME` 填成 `suda_union`（错误）：应填 `wxcheckin_ext`
+2. 只配了 `DB_*`，没配 `LEGACY_DB_*`（会影响同步）
+3. 忘了初始化扩展库表（prod 不会自动建表）
+4. `QR_SIGNING_KEY` 沿用默认值（高风险）
+5. Redis 连不上（`REDIS_HOST/PORT/PASSWORD` 配错）
+
+## 7. 安全说明
+
+- `GET /api/checkin/records/{record_id}` 需要有效 `session_token`，且只允许访问当前会话用户自己的记录详情。
