@@ -3,9 +3,7 @@ spring:
     activate:
       on-profile: prod
   jpa:
-    show-sql: false
-
-logging:
-  level:
-    root: WARN
-    com.wxcheckin.backend: INFO
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: false

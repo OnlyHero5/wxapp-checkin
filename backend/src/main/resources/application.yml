@@ -5,7 +5,7 @@ spring:
     property-naming-strategy: SNAKE_CASE
     default-property-inclusion: non_null
   datasource:
-    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:suda_union}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:wxcheckin_ext}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -66,6 +66,12 @@ app:
     appid: ${WECHAT_APPID:}
     secret: ${WECHAT_SECRET:}
     jscode2session-url: https://api.weixin.qq.com/sns/jscode2session
+  legacy:
+    datasource:
+      url: ${LEGACY_DB_URL:}
+      username: ${LEGACY_DB_USER:}
+      password: ${LEGACY_DB_PASSWORD:}
+      driver-class-name: ${LEGACY_DB_DRIVER:com.mysql.cj.jdbc.Driver}
   sync:
     legacy:
       enabled: ${LEGACY_SYNC_ENABLED:false}

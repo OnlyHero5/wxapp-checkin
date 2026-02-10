@@ -157,3 +157,16 @@
 - Executed commands:
   - `git diff -- README.md` (manual diff verification)
   - `rg -n "系统架构|仓库结构|Java 17|Spring_Boot|后端代码已正式纳入" README.md` (anchor/content spot check)
+
+## Session: 2026-02-10 (Legacy Compatibility Hardening)
+
+### Phase L: Baseline Audit
+- **Status:** in_progress
+- Actions taken:
+  - Re-ran skill bootstrap and loaded `brainstorming` + `planning-with-files`.
+  - Audited backend DB bootstrap behavior via code search:
+    - `application.yml` uses `ddl-auto=validate`.
+    - Flyway is enabled in base profile.
+    - Test profile keeps `ddl-auto=update` for isolated test runtime.
+  - Confirmed existing design is extension-first (`wx_*` tables + legacy sync services).
+  - Confirmed legacy SQL access currently reuses primary datasource via default `JdbcTemplate` (not yet explicit dual-datasource split).

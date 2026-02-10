@@ -2,6 +2,7 @@ package com.wxcheckin.backend.application.service;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,7 +15,7 @@ public class LegacyUserLookupService {
 
   private final JdbcTemplate jdbcTemplate;
 
-  public LegacyUserLookupService(JdbcTemplate jdbcTemplate) {
+  public LegacyUserLookupService(@Qualifier("legacyJdbcTemplate") JdbcTemplate jdbcTemplate) {
     this.jdbcTemplate = jdbcTemplate;
   }
 

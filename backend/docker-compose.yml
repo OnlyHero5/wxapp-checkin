@@ -5,7 +5,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: suda_union
+      MYSQL_DATABASE: wxcheckin_ext
       MYSQL_USER: wxcheckin
       MYSQL_PASSWORD: wxcheckin
     ports:
@@ -42,9 +42,12 @@ services:
       SERVER_PORT: 8080
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: suda_union
+      DB_NAME: wxcheckin_ext
       DB_USER: wxcheckin
       DB_PASSWORD: wxcheckin
+      LEGACY_DB_URL: jdbc:mysql://mysql:3306/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      LEGACY_DB_USER: wxcheckin
+      LEGACY_DB_PASSWORD: wxcheckin
       REDIS_HOST: redis
       REDIS_PORT: 6379
       QR_SIGNING_KEY: replace-this-before-prod

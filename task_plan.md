@@ -4,7 +4,7 @@
 Deliver a production-grade Java backend for the WeChat check-in miniapp with extension-first database design, Linux-oriented deployment support, and frontend/backend directory split (`frontend/` + `backend/`).
 
 ## Current Phase
-Phase 8
+Phase 9
 
 ## Phases
 
@@ -64,6 +64,14 @@ Phase 8
 - [ ] Commit and push to GitHub
 - **Status:** in_progress
 
+### Phase 9: Legacy Schema Compatibility Hardening (2026-02-10)
+- [x] Confirm current DB bootstrap strategy (`ddl-auto`, Flyway, profile behavior)
+- [ ] Enforce production-safe mode (no auto create/alter on existing legacy schema)
+- [ ] Keep test/dev runnable with isolated/local schema option
+- [ ] Update backend docs to clearly separate test vs production DB behavior
+- [ ] Re-run backend verification after config changes
+- **Status:** in_progress
+
 ## Key Decisions
 | Decision | Rationale |
 |----------|-----------|
@@ -73,6 +81,7 @@ Phase 8
 | Sync as config-gated scheduled jobs | Safe rollout and rollback (`LEGACY_SYNC_ENABLED`, `OUTBOX_RELAY_ENABLED`) |
 | Linux-first scripts + Docker support | Match production deployment target while keeping Windows development support |
 | Project review must separate "test/build passed" from "full runtime verified" | Avoid over-claiming completion when DB/container runtime prerequisites are unavailable |
+| Production startup must not mutate legacy tables | Production profile should disable ORM DDL and Flyway auto-migration, only read/write business data |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

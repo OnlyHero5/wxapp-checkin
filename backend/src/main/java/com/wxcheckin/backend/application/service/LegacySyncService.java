@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -37,7 +38,7 @@ public class LegacySyncService {
 
   public LegacySyncService(
       AppProperties appProperties,
-      JdbcTemplate jdbcTemplate,
+      @Qualifier("legacyJdbcTemplate") JdbcTemplate jdbcTemplate,
       WxActivityProjectionRepository activityRepository,
       WxUserAuthExtRepository userRepository,
       WxUserActivityStatusRepository statusRepository

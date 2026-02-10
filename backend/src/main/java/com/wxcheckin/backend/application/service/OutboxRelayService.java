@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,7 +39,7 @@ public class OutboxRelayService {
       WxSyncOutboxRepository outboxRepository,
       WxUserAuthExtRepository userRepository,
       WxActivityProjectionRepository activityRepository,
-      JdbcTemplate jdbcTemplate,
+      @Qualifier("legacyJdbcTemplate") JdbcTemplate jdbcTemplate,
       JsonCodec jsonCodec,
       Clock clock
   ) {

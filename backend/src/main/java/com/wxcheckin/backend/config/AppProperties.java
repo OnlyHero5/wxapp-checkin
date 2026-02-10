@@ -14,6 +14,7 @@ public class AppProperties {
   private final SessionProperties session = new SessionProperties();
   private final QrProperties qr = new QrProperties();
   private final WechatProperties wechat = new WechatProperties();
+  private final LegacyProperties legacy = new LegacyProperties();
   private final SyncProperties sync = new SyncProperties();
 
   public SessionProperties getSession() {
@@ -26,6 +27,10 @@ public class AppProperties {
 
   public WechatProperties getWechat() {
     return wechat;
+  }
+
+  public LegacyProperties getLegacy() {
+    return legacy;
   }
 
   public SyncProperties getSync() {
@@ -119,6 +124,53 @@ public class AppProperties {
 
     public void setJscode2sessionUrl(String jscode2sessionUrl) {
       this.jscode2sessionUrl = jscode2sessionUrl;
+    }
+  }
+
+  public static class LegacyProperties {
+    private final LegacyDatasourceProperties datasource = new LegacyDatasourceProperties();
+
+    public LegacyDatasourceProperties getDatasource() {
+      return datasource;
+    }
+  }
+
+  public static class LegacyDatasourceProperties {
+    private String url = "";
+    private String username = "";
+    private String password = "";
+    private String driverClassName = "com.mysql.cj.jdbc.Driver";
+
+    public String getUrl() {
+      return url;
+    }
+
+    public void setUrl(String url) {
+      this.url = url;
+    }
+
+    public String getUsername() {
+      return username;
+    }
+
+    public void setUsername(String username) {
+      this.username = username;
+    }
+
+    public String getPassword() {
+      return password;
+    }
+
+    public void setPassword(String password) {
+      this.password = password;
+    }
+
+    public String getDriverClassName() {
+      return driverClassName;
+    }
+
+    public void setDriverClassName(String driverClassName) {
+      this.driverClassName = driverClassName;
     }
   }
 

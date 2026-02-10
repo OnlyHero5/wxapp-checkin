@@ -82,3 +82,10 @@
 - Root `README.md` now explicitly highlights full-stack structure (`frontend/` + `backend/`) in top summary.
 - Added richer badge/icon set (WeChat, TDesign, Java, Spring Boot, MySQL, Redis, Docs) to improve first-screen visual quality.
 - Added `系统架构` and `仓库结构` sections to improve onboarding readability.
+
+## 2026-02-10 Legacy Compatibility Audit Findings
+- `backend/src/main/resources/application.yml` currently sets `spring.jpa.hibernate.ddl-auto=validate` (不会自动改表，但会校验表结构)。
+- Flyway is enabled by default in base config and migration scripts use `CREATE TABLE IF NOT EXISTS wx_*`, so extension tables are bootstrap-capable.
+- Test profile (`backend/src/test/resources/application-test.yml`) explicitly uses `ddl-auto=update` and H2; this is acceptable for CI/testing only.
+- Current architecture already follows extension-first approach and sync strategy (legacy pull + outbox relay), matching coexistence with `suda_union.sql`.
+- Legacy read/write services (`LegacyUserLookupService`, `LegacySyncService`, `OutboxRelayService`) currently use default `JdbcTemplate`, i.e., same datasource as JPA extension tables. This supports same-DB mode but does not explicitly model dual-database production deployment.
