@@ -29,6 +29,7 @@ public class RegistrationService {
   private final WxAdminRosterRepository adminRosterRepository;
   private final WxSessionRepository sessionRepository;
   private final LegacyUserLookupService legacyUserLookupService;
+  private final RegisterPayloadIntegrityService registerPayloadIntegrityService;
   private final JsonCodec jsonCodec;
 
   public RegistrationService(
@@ -37,6 +38,7 @@ public class RegistrationService {
       WxAdminRosterRepository adminRosterRepository,
       WxSessionRepository sessionRepository,
       LegacyUserLookupService legacyUserLookupService,
+      RegisterPayloadIntegrityService registerPayloadIntegrityService,
       JsonCodec jsonCodec
   ) {
     this.sessionService = sessionService;
@@ -44,12 +46,14 @@ public class RegistrationService {
     this.adminRosterRepository = adminRosterRepository;
     this.sessionRepository = sessionRepository;
     this.legacyUserLookupService = legacyUserLookupService;
+    this.registerPayloadIntegrityService = registerPayloadIntegrityService;
     this.jsonCodec = jsonCodec;
   }
 
   @Transactional
   public RegisterResponse register(RegisterRequest request) {
     SessionPrincipal principal = sessionService.requirePrincipal(request.sessionToken());
+    registerPayloadIntegrityService.verify(request);
     WxUserAuthExtEntity user = principal.user();
 
     String studentId = normalize(request.studentId());

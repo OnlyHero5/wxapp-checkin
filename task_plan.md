@@ -4,7 +4,7 @@
 Deliver a production-grade Java backend for the WeChat check-in miniapp with extension-first database design, Linux-oriented deployment support, and frontend/backend directory split (`frontend/` + `backend/`).
 
 ## Current Phase
-Phase 12
+Phase 15
 
 ## Phases
 
@@ -103,6 +103,23 @@ Phase 12
 - [ ] Implement and verify remediation
 - **Status:** in_progress
 
+### Phase 14: Review-Driven Frontend Hardening (2026-02-12)
+- [x] Parse external review report and verify claims against current codebase
+- [x] Add TDD coverage for API resilience (`GET` retry + concurrent dedupe) and register form validation
+- [x] Implement frontend fixes: request resilience, register validation, error feedback, reusable empty-state component
+- [x] Re-run frontend test suite with new cases and verify all green
+- [ ] Commit and push to GitHub
+- **Status:** in_progress
+
+### Phase 15: API Split + Signed Register Payload End-to-End (2026-02-12)
+- [x] Split frontend request stack into `request-core` + `mock-api` + endpoint facade
+- [x] Implement frontend signed register payload envelope generation (`HMAC-SHA256`, timestamp, nonce)
+- [x] Implement backend register payload verification and nonce replay protection
+- [x] Add/upgrade tests for missing/tampered/replay signatures and signed payload generation
+- [x] Re-run frontend and backend verification commands after split + security changes
+- [ ] Commit and push to GitHub
+- **Status:** in_progress
+
 ## Key Decisions
 | Decision | Rationale |
 |----------|-----------|
@@ -115,6 +132,8 @@ Phase 12
 | Production startup must not mutate legacy tables | Production profile should disable ORM DDL and Flyway auto-migration, only read/write business data |
 | `suda_union` is active Web management primary schema | Extension schema must stay isolated; cross-schema sync must be enabled in production |
 | Liquid-glass UI migration must preserve legacy shared utility classes | Existing pages still depend on global `.hint/.network-banner/.info-row` helpers; deleting them causes visual regressions |
+| HTTP retry should apply to idempotent methods only | Avoid duplicate write side effects while improving transient network resilience for `GET` |
+| Register payload integrity must be verified server-side with timestamp + nonce replay guard | Prevent unsigned/tampered payload acceptance and reduce replay risk on `/api/register` |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
@@ -128,6 +147,7 @@ Phase 12
 | `mysql-server-8.0` post-install script failed in WSL test env | 1 | Root cause was local port conflict (`3306`, `33060`); moved MySQL to `3307` / `33061` and reconfigured dpkg successfully |
 | `redis-server` failed to start in WSL test env | 1 | Root cause was local port conflict (`6379`/`6380`/`6381` busy); moved Redis to `16379` and restarted service successfully |
 | Maven dependency resolution hung at HTTPS response read | 1 | Root cause was Java/Maven proxy path in this environment; added Maven proxy config in `~/.m2/settings.xml` |
+| `ui-ux-pro-max` referenced script path was missing in local skill install | 1 | Followed fallback path: use available skill rules and continue without script automation |
 
 ## Notes
 - Current `main` working tree contains pending liquid-glass frontend updates and awaits commit/push.

@@ -21,7 +21,13 @@ import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepo
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSyncOutboxRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
+import java.util.Map;
+import java.util.UUID;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,6 +122,83 @@ class ApiFlowIntegrationTest {
   }
 
   @Test
+  void shouldRejectRegisterWithoutSignedPayload() throws Exception {
+    String session = login("code-register-missing-payload");
+    mockMvc.perform(post("/api/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "student_id":"2025000011",
+                  "name":"测试用户",
+                  "department":"信息工程学院",
+                  "club":"测试社团"
+                }
+                """.formatted(session)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("invalid_payload_signature")));
+  }
+
+  @Test
+  void shouldRejectRegisterWithTamperedPayloadSignature() throws Exception {
+    String session = login("code-register-tampered-payload");
+    String payloadEncrypted = buildRegisterPayload(session, "2025000012", "篡改用户", "信息工程学院", "测试社团");
+    String tampered = payloadEncrypted.substring(0, payloadEncrypted.length() - 1)
+        + (payloadEncrypted.endsWith("A") ? "B" : "A");
+
+    mockMvc.perform(post("/api/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "student_id":"2025000012",
+                  "name":"篡改用户",
+                  "department":"信息工程学院",
+                  "club":"测试社团",
+                  "payload_encrypted":"%s"
+                }
+                """.formatted(session, tampered)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("invalid_payload_signature")));
+  }
+
+  @Test
+  void shouldRejectRegisterPayloadReplay() throws Exception {
+    String session = login("code-register-replay");
+    String payloadEncrypted = buildRegisterPayload(session, "2025000013", "重放用户", "信息工程学院", "测试社团");
+
+    mockMvc.perform(post("/api/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "student_id":"2025000013",
+                  "name":"重放用户",
+                  "department":"信息工程学院",
+                  "club":"测试社团",
+                  "payload_encrypted":"%s"
+                }
+                """.formatted(session, payloadEncrypted)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")));
+
+    mockMvc.perform(post("/api/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "student_id":"2025000013",
+                  "name":"重放用户",
+                  "department":"信息工程学院",
+                  "club":"测试社团",
+                  "payload_encrypted":"%s"
+                }
+                """.formatted(session, payloadEncrypted)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("payload_replay")));
+  }
+
+  @Test
   void shouldCompleteStaffIssueAndNormalConsumeFlow() throws Exception {
     String staffSession = login("code-staff");
     register(staffSession, "2025000007", "刘洋");
@@ -190,6 +273,9 @@ class ApiFlowIntegrationTest {
   }
 
   private void register(String sessionToken, String studentId, String name) throws Exception {
+    String department = "学生工作部";
+    String club = "活动执行组";
+    String payloadEncrypted = buildRegisterPayload(sessionToken, studentId, name, department, club);
     mockMvc.perform(post("/api/register")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
@@ -197,10 +283,11 @@ class ApiFlowIntegrationTest {
                   "session_token":"%s",
                   "student_id":"%s",
                   "name":"%s",
-                  "department":"学生工作部",
-                  "club":"活动执行组"
+                  "department":"%s",
+                  "club":"%s",
+                  "payload_encrypted":"%s"
                 }
-                """.formatted(sessionToken, studentId, name)))
+                """.formatted(sessionToken, studentId, name, department, club, payloadEncrypted)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")));
   }
@@ -245,5 +332,49 @@ class ApiFlowIntegrationTest {
     status.setRegistered(true);
     status.setStatus("none");
     statusRepository.save(status);
+  }
+
+  private String buildRegisterPayload(
+      String sessionToken,
+      String studentId,
+      String name,
+      String department,
+      String club
+  ) throws Exception {
+    long timestamp = System.currentTimeMillis();
+    String nonce = "nonce_" + UUID.randomUUID().toString().replace("-", "");
+    String bodyJson = objectMapper.writeValueAsString(Map.of(
+        "student_id", studentId,
+        "name", name,
+        "department", department,
+        "club", club
+    ));
+    String bodyBase64 = Base64.getEncoder().encodeToString(bodyJson.getBytes(StandardCharsets.UTF_8));
+    String signText = "v1.%d.%s.%s".formatted(timestamp, nonce, bodyBase64);
+    String signature = hmacSha256Hex(sessionToken, signText);
+    String envelopeJson = objectMapper.writeValueAsString(Map.of(
+        "v", 1,
+        "alg", "HMAC-SHA256",
+        "ts", timestamp,
+        "nonce", nonce,
+        "body", bodyBase64,
+        "sig", signature
+    ));
+    return Base64.getEncoder().encodeToString(envelopeJson.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private String hmacSha256Hex(String key, String plainText) throws Exception {
+    Mac mac = Mac.getInstance("HmacSHA256");
+    mac.init(new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    byte[] digest = mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+    StringBuilder builder = new StringBuilder(digest.length * 2);
+    for (byte b : digest) {
+      String hex = Integer.toHexString(b & 0xff);
+      if (hex.length() == 1) {
+        builder.append('0');
+      }
+      builder.append(hex);
+    }
+    return builder.toString();
   }
 }

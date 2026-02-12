@@ -1,0 +1,7 @@
+<view class="empty-state card">
+  <text class="empty-state-title">{{title}}</text>
+  <text class="empty-state-message">{{message}}</text>
+  <t-button wx:if="{{showAction}}" size="small" theme="default" class="empty-state-action" bindtap="onTapAction">
+    {{actionText}}
+  </t-button>
+</view>

@@ -1,0 +1,24 @@
+.empty-state {
+  margin: 20rpx 0;
+  text-align: center;
+  padding: 50rpx 30rpx;
+}
+
+.empty-state-title {
+  display: block;
+  font-size: 30rpx;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.empty-state-message {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.empty-state-action {
+  margin-top: 24rpx;
+}

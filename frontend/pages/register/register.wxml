@@ -15,7 +15,9 @@
       </view>
       <view class="divider"></view>
       <t-input class="input" placeholder="学号" value="{{studentId}}" bindchange="onInputStudent" />
+      <text class="field-hint">学号支持字母/数字/_/-，长度 4-32</text>
       <t-input class="input" placeholder="姓名" value="{{name}}" bindchange="onInputName" />
+      <text class="field-hint">姓名不能为空，最长 64 个字符</text>
       <t-input class="input" placeholder="学院/部门（选填）" value="{{department}}" bindchange="onInputDepartment" />
       <t-input class="input" placeholder="社团/组织（选填）" value="{{club}}" bindchange="onInputClub" />
       <view class="btn-center">

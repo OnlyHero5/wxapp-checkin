@@ -3,6 +3,7 @@ const api = require("../../utils/api");
 const storage = require("../../utils/storage");
 const crypto = require("../../utils/crypto");
 const ui = require("../../utils/ui");
+const validators = require("../../utils/validators");
 
 Page({
   data: {
@@ -82,14 +83,29 @@ Page({
       ui.showToast("当前无网络");
       return;
     }
-    const studentId = this.data.studentId;
-    const name = this.data.name;
-    const department = this.data.department;
-    const club = this.data.club;
-    if (!studentId || !name) {
-      ui.showToast("请填写学号与姓名");
+
+    const validation = validators.validateRegisterForm({
+      studentId: this.data.studentId,
+      name: this.data.name,
+      department: this.data.department,
+      club: this.data.club
+    });
+    if (!validation.ok) {
+      ui.showToast(validation.firstError || "输入信息不合法");
       return;
     }
+
+    const studentId = validation.normalized.studentId;
+    const name = validation.normalized.name;
+    const department = validation.normalized.department;
+    const club = validation.normalized.club;
+    this.setData({
+      studentId,
+      name,
+      department,
+      club
+    });
+
     const identityReady = await this.ensureIdentityReady();
     if (!identityReady) {
       ui.showToast("登录态未建立，请确认后端已启动并可访问");
@@ -105,7 +121,7 @@ Page({
       club,
       timestamp: Date.now()
     };
-    const encrypted = crypto.encryptPayload(payload);
+    const encrypted = crypto.encryptPayload(payload, this.data.sessionToken);
 
     try {
       const result = await api.register({
@@ -134,10 +150,11 @@ Page({
           wx.switchTab({ url: "/pages/profile/profile" });
         }
       } else {
-        ui.showToast(result.message || "绑定失败");
+        ui.showToast((result && result.message) || "绑定失败");
       }
     } catch (err) {
-      ui.showToast("绑定失败，请重试");
+      const backendMessage = (err && err.data && err.data.message) || (err && err.message) || "";
+      ui.showToast(backendMessage || "绑定失败，请重试");
     }
 
     this.setData({ submitting: false });

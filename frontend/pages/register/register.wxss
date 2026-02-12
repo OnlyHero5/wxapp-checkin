@@ -19,6 +19,14 @@
   color: var(--text-main) !important;
 }
 
+.field-hint {
+  display: block;
+  margin: -10rpx 0 18rpx;
+  font-size: 22rpx;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .t-input__control {
   color: var(--text-main) !important;
 }

@@ -287,3 +287,108 @@
 - Executed commands:
   - Page class coverage check (PowerShell script) -> `No missing class definitions detected for page-level wxml/wxss.`
   - `npm test` (frontend) -> exit `0`, all 6 test scripts passed.
+
+## Session: 2026-02-12 (Review Report Remediation Sprint)
+
+### Phase T: Review Ingestion and Claim Verification
+- **Status:** complete
+- Actions taken:
+  - Parsed `d:\LeStoreDownload\wxapp-checkin-review-report.docx` and extracted issue list.
+  - Cross-checked report claims against frontend code (`api.js`, `storage.js`, register/index/staff-qr pages).
+  - Marked accurate, partially accurate, and unsupported claims before coding.
+
+### Phase U: TDD (RED -> GREEN) for High-Priority Fixes
+- **Status:** complete
+- Actions taken:
+  - Added RED tests:
+    - `frontend/tests/api-request-resilience.test.js`
+    - `frontend/tests/register-form-validation.test.js`
+  - RED evidence:
+    - API resilience test failed on first run (`request:fail timeout` not retried).
+    - Register validation test failed on first run (`../utils/validators` missing).
+  - Implemented GREEN fixes:
+    - Added idempotent request retry + concurrent GET dedupe in `frontend/utils/api.js`.
+    - Added register form validators in `frontend/utils/validators.js` and integrated into register submit flow.
+  - Re-ran both tests to green.
+
+### Phase V: UX & Maintainability Improvements
+- **Status:** complete
+- Actions taken:
+  - Added reusable component:
+    - `frontend/components/empty-state/*`
+  - Integrated index-page improvements:
+    - load-error card + retry action
+    - offline-disabled scan entry button
+    - network-recovery auto-reload for activities
+  - Enhanced register UX:
+    - field format hints
+    - better backend message passthrough on request-level failure
+  - Updated storage error handling to avoid silent catch while suppressing non-mini-program noise.
+
+### Phase W: Final Verification
+- **Status:** complete
+- Executed commands:
+  - `node tests/api-request-resilience.test.js` -> exit `0`
+  - `node tests/register-form-validation.test.js` -> exit `0`
+  - `npm test` (frontend) -> exit `0`, all 8 scripts passed
+
+### Error Log Addendum
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-02-12 | `ui-ux-pro-max` skill script missing (`.../scripts/search.py` not found) | 1 | Used documented fallback: apply skill rule checklist without script automation |
+| 2026-02-12 | Full frontend test log noisy after storage warning hardening (`wx is not defined` in Node tests) | 1 | Adjusted storage warning to log only when mini-program runtime `wx` exists |
+
+## Session: 2026-02-12 (API Split + Register Payload Signature End-to-End)
+
+### Phase X: Frontend Request-Layer Architecture Split
+- **Status:** complete
+- Actions taken:
+  - Split legacy monolithic `frontend/utils/api.js` into:
+    - `frontend/utils/request-core.js` (request orchestration)
+    - `frontend/utils/mock-api.js` (mock behavior/state)
+    - lightweight endpoint facade `frontend/utils/api.js`
+  - Preserved endpoint contract and existing test behavior while separating responsibilities.
+
+### Phase Y: Signed Register Payload Delivery (Frontend + Backend)
+- **Status:** complete
+- Actions taken:
+  - Frontend:
+    - Added `frontend/utils/payload-seal.js` for HMAC-based envelope generation.
+    - Updated `frontend/utils/crypto.js` and register submit flow to send signed `payload_encrypted`.
+    - Added `js-sha256` dependency and regression test `payload-seal.test.js`.
+  - Backend:
+    - Added security config under `app.security.register-payload`.
+    - Added `RegisterPayloadIntegrityService` and integrated into `RegistrationService`.
+    - Implemented timestamp skew validation + signature verification + nonce replay guard.
+
+### Phase Z: TDD and Verification
+- **Status:** complete
+- RED evidence:
+  - `ApiFlowIntegrationTest#shouldRejectRegisterWithoutSignedPayload` initially failed (`status=success`).
+- GREEN evidence:
+  - Implemented verification service and updated tests.
+- Executed commands:
+  - `.\mvnw.cmd -q "-Dtest=ApiFlowIntegrationTest#shouldRejectRegisterWithoutSignedPayload" test` -> RED fail (pre-fix)
+  - `.\mvnw.cmd -q "-Dtest=ApiFlowIntegrationTest" test` -> exit `0`
+  - `.\mvnw.cmd -q test` -> exit `0`
+  - `.\mvnw.cmd -q -DskipTests package` -> exit `0`
+  - `npm install` (frontend) -> exit `0`, added `js-sha256`
+  - `npm test` (frontend) -> exit `0`, all 9 scripts passed
+
+## Session: 2026-02-12 (Replay Proof + Final Verification Pass)
+
+### Phase AA: Register Payload Replay Regression Coverage
+- **Status:** complete
+- Actions taken:
+  - Added backend integration test:
+    - `ApiFlowIntegrationTest#shouldRejectRegisterPayloadReplay`
+  - Verifies same `payload_encrypted` replay under same `session_token` is rejected with `payload_replay`.
+- Executed commands:
+  - `.\mvnw.cmd -q "-Dtest=ApiFlowIntegrationTest#shouldRejectRegisterPayloadReplay" test` -> exit `0`
+  - `.\mvnw.cmd -q test` -> exit `0`
+
+### Phase AB: Internet Standards Cross-Check
+- **Status:** complete
+- Actions taken:
+  - Queried RFC/OWASP primary sources for signature and anti-replay implementation consistency.
+  - Confirmed current design aligns with HMAC, nonce/timestamp replay defense, and idempotent retry boundary guidance.

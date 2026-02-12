@@ -27,7 +27,13 @@
         <text class="scan-entry-title">签到/签退</text>
         <text class="scan-entry-desc">前往扫码页面完成签到或签退，结果会同步回活动状态</text>
       </view>
-      <t-button theme="primary" size="small" class="scan-entry-btn" bindtap="onGoScanPage">去扫码</t-button>
+      <t-button theme="primary" size="small" class="scan-entry-btn" disabled="{{!isOnline}}" bindtap="onGoScanPage">去扫码</t-button>
+    </view>
+
+    <view wx:if="{{!loading && loadError}}" class="load-error-card">
+      <text class="load-error-title">活动列表加载失败</text>
+      <text class="load-error-message">{{loadError}}</text>
+      <t-button size="small" theme="default" class="load-error-btn" bindtap="onRetryLoad">重试</t-button>
     </view>
 
     <view wx:for="{{activitySections}}" wx:key="key" wx:for-item="section" class="activity-section" wx:if="{{section.items.length > 0}}">
@@ -113,7 +119,14 @@
       </view>
     </view>
 
-    <view wx:if="{{!loading && ongoingActivities.length === 0 && completedActivities.length === 0}}" class="empty">暂无活动卡片</view>
+    <app-empty-state
+      wx:if="{{!loading && !loadError && ongoingActivities.length === 0 && completedActivities.length === 0}}"
+      title="暂无活动卡片"
+      message="当前没有可展示的活动，稍后可下拉刷新或重新进入页面查看。"
+      action-text="刷新列表"
+      show-action="{{isOnline}}"
+      bindretry="onRetryLoad"
+    />
 
     <t-cell-group class="status-card" wx:if="{{role === 'staff' && lastStatus}}">
       <t-cell title="{{lastStatus.title}}" note="{{lastStatus.message}}" />

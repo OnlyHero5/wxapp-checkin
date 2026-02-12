@@ -16,6 +16,7 @@ public class AppProperties {
   private final WechatProperties wechat = new WechatProperties();
   private final LegacyProperties legacy = new LegacyProperties();
   private final SyncProperties sync = new SyncProperties();
+  private final SecurityProperties security = new SecurityProperties();
 
   public SessionProperties getSession() {
     return session;
@@ -35,6 +36,10 @@ public class AppProperties {
 
   public SyncProperties getSync() {
     return sync;
+  }
+
+  public SecurityProperties getSecurity() {
+    return security;
   }
 
   public static class SessionProperties {
@@ -226,6 +231,44 @@ public class AppProperties {
 
     public void setRelayIntervalMs(long relayIntervalMs) {
       this.relayIntervalMs = relayIntervalMs;
+    }
+  }
+
+  public static class SecurityProperties {
+    private final RegisterPayloadProperties registerPayload = new RegisterPayloadProperties();
+
+    public RegisterPayloadProperties getRegisterPayload() {
+      return registerPayload;
+    }
+  }
+
+  public static class RegisterPayloadProperties {
+    private boolean enabled = true;
+    private long maxSkewSeconds = 300;
+    private long nonceTtlSeconds = 600;
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    public long getMaxSkewSeconds() {
+      return maxSkewSeconds;
+    }
+
+    public void setMaxSkewSeconds(long maxSkewSeconds) {
+      this.maxSkewSeconds = maxSkewSeconds;
+    }
+
+    public long getNonceTtlSeconds() {
+      return nonceTtlSeconds;
+    }
+
+    public void setNonceTtlSeconds(long nonceTtlSeconds) {
+      this.nonceTtlSeconds = nonceTtlSeconds;
     }
   }
 }

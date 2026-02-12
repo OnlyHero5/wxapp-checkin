@@ -137,6 +137,7 @@ Page({
     role: "normal",
     sessionToken: "",
     loading: false,
+    loadError: "",
     activities: [],
     ongoingActivities: [],
     completedActivities: [],
@@ -164,6 +165,9 @@ Page({
     this.setData({ isOnline: app.globalData.isOnline });
     this.unsubNetwork = app.onNetworkChange((res) => {
       this.setData({ isOnline: res.isOnline });
+      if (res.isOnline && this.data.initialized && storage.isBound()) {
+        this.loadActivities({ silent: true });
+      }
     });
   },
   async init() {
@@ -189,19 +193,36 @@ Page({
     }
     this.loadActivities();
   },
-  async loadActivities() {
+  async loadActivities(options = {}) {
+    if (this.data.loading) {
+      return;
+    }
     if (!this.data.isOnline) {
+      this.setData({ loadError: "网络未连接，无法加载活动列表" });
+      if (!options.silent) {
+        ui.showToast("当前无网络");
+      }
       return;
     }
     this.setData({ loading: true });
     try {
       const result = await api.getStaffActivities(this.data.sessionToken);
       const grouped = buildActivityGroups((result && result.activities) || [], this.data.role);
-      this.setData(grouped);
+      this.setData({
+        ...grouped,
+        loadError: ""
+      });
     } catch (err) {
-      ui.showToast("活动信息加载失败");
+      const message = (err && err.data && err.data.message) || "活动信息加载失败";
+      if (!options.silent) {
+        ui.showToast(message);
+      }
+      this.setData({ loadError: message });
     }
     this.setData({ loading: false });
+  },
+  onRetryLoad() {
+    this.loadActivities();
   },
   onTapCheckin(e) {
     const activityId = e.currentTarget.dataset.id;

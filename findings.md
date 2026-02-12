@@ -135,3 +135,72 @@
   - Stale token after session-table reset returns `{"status":"forbidden","error_code":"session_expired"}` on `/api/register`.
   - Two different login codes in dev mode produce two different `wx_identity` values; first bind succeeds, second bind of same student returns `student_already_bound`.
   - Fresh `wx-login + register(2025000008/王敏)` works and returns `role=staff`, proving core register flow itself is functional under clean session + first bind conditions.
+
+## 2026-02-12 Review Report Verification & Remediation Findings
+- Report claim validation summary:
+  - Accurate: `frontend/utils/api.js` is oversized and mixes mock + real request responsibilities.
+  - Accurate: register page lacked frontend-side strict format/length validation and had generic catch-level error messaging.
+  - Accurate: request layer previously lacked retry and inflight dedupe for transient network failures.
+  - Accurate: no project-level reusable custom component existed for empty/loading error state in index page.
+  - Partially accurate: network interaction disablement was not fully missing; register/scan/staff-qr pages already disabled key buttons when offline, but index scan entry still allowed click.
+  - Inaccurate/unsupported: "session expiration concurrent relogin storm" has an existing guard (`sessionExpiredRedirecting`) in `frontend/utils/api.js`.
+  - Inaccurate/unsupported: "timer cleanup generally missing" is not supported for key polling page (`staff-qr`) where timers are cleared in `onUnload` and guarded in runtime.
+- Implemented remediation set:
+  - API resilience:
+    - Added idempotent-only retry policy (`GET/HEAD/OPTIONS`) with bounded backoff jitter.
+    - Added inflight dedupe for same-parameter concurrent `GET` requests.
+    - Added request timeout baseline (`10000ms`) in real network requests.
+  - Register flow hardening:
+    - Added `frontend/utils/validators.js` and aligned frontend validation with backend contract (`student_id` pattern/length, name required, optional field max length).
+    - Updated register submit path to use normalized validated values.
+    - Updated request-fail catch path to surface backend error message when available.
+    - Added explicit input format hints in register UI.
+  - UX and maintainability:
+    - Added reusable component `frontend/components/empty-state` and integrated into index page.
+    - Added index load-error card with retry entry and offline-aware auto reload after network recovery.
+    - Disabled index scan-entry button when offline to prevent known-fail operations.
+  - Storage error handling:
+    - Replaced silent storage catch with runtime logging in mini-program context (suppressed in Node test env).
+- TDD evidence:
+  - Added failing-then-passing tests:
+    - `frontend/tests/api-request-resilience.test.js`
+    - `frontend/tests/register-form-validation.test.js`
+  - Updated npm test chain and verified all frontend tests pass with new cases.
+
+## 2026-02-12 API Split + Signed Payload Findings
+- Frontend API architecture split completed:
+  - `frontend/utils/request-core.js` now owns request concerns (session-expired handling, idempotent retry, GET dedupe, timeout).
+  - `frontend/utils/mock-api.js` now owns all mock dataset + mock endpoint behavior.
+  - `frontend/utils/api.js` now acts as endpoint facade only (business endpoint wrappers).
+- Register payload sealing upgraded:
+  - `frontend/utils/payload-seal.js` builds signed envelope:
+    - fields: `v`, `alg`, `ts`, `nonce`, `body`, `sig`
+    - signing text: `v1.<ts>.<nonce>.<bodyBase64>`
+    - signature: `HMAC-SHA256(session_token, signing_text)`
+  - `frontend/utils/crypto.js` now delegates to payload seal module.
+  - Register page now signs with current `sessionToken` before calling `/api/register`.
+- Backend verification added:
+  - `RegisterPayloadIntegrityService` validates:
+    - envelope shape + algorithm + version
+    - timestamp skew window
+    - signature correctness
+    - signed body fields must match request body fields
+    - nonce replay prevention via TTL cache (`session_token + nonce`)
+  - Error mapping:
+    - invalid/missing/tampered signature -> `invalid_payload_signature`
+    - nonce replay -> `payload_replay`
+- New/updated test coverage:
+  - Frontend:
+    - `frontend/tests/payload-seal.test.js`
+  - Backend:
+    - `ApiFlowIntegrationTest#shouldRejectRegisterWithoutSignedPayload`
+    - `ApiFlowIntegrationTest#shouldRejectRegisterWithTamperedPayloadSignature`
+    - `ApiFlowIntegrationTest#shouldRejectRegisterPayloadReplay`
+    - Existing register helper updated to send valid signed payload.
+
+## 2026-02-12 Internet Cross-Verification Notes
+- Used primary sources to validate implementation choices:
+  - RFC 2104 (HMAC construction) supports current `HMAC-SHA256` signing approach for payload integrity.
+  - RFC 5849 Section 3.3 (`nonce` + timestamp) supports anti-replay strategy applied in register payload envelope.
+  - RFC 9110 Section 9.2.2 (idempotent methods) supports retry policy restricted to safe/idempotent methods (`GET/HEAD/OPTIONS`).
+  - OWASP API Security Top 10 (API2:2023 Broken Authentication, API4:2023 Unrestricted Resource Consumption) supports strict session validation and replay/rate controls.

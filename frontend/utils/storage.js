@@ -13,10 +13,18 @@ const KEYS = {
   lectureScore: "lecture_score"
 };
 
+const reportStorageError = (action, key, err) => {
+  if (typeof wx === "undefined") {
+    return;
+  }
+  console.warn(`[storage] ${action} failed`, key, err);
+};
+
 const get = (key) => {
   try {
     return wx.getStorageSync(key);
   } catch (err) {
+    reportStorageError("read", key, err);
     return "";
   }
 };
@@ -25,7 +33,7 @@ const set = (key, value) => {
   try {
     wx.setStorageSync(key, value);
   } catch (err) {
-    // ignore
+    reportStorageError("write", key, err);
   }
 };
 

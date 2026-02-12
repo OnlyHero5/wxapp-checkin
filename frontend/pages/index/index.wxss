@@ -118,6 +118,37 @@
   z-index: 2;
 }
 
+.scan-entry-btn.t-is-disabled {
+  opacity: 0.5;
+}
+
+.load-error-card {
+  margin-bottom: 24rpx;
+  padding: 24rpx;
+  border-radius: 20rpx;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.load-error-title {
+  display: block;
+  font-size: 28rpx;
+  color: #fde68a;
+  font-weight: 600;
+}
+
+.load-error-message {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: rgba(254, 240, 138, 0.92);
+}
+
+.load-error-btn {
+  margin-top: 18rpx;
+}
+
 /* 活动列表部分 */
 .activity-section {
   margin-bottom: 40rpx;

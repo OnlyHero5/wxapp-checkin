@@ -79,3 +79,8 @@ app:
     outbox:
       enabled: ${OUTBOX_RELAY_ENABLED:false}
       relay-interval-ms: ${OUTBOX_RELAY_INTERVAL_MS:10000}
+  security:
+    register-payload:
+      enabled: ${REGISTER_PAYLOAD_VERIFY_ENABLED:true}
+      max-skew-seconds: ${REGISTER_PAYLOAD_MAX_SKEW_SECONDS:300}
+      nonce-ttl-seconds: ${REGISTER_PAYLOAD_NONCE_TTL_SECONDS:600}
