@@ -71,10 +71,21 @@ Page({
     serverOffsetMs: 0,
     lastGeneratedAt: "",
     checkinCount: 0,
-    checkoutCount: 0
+    checkoutCount: 0,
+    activityCompleted: false,
+    qrSize: 200
   },
   onLoad(options) {
     this.bindNetwork();
+    // Compute QR pixel size to fill .qr-box (520rpx width, 20rpx padding each side = 480rpx content)
+    try {
+      const sysInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+      const screenWidth = sysInfo.windowWidth || 375;
+      const qrSize = Math.floor((480 / 750) * screenWidth);
+      this.setData({ qrSize });
+    } catch (e) {
+      this.setData({ qrSize: 240 });
+    }
     const actionType = parseActionType(options && options.actionType);
     const actionLabel = actionType === "checkout" ? "签退" : "签到";
     const activityTitle = decodeTitle(options && options.title);
@@ -156,7 +167,7 @@ Page({
     return Date.now() + (this.data.serverOffsetMs || 0);
   },
   syncCountdown() {
-    if (this.activityCompleted || !this.data.qrPayload) {
+    if (this.data.activityCompleted || !this.data.qrPayload) {
       return;
     }
 
@@ -173,7 +184,7 @@ Page({
     }
   },
   async loadQrSession(options = {}) {
-    if (this.activityCompleted || this.data.role !== "staff") {
+    if (this.data.activityCompleted || this.data.role !== "staff") {
       return;
     }
     if (!this.data.isOnline || !this.data.sessionToken || !this.data.activityId) {
@@ -250,17 +261,19 @@ Page({
     }
     this.activityLoading = true;
     try {
-      const detail = await api.getStaffActivityDetail(this.data.activityId, this.data.sessionToken);
-      if (!detail || detail.status === "invalid_activity" || detail.status === "forbidden") {
+      const result = await api.getStaffActivityDetail(this.data.activityId, this.data.sessionToken);
+      if (!result || result.status === "invalid_activity" || result.status === "forbidden") {
         if (!this.detailInvalidShown) {
-          ui.showToast((detail && detail.message) || "活动不可用");
+          ui.showToast((result && result.message) || "活动不可用");
           this.detailInvalidShown = true;
         }
-        this.activityCompleted = true;
         this.clearTimers();
-        this.setData({ qrStatus: "expired" });
+        this.setData({ activityCompleted: true, qrStatus: "expired" });
         return;
       }
+
+      // Backend wraps detail fields inside result.data
+      const detail = result.data || result;
 
       const isCompleted = `${detail.progress_status || ""}`.toLowerCase() === "completed";
       const isUnsupportedCheckout = this.data.actionType === "checkout" && !detail.support_checkout;
@@ -274,9 +287,9 @@ Page({
         serverOffsetMs: serverTime - Date.now()
       });
       if (isCompleted || isUnsupportedCheckout) {
-        this.activityCompleted = true;
         this.clearTimers();
         this.setData({
+          activityCompleted: true,
           actionBlocked: isUnsupportedCheckout,
           qrStatus: "expired"
         });
@@ -292,7 +305,7 @@ Page({
     }
   },
   async onTapRefresh() {
-    if (this.activityCompleted) {
+    if (this.data.activityCompleted) {
       ui.showToast("活动已结束");
       return;
     }

@@ -1,9 +1,23 @@
 const auth = require("../../utils/auth");
 const api = require("../../utils/api");
 const storage = require("../../utils/storage");
-const crypto = require("../../utils/crypto");
 const ui = require("../../utils/ui");
 const validators = require("../../utils/validators");
+
+let cachedCryptoModule = null;
+
+const getCryptoModule = () => {
+  if (cachedCryptoModule) {
+    return cachedCryptoModule;
+  }
+  try {
+    cachedCryptoModule = require("../../utils/crypto");
+    return cachedCryptoModule;
+  } catch (err) {
+    console.error("[register] load crypto module failed", err);
+    return null;
+  }
+};
 
 Page({
   data: {
@@ -121,7 +135,18 @@ Page({
       club,
       timestamp: Date.now()
     };
-    const encrypted = crypto.encryptPayload(payload, this.data.sessionToken);
+
+    const cryptoModule = getCryptoModule();
+    if (!cryptoModule || typeof cryptoModule.encryptPayload !== "function") {
+      ui.showToast("签名组件未就绪，请先执行“构建 npm”");
+      return;
+    }
+
+    const encrypted = cryptoModule.encryptPayload(payload, this.data.sessionToken);
+    if (!encrypted) {
+      ui.showToast("签名失败，请重新登录后再试");
+      return;
+    }
 
     try {
       const result = await api.register({

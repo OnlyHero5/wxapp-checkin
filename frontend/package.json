@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "test": "node tests/activity-visibility.test.js && node tests/auth-register-binding.test.js && node tests/auth-session-registration-state.test.js && node tests/qr-checkin-flow.test.js && node tests/session-expired-redirect.test.js && node tests/auth-real-device-loopback-baseurl.test.js && node tests/api-request-resilience.test.js && node tests/register-form-validation.test.js && node tests/payload-seal.test.js"
+    "repair:miniprogram-npm": "node scripts/repair-miniprogram-npm.js",
+    "test": "node tests/activity-visibility.test.js && node tests/auth-register-binding.test.js && node tests/auth-session-registration-state.test.js && node tests/qr-checkin-flow.test.js && node tests/session-expired-redirect.test.js && node tests/auth-real-device-loopback-baseurl.test.js && node tests/api-request-resilience.test.js && node tests/register-form-validation.test.js && node tests/payload-seal.test.js && node tests/miniprogram-json-integrity.test.js"
   },
   "dependencies": {
     "js-sha256": "^0.11.1",

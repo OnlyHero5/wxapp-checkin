@@ -17,12 +17,21 @@
       </view>
 
       <view class="qr-box">
-        <t-qrcode
-          value="{{qrPayload}}"
-          size="{{360}}"
-          status="{{qrStatus}}"
-          bindrefresh="onTapRefresh"
-        />
+        <block wx:if="{{actionBlocked || activityCompleted}}">
+          <view class="qr-blocked-overlay">
+            <text class="qr-blocked-icon">⚠</text>
+            <text class="qr-blocked-text">{{actionBlocked ? '该活动暂不支持签退二维码' : '活动已结束'}}</text>
+            <t-button size="small" theme="default" bindtap="goBack" class="qr-blocked-btn">返回活动列表</t-button>
+          </view>
+        </block>
+        <block wx:else>
+          <t-qrcode
+            value="{{qrPayload}}"
+            size="{{qrSize}}"
+            status="{{qrStatus}}"
+            bindrefresh="onTapRefresh"
+          />
+        </block>
       </view>
 
       <view class="countdown-panel">

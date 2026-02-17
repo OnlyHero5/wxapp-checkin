@@ -53,18 +53,21 @@ Page({
     }
     this.setData({ loading: true });
     try {
-      const detail = await api.getStaffActivityDetail(this.data.activityId, this.data.sessionToken);
-      if (!detail || detail.status === "invalid_activity") {
-        ui.showToast((detail && detail.message) || "活动不存在或已下线");
+      const result = await api.getStaffActivityDetail(this.data.activityId, this.data.sessionToken);
+      if (!result || result.status === "invalid_activity") {
+        ui.showToast((result && result.message) || "活动不存在或已下线");
         wx.navigateBack();
         return;
       }
 
-      if (detail.status === "forbidden") {
-        ui.showToast(detail.message || "无权限查看该活动");
+      if (result.status === "forbidden") {
+        ui.showToast(result.message || "无权限查看该活动");
         wx.navigateBack();
         return;
       }
+
+      // Backend wraps detail fields inside result.data
+      const detail = result.data || result;
 
       const normalizedDetail = {
         ...detail,

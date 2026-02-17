@@ -12,6 +12,7 @@ public record ActivitySummaryDto(
     String description,
     String progressStatus,
     Boolean supportCheckout,
+    Boolean supportCheckin,
     Boolean hasDetail,
     Integer checkinCount,
     Integer checkoutCount,

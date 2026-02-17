@@ -92,6 +92,7 @@ public class CompatibilityController {
         first.getDescription(),
         first.getProgressStatus(),
         first.getSupportCheckout(),
+        first.getSupportCheckin(),
         first.getHasDetail(),
         first.getCheckinCount(),
         first.getCheckoutCount(),

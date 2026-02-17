@@ -152,3 +152,50 @@ Phase 15
 ## Notes
 - Current `main` working tree contains pending liquid-glass frontend updates and awaits commit/push.
 - Review evidence must rely on fresh command outputs from this session.
+
+### Phase 16: Codex Skills Refresh + Integrity Verification (2026-02-12)
+- [x] Reinstall `ui-ux-pro-max` from requested GitHub URL
+- [x] Repair Windows symlink degradation (`scripts`/`data` from file stubs to real directories)
+- [x] Check other installed skills against corresponding upstream repos and apply updates where valid
+- [x] Detect and handle incomplete upstream package case (`planning-with-files` source missing referenced scripts)
+- [x] Run script-level smoke checks for skill usability
+- **Status:** complete
+
+### Phase 17: Real-Device Register Page Open Failure Root-Cause Debug (2026-02-12)
+- [x] Load and apply `systematic-debugging` + `planning-with-files` skills
+- [x] Trace register page route, lifecycle, and runtime dependency chain
+- [x] Verify frontend dependency packaging state (`miniprogram_npm`) for register-page-only modules
+- [x] Implement minimal safety fix to avoid page-load crash when crypto module is missing
+- [x] Re-run frontend test suite after fix
+- [ ] Commit and push to GitHub
+- **Status:** in_progress
+
+### Phase 18: DevTools JSON Parse Failure Hardening (2026-02-12)
+- [x] Load and apply `systematic-debugging` + `planning-with-files` skills
+- [x] Verify offending file integrity (`loading.json`) with byte-level check and Git hash comparison
+- [x] Add deterministic npm repair script for `miniprogram_npm/tdesign-miniprogram`
+- [x] Add JSON integrity test coverage for `frontend/miniprogram_npm`
+- [x] Update README with simulator startup failure recovery steps
+- [x] Re-run frontend verification commands after hardening changes
+- [ ] Commit and push to GitHub
+- **Status:** in_progress
+
+## Errors Encountered (Addendum)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| `ui-ux-pro-max` reinstall on Windows produced symlink stub files (`scripts`/`data`) | 1 | Installed skill from URL, then materialized real directories from upstream `src/ui-ux-pro-max/*` files |
+| `planning-with-files` upstream candidate lacked `session-catchup.py` and `check-complete.ps1` despite `SKILL.md` references | 1 | Marked upstream as incomplete and restored previously working local backup |
+| WeChat DevTools reported `loading/loading.json` parse invalid while repository JSON remained valid | 1 | Treated as local npm build/cache corruption and added `repair:miniprogram-npm` script + JSON integrity test |
+
+### Phase 19: Uncommitted Change Comprehensive Review + GitHub Submission (2026-02-17)
+- [x] Load and apply relevant skills (`planning-with-files`, `requesting-code-review`, `finishing-a-development-branch`, `verification-before-completion`)
+- [x] Review all current unstaged/untracked changes and inspect changed files end-to-end
+- [x] Run frontend/backend verification commands with fresh evidence in this session
+- [x] Fix compile blocker found during review (`ActivitySummaryDto` constructor arg mismatch)
+- [ ] Commit and push to GitHub
+- **Status:** in_progress
+
+## Errors Encountered (2026-02-17 Addendum)
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| Backend compile failed after DTO field addition (`ActivitySummaryDto` constructor args mismatch) | 1 | Updated `CompatibilityController.currentActivity()` to pass `supportCheckin` and reran backend verification to green |

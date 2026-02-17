@@ -46,6 +46,9 @@ public class WxActivityProjectionEntity {
   @Column(name = "support_checkout", nullable = false)
   private Boolean supportCheckout = true;
 
+  @Column(name = "support_checkin", nullable = false)
+  private Boolean supportCheckin = true;
+
   @Column(name = "has_detail", nullable = false)
   private Boolean hasDetail = true;
 
@@ -152,6 +155,14 @@ public class WxActivityProjectionEntity {
 
   public void setSupportCheckout(Boolean supportCheckout) {
     this.supportCheckout = supportCheckout;
+  }
+
+  public Boolean getSupportCheckin() {
+    return supportCheckin;
+  }
+
+  public void setSupportCheckin(Boolean supportCheckin) {
+    this.supportCheckin = supportCheckin;
   }
 
   public Boolean getHasDetail() {

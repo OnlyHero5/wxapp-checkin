@@ -154,6 +154,20 @@ npm install
 1. 微信开发者工具执行 `工具 -> 构建 NPM`
 2. 编译并预览小程序
 
+### 常见问题：模拟器启动失败（JSON 解析报错）
+若出现类似 `frontend/miniprogram_npm/tdesign-miniprogram/loading/loading.json` 的 JSON 解析错误，请按下面步骤恢复：
+
+```bash
+cd frontend
+npm install
+npm run repair:miniprogram-npm
+```
+
+然后在微信开发者工具执行：
+1. `工具 -> 构建 NPM`
+2. `详情 -> 本地设置 -> 清缓存 -> 清除全部缓存`
+3. 重新编译项目
+
 ### 5. 运行测试
 后端测试：
 ```bash

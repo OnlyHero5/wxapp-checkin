@@ -392,3 +392,111 @@
 - Actions taken:
   - Queried RFC/OWASP primary sources for signature and anti-replay implementation consistency.
   - Confirmed current design aligns with HMAC, nonce/timestamp replay defense, and idempotent retry boundary guidance.
+
+## Session: 2026-02-12 (Codex Skills Redownload + Update + Integrity Check)
+
+### Phase AC: ui-ux-pro-max Reinstall and Missing Data Repair
+- **Status:** complete
+- Actions taken:
+  - Backed up old `~/.codex/skills/ui-ux-pro-max`.
+  - Reinstalled from user-specified GitHub URL via skill-installer script.
+  - Fixed Windows symlink degradation by rebuilding real `scripts/` and `data/` trees from upstream source files.
+- Verification:
+  - `python C:\Users\Lenovo\.codex\skills\ui-ux-pro-max\scripts\search.py --help` -> exit `0`
+  - `python ...\search.py "fintech" --domain ux -n 2` -> exit `0`
+
+### Phase AD: Other Skills Upstream Check and Auto Update
+- **Status:** complete (with one guarded rollback)
+- Actions taken:
+  - Updated `frontend-design` from `anthropics/skills`.
+  - Updated `.system/skill-creator` and `.system/skill-installer` from `openai/skills`.
+  - Evaluated `planning-with-files` upstream candidate (`hanzoskill/planning-with-files`), detected package inconsistency, and restored working backup version.
+- Verification:
+  - `python ...skill-installer\scripts\install-skill-from-github.py --help` -> exit `0`
+  - `python ...skill-installer\scripts\list-skills.py --help` -> exit `0`
+  - `python ...planning-with-files\scripts\session-catchup.py <project>` -> exit `0`
+
+### Phase AE: Final Skill Availability Validation
+- **Status:** complete
+- Actions taken:
+  - Moved maintenance backup/staging directories out of `~/.codex/skills` to avoid being detected as installable skills.
+  - Re-ran bootstrap and confirmed skill listing is clean.
+
+## Session: 2026-02-12 (Real-Device Register Page Open Failure)
+
+### Phase AF: Systematic Root-Cause Investigation
+- **Status:** complete
+- Actions taken:
+  - Loaded `superpowers:systematic-debugging` and `planning-with-files`.
+  - Verified register route declaration in `frontend/app.json` and navigation callsites.
+  - Traced register runtime dependency chain (`register.js -> crypto.js -> payload-seal.js -> js-sha256`).
+  - Verified package state:
+    - `frontend/node_modules/js-sha256` exists.
+    - `frontend/miniprogram_npm/js-sha256` missing.
+    - `frontend/miniprogram_npm` currently only contains `tdesign-miniprogram`.
+
+### Phase AG: Minimal Remediation + Verification
+- **Status:** complete
+- Actions taken:
+  - Updated `frontend/pages/register/register.js`:
+    - removed top-level crypto import;
+    - added lazy loader for crypto module during submit;
+    - added explicit toast when signing module is unavailable (guides to rebuild npm).
+  - Re-ran frontend verification:
+    - `npm test` -> exit `0`, all 9 scripts passed.
+
+## Session: 2026-02-12 (DevTools JSON Parse Failure Hardening)
+
+### Phase AH: Root Cause Verification
+- **Status:** complete
+- Actions taken:
+  - Loaded `planning-with-files` and `superpowers:systematic-debugging`.
+  - Inspected `frontend/miniprogram_npm/tdesign-miniprogram/loading/loading.json` with raw text + hex bytes.
+  - Compared Git blob hash and working tree hash for the same file; confirmed identical.
+  - Ran JSON parse sweep for:
+    - `frontend/miniprogram_npm` (`98` files, all valid)
+    - `frontend/` excluding `node_modules` (`112` files, all valid)
+
+### Phase AI: Repair Tooling + Test Guardrail
+- **Status:** complete
+- Actions taken:
+  - Added `frontend/scripts/repair-miniprogram-npm.js`:
+    - rebuilds `miniprogram_npm/tdesign-miniprogram` from `node_modules/tdesign-miniprogram/miniprogram_dist`
+    - normalizes `loading/loading.json`
+    - validates all JSON under target directory
+  - Added npm script:
+    - `repair:miniprogram-npm`
+  - Added frontend integrity test:
+    - `frontend/tests/miniprogram-json-integrity.test.js`
+    - integrated into `npm test`
+  - Added README troubleshooting section for simulator startup JSON parse failures.
+
+### Phase AJ: Verification
+- **Status:** complete
+- Executed commands:
+  - `npm run repair:miniprogram-npm` -> exit `0`, validated `98` JSON files.
+  - `npm test` -> exit `0`, all 10 frontend test scripts passed.
+
+## Session: 2026-02-17 (Uncommitted Change Review + Commit Readiness)
+
+### Phase AK: Skill-Guided Comprehensive Review
+- **Status:** complete
+- Actions taken:
+  - Executed superpowers bootstrap and loaded:
+    - `planning-with-files`
+    - `superpowers:requesting-code-review`
+    - `superpowers:finishing-a-development-branch`
+    - `superpowers:verification-before-completion`
+  - Audited full working tree status (`git status`, `git diff --stat`, `git diff`, untracked files list).
+  - Reviewed all changed files and new files relevant to backend schema/DTO update and frontend runtime hardening.
+
+### Phase AL: Verification and Blocker Remediation
+- **Status:** complete
+- Actions taken:
+  - Ran `frontend` verification:
+    - `npm test` -> exit `0`, all 10 scripts passed.
+  - Ran `backend` verification:
+    - first run `.\mvnw.cmd -q test` -> failed (compile error at `CompatibilityController`, `ActivitySummaryDto` constructor arg mismatch).
+    - patched `CompatibilityController.currentActivity()` to add missing `supportCheckin` argument.
+    - reran `.\mvnw.cmd -q test` -> exit `0`.
+    - ran `.\mvnw.cmd -q -DskipTests package` -> exit `0`.

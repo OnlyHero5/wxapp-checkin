@@ -40,15 +40,43 @@
 
 .qr-box {
   margin: 30rpx auto;
-  width: 460rpx;
-  height: 460rpx;
+  width: 520rpx;
+  min-height: 520rpx;
   padding: 20rpx;
-  background: rgba(255, 255, 255, 0.9); /* 二维码需要白底 */
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+/* 签退不可用 / 活动已结束 覆盖层 */
+.qr-blocked-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 20rpx;
+  text-align: center;
+}
+
+.qr-blocked-icon {
+  font-size: 64rpx;
+  margin-bottom: 20rpx;
+}
+
+.qr-blocked-text {
+  font-size: 28rpx;
+  color: #475569;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 30rpx;
+}
+
+.qr-blocked-btn {
+  margin-top: 10rpx;
 }
 
 .qr-image {

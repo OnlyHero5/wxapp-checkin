@@ -42,9 +42,8 @@
           <text class="section-title">{{section.title}}</text>
           <text class="section-subtitle">共 {{section.items.length}} 场</text>
         </view>
-        <t-tag size="small" theme="{{section.key === 'ongoing' ? 'primary' : 'default'}}" variant="light">
-          {{section.key === 'ongoing' ? '优先处理' : '历史归档'}}
-        </t-tag>
+        <text wx:if="{{section.key === 'ongoing'}}" class="section-badge section-badge-ongoing">优先处理</text>
+        <text wx:else class="section-badge section-badge-completed">历史归档</text>
       </view>
 
       <view wx:for="{{section.items}}" wx:key="activity_id" wx:for-item="activity" class="activity-card activity-card-{{section.key}}">
@@ -53,9 +52,8 @@
             <text class="activity-title">{{activity.activity_title}}</text>
             <view class="activity-tag-row">
               <text class="activity-type activity-type-{{activity.type_tone}}">{{activity.activity_type}}</text>
-              <t-tag size="small" theme="{{section.key === 'ongoing' ? 'primary' : 'default'}}" variant="light">
-                {{section.key === 'ongoing' ? '进行中' : '已完成'}}
-              </t-tag>
+              <text wx:if="{{section.key === 'ongoing'}}" class="status-tag status-tag-ongoing">进行中</text>
+              <text wx:else class="status-tag status-tag-completed">已完成</text>
             </view>
           </view>
         </view>
@@ -85,7 +83,7 @@
         >
           <view class="actions-grid">
             <t-button
-              wx:if="{{role === 'staff' && section.key === 'ongoing'}}"
+              wx:if="{{role === 'staff' && section.key === 'ongoing' && activity.support_checkin !== false}}"
               size="small"
               theme="primary"
               class="action-btn"

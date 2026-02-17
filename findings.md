@@ -204,3 +204,65 @@
   - RFC 5849 Section 3.3 (`nonce` + timestamp) supports anti-replay strategy applied in register payload envelope.
   - RFC 9110 Section 9.2.2 (idempotent methods) supports retry policy restricted to safe/idempotent methods (`GET/HEAD/OPTIONS`).
   - OWASP API Security Top 10 (API2:2023 Broken Authentication, API4:2023 Unrestricted Resource Consumption) supports strict session validation and replay/rate controls.
+
+## 2026-02-12 Skill Maintenance Findings
+- `ui-ux-pro-max`:
+  - Reinstalled from `https://github.com/nextlevelbuilder/ui-ux-pro-max-skill/tree/main/.claude/skills/ui-ux-pro-max`.
+  - Confirmed previous defect root cause: GitHub symlink entries were materialized as plain files on Windows (`scripts`, `data`).
+  - Repaired by materializing real directories and files from upstream `src/ui-ux-pro-max/scripts` and `src/ui-ux-pro-max/data`.
+  - Smoke check passed: `python ...\ui-ux-pro-max\scripts\search.py --help` and sample query execution.
+- `frontend-design`:
+  - Compared against `anthropics/skills` and updated local copy.
+  - Post-update SKILL content hash matches upstream.
+- `.system/skill-creator` and `.system/skill-installer`:
+  - Compared against `openai/skills` and updated local copies.
+  - Installer helper scripts run normally (`--help` checks passed).
+- `planning-with-files`:
+  - Upstream candidate repository (`hanzoskill/planning-with-files`) has `SKILL.md` but misses referenced scripts (`session-catchup.py`, `check-complete.ps1`), making package internally inconsistent on Windows workflow.
+  - Restored previous local version from backup to keep skill complete and usable.
+- Skill inventory check:
+  - Re-ran bootstrap after cleanup; skills list is normal and no backup directories are exposed as skills.
+
+## 2026-02-12 Real-Device Register Page Open Failure Findings
+- Current route declaration is valid:
+  - `frontend/app.json` includes `pages/register/register`.
+  - Multiple entry points navigate to `/pages/register/register` (`index/profile/scan-action` pages).
+- Register page has a register-specific runtime dependency chain:
+  - `frontend/pages/register/register.js` imports `frontend/utils/crypto.js`.
+  - `frontend/utils/crypto.js` imports `frontend/utils/payload-seal.js`.
+  - `frontend/utils/payload-seal.js` imports npm package `js-sha256`.
+- Packaging evidence shows dependency gap:
+  - `frontend/package.json` declares `"js-sha256": "^0.11.1"`.
+  - `frontend/node_modules/js-sha256` exists.
+  - but `frontend/miniprogram_npm/` only contains `tdesign-miniprogram`; `js-sha256` is absent.
+- In mini-program runtime, top-level `require("js-sha256")` failure can prevent register page script load, causing "页面打不开" on real device even when route exists.
+- Implemented risk-reduction fix:
+  - moved crypto loading in register page from top-level import to submit-time lazy loading with explicit user guidance toast when module is unavailable (`请先执行“构建 npm”`).
+- Local regression verification:
+  - `npm test` passed (9/9 frontend test scripts).
+
+## 2026-02-12 DevTools `loading.json` Parse Error Findings
+- The reported file `frontend/miniprogram_npm/tdesign-miniprogram/loading/loading.json` is valid JSON in current workspace:
+  - byte-level check shows no UTF-8 BOM and no non-JSON prefix.
+  - Git blob hash equals working tree hash (file content unchanged vs repository baseline).
+- Full JSON scan result:
+  - `frontend/miniprogram_npm`: 98 JSON files, all parse successfully.
+  - `frontend/` (excluding `node_modules`): 112 JSON files, all parse successfully.
+- Inference: the reported error is consistent with local WeChat DevTools npm/cache build state mismatch rather than source-controlled JSON syntax corruption.
+- Remediation landed:
+  - Added `frontend/scripts/repair-miniprogram-npm.js` and npm command `npm run repair:miniprogram-npm` to rebuild `tdesign-miniprogram` artifacts from `node_modules` and validate JSON.
+  - Added `frontend/tests/miniprogram-json-integrity.test.js` and integrated into `npm test`.
+  - Added README troubleshooting procedure for simulator startup failure with JSON parse errors.
+
+## 2026-02-17 Uncommitted Change Comprehensive Review Findings
+- Current uncommitted scope includes backend schema/API field evolution (`support_checkin`) and frontend UX/reliability hardening, plus planning-document updates.
+- Critical blocker found during verification:
+  - backend compile failed because `ActivitySummaryDto` gained `supportCheckin`, but `CompatibilityController.currentActivity()` still used old constructor parameters.
+  - fix applied: add `first.getSupportCheckin()` argument at constructor callsite.
+- Fresh verification evidence (after fix):
+  - `frontend/npm test` passed (10 scripts, including `miniprogram-json-integrity`).
+  - `backend/.\\mvnw.cmd -q test` passed.
+  - `backend/.\\mvnw.cmd -q -DskipTests package` passed.
+- Release-risk notes:
+  - `frontend/utils/config.js` now points to `http://192.168.31.94:9989`; this is environment-specific and should be intentional before merge to shared mainline.
+  - `frontend/miniprogram_npm/js-sha256/*` is generated runtime artifact but repository already tracks `miniprogram_npm` content, so including it is consistent with existing versioning strategy.
