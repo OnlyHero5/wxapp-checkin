@@ -75,7 +75,27 @@ public class RegistrationService {
     }
 
     boolean adminVerified = adminRosterRepository.existsByStudentIdAndNameAndActiveTrue(studentId, name);
-    RoleType role = adminVerified ? RoleType.STAFF : RoleType.NORMAL;
+    var legacyUserOpt = legacyUserLookupService.findLegacyUserByStudentId(studentId);
+    if (user.getLegacyUserId() == null) {
+      legacyUserOpt.map(LegacyUserLookupService.LegacyUserRow::id).ifPresent(user::setLegacyUserId);
+    }
+
+    boolean legacyStaff = legacyUserOpt
+        .map(row -> row.role() != null && row.role() >= 0 && row.role() <= 3)
+        .orElse(false);
+    boolean legacyNameMatch = legacyUserOpt
+        .map(row -> name.equals(normalize(row.name())))
+        .orElse(false);
+
+    boolean staffVerified = adminVerified;
+    if (!staffVerified && legacyStaff) {
+      if (!legacyNameMatch) {
+        throw new BusinessException("invalid_param", "姓名与系统不匹配，无法绑定工作人员身份", "legacy_name_mismatch");
+      }
+      staffVerified = true;
+    }
+
+    RoleType role = staffVerified ? RoleType.STAFF : RoleType.NORMAL;
     List<String> permissions = role == RoleType.STAFF
         ? PermissionCatalog.STAFF_PERMISSIONS
         : PermissionCatalog.NORMAL_PERMISSIONS;
@@ -87,9 +107,6 @@ public class RegistrationService {
     user.setRegistered(true);
     user.setRoleCode(role.getCode());
     user.setPermissionsJson(jsonCodec.writeList(permissions));
-    if (user.getLegacyUserId() == null) {
-      legacyUserLookupService.findLegacyUserIdByStudentId(studentId).ifPresent(user::setLegacyUserId);
-    }
     userRepository.save(user);
 
     WxSessionEntity currentSession = principal.session();
@@ -102,7 +119,7 @@ public class RegistrationService {
         "注册绑定成功",
         role.getCode(),
         permissions,
-        adminVerified,
+        staffVerified,
         true,
         buildProfile(user)
     );

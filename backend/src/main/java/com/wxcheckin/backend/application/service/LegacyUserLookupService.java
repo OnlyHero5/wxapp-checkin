@@ -19,6 +19,29 @@ public class LegacyUserLookupService {
     this.jdbcTemplate = jdbcTemplate;
   }
 
+  public Optional<LegacyUserRow> findLegacyUserByStudentId(String studentId) {
+    String normalized = studentId == null ? "" : studentId.trim();
+    if (normalized.isEmpty()) {
+      return Optional.empty();
+    }
+    try {
+      List<LegacyUserRow> result = jdbcTemplate.query(
+          "SELECT id, username, name, role FROM suda_user WHERE username = ? LIMIT 1",
+          (rs, rowNum) -> new LegacyUserRow(
+              rs.getLong("id"),
+              rs.getString("username"),
+              rs.getString("name"),
+              rs.getInt("role")
+          ),
+          normalized
+      );
+      return result.stream().findFirst();
+    } catch (DataAccessException ex) {
+      // Legacy table may not exist in all environments.
+      return Optional.empty();
+    }
+  }
+
   public Optional<Long> findLegacyUserIdByStudentId(String studentId) {
     String normalized = studentId == null ? "" : studentId.trim();
     if (normalized.isEmpty()) {
@@ -36,4 +59,6 @@ public class LegacyUserLookupService {
       return Optional.empty();
     }
   }
+
+  public record LegacyUserRow(Long id, String username, String name, Integer role) {}
 }
