@@ -34,6 +34,9 @@ public class WxActivityProjectionEntity {
   @Column(name = "start_time", nullable = false)
   private Instant startTime;
 
+  @Column(name = "end_time", nullable = false)
+  private Instant endTime;
+
   @Column(name = "location", nullable = false, length = 255)
   private String location;
 
@@ -123,6 +126,14 @@ public class WxActivityProjectionEntity {
 
   public void setStartTime(Instant startTime) {
     this.startTime = startTime;
+  }
+
+  public Instant getEndTime() {
+    return endTime;
+  }
+
+  public void setEndTime(Instant endTime) {
+    this.endTime = endTime;
   }
 
   public String getLocation() {

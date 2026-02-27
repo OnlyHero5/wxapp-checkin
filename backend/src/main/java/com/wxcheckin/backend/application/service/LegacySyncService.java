@@ -67,33 +67,36 @@ public class LegacySyncService {
         SELECT
           a.id,
           a.name,
-          a.description,
-          a.location,
-          a.activity_stime,
-          a.type,
-          a.state,
-          COALESCE(SUM(CASE WHEN aa.check_in = b'1' THEN 1 ELSE 0 END), 0) AS checkin_count,
-          COALESCE(SUM(CASE WHEN aa.check_in = b'1' AND aa.check_out = b'1' THEN 1 ELSE 0 END), 0) AS checkout_count
-        FROM suda_activity a
-        LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
-        GROUP BY a.id, a.name, a.description, a.location, a.activity_stime, a.type, a.state
-        """;
+	          a.description,
+	          a.location,
+	          a.activity_stime,
+	          a.activity_etime,
+	          a.type,
+	          a.state,
+	          COALESCE(SUM(CASE WHEN aa.check_in = b'1' THEN 1 ELSE 0 END), 0) AS checkin_count,
+	          COALESCE(SUM(CASE WHEN aa.check_in = b'1' AND aa.check_out = b'1' THEN 1 ELSE 0 END), 0) AS checkout_count
+	        FROM suda_activity a
+	        LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
+	        GROUP BY a.id, a.name, a.description, a.location, a.activity_stime, a.activity_etime, a.type, a.state
+	        """;
 
     try {
       List<LegacyActivityRow> rows = jdbcTemplate.query(sql, (rs, rowNum) -> {
         LegacyActivityRow row = new LegacyActivityRow();
         row.id = rs.getInt("id");
         row.name = rs.getString("name");
-        row.description = rs.getString("description");
-        row.location = rs.getString("location");
-        Timestamp start = rs.getTimestamp("activity_stime");
-        row.startTime = start == null ? Instant.now() : start.toInstant();
-        row.type = rs.getInt("type");
-        row.state = rs.getInt("state");
-        row.checkinCount = rs.getInt("checkin_count");
-        row.checkoutCount = rs.getInt("checkout_count");
-        return row;
-      });
+	        row.description = rs.getString("description");
+	        row.location = rs.getString("location");
+	        Timestamp start = rs.getTimestamp("activity_stime");
+	        row.startTime = start == null ? Instant.now() : start.toInstant();
+	        Timestamp end = rs.getTimestamp("activity_etime");
+	        row.endTime = end == null ? row.startTime : end.toInstant();
+	        row.type = rs.getInt("type");
+	        row.state = rs.getInt("state");
+	        row.checkinCount = rs.getInt("checkin_count");
+	        row.checkoutCount = rs.getInt("checkout_count");
+	        return row;
+	      });
 
       for (LegacyActivityRow row : rows) {
         String activityId = "legacy_act_" + row.id;
@@ -102,13 +105,14 @@ public class LegacySyncService {
         entity.setActivityId(activityId);
         entity.setLegacyActivityId(row.id);
         entity.setActivityTitle(row.name);
-        entity.setActivityType(row.type == 1 ? "讲座" : "活动");
-        entity.setDescription(row.description);
-        entity.setLocation(row.location);
-        entity.setStartTime(row.startTime);
-        entity.setProgressStatus(row.state >= 4
-            ? ActivityProgressStatus.COMPLETED.getCode()
-            : ActivityProgressStatus.ONGOING.getCode());
+	        entity.setActivityType(row.type == 1 ? "讲座" : "活动");
+	        entity.setDescription(row.description);
+	        entity.setLocation(row.location);
+	        entity.setStartTime(row.startTime);
+	        entity.setEndTime(row.endTime);
+	        entity.setProgressStatus(row.state >= 4
+	            ? ActivityProgressStatus.COMPLETED.getCode()
+	            : ActivityProgressStatus.ONGOING.getCode());
         entity.setSupportCheckout(true);
         entity.setHasDetail(true);
         entity.setCheckinCount(Math.max(0, row.checkinCount));
@@ -189,17 +193,18 @@ public class LegacySyncService {
     return "1".equals(String.valueOf(raw));
   }
 
-  private static class LegacyActivityRow {
-    int id;
-    String name;
-    String description;
-    String location;
-    Instant startTime;
-    int type;
-    int state;
-    int checkinCount;
-    int checkoutCount;
-  }
+	  private static class LegacyActivityRow {
+	    int id;
+	    String name;
+	    String description;
+	    String location;
+	    Instant startTime;
+	    Instant endTime;
+	    int type;
+	    int state;
+	    int checkinCount;
+	    int checkoutCount;
+	  }
 
   private static class LegacyApplyRow {
     long legacyUserId;

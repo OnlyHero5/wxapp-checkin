@@ -98,7 +98,9 @@ class ApiFlowIntegrationTest {
     activity.setActivityId("act_hackathon_20260215");
     activity.setActivityTitle("校园 HackDay");
     activity.setActivityType("竞赛");
-    activity.setStartTime(Instant.parse("2026-02-15T01:00:00Z"));
+    Instant now = Instant.now();
+    activity.setStartTime(now.minusSeconds(10 * 60L));
+    activity.setEndTime(now.plusSeconds(60 * 60L));
     activity.setLocation("创新中心 1F");
     activity.setDescription("48 小时团队赛，支持签到与签退。");
     activity.setProgressStatus("ongoing");

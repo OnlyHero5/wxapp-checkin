@@ -14,6 +14,7 @@ import com.wxcheckin.backend.infrastructure.persistence.entity.WxQrIssueLogEntit
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxQrIssueLogRepository;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,6 +84,8 @@ public class QrSessionService {
       throw new BusinessException("forbidden", "该活动暂不支持签退二维码");
     }
 
+    ensureWithinIssueWindow(activity);
+
     int rotateSeconds = resolveSeconds(
         rotateSecondsOverride,
         activity.getRotateSeconds(),
@@ -142,5 +145,24 @@ public class QrSessionService {
 
   private String normalize(String text) {
     return text == null ? "" : text.trim();
+  }
+
+  private void ensureWithinIssueWindow(WxActivityProjectionEntity activity) {
+    Instant startTime = activity.getStartTime();
+    Instant endTime = activity.getEndTime();
+    if (startTime == null || endTime == null || endTime.isBefore(startTime)) {
+      throw new BusinessException("failed", "活动时间信息异常，无法生成二维码", "activity_time_invalid");
+    }
+
+    Instant now = Instant.now(clock);
+    Instant allowedFrom = startTime.minus(Duration.ofMinutes(30));
+    Instant allowedUntil = endTime.plus(Duration.ofMinutes(30));
+    if (now.isBefore(allowedFrom) || now.isAfter(allowedUntil)) {
+      throw new BusinessException(
+          "forbidden",
+          "仅可在活动开始前30分钟到结束后30分钟内生成二维码",
+          "outside_activity_time_window"
+      );
+    }
   }
 }

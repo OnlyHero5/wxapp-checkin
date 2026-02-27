@@ -205,10 +205,21 @@ Page({
         actionType: this.data.actionType
       });
       if (!result || result.status !== "success") {
+        const errorCode = `${(result && (result.error_code || result.code)) || ""}`.trim().toLowerCase();
+        const isOutsideTimeWindow = errorCode === "outside_activity_time_window";
         if (!options.silent) {
           ui.showToast((result && result.message) || "二维码加载失败");
         }
-        if (result && result.status === "forbidden") {
+        if (isOutsideTimeWindow) {
+          this.setData({
+            qrStatus: "expired",
+            qrPayload: "",
+            displayExpireAt: 0,
+            acceptExpireAt: 0,
+            displayRemainingSeconds: 0,
+            acceptRemainingSeconds: 0
+          });
+        } else if (result && result.status === "forbidden") {
           this.setData({
             actionBlocked: true,
             qrStatus: "expired"
