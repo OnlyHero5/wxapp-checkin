@@ -235,6 +235,30 @@ class ApiFlowIntegrationTest {
   }
 
   @Test
+  void shouldRejectStaffIssueOutsideActivityTimeWindow() throws Exception {
+    String staffSession = login("code-staff-outside-window");
+    register(staffSession, "2025000007", "刘洋");
+
+    WxActivityProjectionEntity activity = activityRepository.findById("act_hackathon_20260215").orElseThrow();
+    Instant now = Instant.now();
+    activity.setStartTime(now.minusSeconds(3 * 60 * 60L));
+    activity.setEndTime(now.minusSeconds(2 * 60 * 60L));
+    activityRepository.save(activity);
+
+    mockMvc.perform(post("/api/staff/activities/{activityId}/qr-session", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "action_type":"checkin"
+                }
+                """.formatted(staffSession)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")))
+        .andExpect(jsonPath("$.error_code", is("outside_activity_time_window")));
+  }
+
+  @Test
   void shouldRejectRecordDetailAccessFromAnotherUser() throws Exception {
     String staffSession = login("code-staff");
     register(staffSession, "2025000007", "刘洋");
