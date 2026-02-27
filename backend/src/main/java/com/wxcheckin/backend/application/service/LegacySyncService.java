@@ -73,7 +73,7 @@ public class LegacySyncService {
           a.type,
           a.state,
           COALESCE(SUM(CASE WHEN aa.check_in = b'1' THEN 1 ELSE 0 END), 0) AS checkin_count,
-          COALESCE(SUM(CASE WHEN aa.check_in = b'1' AND aa.check_out = b'0' THEN 1 ELSE 0 END), 0) AS checkout_count
+          COALESCE(SUM(CASE WHEN aa.check_in = b'1' AND aa.check_out = b'1' THEN 1 ELSE 0 END), 0) AS checkout_count
         FROM suda_activity a
         LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
         GROUP BY a.id, a.name, a.description, a.location, a.activity_stime, a.type, a.state
@@ -161,8 +161,8 @@ public class LegacySyncService {
         status.setRegistered(row.applyState != 3);
 
         if (row.checkIn) {
-          // Legacy convention: check_out=0 means already checked out, 1 means not yet checked out.
-          status.setStatus(row.checkOut ? UserActivityState.CHECKED_IN.getCode() : UserActivityState.CHECKED_OUT.getCode());
+          // Legacy convention: check_out=1 means already checked out, 0 means not yet checked out.
+          status.setStatus(row.checkOut ? UserActivityState.CHECKED_OUT.getCode() : UserActivityState.CHECKED_IN.getCode());
         } else {
           status.setStatus(UserActivityState.NONE.getCode());
         }

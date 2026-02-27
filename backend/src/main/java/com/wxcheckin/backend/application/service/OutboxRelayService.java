@@ -99,13 +99,13 @@ public class OutboxRelayService {
 
       if ("checkin".equalsIgnoreCase(actionType)) {
         jdbcTemplate.update(
-            "UPDATE suda_activity_apply SET check_in = b'1', check_out = b'1' WHERE activity_id = ? AND username = ?",
+            "UPDATE suda_activity_apply SET check_in = b'1', check_out = b'0' WHERE activity_id = ? AND username = ?",
             activity.getLegacyActivityId(),
             username
         );
       } else {
         jdbcTemplate.update(
-            "UPDATE suda_activity_apply SET check_in = b'1', check_out = b'0' WHERE activity_id = ? AND username = ?",
+            "UPDATE suda_activity_apply SET check_in = b'1', check_out = b'1' WHERE activity_id = ? AND username = ?",
             activity.getLegacyActivityId(),
             username
         );
