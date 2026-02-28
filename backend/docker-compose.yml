@@ -4,10 +4,10 @@ services:
     container_name: wxcheckin-mysql
     command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: wxcheckin_ext
-      MYSQL_USER: wxcheckin
-      MYSQL_PASSWORD: wxcheckin
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-wxcheckin_ext}
+      MYSQL_USER: ${MYSQL_USER:-wxcheckin}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-wxcheckin}
     ports:
       - "3306:3306"
     volumes:
@@ -38,23 +38,28 @@ services:
       redis:
         condition: service_started
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SERVER_PORT: 8080
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: wxcheckin_ext
-      DB_USER: wxcheckin
-      DB_PASSWORD: wxcheckin
-      LEGACY_DB_URL: jdbc:mysql://mysql:3306/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
-      LEGACY_DB_USER: wxcheckin
-      LEGACY_DB_PASSWORD: wxcheckin
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      QR_SIGNING_KEY: replace-this-before-prod
-      SESSION_TTL_SECONDS: 7200
-      WECHAT_API_ENABLED: "false"
-      LEGACY_SYNC_ENABLED: "false"
-      OUTBOX_RELAY_ENABLED: "false"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-wxcheckin_ext}
+      DB_USER: ${DB_USER:-wxcheckin}
+      DB_PASSWORD: ${DB_PASSWORD:-wxcheckin}
+      LEGACY_DB_URL: "${LEGACY_DB_URL:-jdbc:mysql://mysql:3306/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}"
+      LEGACY_DB_USER: ${LEGACY_DB_USER:-wxcheckin}
+      LEGACY_DB_PASSWORD: ${LEGACY_DB_PASSWORD:-wxcheckin}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      QR_SIGNING_KEY: ${QR_SIGNING_KEY:-replace-this-before-prod}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-7200}
+      WECHAT_API_ENABLED: "${WECHAT_API_ENABLED:-false}"
+      WECHAT_APPID: "${WECHAT_APPID:-}"
+      WECHAT_SECRET: "${WECHAT_SECRET:-}"
+      LEGACY_SYNC_ENABLED: "${LEGACY_SYNC_ENABLED:-false}"
+      LEGACY_SYNC_INTERVAL_MS: ${LEGACY_SYNC_INTERVAL_MS:-2000}
+      OUTBOX_RELAY_ENABLED: "${OUTBOX_RELAY_ENABLED:-false}"
+      OUTBOX_RELAY_INTERVAL_MS: ${OUTBOX_RELAY_INTERVAL_MS:-1000}
     ports:
       - "8080:8080"
     restart: unless-stopped

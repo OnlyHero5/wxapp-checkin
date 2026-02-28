@@ -35,7 +35,7 @@
 - 前端已引入 **拟态玻璃（Liquid Glass）全新 UI**，统一暗色渐变背景、玻璃卡片和动态光晕视觉。
 - 活动列表双分组：`正在进行`（上）+ `已完成`（下），两组均按时间倒序。
 - 已完成活动仅支持“查看详情”，不再允许签到/签退动作。
-- 管理员二维码由后端接口签发：`10 秒展示窗口` + `20 秒提交宽限`（前端仅展示与刷新；默认 `mock=true`，可切换到真实后端）。
+- 管理员二维码由后端接口签发：`10 秒展示窗口` + `20 秒提交宽限`（前端仅展示与刷新；可通过 `frontend/utils/config.js` 切换 mock/真实后端）。
 - 注册绑定时后端会用 `学号+姓名` 查询管理员名册，命中后返回 `staff` 角色并直接进入管理员页面。
 - 会话失效时（`forbidden + error_code=session_expired`）前端会清理本地登录态并跳转登录页自动重登。
 - 普通用户在独立“签到/签退”页面调用摄像头扫码并即时收到成功/失败反馈。
@@ -154,6 +154,10 @@ npm install
 1. 微信开发者工具执行 `工具 -> 构建 NPM`
 2. 编译并预览小程序
 
+若需要对接真实后端（非 mock），请先按 `frontend/utils/config.js` 配置：
+- `mock=false`
+- `baseUrl=http(s)://<后端地址>`（不要加 `/api`）
+
 ### 常见问题：模拟器启动失败（JSON 解析报错）
 若出现类似 `frontend/miniprogram_npm/tdesign-miniprogram/loading/loading.json` 的 JSON 解析错误，请按下面步骤恢复：
 
@@ -187,13 +191,9 @@ npm test
 - `mockUserRole`：本地验收角色（`normal` / `staff`）
 - `baseUrl`：后端 API 地址（仅 `mock=false` 时生效）
 
-当前默认值（与代码一致）:
-- `mock = true`
-- `baseUrl = https://api.example.com`
-
 说明:
-- 当前仓库已包含独立后端目录：`backend/`（Java Spring Boot）。
-- 若需对接真实后端，请将 `mock` 改为 `false` 并配置真实 `baseUrl`。
+- `baseUrl` 不要加 `/api`（请求层会自动拼接 `/api/...`）
+- 生产发布/更新小程序与后端一键启动：见 `frontend/README.md` 与 `backend/README.md`
 
 ## 联调校验清单
 - 普通用户活动列表不出现未报名、未签到、未签退的无关活动。
@@ -202,6 +202,8 @@ npm test
 - 活动页状态与管理员统计人数在动作后可见更新。
 
 ## 文档导航
+- 前端（生产发布/配置）：`frontend/README.md`
+- 后端（生产一键启动/环境变量）：`backend/README.md`
 - 需求文档：`docs/REQUIREMENTS.md`
 - 功能说明：`docs/FUNCTIONAL_SPEC.md`
 - 接口规范：`docs/API_SPEC.md`

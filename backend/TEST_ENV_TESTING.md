@@ -8,7 +8,7 @@
 - 一键加载测试环境变量（默认 `~/.wxapp-checkin-test-env.sh`）。
 - 自动设置测试运行参数：
   - `SPRING_PROFILES_ACTIVE=dev`
-  - `SERVER_PORT=1455`
+  - `SERVER_PORT=9989`
   - `LEGACY_SYNC_ENABLED=true`
   - `LEGACY_SYNC_INTERVAL_MS=2000`
   - `OUTBOX_RELAY_ENABLED=true`
@@ -22,7 +22,7 @@
   - `wx_qr_issue_log`
   - `wx_replay_guard`
   - `wx_sync_outbox`
-- 如果 `1455` 端口被旧的本项目后端进程占用，会先自动停止旧进程后再启动新实例。
+- 如果 `9989` 端口被旧的本项目后端进程占用，会先自动停止旧进程后再启动新实例。
 - 最后调用 `scripts/start-dev.sh` 启动后端。
 
 ### `scripts/reset-suda-union-test-data.sh`
@@ -42,7 +42,7 @@
 在项目根目录执行：
 
 ```bash
-cd /home/psx/wxapp-checkin/backend
+cd /path/to/wxapp-checkin/backend
 chmod +x scripts/start-test-env.sh scripts/reset-suda-union-test-data.sh
 ./scripts/start-test-env.sh
 ```
@@ -50,14 +50,14 @@ chmod +x scripts/start-test-env.sh scripts/reset-suda-union-test-data.sh
 启动成功后可检查：
 
 ```bash
-curl http://127.0.0.1:1455/actuator/health
+curl http://127.0.0.1:9989/actuator/health
 ```
 
 返回 `{"status":"UP"...}` 即正常。
 
 ## 3. 前端联调 baseURL
 
-- 前端 `baseUrl` 使用：`http://127.0.0.1:1455`
+- 前端 `baseUrl` 使用：`http://127.0.0.1:9989`
 - 注意：前端请求代码会自动拼接 `/api/...`，`baseUrl` 不要再额外加 `/api`。
 
 ## 4. 测试账号（学号 + 姓名）
