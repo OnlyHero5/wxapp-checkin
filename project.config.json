@@ -2,7 +2,7 @@
   "miniprogramRoot": "frontend/",
   "projectname": "wxapp-checkin",
   "description": "活动二维码签到小程序",
-  "appid": "wx973948495768f739",
+  "appid": "wx1f7e49fb628eb81f",
   "setting": {
     "urlCheck": false,
     "es6": true,
