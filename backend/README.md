@@ -12,6 +12,7 @@
 - `scripts/bootstrap-prod-schema.sql`：生产扩展库建表脚本（不含演示数据）
 - `src/main/resources/application.yml`：基础配置（全部由环境变量覆盖）
 - `src/main/resources/application-prod.yml`：生产 profile 覆盖（默认关闭 Flyway）
+- `DB_DATABASE_DEEP_DIVE.md`：后端数据库深度说明（双库架构、表结构、同步链路、排障 SQL）
 
 ## 1) 生产环境一键启动（推荐：systemd）
 
