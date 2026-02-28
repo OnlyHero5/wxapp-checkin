@@ -6,6 +6,7 @@ import com.wxcheckin.backend.api.error.BusinessException;
 import com.wxcheckin.backend.application.model.ParsedQrPayload;
 import com.wxcheckin.backend.application.model.SessionPrincipal;
 import com.wxcheckin.backend.application.support.JsonCodec;
+import com.wxcheckin.backend.application.support.QrNonceSigner;
 import com.wxcheckin.backend.application.support.QrPayloadCodec;
 import com.wxcheckin.backend.application.support.TokenGenerator;
 import com.wxcheckin.backend.config.AppProperties;
@@ -48,6 +49,7 @@ public class CheckinConsumeService {
   private final WxSyncOutboxRepository syncOutboxRepository;
   private final TokenGenerator tokenGenerator;
   private final JsonCodec jsonCodec;
+  private final QrNonceSigner qrNonceSigner;
   private final AppProperties appProperties;
   private final Clock clock;
 
@@ -62,6 +64,7 @@ public class CheckinConsumeService {
       WxSyncOutboxRepository syncOutboxRepository,
       TokenGenerator tokenGenerator,
       JsonCodec jsonCodec,
+      QrNonceSigner qrNonceSigner,
       AppProperties appProperties,
       Clock clock
   ) {
@@ -75,6 +78,7 @@ public class CheckinConsumeService {
     this.syncOutboxRepository = syncOutboxRepository;
     this.tokenGenerator = tokenGenerator;
     this.jsonCodec = jsonCodec;
+    this.qrNonceSigner = qrNonceSigner;
     this.appProperties = appProperties;
     this.clock = clock;
   }
@@ -114,15 +118,24 @@ public class CheckinConsumeService {
       throw new BusinessException("expired", "二维码已过期，请重新获取");
     }
 
-    boolean issueExists = qrIssueLogRepository
-        .existsByActivityIdAndActionTypeAndSlotAndNonce(
-            parsed.activityId(),
-            parsed.actionType().getCode(),
-            parsed.slot(),
-            parsed.nonce()
-        );
-    if (!issueExists) {
-      throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
+    if (qrNonceSigner.isSigned(parsed.nonce())) {
+      if (!qrNonceSigner.verify(parsed.activityId(), parsed.actionType(), parsed.slot(), parsed.nonce())) {
+        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
+      }
+    } else {
+      if (!appProperties.getQr().isAllowLegacyUnsigned()) {
+        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
+      }
+      boolean issueExists = qrIssueLogRepository
+          .existsByActivityIdAndActionTypeAndSlotAndNonce(
+              parsed.activityId(),
+              parsed.actionType().getCode(),
+              parsed.slot(),
+              parsed.nonce()
+          );
+      if (!issueExists) {
+        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
+      }
     }
 
     acquireReplayGuard(principal.user(), parsed, acceptExpireAt);

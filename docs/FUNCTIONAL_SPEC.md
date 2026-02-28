@@ -1,8 +1,8 @@
 # 微信小程序活动二维码签到功能说明书
 
-文档版本: v1.7  
+文档版本: v1.8  
 状态: 进行中  
-更新日期: 2026-02-09  
+更新日期: 2026-02-28  
 项目: wxapp-checkin  
 依据: `docs/REQUIREMENTS.md`、`docs/API_SPEC.md`
 
@@ -119,6 +119,8 @@
 - 请求:
   - `session_token`
   - `action_type`（`checkin|checkout`）
+  - `rotate_seconds`（可选）
+  - `grace_seconds`（可选）
 - 响应关键字段:
   - `qr_payload`
   - `rotate_seconds`
@@ -126,6 +128,9 @@
   - `display_expire_at`
   - `accept_expire_at`
   - `server_time`
+
+说明：
+- `qr_payload` 中 `nonce` 为后端签名后的随机串（signed nonce），前端只负责展示与透传，不做解析与组装。
 
 ### 6.2 A-06 扫码消费接口
 - 路径: `POST /api/checkin/consume`
@@ -168,6 +173,7 @@
 - 后端 `mvn test` 可执行并通过
 
 ## 9. 更新记录
+- 2026-02-28：二维码生产加固（Point 2/3/4）：signed nonce、issue log 可禁用 + retention cleanup、rotate/grace override 口径一致。
 - 2026-02-09：文档升级为 v1.7，补充兼容接口与前后端自动化测试验收项。
 - 2026-02-09：新增 `backend/` Java 后端目录与 Linux 友好部署脚本，文档边界描述同步更新。
 - 2026-02-09：二维码链路文档对齐当前实现（A-05 返回 `qr_payload`，二维码页不再前端本地组码）。

@@ -121,6 +121,8 @@ CREATE TABLE IF NOT EXISTS wx_qr_issue_log (
   issued_by_user_id BIGINT NOT NULL,
   KEY idx_wx_qr_issue_log_payload (qr_payload),
   KEY idx_wx_qr_issue_log_slot (activity_id, action_type, slot),
+  KEY idx_wx_qr_issue_log_key (activity_id, action_type, slot, nonce),
+  KEY idx_wx_qr_issue_log_accept_expire_at (accept_expire_at),
   CONSTRAINT fk_wx_qr_issue_log_user FOREIGN KEY (issued_by_user_id) REFERENCES wx_user_auth_ext(id),
   CONSTRAINT fk_wx_qr_issue_log_activity FOREIGN KEY (activity_id) REFERENCES wx_activity_projection(activity_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

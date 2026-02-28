@@ -123,3 +123,17 @@
   - 新增 Windows 开发辅助脚本（`scripts/*.ps1`）。
   - 前端目录重构：`src/` -> `frontend/`；`project.config.json` 同步更新。
   - 前端测试入口修正：`frontend/package.json` 的 `npm test` 现可执行 5 个真实测试脚本。
+
+## 2026-02-28
+- 二维码生产加固（Point 2/3/4）：
+  - signed nonce（`QR_SIGNING_KEY` 生效）：payload 形态不变，仅 nonce 内嵌 HMAC 签名，consume 侧验签拒绝篡改/伪造。
+  - 日志增长治理：
+    - `QR_ISSUE_LOG_ENABLED` 可关闭 issue log 写入，杜绝 `wx_qr_issue_log` 持续增长。
+    - 新增 `QrMaintenanceJob` 定期按 retention 清理 `wx_qr_issue_log` 与 `wx_replay_guard`。
+  - rotate/grace override 一致性：A-05 override 会持久化到活动配置，issue/consume 使用同一套口径。
+  - 索引与生产安全：
+    - 新增 V5 迁移为 `wx_qr_issue_log` 增加关键索引与清理索引。
+    - `prod` profile 下强制要求配置非默认 `QR_SIGNING_KEY`，避免误上生产。
+  - 文档同步更新：
+    - `docs/API_SPEC.md` / `docs/REQUIREMENTS.md` / `docs/FUNCTIONAL_SPEC.md`
+    - `backend/README.md` / `backend/DB_DATABASE_DEEP_DIVE.md`

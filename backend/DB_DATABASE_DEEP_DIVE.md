@@ -256,17 +256,27 @@
 
 ## 6.7 `wx_qr_issue_log`
 
-作用：工作人员发码审计与扫码合法性校验依据。
+作用：
+
+- 发码审计：记录 staff 发出的二维码票据（可用于排障追溯）。
+- legacy 兼容：当 `nonce` 不是 signed nonce 且 `app.qr.allow-legacy-unsigned=true` 时，A-06 会用本表做“存在性校验”。
+- **signed nonce 模式**：当 `nonce` 为 signed nonce 时，A-06 以 `QR_SIGNING_KEY` 验签为准，**不再依赖本表**。
+
+写入开关：
+
+- `app.qr.issue-log-enabled`（环境变量 `QR_ISSUE_LOG_ENABLED`）可关闭写入，避免表在生产环境持续增长。
 
 索引：
 
 - `idx_wx_qr_issue_log_payload`（按二维码字符串快速回查）
 - `idx_wx_qr_issue_log_slot`（按活动+动作+时段核验）
+- `idx_wx_qr_issue_log_key`（按活动+动作+时段+nonce 精确定位，2026-02-28 新增）
+- `idx_wx_qr_issue_log_accept_expire_at`（按 `accept_expire_at` 清理过期数据，2026-02-28 新增）
 
 读写来源：
 
-- 写：`QrSessionService.issue`
-- 读：`CheckinConsumeService`（校验二维码确实由 staff 发出）
+- 写：`QrSessionService.issue`（受 `issue-log-enabled` 控制）
+- 读：`CheckinConsumeService`（仅 legacy unsigned nonce 兼容模式使用）
 
 ## 6.8 `wx_replay_guard`
 
@@ -306,6 +316,23 @@
 
 - 写：`CheckinConsumeService`（入队）、`OutboxRelayService`（更新状态）
 - 读：`OutboxRelayService.findTop100ByStatusAndAvailableAtLessThanEqualOrderByIdAsc`
+
+## 6.10 二维码表保留与清理（`QrMaintenanceJob`）
+
+目标：避免 `wx_qr_issue_log` / `wx_replay_guard` 在生产环境无限增长。
+
+清理任务：
+
+- 任务类：`QrMaintenanceJob`
+- 默认开启：`app.qr.cleanup-enabled=true`（环境变量 `QR_CLEANUP_ENABLED`）
+- 默认间隔：`app.qr.cleanup-interval-ms=300000`（5 分钟）
+
+清理规则（可配置）：
+
+- `wx_qr_issue_log`：删除 `accept_expire_at < (now - issue_log_retention)` 的记录
+  - `app.qr.issue-log-retention-seconds`（默认 86400 秒）
+- `wx_replay_guard`：删除 `expires_at < (now - replay_guard_retention)` 的记录
+  - `app.qr.replay-guard-retention-seconds`（默认 0 秒，表示到期即可删除）
 
 ## 7. 遗留库 `suda_union` 依赖面（wxapp-checkin 视角）
 
@@ -401,16 +428,21 @@
 1. 校验 staff 权限
 2. 读取 `wx_activity_projection` 活动信息
 3. 校验活动时间窗（必要时回查 `suda_activity` 并回填 start/end）
-4. 写 `wx_qr_issue_log`
+4. 解析 `rotate_seconds/grace_seconds`（允许 request override；override 会持久化到 `wx_activity_projection`，以保证 issue/consume 口径一致）
+5. 使用服务端时间计算 `slot`，生成 **signed nonce** 并组装 `qr_payload`
+6. 按配置决定是否写 `wx_qr_issue_log`（审计/legacy 兼容用）
 
 读表：`wx_activity_projection`, `suda_activity`（必要时）
-写表：`wx_qr_issue_log`, `wx_activity_projection`（可能更新时段）
+写表：`wx_activity_projection`（可能更新时段）、`wx_qr_issue_log`（可选）
 
 ## 8.5 A-06 普通用户扫码 `/api/checkin/consume`
 
 单事务内关键步骤：
 
-1. 校验二维码合法性（`wx_qr_issue_log`）
+1. 校验二维码合法性：
+   - payload 结构与字段格式
+   - rotate/grace 时间窗（含 `expired/invalid_qr`）
+   - 票据真实性：signed nonce 验签（或 legacy unsigned 模式下校验 `wx_qr_issue_log`）
 2. 防重放（尝试插入 `wx_replay_guard`）
 3. 锁定并更新 `wx_user_activity_status`
 4. 更新 `wx_activity_projection` 统计

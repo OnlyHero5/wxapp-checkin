@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
     "spring.datasource.password=",
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.data.redis.repositories.enabled=false",
+    "app.qr.signing-key=prod-test-signing-key",
     "app.sync.scheduler-enabled=false",
     "app.session.cleanup-enabled=false"
 })

@@ -209,6 +209,10 @@ class ApiFlowIntegrationTest {
     bindUserActivity(normalSession, "act_hackathon_20260215");
 
     String qrPayload = issueQr(staffSession, "act_hackathon_20260215", "checkin");
+    // QR payload should carry a signed nonce so that it can be validated without DB issue logs.
+    String[] parts = qrPayload.split(":");
+    org.junit.jupiter.api.Assertions.assertEquals(6, parts.length);
+    org.junit.jupiter.api.Assertions.assertEquals(65, parts[5].length());
 
     mockMvc.perform(post("/api/checkin/consume")
             .contentType(MediaType.APPLICATION_JSON)
@@ -232,6 +236,89 @@ class ApiFlowIntegrationTest {
                 """.formatted(normalSession, qrPayload)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("duplicate")));
+  }
+
+  @Test
+  void shouldAllowConsumeSignedQrEvenWhenIssueLogMissing() throws Exception {
+    String staffSession = login("code-staff-no-issue-log");
+    register(staffSession, "2025000007", "刘洋");
+
+    String normalSession = login("code-normal-no-issue-log");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    String qrPayload = issueQr(staffSession, "act_hackathon_20260215", "checkin");
+
+    // Simulate production where we no longer persist issue logs once nonce signing is enabled.
+    qrIssueLogRepository.deleteAll();
+
+    mockMvc.perform(post("/api/checkin/consume")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "qr_payload":"%s"
+                }
+                """.formatted(normalSession, qrPayload)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.action_type", is("checkin")));
+  }
+
+  @Test
+  void shouldRejectConsumeWhenSignedNonceTamperedEvenWhenIssueLogMissing() throws Exception {
+    String staffSession = login("code-staff-tamper-nonce");
+    register(staffSession, "2025000007", "刘洋");
+
+    String normalSession = login("code-normal-tamper-nonce");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    String qrPayload = issueQr(staffSession, "act_hackathon_20260215", "checkin");
+    String[] parts = qrPayload.split(":");
+    String nonce = parts[5];
+    // Keep length unchanged; only alter one character in the signature portion.
+    int tamperIndex = 22 + 10;
+    char original = nonce.charAt(tamperIndex);
+    char replacement = original == 'A' ? 'B' : 'A';
+    String tamperedNonce = nonce.substring(0, tamperIndex) + replacement + nonce.substring(tamperIndex + 1);
+    String tamperedPayload = String.join(":", parts[0], parts[1], parts[2], parts[3], parts[4], tamperedNonce);
+
+    qrIssueLogRepository.deleteAll();
+
+    mockMvc.perform(post("/api/checkin/consume")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "qr_payload":"%s"
+                }
+                """.formatted(normalSession, tamperedPayload)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("invalid_qr")));
+  }
+
+  @Test
+  void shouldPersistRotateGraceOverridesForActivityProjection() throws Exception {
+    String staffSession = login("code-staff-override");
+    register(staffSession, "2025000007", "刘洋");
+
+    mockMvc.perform(post("/api/staff/activities/{activityId}/qr-session", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "session_token":"%s",
+                  "action_type":"checkin",
+                  "rotate_seconds":15,
+                  "grace_seconds":25
+                }
+                """.formatted(staffSession)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.rotate_seconds", is(15)))
+        .andExpect(jsonPath("$.grace_seconds", is(25)));
+
+    WxActivityProjectionEntity updated = activityRepository.findById("act_hackathon_20260215").orElseThrow();
+    org.junit.jupiter.api.Assertions.assertEquals(15, updated.getRotateSeconds());
+    org.junit.jupiter.api.Assertions.assertEquals(25, updated.getGraceSeconds());
   }
 
   @Test

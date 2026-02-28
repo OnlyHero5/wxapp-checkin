@@ -61,6 +61,12 @@ app:
     default-grace-seconds: ${QR_DEFAULT_GRACE_SECONDS:20}
     replay-key-ttl-seconds: ${QR_REPLAY_TTL_SECONDS:90}
     signing-key: ${QR_SIGNING_KEY:replace-with-a-strong-server-side-secret}
+    issue-log-enabled: ${QR_ISSUE_LOG_ENABLED:true}
+    allow-legacy-unsigned: ${QR_ALLOW_LEGACY_UNSIGNED:true}
+    issue-log-retention-seconds: ${QR_ISSUE_LOG_RETENTION_SECONDS:86400}
+    replay-guard-retention-seconds: ${QR_REPLAY_GUARD_RETENTION_SECONDS:0}
+    cleanup-enabled: ${QR_CLEANUP_ENABLED:true}
+    cleanup-interval-ms: ${QR_CLEANUP_INTERVAL_MS:300000}
   wechat:
     enabled: ${WECHAT_API_ENABLED:false}
     appid: ${WECHAT_APPID:}

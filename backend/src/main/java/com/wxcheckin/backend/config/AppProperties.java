@@ -59,6 +59,10 @@ public class AppProperties {
     private int defaultGraceSeconds = 20;
     private long replayKeyTtlSeconds = 90;
     private String signingKey = "replace-with-a-strong-server-side-secret";
+    private boolean issueLogEnabled = true;
+    private boolean allowLegacyUnsigned = true;
+    private long issueLogRetentionSeconds = 86400;
+    private long replayGuardRetentionSeconds = 0;
 
     public int getDefaultRotateSeconds() {
       return defaultRotateSeconds;
@@ -90,6 +94,38 @@ public class AppProperties {
 
     public void setSigningKey(String signingKey) {
       this.signingKey = signingKey;
+    }
+
+    public boolean isIssueLogEnabled() {
+      return issueLogEnabled;
+    }
+
+    public void setIssueLogEnabled(boolean issueLogEnabled) {
+      this.issueLogEnabled = issueLogEnabled;
+    }
+
+    public boolean isAllowLegacyUnsigned() {
+      return allowLegacyUnsigned;
+    }
+
+    public void setAllowLegacyUnsigned(boolean allowLegacyUnsigned) {
+      this.allowLegacyUnsigned = allowLegacyUnsigned;
+    }
+
+    public long getIssueLogRetentionSeconds() {
+      return issueLogRetentionSeconds;
+    }
+
+    public void setIssueLogRetentionSeconds(long issueLogRetentionSeconds) {
+      this.issueLogRetentionSeconds = issueLogRetentionSeconds;
+    }
+
+    public long getReplayGuardRetentionSeconds() {
+      return replayGuardRetentionSeconds;
+    }
+
+    public void setReplayGuardRetentionSeconds(long replayGuardRetentionSeconds) {
+      this.replayGuardRetentionSeconds = replayGuardRetentionSeconds;
     }
   }
 

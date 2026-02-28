@@ -3,6 +3,7 @@ package com.wxcheckin.backend.application.service;
 import com.wxcheckin.backend.api.dto.CreateQrSessionResponse;
 import com.wxcheckin.backend.api.error.BusinessException;
 import com.wxcheckin.backend.application.model.SessionPrincipal;
+import com.wxcheckin.backend.application.support.QrNonceSigner;
 import com.wxcheckin.backend.application.support.QrPayloadCodec;
 import com.wxcheckin.backend.application.support.TokenGenerator;
 import com.wxcheckin.backend.config.AppProperties;
@@ -34,6 +35,7 @@ public class QrSessionService {
   private final WxQrIssueLogRepository qrIssueLogRepository;
   private final TokenGenerator tokenGenerator;
   private final QrPayloadCodec qrPayloadCodec;
+  private final QrNonceSigner qrNonceSigner;
   private final AppProperties appProperties;
   private final Clock clock;
   private final JdbcTemplate legacyJdbcTemplate;
@@ -44,6 +46,7 @@ public class QrSessionService {
       WxQrIssueLogRepository qrIssueLogRepository,
       TokenGenerator tokenGenerator,
       QrPayloadCodec qrPayloadCodec,
+      QrNonceSigner qrNonceSigner,
       AppProperties appProperties,
       Clock clock,
       @Qualifier("legacyJdbcTemplate") JdbcTemplate legacyJdbcTemplate
@@ -53,6 +56,7 @@ public class QrSessionService {
     this.qrIssueLogRepository = qrIssueLogRepository;
     this.tokenGenerator = tokenGenerator;
     this.qrPayloadCodec = qrPayloadCodec;
+    this.qrNonceSigner = qrNonceSigner;
     this.appProperties = appProperties;
     this.clock = clock;
     this.legacyJdbcTemplate = legacyJdbcTemplate;
@@ -104,25 +108,43 @@ public class QrSessionService {
         appProperties.getQr().getDefaultGraceSeconds()
     );
 
+    boolean overrideApplied = false;
+    if (rotateSecondsOverride != null && rotateSecondsOverride > 0
+        && !rotateSecondsOverride.equals(activity.getRotateSeconds())) {
+      activity.setRotateSeconds(rotateSeconds);
+      overrideApplied = true;
+    }
+    if (graceSecondsOverride != null && graceSecondsOverride > 0
+        && !graceSecondsOverride.equals(activity.getGraceSeconds())) {
+      activity.setGraceSeconds(graceSeconds);
+      overrideApplied = true;
+    }
+    if (overrideApplied) {
+      activityRepository.save(activity);
+    }
+
     long serverTime = Instant.now(clock).toEpochMilli();
     long slot = serverTime / (rotateSeconds * 1000L);
     long displayStartAt = slot * rotateSeconds * 1000L;
     long displayExpireAt = displayStartAt + rotateSeconds * 1000L;
     long acceptExpireAt = displayExpireAt + graceSeconds * 1000L;
 
-    String nonce = tokenGenerator.newNonce();
+    String randomPart = tokenGenerator.newNonce();
+    String nonce = qrNonceSigner.sign(normalizedActivityId, actionType, slot, randomPart);
     String qrPayload = qrPayloadCodec.encode(normalizedActivityId, actionType, slot, nonce);
 
-    WxQrIssueLogEntity log = new WxQrIssueLogEntity();
-    log.setActivityId(normalizedActivityId);
-    log.setActionType(actionType.getCode());
-    log.setSlot(slot);
-    log.setNonce(nonce);
-    log.setQrPayload(qrPayload);
-    log.setDisplayExpireAt(displayExpireAt);
-    log.setAcceptExpireAt(acceptExpireAt);
-    log.setIssuedByUser(principal.user());
-    qrIssueLogRepository.save(log);
+    if (appProperties.getQr().isIssueLogEnabled()) {
+      WxQrIssueLogEntity log = new WxQrIssueLogEntity();
+      log.setActivityId(normalizedActivityId);
+      log.setActionType(actionType.getCode());
+      log.setSlot(slot);
+      log.setNonce(nonce);
+      log.setQrPayload(qrPayload);
+      log.setDisplayExpireAt(displayExpireAt);
+      log.setAcceptExpireAt(acceptExpireAt);
+      log.setIssuedByUser(principal.user());
+      qrIssueLogRepository.save(log);
+    }
 
     return new CreateQrSessionResponse(
         "success",

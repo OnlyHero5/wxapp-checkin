@@ -87,3 +87,11 @@
   - 新增 Windows 开发辅助脚本：`scripts/*.ps1`。
   - 根目录 `src/` 重命名为 `frontend/`，并更新小程序根目录配置。
   - 前端 `npm test` 接入 5 个真实测试脚本，替换原占位命令。
+
+## 2026-02-28
+- 二维码生产加固（Point 2/3/4）：
+  - 引入 signed nonce（`QR_SIGNING_KEY` 生效），consume 侧验签防篡改/防伪造。
+  - `wx_qr_issue_log` 可禁用写入 + retention cleanup job，避免 `wx_qr_issue_log`/`wx_replay_guard` 无限增长。
+  - rotate/grace override 持久化到活动配置，保证 issue/consume 口径一致。
+  - 新增 `wx_qr_issue_log` 相关索引迁移（V5），并在 `prod` profile 下强制要求配置非默认 `QR_SIGNING_KEY`。
+  - 文档同步更新：`backend/README.md`、`docs/API_SPEC.md`、`backend/DB_DATABASE_DEEP_DIVE.md` 等。

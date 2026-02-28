@@ -1,7 +1,7 @@
 # API 协议规范（后端实施手册）
 
-文档版本: v4.6  
-更新日期: 2026-02-09  
+文档版本: v4.7  
+更新日期: 2026-02-28  
 适用分支: `main`  
 代码对齐基线: `frontend/utils/api.js`、`frontend/utils/auth.js`、`frontend/pages/login/login.js`、`frontend/pages/index/index.js`、`frontend/pages/staff-qr/staff-qr.js`、`frontend/pages/scan-action/scan-action.js`、`frontend/pages/activity-detail/activity-detail.js`、`frontend/pages/register/register.js`
 
@@ -143,7 +143,10 @@ wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
 - `activity_id`
 - `action_type`（`checkin` / `checkout`）
 - `slot`（时间片，防重放键组成）
-- `nonce`
+- `nonce`：不透明随机串。当前后端会返回 **signed nonce**（长度固定 65），用于防篡改/防伪造。
+  - `nonce = randomPart(22) + sigPart(43) = 65`
+  - `sigPart = base64url(HMAC-SHA256(...))`（无 padding），签名 key 来自 `QR_SIGNING_KEY`
+  - 前端不需要解析/生成 nonce，只需展示与透传 `qr_payload` 即可
 
 后端时效规则：
 1. `display_start_at = slot * rotate_seconds * 1000`
@@ -707,6 +710,8 @@ curl -G "https://api.example.com/api/staff/activities/act_hackathon_20260215" \
 | `activity_id` | path | 是 | string | 非空；建议正则 `^[0-9A-Za-z_-]{1,64}$` | 目标活动主键 |
 | `session_token` | body | 是 | string | 非空且有效；角色必须为 `staff` | staff 会话令牌 |
 | `action_type` | body | 是 | string | 仅允许 `checkin` / `checkout` | 当前要生成哪种动作二维码 |
+| `rotate_seconds` | body | 否 | integer | `>0`；建议 `3~600` | 覆盖二维码轮换秒数（会持久化到活动配置，保证 issue/consume 口径一致） |
+| `grace_seconds` | body | 否 | integer | `>0`；建议 `0~600` | 覆盖二维码宽限秒数（会持久化到活动配置，保证 issue/consume 口径一致） |
 
 ### 4.5.1A 参数落地详解（后端怎么写）
 
@@ -715,6 +720,8 @@ curl -G "https://api.example.com/api/staff/activities/act_hackathon_20260215" \
 | `activity_id` | staff 活动卡片 | 路径参数校验 | 先查活动是否存在/是否已结束 | `invalid_activity` / `forbidden` |
 | `session_token` | staff 登录态 | 鉴权 + 角色校验 | 必须是 `staff` | `forbidden` |
 | `action_type` | 页面按钮（签到/签退） | 枚举校验 | 仅 `checkin/checkout` | `invalid_param` |
+| `rotate_seconds` | （可选）页面配置 | 正整数校验 | 存在即生效并持久化到活动配置 | `invalid_param` |
+| `grace_seconds` | （可选）页面配置 | 正整数校验 | 存在即生效并持久化到活动配置 | `invalid_param` |
 
 实现注意：
 1. 该接口必须完成“二维码票据签发”，不是纯配置接口。
@@ -738,10 +745,14 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
 3. 活动不存在 -> `invalid_activity`。
 4. 活动 `progress_status = completed` -> `forbidden`。
 5. 若 `action_type = checkout` 且活动不支持签退 -> `forbidden`。
-6. 读取活动配置（或系统默认）得到 `rotate_seconds` 与 `grace_seconds`。
-7. 使用后端时间计算当前 `slot`，生成 `nonce`。
-8. 组装 `qr_payload`（`wxcheckin:v1` 协议），写入 `display_expire_at` 与 `accept_expire_at`。
-9. 返回签发结果与 `server_time`。
+6. 解析 `rotate_seconds/grace_seconds`：
+   - request 传入且 `>0`：覆盖并持久化到活动配置（保证 issue/consume 口径一致）
+   - 否则：使用活动配置（或系统默认）
+7. 使用服务端时间计算当前 `slot`。
+8. 生成 **signed nonce**（HMAC-SHA256，key=`QR_SIGNING_KEY`）。
+9. 组装 `qr_payload`（`wxcheckin:v1` 协议），并计算 `display_expire_at/accept_expire_at`。
+10. （可选）写 `wx_qr_issue_log`（受 `QR_ISSUE_LOG_ENABLED` 控制；生产建议关闭以避免持续增长）。
+11. 返回签发结果与 `server_time`。
 
 ### 4.5.3 成功响应示例
 
@@ -751,8 +762,9 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
   "message": "二维码签发成功",
   "activity_id": "act_hackathon_20260215",
   "action_type": "checkin",
-  "qr_payload": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:n100001",
+  "qr_payload": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:VF6D2PWfXqqiX6TvkRobEQjXA9xvh2nEjzvCQpKV-GW03UDKB84CO_GT7r4cOtszg",
   "slot": 177051839,
+  "nonce": "VF6D2PWfXqqiX6TvkRobEQjXA9xvh2nEjzvCQpKV-GW03UDKB84CO_GT7r4cOtszg",
   "rotate_seconds": 10,
   "grace_seconds": 20,
   "display_expire_at": 1770518400000,
@@ -771,6 +783,7 @@ curl -X POST "https://api.example.com/api/staff/activities/act_hackathon_2026021
 | `action_type` | string | 是 | 动作类型回显 | 入参归一化结果 |
 | `qr_payload` | string | 是 | 后端生成的二维码文本，供前端渲染二维码 | 后端生成逻辑 |
 | `slot` | integer | 建议 | 票据时间片，用于审计与防重放 | 后端时间窗口计算 |
+| `nonce` | string | 是 | 票据 nonce（与 `qr_payload` 最后一段一致；当前为 signed nonce，长度固定 65） | 后端生成逻辑 |
 | `rotate_seconds` | number | 是 | 前端换码周期 | 入参归一化结果/系统默认 |
 | `grace_seconds` | number | 是 | 提交宽限周期 | 入参归一化结果/系统默认 |
 | `display_expire_at` | number | 是 | 二维码展示截止时间（毫秒） | 后端时间窗口计算 |
@@ -838,16 +851,16 @@ curl -X POST "https://api.example.com/api/checkin/consume" \
   -H "Content-Type: application/json" \
   -d '{
     "session_token": "sess_normal_xxx",
-    "qr_payload": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:n100001",
+    "qr_payload": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:VF6D2PWfXqqiX6TvkRobEQjXA9xvh2nEjzvCQpKV-GW03UDKB84CO_GT7r4cOtszg",
     "scan_type": "QR_CODE",
-    "raw_result": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:n100001",
+    "raw_result": "wxcheckin:v1:act_hackathon_20260215:checkin:177051839:VF6D2PWfXqqiX6TvkRobEQjXA9xvh2nEjzvCQpKV-GW03UDKB84CO_GT7r4cOtszg",
     "path": ""
   }'
 ```
 
 ### 4.6.2 后端解析规则
 
-1. 解析优先级：`qr_payload` > `path` > `raw_result`。
+1. 解析优先级：`qr_payload` > `raw_result` > `path`。
 2. 解析 payload 得到标准上下文：`activity_id`、`action_type`、`slot`、`nonce`。
 3. 只要结构化冗余字段存在，必须与解析结果一致。
 4. 任一关键字段缺失即 `invalid_qr`。
@@ -894,26 +907,30 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 ### 4.6.3 后端处理步骤（必须按序执行）
 
 1. **鉴权**: 校验 `session_token`，确认角色是 `normal`。
-2. **限流**: 按用户做短窗限流（当前建议: 5 秒窗口最多 6 次）。命中返回 `forbidden`。
-3. **解析载荷**: 按 4.6.2 规则解析 payload，得到标准上下文：`activity_id`、`action_type`、`slot`、`nonce`。
-4. **一致性校验**: 按 4.6.2A 对 `activity_id/action_type/slot/nonce` 做逐字段比对；任一不一致立即返回 `invalid_qr`。
-5. **活动校验**: 查询活动，不存在返回 `invalid_activity`。
-6. **可见性校验**: 用户未报名且无参与记录（签到/签退）则返回 `forbidden`。
-7. **活动状态校验**: 活动已完成返回 `forbidden`。
-8. **动作能力校验**: `checkout` 但活动不支持签退返回 `forbidden`。
-9. **时效校验**:
+2. **解析载荷**: 按 4.6.2 规则解析 payload，得到标准上下文：`activity_id`、`action_type`、`slot`、`nonce`。
+3. **一致性校验**: 按 4.6.2A 对 `activity_id/action_type/slot/nonce` 做逐字段比对；任一不一致立即返回 `invalid_qr`。
+4. **活动校验**: 查询活动，不存在返回 `invalid_activity`；活动已结束返回 `forbidden`；签退能力校验不通过返回 `forbidden`。
+5. **时效校验**:
    - `slot` 在未来 -> `invalid_qr`
    - 超过宽限时间 -> `expired`
-10. **防重放校验**: 幂等键 `user_id + activity_id + action_type + slot`，已消费则 `duplicate`。
-11. **业务状态机校验**:
+6. **票据真实性校验（Point 2）**:
+   - `nonce` 为 signed nonce（长度 65）时：必须通过 `QR_SIGNING_KEY` 验签
+   - 否则：
+     - `QR_ALLOW_LEGACY_UNSIGNED=true`：回退到 `wx_qr_issue_log` 存在性校验
+     - `QR_ALLOW_LEGACY_UNSIGNED=false`：直接拒绝（`invalid_qr`）
+7. **防重放校验（Point 3）**: 幂等键 `user_id + activity_id + action_type + slot`（落库 `wx_replay_guard`），命中返回 `duplicate`。
+8. **报名/可见性校验**: 用户未报名返回 `forbidden`。
+9. **业务状态机校验**:
    - 已 `checked_in` 再执行 `checkin` -> `duplicate`
    - 非 `checked_in` 执行 `checkout` -> `forbidden`
-12. **事务写入（必须同事务）**:
-   - 写签到记录 `checkin_record`。
+10. **事务写入（必须同事务）**:
    - 更新用户活动状态（`none`/`checked_in`/`checked_out`）。
    - 更新活动计数（签到+1 或签退-1+签退计数+1）。
-   - 写入防重放键（含过期时间）。
-13. **返回结果**: 包含记录 ID、动作类型、活动信息、是否宽限窗口。
+   - 写签到事件 `wx_checkin_event`。
+   - 写 outbox `wx_sync_outbox(status=pending)`。
+11. **返回结果**: 包含记录 ID、动作类型、活动信息、是否宽限窗口。
+
+> 说明：文档中“限流”属于建议能力，本仓库当前实现未启用；如需上生产建议在网关/应用侧补齐。
 
 ### 4.6.4 成功响应示例
 
@@ -950,6 +967,7 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 | `forbidden` | 仅普通用户可扫码签到/签退 | 非 normal 用户提交 |
 | `forbidden` | 提交过于频繁，请稍后再试 | 命中限流 |
 | `invalid_qr` | 二维码无法识别，请重新扫码 | payload 无法解析 |
+| `invalid_qr` | 二维码无法识别，请重新扫码 | signed nonce 验签失败，或 legacy unsigned 被禁用 |
 | `invalid_qr` | 二维码数据不一致，请重新扫码 | 冗余字段与 payload 冲突 |
 | `invalid_activity` | 活动不存在或已下线 | 活动不存在 |
 | `forbidden` | 你未报名该活动，无法签到/签退 | 无可见性权限 |
@@ -1063,6 +1081,7 @@ function ensureFieldConsistent(requestValue, parsedValue, fieldName) {
 
 ## 9. 版本记录
 
+- 2026-02-28 v4.7：二维码生产加固（Point 2/3/4）：nonce 内嵌 HMAC 签名（`QR_SIGNING_KEY` 生效）并在 A-06 consume 侧强制验签；issue log 支持禁用写入 + retention cleanup；A-05 rotate/grace override 持久化保证 issue/consume 口径一致。
 - 2026-02-09 v4.6：新增 3.1B 兼容接口清单（`/api/checkin/verify`、`/api/checkin/records*`、`/api/activity/current`、`/api/staff/activity-action`），明确当前前端封装仍依赖这些路径。
 - 2026-02-09 v4.5：二维码链路切换为“后端接口返回二维码 payload”口径；重写职责边界与 3.5；A-05 增加 `qr_payload/display_expire_at/accept_expire_at`；A-06 补齐与当前 payload 协议一致的解析与校验示例。
 - 2026-02-08 v4.4：新增“3.3A 会话失效信号约定（强制）”，明确 `status=forbidden + error_code=session_expired` 为会话过期标准返回；补充前端收到后必须清理会话并跳转 `pages/login/login` 重登。
