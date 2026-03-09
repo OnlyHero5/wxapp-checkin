@@ -1,5 +1,7 @@
 # wxapp-checkin/backend 数据库深度说明（双库联调版）
 
+> 说明：本文档描述的是当前 `backend/` 的数据库实现与迁移基座，主要用于理解历史小程序链路和后续 Web 迁移的后端复用边界，不单独定义当前产品基线。正式产品需求与接口口径以 `../docs/REQUIREMENTS.md`、`../docs/FUNCTIONAL_SPEC.md`、`../docs/API_SPEC.md` 为准。
+
 ## 1. 文档目标与范围
 
 本文档聚焦 `wxapp-checkin/backend` 的数据库实现细节，覆盖：

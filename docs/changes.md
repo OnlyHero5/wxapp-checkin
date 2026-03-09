@@ -1,5 +1,12 @@
 # Changes Log
 
+## 2026-03-09
+- 文档体系正式切换为“手机 Web + Passkey + 动态 6 位码”基线。
+- `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` 重写为当前唯一正式需求、功能、接口基线。
+- `docs/WEB_DESIGN.md`、`docs/WEB_COMPATIBILITY.md`、`docs/WEB_MIGRATION_REVIEW.md` 与 `docs/plans/2026-03-09-web-only-migration-implementation-plan.md` 保留为补充设计、兼容性、审查与实施文档。
+- 根 `README.md` 改为 Web 项目入口；`frontend/README.md`、`backend/README.md`、`backend/DB_DATABASE_DEEP_DIVE.md`、`backend/TEST_ENV_TESTING.md` 增补“历史参考 / 迁移基座”说明。
+- 删除重复文档 `docs/WEB_REQUIREMENTS.md`、`docs/WEB_API_SPEC.md`，收口“双正式基线”问题。
+
 ## 2026-02-03
 - 新增 `frontend/` 下完整微信小程序结构与页面代码（签到、注册、记录、详情）。
 - 增加通用样式与极简科技风 UI 视觉方案，包含成功动画与无网提示。

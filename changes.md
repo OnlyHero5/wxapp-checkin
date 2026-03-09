@@ -21,6 +21,13 @@
 - 已将发布标签 `v2026.02.04` 重新指向最新提交。
 - 新增 `docs/API_SPEC.md`，提供后端接口说明（code/message/data 统一返回）。
 
+## 2026-03-09
+- 项目正式文档基线切换为“手机 Web + Passkey + 动态 6 位码”。
+- 重写 `README.md`、`docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` 为 Web 口径。
+- 保留 `docs/WEB_DESIGN.md`、`docs/WEB_COMPATIBILITY.md`、`docs/WEB_MIGRATION_REVIEW.md` 与实施计划作为补充文档。
+- 更新 `frontend/README.md`、`backend/README.md`、`backend/DB_DATABASE_DEEP_DIVE.md`、`backend/TEST_ENV_TESTING.md` 的历史参考说明。
+- 删除重复文档 `docs/WEB_REQUIREMENTS.md`、`docs/WEB_API_SPEC.md`。
+
 ## 2026-02-06
 - 登录后角色分流落地：普通用户 / 工作人员两套页面能力。
 - 活动页改为活动卡片模型，支持可选签到、签退、详情按钮。

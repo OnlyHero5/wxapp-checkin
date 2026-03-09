@@ -1,5 +1,7 @@
 # wxapp-checkin 小程序前端（`frontend/`）说明
 
+> 说明：`frontend/` 是历史微信小程序前端参考实现。自 2026-03-09 起，项目正式产品基线已切换为“手机 Web + Passkey + 动态 6 位码”；新增需求不应继续落在本目录。正式基线请阅读 `../docs/REQUIREMENTS.md`、`../docs/FUNCTIONAL_SPEC.md`、`../docs/API_SPEC.md`。
+
 本文档只回答三件事：
 1. **生产环境怎么“上线/更新”前端**（小程序发布）
 2. **前端如何配置后端地址**（`baseUrl` / `mock`）
@@ -78,4 +80,3 @@ npm run repair:miniprogram-npm
 cd frontend
 npm test
 ```
-

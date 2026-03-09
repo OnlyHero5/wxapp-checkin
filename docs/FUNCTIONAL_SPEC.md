@@ -1,182 +1,168 @@
-# 微信小程序活动二维码签到功能说明书
+# 手机 Web 动态验证码签到功能说明书
 
-文档版本: v1.8  
-状态: 进行中  
-更新日期: 2026-02-28  
-项目: wxapp-checkin  
+文档版本: v1.0
+状态: 正式基线
+更新日期: 2026-03-09
+项目: `wxapp-checkin`
 依据: `docs/REQUIREMENTS.md`、`docs/API_SPEC.md`
 
 ## 1. 目的
-本文档描述当前版本小程序的页面行为、角色能力、接口协作和异常处理，用于产品确认、联调与测试验收。
 
-## 2. 当前实现边界
-- 当前仓库为前后端一体结构：`frontend/`（小程序）+ `backend/`（Java Spring Boot）。
-- 默认运行模式为 mock（`frontend/utils/config.js` 中 `mock=true`）。
-- 当前仓库已包含独立 `backend/` 服务目录（Java Spring Boot）。
-- 二维码页面不再本地拼装 payload，统一调用 A-05 获取 `qr_payload` 后展示。
+本文档描述手机 Web 版本的页面行为、角色能力、主链路交互与异常处理，供产品确认、联调、测试验收和后续实现拆分使用。
+
+## 2. 当前定位
+
+- 本文档描述的是目标态 Web 产品行为。
+- 当前仓库代码主实现仍是小程序 + 二维码，尚未完全达到本文档描述状态。
+- 小程序相关页面与流程仅作为迁移参考，不再作为正式产品口径。
 
 ## 3. 角色定义
-- `normal`：普通用户
-- `staff`：工作人员
 
-角色来源:
-- `POST /api/auth/wx-login` 返回 `role` 与 `permissions`
-- `POST /api/register` 基于 `student_id + name` 命中管理员名册后返回最终角色
+- `normal`：普通签到人员
+- `staff`：管理员 / 工作人员
+- `review_admin`：具备解绑审核权限的管理员；实现上可与 `staff` 合并
 
 ## 4. 页面与功能
 
-### 4.1 活动页（`pages/index`）
-共同能力:
-- 活动按 `progress_status` 分组展示：`正在进行`、`已完成`
-- 两组均按 `start_time` 倒序
-- 支持进入详情页（`has_detail=true`）
+| 页面 | 访问角色 | 主要目标 | 核心动作 |
+| --- | --- | --- | --- |
+| `/login` | 全部 | 判断是否可直接登录或需先绑定 | Passkey 登录、跳转绑定、提示浏览器不支持 |
+| `/bind` | 未绑定用户 | 完成实名校验与首次绑定 | 输入学号姓名、实名校验、发起 Passkey 注册 |
+| `/activities` | 已登录用户 | 浏览当前可见活动列表 | 查看活动、进入详情、进入管理页 |
+| `/activities/:id` | 已登录用户 | 查看单个活动详情 | 查看状态、跳转签到/签退页 |
+| `/activities/:id/checkin` | `normal` | 输入签到码完成签到 | 输入 6 位码、提交、查看结果 |
+| `/activities/:id/checkout` | `normal` | 输入签退码完成签退 | 输入 6 位码、提交、查看结果 |
+| `/staff/activities/:id/manage` | `staff` | 展示动态码与活动管理 | 切换签到码/签退码、查看统计、一键全部签退 |
+| `/staff/unbind-reviews` | `staff`/`review_admin` | 审核解绑申请 | 查看列表、批准、拒绝 |
 
-普通用户:
-- 仅展示 `my_registered || my_checked_in || my_checked_out` 的活动
-- 显示“我的状态”（已报名/已签到/已签退）
-- 可点击“去扫码”跳转 `pages/scan-action`
+## 5. 主链路说明
 
-工作人员:
-- 进行中活动显示“签到码”
-- `support_checkout=true` 时显示“签退码”
-- 显示统计字段 `checkin_count`
-- 点击后跳转 `pages/staff-qr`
+### 5.1 首次访问与实名绑定
 
-规则:
-- 已完成活动仅允许查看详情，不允许签到/签退
+1. 用户访问系统时先进入 `/login`。
+2. 若当前浏览器没有有效绑定，则跳转 `/bind`。
+3. 用户输入 `student_id + name`。
+4. 后端只读查询 `suda_union` 校验实名。
+5. 校验通过后，前端发起 Passkey 注册。
+6. 注册完成后，后端创建浏览器绑定、Passkey 凭据和业务会话。
+7. 用户自动进入 `/activities`。
 
-### 4.2 活动详情页（`pages/activity-detail`）
-- 展示活动基础信息与人数
-- 普通用户访问未授权活动时返回上一页并提示
-- 无网时显示提示，不触发接口请求
+### 5.2 后续登录
 
-### 4.3 扫码页（`pages/scan-action`）
-- 仅普通用户允许提交扫码动作
-- 调用 `wx.scanCode` 扫码
-- 以 `qr_payload` 为主提交到 `POST /api/checkin/consume`
-- 展示结果卡（状态、动作、活动、提交时间）
+1. 已绑定用户进入 `/login`。
+2. 前端请求登录 challenge。
+3. 浏览器发起 Passkey 验证。
+4. 后端验证通过后签发新的 `session_token`。
+5. 登录成功后进入 `/activities`。
 
-### 4.4 工作人员二维码页（`pages/staff-qr`）
-- 页面打开时调用 `POST /api/staff/activities/{id}/qr-session`
-- 使用接口返回的 `qr_payload` 渲染二维码
-- 使用 `display_expire_at`、`accept_expire_at` 展示倒计时
-- 倒计时归零后自动重新请求 A-05 刷新二维码
-- 每 3 秒轮询活动详情刷新 `checkin_count`/`checkout_count`
+### 5.3 普通用户活动浏览
 
-### 4.5 个人中心（`pages/profile`）
-共同能力:
-- 展示姓名、学号、院系、社团、绑定状态
-- 支持跳转注册页重新绑定
+- 普通用户只能看到本人已报名、已签到或已签退的活动。
+- 活动列表需展示：
+  - 标题
+  - 时间
+  - 地点
+  - 当前状态
+  - 我的状态
+- 进入详情页后，用户才能继续进入签到页或签退页。
 
-普通用户:
-- 展示积分：`social_score`、`lecture_score`
+### 5.4 普通用户签到
 
-工作人员:
-- 提供“进入活动页”快捷入口
+1. 用户进入具体活动的签到页。
+2. 页面以大号数字输入控件展示 6 位输入框。
+3. 用户输入管理员当前展示的签到码。
+4. 提交后后端校验：
+   - 会话有效
+   - 浏览器绑定有效
+   - 用户已报名
+   - 当前状态允许签到
+   - 动态码正确且未过期
+   - 当前时间片未重复提交
+5. 成功后页面展示：
+   - 活动标题
+   - 动作类型
+   - 成功提示
+   - 服务器时间
 
-### 4.6 注册页（`pages/register`）
-- 学号、姓名必填
-- 成功后写入本地缓存（资料、角色、权限、绑定状态）
-- 根据返回角色跳转：
-  - `staff` -> 活动 tab
-  - `normal` -> 我的 tab
+### 5.5 普通用户签退
 
-### 4.7 登录页（`pages/login`）
-- 会话失效后自动进入登录页
-- 自动执行 `wx.login -> /api/auth/wx-login` 重登
-- 重登失败提供“重新登录”按钮
+1. 用户进入具体活动的签退页。
+2. 页面提示当前活动名称与动作“签退”。
+3. 用户输入管理员展示的签退码。
+4. 后端校验当前状态必须为“已签到未签退”。
+5. 成功后页面展示签退成功结果，并返回活动页可见的最新状态。
 
-## 5. 关键流程
+### 5.6 管理员动态码管理页
 
-### 5.1 登录初始化
-1. 页面调用 `auth.ensureSession`
-2. 触发 `wx.login`
-3. 请求 `POST /api/auth/wx-login`
-4. 缓存 `session_token/role/permissions/user_profile`
+1. 管理员进入活动管理页。
+2. 页面默认展示当前动作对应的动态码。
+3. 管理员可切换：
+   - `checkin`
+   - `checkout`
+4. 页面必须持续展示：
+   - 当前 6 位码
+   - 剩余有效时间
+   - 签到人数
+   - 签退人数
+5. 页面从后台恢复到前台时，必须立即刷新动态码与统计。
 
-### 5.2 会话失效恢复
-1. 业务接口返回 `status=forbidden` + `error_code=session_expired`
-2. 清理本地登录态
-3. `reLaunch` 到 `pages/login`
-4. 自动重登成功后回 `pages/index`
+### 5.7 一键全部签退
 
-### 5.3 工作人员二维码流程
-1. 活动页点击签到码/签退码
-2. A-05 返回 `qr_payload`、`display_expire_at`、`accept_expire_at`、`server_time`
-3. 页面展示二维码与剩余秒数
-4. 展示窗口到期后自动请求新二维码
+1. 管理员在活动管理页点击“一键全部签退”。
+2. 页面必须先弹出确认提示。
+3. 确认后，后端统一对“已签到未签退”用户执行批量签退。
+4. 页面返回：
+   - 影响人数
+   - 批次号
+   - 操作时间
+5. 操作完成后，统计数字必须刷新。
 
-### 5.4 普通用户扫码提交流程
-1. 扫码得到 `result/path`
-2. 提交到 A-06（`qr_payload` 主字段，`scan_type/raw_result/path` 辅助）
-3. 后端返回 `success/duplicate/expired/invalid_qr/forbidden`
-4. 页面展示结果卡并可返回活动页查看状态
+### 5.8 解绑审核
 
-## 6. API 协作要求（当前代码口径）
+1. 用户可在绑定相关入口发起解绑申请。
+2. 解绑申请不会立即生效。
+3. 管理员在 `/staff/unbind-reviews` 查看待审核列表。
+4. 审核通过后：
+   - 原浏览器绑定失效
+   - 原会话失效
+   - 用户可在新浏览器重新绑定
+5. 审核拒绝后：
+   - 原绑定保持不变
+   - 申请状态记录为拒绝
 
-### 6.1 A-05 二维码会话接口
-- 路径: `POST /api/staff/activities/{activity_id}/qr-session`
-- 请求:
-  - `session_token`
-  - `action_type`（`checkin|checkout`）
-  - `rotate_seconds`（可选）
-  - `grace_seconds`（可选）
-- 响应关键字段:
-  - `qr_payload`
-  - `rotate_seconds`
-  - `grace_seconds`
-  - `display_expire_at`
-  - `accept_expire_at`
-  - `server_time`
+## 6. 异常与恢复
 
-说明：
-- `qr_payload` 中 `nonce` 为后端签名后的随机串（signed nonce），前端只负责展示与透传，不做解析与组装。
+### 6.1 浏览器不支持
 
-### 6.2 A-06 扫码消费接口
-- 路径: `POST /api/checkin/consume`
-- 请求关键字段:
-  - `session_token`
-  - `qr_payload`（建议必传）
-  - `scan_type`、`raw_result`、`path`（辅助）
-  - `activity_id/action_type/slot/nonce`（可选冗余字段）
-- 响应关键字段:
-  - `status`
-  - `message`
-  - `action_type`
-  - `checkin_record_id`
-  - `in_grace_window`
+- 若当前浏览器不满足 Passkey 基线，登录页必须明确提示“不支持当前浏览器”。
+- 不提供降级密码登录。
 
-### 6.3 兼容接口（当前前端仍保留调用封装）
-- `POST /api/checkin/verify`
-- `GET /api/checkin/records`
-- `GET /api/checkin/records/{record_id}`（需 `session_token` 且仅可查看本人记录）
-- `GET /api/activity/current`
-- `POST /api/staff/activity-action`
+### 6.2 会话失效
 
-## 7. 异常处理
-- 无网: 阻止关键动作并提示
-- `invalid_qr`: 提示二维码失效
-- `expired`: 提示二维码过期
-- `duplicate`: 提示重复提交
-- `forbidden`:
-  - 带 `session_expired` -> 走重登流程
-  - 其他 -> 提示无权限/状态不允许
+- 任何需要登录态的页面在收到 `session_expired` 后，必须清理本地会话并跳回 `/login`。
 
-## 8. 验收要点
-- 活动页分组与排序正确
-- 已完成活动仅保留详情
-- 普通用户仅可见相关活动
-- 二维码页由 A-05 提供 payload 并自动轮换
-- 普通用户宽限期内可提交，超时返回过期
-- 会话失效自动跳登录页并可重登
-- 前端 `npm test` 可执行并通过
-- 后端 `mvn test` 可执行并通过
+### 6.3 动态码错误或过期
 
-## 9. 更新记录
-- 2026-02-28：二维码生产加固（Point 2/3/4）：signed nonce、issue log 可禁用 + retention cleanup、rotate/grace override 口径一致。
-- 2026-02-09：文档升级为 v1.7，补充兼容接口与前后端自动化测试验收项。
-- 2026-02-09：新增 `backend/` Java 后端目录与 Linux 友好部署脚本，文档边界描述同步更新。
-- 2026-02-09：二维码链路文档对齐当前实现（A-05 返回 `qr_payload`，二维码页不再前端本地组码）。
-- 2026-02-08：新增会话失效重登机制。
-- 2026-02-08：普通用户活动可见性收敛为“已报名/已签到/已签退”。
-- 2026-02-08：注册绑定新增管理员名册判定。
+- 错误码：明确提示“验证码错误，请重新确认”。
+- 过期码：明确提示“验证码已过期，请重新输入最新验证码”。
+- 重复提交：明确提示“当前时段已提交，请勿重复操作”。
+
+### 6.4 前后台切换
+
+- 管理员页和普通用户输入页都必须监听 `visibilitychange`。
+- 页面回到前台后必须重新校验会话、刷新时间差、拉取动态码或统计。
+
+## 7. 交互原则
+
+- 只做手机优先布局。
+- 6 位码输入必须适合单手操作。
+- 成功 / 失败反馈必须在一屏内读完。
+- 页面必须始终展示当前活动名称与当前动作，避免输错活动或输错码。
+
+## 8. 文档关系
+
+- 需求基线：`docs/REQUIREMENTS.md`
+- 接口基线：`docs/API_SPEC.md`
+- 详细设计：`docs/WEB_DESIGN.md`
+- 兼容性：`docs/WEB_COMPATIBILITY.md`
+- 审查与迁移边界：`docs/WEB_MIGRATION_REVIEW.md`

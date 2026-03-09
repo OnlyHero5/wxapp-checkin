@@ -1,217 +1,92 @@
-<div align="center">
+# 手机 Web 动态验证码签到平台
 
-# 微信小程序活动签到平台
-### `wxapp-checkin`
+项目 `wxapp-checkin` 的正式文档基线已切换为：
 
-面向校园活动场景的签到/签退小程序。<br/>
-管理员动态展示二维码，普通用户扫码提交动作，活动状态与人数统计实时回流。
+- 手机浏览器 Web 前端
+- `学号 + 姓名 + Passkey + 临时会话 + 浏览器绑定`
+- 管理员展示动态 6 位签到码 / 签退码
+- 普通用户进入具体活动后输入 6 位码完成签到 / 签退
+- `suda_union` 继续作为实名 / 报名事实源，`wxcheckin_ext` 继续承担扩展域与最终一致性回写
 
-[![WeChat MiniProgram](https://img.shields.io/badge/WeChat-MiniProgram-07C160?style=for-the-badge&logo=wechat&logoColor=white)](https://developers.weixin.qq.com/miniprogram/dev/framework/)
-[![TDesign MiniProgram](https://img.shields.io/badge/UI-TDesign-0052D9?style=for-the-badge)](https://tdesign.tencent.com/miniprogram)
-[![Liquid Glass UI](https://img.shields.io/badge/UI-Liquid_Glass-6366F1?style=for-the-badge)](frontend/app.wxss)
-[![Java 17](https://img.shields.io/badge/Java-17-ff7f50?style=for-the-badge&logo=openjdk&logoColor=white)](backend/pom.xml)
-[![Spring Boot 3.5](https://img.shields.io/badge/Spring_Boot-3.5-6db33f?style=for-the-badge&logo=springboot&logoColor=white)](backend/pom.xml)
-[![MySQL 8](https://img.shields.io/badge/MySQL-8-4479a1?style=for-the-badge&logo=mysql&logoColor=white)](backend/docker-compose.yml)
-[![Redis 7](https://img.shields.io/badge/Redis-7-dc382d?style=for-the-badge&logo=redis&logoColor=white)](backend/docker-compose.yml)
-[![Role Based Access](https://img.shields.io/badge/Auth-RBAC-0F766E?style=for-the-badge)](docs/FUNCTIONAL_SPEC.md)
-[![API Contract](https://img.shields.io/badge/API-Contract-2563EB?style=for-the-badge)](docs/API_SPEC.md)
-[![Dynamic QR](https://img.shields.io/badge/QR-10s_Rotation-1D4ED8?style=for-the-badge)](docs/API_SPEC.md)
-[![Docs](https://img.shields.io/badge/Docs-Chinese-0ea5e9?style=for-the-badge)](docs/REQUIREMENTS.md)
+## 当前状态
 
-<p>
-  <a href="#快速预览">快速预览</a> ·
-  <a href="#系统架构">系统架构</a> ·
-  <a href="#仓库结构">仓库结构</a> ·
-  <a href="#角色与可见性">角色与可见性</a> ·
-  <a href="#签到签退流程">签到签退流程</a> ·
-  <a href="#快速开始">快速开始</a> ·
-  <a href="#文档导航">文档导航</a>
-</p>
+- 文档基线已经切换到 Web 目标态。
+- 仓库当前代码主实现仍是“小程序 + 二维码”。
+- `frontend/` 目录目前只作为迁移参考，后续应被 `web/` 取代并最终删除。
+- `backend/` 是迁移的核心复用基座：活动查询、会话、状态机、同步回写等主干保留，微信登录与二维码链路会被逐步替换。
 
-</div>
+## 目标架构
 
-## 快速预览
-- 当前仓库是前后端一体化工程：`frontend/`（微信小程序）+ `backend/`（Java Spring Boot）。
-- 前端已引入 **拟态玻璃（Liquid Glass）全新 UI**，统一暗色渐变背景、玻璃卡片和动态光晕视觉。
-- 活动列表双分组：`正在进行`（上）+ `已完成`（下），两组均按时间倒序。
-- 已完成活动仅支持“查看详情”，不再允许签到/签退动作。
-- 管理员二维码由后端接口签发：`10 秒展示窗口` + `20 秒提交宽限`（前端仅展示与刷新；可通过 `frontend/utils/config.js` 切换 mock/真实后端）。
-- 二维码票据使用服务端 **signed nonce**（`QR_SIGNING_KEY`）防篡改/防伪造；生产建议关闭 issue log 写入并启用定期清理，避免日志持续增长（详见 `backend/README.md`）。
-- 注册绑定时后端会用 `学号+姓名` 查询管理员名册，命中后返回 `staff` 角色并直接进入管理员页面。
-- 会话失效时（`forbidden + error_code=session_expired`）前端会清理本地登录态并跳转登录页自动重登。
-- 普通用户在独立“签到/签退”页面调用摄像头扫码并即时收到成功/失败反馈。
-- 普通用户只可见与自己有关的活动：`已报名 / 已签到 / 已签退`，不可见无关活动。
-- 管理员可看到全量活动与实时统计字段：`checkin_count` / `checkout_count`。
-
-> 仓库状态说明：后端代码已正式纳入本仓库并持续维护，默认与前端同仓协作。
-
-## 系统架构
 ```text
-┌────────────────────────────┐
-│ 微信小程序前端 (frontend/)  │
-│  pages + utils + tests     │
-└──────────────┬─────────────┘
+┌──────────────────────────────┐
+│ 手机浏览器 Web 前端 (web/)   │
+│  normal / staff / review     │
+└──────────────┬───────────────┘
                │ HTTPS JSON API
-┌──────────────▼─────────────┐
-│ Spring Boot 后端 (backend/) │
-│  A-01~A-06 + 兼容接口       │
-└───────┬──────────┬─────────┘
-        │          │
-     MySQL 8     Redis 7
+┌──────────────▼───────────────┐
+│ Spring Boot 后端 (backend/)  │
+│ identity / activity / code   │
+│ attendance / review / sync   │
+└──────────────┬───────────────┘
+               │
+    ┌──────────┴──────────┐
+    │                     │
+┌───▼────────────┐   ┌────▼───────────┐
+│ wxcheckin_ext  │   │ suda_union     │
+│ 扩展域主写库    │   │ 只读事实源+回写 │
+└────────────────┘   └────────────────┘
 ```
 
 ## 仓库结构
-| 目录 | 说明 | 技术栈 |
-|------|------|--------|
-| `frontend/` | 微信小程序前端，含页面逻辑与 Node 测试脚本 | WeChat MiniProgram + TDesign |
-| `backend/` | 业务后端、数据库迁移、测试与部署脚本 | Java 17 + Spring Boot + Flyway |
-| `docs/` | 需求、功能、接口与变更文档（中文） | Markdown |
-| `changes.md` | 根目录变更摘要 | Markdown |
 
-## 角色与可见性
-| 能力 | 普通用户 (`normal`) | 工作人员 (`staff`) |
-|------|---------------------|--------------------|
-| 浏览活动卡片 | `Yes`（仅已报名/已签到/已签退） | `Yes`（全部活动） |
-| 查看活动详情 | `Yes`（且 `has_detail=true`） | `Yes`（`has_detail=true`） |
-| 生成签到二维码 | `No` | `Yes`（仅进行中活动） |
-| 生成签退二维码 | `No` | `Yes`（仅进行中且 `support_checkout=true`） |
-| 扫码提交签到/签退 | `Yes` | `No` |
-| 已完成活动动作 | 仅详情 | 仅详情 |
-| 查看总签到/签退人数 | `No` | `Yes` |
-| 查看个人状态 | `Yes`（`my_registered/my_checked_in/my_checked_out`） | 可选 |
-| 查看个人积分 | `Yes`（`social_score/lecture_score`） | 可选 |
-
-角色判定规则:
-- 首次登录后若未注册，用户先进入绑定流程。
-- 绑定提交 `student_id + name` 后，后端查询管理员名册：
-  - 命中 -> 返回 `staff` + 管理员权限，前端跳转活动页。
-  - 未命中 -> 返回 `normal`，前端跳转“我的”页。
-
-## 签到/签退流程
-### 管理员端
-1. 在活动页点击“签到”或“签退”动作，跳转 `staff-qr` 页面。
-2. 页面展示动态二维码 + 倒计时（剩余秒数可见）。
-3. 倒计时归零后前端请求后端签发新票据，页面无闪烁切换到新二维码。
-4. 统计人数通过活动列表与活动详情接口回流并实时更新。
-
-### 普通用户端
-1. 进入 `scan-action` 页面，点击“签到/签退”按钮。
-2. 调起摄像头扫码，读取二维码载荷后提交到 `POST /api/checkin/consume`。
-3. 成功后显示明确反馈，活动页状态更新为已签到/已签退。
-4. 若命中宽限期，后端可通过 `in_grace_window` 返回可接受状态。
-
-## 页面结构
-```text
-backend/             # Java Spring Boot 后端服务
-  src/main/...
-frontend/            # 微信小程序前端
-frontend/pages/
-  index/            # 活动页（双分组卡片）
-  activity-detail/  # 活动详情页
-  scan-action/      # 普通用户“签到/签退”扫码页
-  staff-qr/         # 管理员动态二维码页（倒计时自动换码）
-  profile/          # 我的（个人信息/积分）
-  register/         # 注册绑定
-```
-
-## API 对接最小闭环
-| 目的 | 接口 | 关键返回字段 |
-|------|------|--------------|
-| 登录建会话 | `POST /api/auth/wx-login` | `role`, `permissions`, `user_profile` |
-| 绑定注册 | `POST /api/register` | `role`, `permissions`, `admin_verified`, `user_profile` |
-| 拉取活动列表 | `GET /api/staff/activities` | `progress_status`, `my_*`, `checkin_count`, `checkout_count` |
-| 获取二维码票据 | `POST /api/staff/activities/{activity_id}/qr-session` | `qr_payload`, `display_expire_at`, `accept_expire_at`, `server_time` |
-| 扫码提交动作 | `POST /api/checkin/consume` | `status`, `message`, `action_type`, `checkin_record_id`, `in_grace_window` |
-| 拉取活动详情 | `GET /api/staff/activities/{activity_id}` | `has_detail` 及详情字段 |
-| 会话失效处理 | A-02~A-06 | `status=forbidden`, `error_code=session_expired`（前端跳 `pages/login` 重登） |
-
-> 完整字段与错误码映射见 `docs/API_SPEC.md`。
-
-## 快速开始
-### 1. 导入工程
-使用微信开发者工具导入仓库根目录：`wxapp-checkin`。
-
-### 2. 启动后端（可选但推荐）
-```bash
-cd backend
-docker compose up -d mysql redis
-./scripts/start-dev.sh
-```
-
-Windows PowerShell:
-```powershell
-cd backend
-docker compose up -d mysql redis
-.\scripts\start-dev.ps1
-```
-
-### 3. 安装前端依赖
-```bash
-cd frontend
-npm install
-```
-
-### 4. 构建并运行小程序
-1. 微信开发者工具执行 `工具 -> 构建 NPM`
-2. 编译并预览小程序
-
-若需要对接真实后端（非 mock），请先按 `frontend/utils/config.js` 配置：
-- `mock=false`
-- `baseUrl=http(s)://<后端地址>`（不要加 `/api`）
-
-### 常见问题：模拟器启动失败（JSON 解析报错）
-若出现类似 `frontend/miniprogram_npm/tdesign-miniprogram/loading/loading.json` 的 JSON 解析错误，请按下面步骤恢复：
-
-```bash
-cd frontend
-npm install
-npm run repair:miniprogram-npm
-```
-
-然后在微信开发者工具执行：
-1. `工具 -> 构建 NPM`
-2. `详情 -> 本地设置 -> 清缓存 -> 清除全部缓存`
-3. 重新编译项目
-
-### 5. 运行测试
-后端测试：
-```bash
-cd backend
-./scripts/run-tests.sh
-```
-
-前端测试（Node 脚本）：
-```bash
-cd frontend
-npm test
-```
-
-## 配置说明
-文件：`frontend/utils/config.js`
-- `mock`：是否启用 mock 数据
-- `mockUserRole`：本地验收角色（`normal` / `staff`）
-- `baseUrl`：后端 API 地址（仅 `mock=false` 时生效）
-
-说明:
-- `baseUrl` 不要加 `/api`（请求层会自动拼接 `/api/...`）
-- 生产发布/更新小程序与后端一键启动：见 `frontend/README.md` 与 `backend/README.md`
-
-## 联调校验清单
-- 普通用户活动列表不出现未报名、未签到、未签退的无关活动。
-- 管理员二维码每 `10s` 由前端触发后端换码请求，倒计时展示连续无卡顿。
-- 普通用户扫码后在 `20s` 宽限期内可正常提交并获得正向反馈。
-- 活动页状态与管理员统计人数在动作后可见更新。
+| 路径 | 说明 | 当前状态 |
+| --- | --- | --- |
+| `backend/` | Java Spring Boot 后端、数据库迁移、测试与部署脚本 | 迁移基座，持续复用 |
+| `frontend/` | 历史微信小程序前端 | 仅作迁移参考，待删除 |
+| `web/` | 新手机 Web 前端 | 目标目录，尚待按计划落地 |
+| `docs/` | 正式需求、功能、接口、设计、兼容性与实施计划 | 已切换到 Web 口径 |
+| `changes.md` | 根目录变更摘要 | 保留 |
 
 ## 文档导航
-- 前端（生产发布/配置）：`frontend/README.md`
-- 后端（生产一键启动/环境变量）：`backend/README.md`
-- 需求文档：`docs/REQUIREMENTS.md`
-- 功能说明：`docs/FUNCTIONAL_SPEC.md`
-- 接口规范：`docs/API_SPEC.md`
+
+正式基线：
+
+- 需求基线：`docs/REQUIREMENTS.md`
+- 功能基线：`docs/FUNCTIONAL_SPEC.md`
+- 接口基线：`docs/API_SPEC.md`
+- 设计文档：`docs/WEB_DESIGN.md`
+- 兼容性文档：`docs/WEB_COMPATIBILITY.md`
+- 审查与迁移说明：`docs/WEB_MIGRATION_REVIEW.md`
+- 实施计划：`docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+
+迁移参考：
+
+- 后端部署与配置：`backend/README.md`
+- 历史小程序前端说明：`frontend/README.md`
+- 数据库深度说明：`backend/DB_DATABASE_DEEP_DIVE.md`
 - 详细变更：`docs/changes.md`
 - 根目录变更摘要：`changes.md`
 
-## 版本信息
-- 当前文档覆盖能力：前后端一体化、拟态玻璃（Liquid Glass）全新 UI、二维码后端签发、普通用户扫码签到/签退、角色分流与积分展示、`suda_union` 主库与扩展库双向同步。
-- 最新发布标签：`v2026.02.10`（2026-02-10）。
-- 历史发布标签：`v2026.02.07`、`v2026.02.04`。
+## 推荐阅读顺序
+
+如果你现在要推进 Web 改造，建议按下面顺序阅读：
+
+1. `docs/WEB_MIGRATION_REVIEW.md`
+2. `docs/REQUIREMENTS.md`
+3. `docs/FUNCTIONAL_SPEC.md`
+4. `docs/API_SPEC.md`
+5. `docs/WEB_DESIGN.md`
+6. `docs/WEB_COMPATIBILITY.md`
+7. `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+
+## 当前最重要的约束
+
+- 只允许改 `wxapp-checkin/`。
+- `suda_union/` 与 `suda-gs-ams/` 只允许读取、联调、参考，禁止改业务逻辑。
+- 所有正式环境必须运行在 HTTPS。
+- 新 Web 功能应统一以 `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` 为准，不再以小程序链路为产品基线。
+
+## 历史说明
+
+- 2026-03-09 起，项目文档正式切换到“手机 Web + Passkey + 动态 6 位码”口径。
+- 小程序相关内容保留在代码和少量说明文档中，仅用于迁移对照，不再作为后续功能设计依据。

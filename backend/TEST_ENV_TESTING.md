@@ -1,5 +1,7 @@
 # 后端测试一键脚本说明（Linux）
 
+> 说明：本文档描述的是当前 `backend/scripts/*.sh` 测试环境脚本与历史联调口径，主要用于迁移期运维和排障参考，不是手机 Web 正式接入文档。正式产品基线请阅读 `../docs/REQUIREMENTS.md`、`../docs/FUNCTIONAL_SPEC.md`、`../docs/API_SPEC.md`。
+
 本文档说明 `backend/scripts/start-test-env.sh` 与 `backend/scripts/reset-suda-union-test-data.sh` 的作用与用法。
 
 ## 1. 脚本作用
@@ -56,6 +58,8 @@ curl http://127.0.0.1:9989/actuator/health
 返回 `{"status":"UP"...}` 即正常。
 
 ## 3. 前端联调 baseURL
+
+以下说明适用于历史小程序前端和迁移期调试场景；未来 Web 前端也可复用同一后端地址，但以正式 Web 接口文档为准。
 
 - 前端 `baseUrl` 使用：`http://127.0.0.1:9989`
 - 注意：前端请求代码会自动拼接 `/api/...`，`baseUrl` 不要再额外加 `/api`。

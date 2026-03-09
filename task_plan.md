@@ -1,201 +1,131 @@
-# Task Plan: Java Backend Full Delivery
+# Task Plan: 手机 Web 动态验证码签到改造设计
 
 ## Goal
-Deliver a production-grade Java backend for the WeChat check-in miniapp with extension-first database design, Linux-oriented deployment support, and frontend/backend directory split (`frontend/` + `backend/`).
+在完整阅读 `wxapp-checkin` 现有前后端、脚本、测试与文档后，形成一套面向手机浏览器 Web 端的改造方案，并输出新的需求文档、设计文档、兼容性文档与实施计划。新方案以“管理员手机展示动态 6 位验证码，签到人员在 7.5 秒内输入验证码完成签到/签退”为核心，同时保留 `suda_union` 只读校验与现有扩展库/同步链路的可复用部分。
 
 ## Current Phase
-Phase 15
+Phase 6
 
 ## Phases
-
-### Phase 1: Plan and Requirement Alignment
-- [x] Read API contract and requirement docs
-- [x] Analyze legacy schema and extension strategy
-- [x] Confirm Java implementation direction
+### Phase 1: 仓库现状补全阅读
+- [x] 理解用户目标与重点问题
+- [x] 初步定位扫码相关代码与 `wx.*` 依赖
+- [x] 阅读核心前端页面、后端主链路服务、数据库迁移、同步任务、测试与核心文档
+- [x] 将初步发现写入 findings.md
 - **Status:** complete
 
-### Phase 2: Project Restructure and Backend Bootstrap
-- [x] Move `src/` to `frontend/`
-- [x] Update miniapp root config to `frontend/`
-- [x] Create `backend/` Spring Boot project skeleton
+### Phase 2: 新业务约束与能力边界确认
+- [x] 逐条确认新的业务规则与安全约束
+- [x] 确认认证方案为“学号+姓名绑定 + Passkey + 临时会话”
+- [x] 确认解绑需管理员审核、活动独立 6 位码、签到/签退均 7.5 秒时窗
+- [x] 确认管理员支持“一键全部签退”
+- [x] 将约束沉淀为需求与设计草案结构
 - **Status:** complete
 
-### Phase 3: Core Backend Implementation
-- [x] Add Flyway migrations for extension tables (`wx_*`) including `wx_token`
-- [x] Implement entities/repositories/services/controllers for A-01~A-06
-- [x] Add compatibility endpoints for existing frontend wrappers
-- [x] Implement sync jobs (legacy pull + outbox relay, config-gated)
+### Phase 3: 官方资料与兼容性核验
+- [x] 核验 Passkey / WebAuthn 在主流手机浏览器的能力边界
+- [x] 核验移动 Web 生命周期、输入体验与页面恢复策略
+- [x] 形成可引用的官方依据
 - **Status:** complete
 
-### Phase 4: Ops and Documentation Completion
-- [x] Add Linux-friendly ops files (`Dockerfile`, `docker-compose.yml`, shell scripts)
-- [x] Add backend operation docs (`backend/README.md`, `.editorconfig`)
-- [x] Fix root docs that still said backend folder was missing
-- [x] Keep frontend default mock mode while enabling real backend integration
+### Phase 4: 方案比较与推荐
+- [x] 输出 2-3 个改造方案与取舍
+- [x] 给出推荐方案与明确不采用项
 - **Status:** complete
 
-### Phase 5: Final Verification and Handoff
-- [x] Re-run backend verification commands after final doc/script updates
-- [x] Capture verification evidence in `progress.md`
-- [x] Run frontend real test suite (`npm test`) and verify pass
-- [x] Update README + docs to full-stack final state
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
-
-### Phase 6: Independent Project Audit (2026-02-10)
-- [x] Re-verify frontend commands on current workspace
-- [x] Re-verify backend commands on current workspace
-- [x] Check frontend/backend API mapping and runtime prerequisites
-- [x] Identify security/consistency risks with file-line evidence
+### Phase 5: 需求文档与设计文档草案
+- [x] 输出需求文档草案
+- [x] 输出设计文档草案
+- [x] 按用户“直接生成文档”的要求直接落盘到 `docs/`
 - **Status:** complete
 
-### Phase 7: Security Fix + Chinese Docs + Push (2026-02-10)
-- [x] Add regression test for record detail cross-user access and verify RED failure
-- [x] Implement session + ownership validation for `GET /api/checkin/records/{recordId}`
-- [x] Update backend docs to Chinese and align API/spec docs with security constraint
-- [x] Re-run frontend/backend verification commands after code/doc changes
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
-
-### Phase 8: Root README Enhancement + Push (2026-02-10)
-- [x] Enhance root README visual badges and full-stack positioning copy
-- [x] Add architecture and repository-structure sections for readability
-- [x] Keep README Chinese-first and consistent with backend-included repo state
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
-
-### Phase 9: Legacy Schema Compatibility Hardening (2026-02-10)
-- [x] Confirm current DB bootstrap strategy (`ddl-auto`, Flyway, profile behavior)
-- [x] Enforce production-safe mode (no auto create/alter on existing legacy schema)
-- [x] Keep test/dev runnable with isolated/local schema option
-- [x] Update backend docs to clearly separate test vs production DB behavior
-- [x] Re-run backend verification after config changes
+### Phase 6: 实施计划与兼容性专项文档
+- [x] 输出浏览器家族与屏幕适配专项文档
+- [x] 输出可直接开工的实施迁移计划
+- [x] 同步更新计划、发现与进度记录
 - **Status:** complete
 
-### Phase 10: Active `suda_union` Positioning & Sync Guard (2026-02-10)
-- [x] Align terminology: `suda_union` is active Web management primary schema, not deprecated
-- [x] Add production startup guard for dual-schema deployment safety
-- [x] Add tests for production guard and dedicated cross-schema datasource
-- [x] Update backend/requirement docs to Chinese wording with primary-schema semantics
-- [x] Re-run backend full verification after guard changes
-- **Status:** complete
+## Key Questions
+1. 新的 Web 端认证如何在不修改 `suda_union` 逻辑的前提下完成实名校验、防切号与降低代签风险？
+2. 6 位动态码如何在“活动独立 + 签到/签退双动作 + 7.5 秒时窗”下稳定生成、展示、校验与防重放？
+3. 哪些现有后端能力可复用，哪些接口/表/测试/文档必须重写？
 
-### Phase 11: Backend Test Environment Provisioning (2026-02-10)
-- [x] Audit missing local runtime dependencies in current WSL environment
-- [x] Install Java 17, Docker/Compose, MySQL 8, Redis 7
-- [x] Resolve local port conflicts for MySQL/Redis in test environment
-- [x] Configure Maven proxy for Java dependency resolution
-- [x] Run backend test suite and dev runtime health verification
-- **Status:** complete
-
-### Phase 12: Liquid Glass Frontend Audit + Push (2026-02-10)
-- [x] Audit current liquid-glass frontend style changes and identify regressions
-- [x] Fix missing global class definitions causing cross-page style breakage
-- [x] Re-verify frontend tests and class-definition coverage checks
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
-
-### Phase 13: Bind Failure Cross-Repo Root Cause Investigation (2026-02-10)
-- [x] Verify effective frontend runtime base URL and mock mode
-- [x] Reproduce backend startup and health status on target LAN port
-- [x] Reproduce bind flow with controlled API requests and inspect backend responses
-- [x] Audit session lifecycle and WeChat identity derivation behavior in dev mode
-- [ ] Implement and verify remediation
-- **Status:** in_progress
-
-### Phase 14: Review-Driven Frontend Hardening (2026-02-12)
-- [x] Parse external review report and verify claims against current codebase
-- [x] Add TDD coverage for API resilience (`GET` retry + concurrent dedupe) and register form validation
-- [x] Implement frontend fixes: request resilience, register validation, error feedback, reusable empty-state component
-- [x] Re-run frontend test suite with new cases and verify all green
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
-
-### Phase 15: API Split + Signed Register Payload End-to-End (2026-02-12)
-- [x] Split frontend request stack into `request-core` + `mock-api` + endpoint facade
-- [x] Implement frontend signed register payload envelope generation (`HMAC-SHA256`, timestamp, nonce)
-- [x] Implement backend register payload verification and nonce replay protection
-- [x] Add/upgrade tests for missing/tampered/replay signatures and signed payload generation
-- [x] Re-run frontend and backend verification commands after split + security changes
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
-
-## Key Decisions
+## Decisions Made
 | Decision | Rationale |
 |----------|-----------|
-| Java 17 + Spring Boot 3.5 | Long-term maintainability, Linux deployment maturity, clear layered architecture |
-| Extension-first DB design | Keep legacy `suda_union` schema intact and add `wx_*` tables |
-| `wx_token` stored in extension user table | Satisfies requirement without modifying legacy user table directly |
-| Sync as config-gated scheduled jobs | Safe rollout and rollback (`LEGACY_SYNC_ENABLED`, `OUTBOX_RELAY_ENABLED`) |
-| Linux-first scripts + Docker support | Match production deployment target while keeping Windows development support |
-| Project review must separate "test/build passed" from "full runtime verified" | Avoid over-claiming completion when DB/container runtime prerequisites are unavailable |
-| Production startup must not mutate legacy tables | Production profile should disable ORM DDL and Flyway auto-migration, only read/write business data |
-| `suda_union` is active Web management primary schema | Extension schema must stay isolated; cross-schema sync must be enabled in production |
-| Liquid-glass UI migration must preserve legacy shared utility classes | Existing pages still depend on global `.hint/.network-banner/.info-row` helpers; deleting them causes visual regressions |
-| HTTP retry should apply to idempotent methods only | Avoid duplicate write side effects while improving transient network resilience for `GET` |
-| Register payload integrity must be verified server-side with timestamp + nonce replay guard | Prevent unsigned/tampered payload acceptance and reduce replay risk on `/api/register` |
+| 不改 `suda_union` 与 `suda-gs-ams` 业务逻辑 | 用户明确禁止，且已写入工作区 `AGENTS.md` |
+| 认证采用“学号+姓名绑定 + Passkey + 临时会话” | 这是用户确认的推荐方案 2，可在 Web 端显著提高代签成本 |
+| 解绑必须管理员审核 | 避免用户自助切换浏览器/设备绕过绑定约束 |
+| 普通用户必须先进入具体活动再输入 6 位码 | 6 位码空间过小，不能用全局码自动猜活动 |
+| 6 位码按“活动 + 动作 + 时间片”统一生成 | 同活动同动作同一时刻所有管理员看到同一组码，便于现场管理 |
+| 签到与签退都仅在 7.5 秒内有效 | 用户已确认放弃当前 `10s + 20s` 宽限模型 |
+| 管理员保留“一键全部签退” | 只作用于“已签到未签退”用户，并以服务端时间统一记账 |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| `superpowers-codex` direct execution failed on Windows | 1 | Executed with `node .../superpowers-codex` |
-| `rg docs/*.md` pattern failed in PowerShell | 1 | Switched to `rg ... docs` directory search |
-| `docker compose` validation unavailable in local shell | 1 | Docker CLI not installed in current environment |
-| `mvnw ... -Dspring-boot.run.profiles=test` parsed incorrectly in PowerShell | 1 | Re-ran with quoted `-D` arguments |
-| `spring-boot:run` startup failed with `Access denied for user 'root'@'localhost'` | 1 | Confirmed local runtime still depends on reachable MySQL credentials/environment |
-| New security regression test failed as expected before fix (`expected forbidden but was success`) | 1 | Added endpoint token extraction + ownership check; reran test to green |
-| `mysql-server-8.0` post-install script failed in WSL test env | 1 | Root cause was local port conflict (`3306`, `33060`); moved MySQL to `3307` / `33061` and reconfigured dpkg successfully |
-| `redis-server` failed to start in WSL test env | 1 | Root cause was local port conflict (`6379`/`6380`/`6381` busy); moved Redis to `16379` and restarted service successfully |
-| Maven dependency resolution hung at HTTPS response read | 1 | Root cause was Java/Maven proxy path in this environment; added Maven proxy config in `~/.m2/settings.xml` |
-| `ui-ux-pro-max` referenced script path was missing in local skill install | 1 | Followed fallback path: use available skill rules and continue without script automation |
+|       | 1       |            |
 
 ## Notes
-- Current `main` working tree contains pending liquid-glass frontend updates and awaits commit/push.
-- Review evidence must rely on fresh command outputs from this session.
+- 本次文档输出对象是 `wxapp-checkin` 新 Web 版，不再以微信小程序为基线
+- `miniprogram_npm` 等第三方生成产物不作为“项目自有代码设计基线”
 
-### Phase 16: Codex Skills Refresh + Integrity Verification (2026-02-12)
-- [x] Reinstall `ui-ux-pro-max` from requested GitHub URL
-- [x] Repair Windows symlink degradation (`scripts`/`data` from file stubs to real directories)
-- [x] Check other installed skills against corresponding upstream repos and apply updates where valid
-- [x] Detect and handle incomplete upstream package case (`planning-with-files` source missing referenced scripts)
-- [x] Run script-level smoke checks for skill usability
+## 2026-03-09 新需求追加：动态 6 位签到码 Web 化改造
+
+### 新目标
+- 不再沿用微信小程序扫码签到模式，改为手机浏览器 Web 端。
+- 管理员手机展示动态 6 位数验证码。
+- 签到人员在 7.5 秒窗口内输入验证码完成签到。
+- `suda_union/` 与 `suda-gs-ams/` 禁止做任何代码逻辑改动，仅允许 `wxapp-checkin/` 改造。
+
+### 新阶段
+#### Phase A: 现状复核
+- [x] 阅读 `wxapp-checkin` 前端页面、工具层、后端控制器、服务与数据库模型
+- [x] 确认可复用的领域规则与必须重写的运行时能力
 - **Status:** complete
 
-### Phase 17: Real-Device Register Page Open Failure Root-Cause Debug (2026-02-12)
-- [x] Load and apply `systematic-debugging` + `planning-with-files` skills
-- [x] Trace register page route, lifecycle, and runtime dependency chain
-- [x] Verify frontend dependency packaging state (`miniprogram_npm`) for register-page-only modules
-- [x] Implement minimal safety fix to avoid page-load crash when crypto module is missing
-- [x] Re-run frontend test suite after fix
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
+#### Phase B: 新方案约束分析
+- [x] 评估 6 位动态码替代二维码后的后端校验路径
+- [x] 识别 Web 端身份体系、活动选择、码冲突与时钟同步风险
+- [x] 联网调研移动浏览器输入、视口、保活与后台节流约束
+- **Status:** complete
 
-### Phase 18: DevTools JSON Parse Failure Hardening (2026-02-12)
-- [x] Load and apply `systematic-debugging` + `planning-with-files` skills
-- [x] Verify offending file integrity (`loading.json`) with byte-level check and Git hash comparison
-- [x] Add deterministic npm repair script for `miniprogram_npm/tdesign-miniprogram`
-- [x] Add JSON integrity test coverage for `frontend/miniprogram_npm`
-- [x] Update README with simulator startup failure recovery steps
-- [x] Re-run frontend verification commands after hardening changes
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
+#### Phase C: 输出改造设计
+- [x] 给出推荐架构、接口变更、前端重建策略、兼容矩阵与迁移步骤
+- [x] 在用户明确“不需要寻求确认，直接生成文档”后完成文档输出
+- **Status:** complete
 
-## Errors Encountered (Addendum)
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-| `ui-ux-pro-max` reinstall on Windows produced symlink stub files (`scripts`/`data`) | 1 | Installed skill from URL, then materialized real directories from upstream `src/ui-ux-pro-max/*` files |
-| `planning-with-files` upstream candidate lacked `session-catchup.py` and `check-complete.ps1` despite `SKILL.md` references | 1 | Marked upstream as incomplete and restored previously working local backup |
-| WeChat DevTools reported `loading/loading.json` parse invalid while repository JSON remained valid | 1 | Treated as local npm build/cache corruption and added `repair:miniprogram-npm` script + JSON integrity test |
+#### Phase D: 文档补完与实施落地准备
+- [x] 输出 Web 需求正式基线 `REQUIREMENTS.md`
+- [x] 输出 `WEB_DESIGN.md`
+- [x] 输出 `WEB_COMPATIBILITY.md`
+- [x] 输出 `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+- **Status:** complete
 
-### Phase 19: Uncommitted Change Comprehensive Review + GitHub Submission (2026-02-17)
-- [x] Load and apply relevant skills (`planning-with-files`, `requesting-code-review`, `finishing-a-development-branch`, `verification-before-completion`)
-- [x] Review all current unstaged/untracked changes and inspect changed files end-to-end
-- [x] Run frontend/backend verification commands with fresh evidence in this session
-- [x] Fix compile blocker found during review (`ActivitySummaryDto` constructor arg mismatch)
-- [ ] Commit and push to GitHub
-- **Status:** in_progress
+## 2026-03-09 补充任务：审查 Web 改造文档完备性与合理性
 
-## Errors Encountered (2026-02-17 Addendum)
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-| Backend compile failed after DTO field addition (`ActivitySummaryDto` constructor args mismatch) | 1 | Updated `CompatibilityController.currentActivity()` to pass `supportCheckin` and reran backend verification to green |
+### Goal
+- 结合当前 `wxapp-checkin` 代码与文档现状，审查“转手机 Web 前端”改造计划是否合理。
+- 识别文档之间的冲突、缺口与实施风险。
+- 若缺少关键文档或缺少关键章节，则在 `docs/` 内补齐。
+
+### Current Phase
+- Phase R2
+
+### Phases
+#### Phase R1: 文档与代码交叉盘点
+- [x] 盘点 `REQUIREMENTS.md`、`FUNCTIONAL_SPEC.md`、`API_SPEC.md`、`WEB_DESIGN.md`、`WEB_COMPATIBILITY.md` 与实施计划的关系
+- [x] 复核当前 `frontend/`、`backend/` 代码对 Web 方案的支撑边界
+- [x] 记录明显冲突与高风险缺口
+- **Status:** complete
+
+#### Phase R2: 审查结论与文档补齐
+- [x] 输出“计划是否合理”的结论与证据
+- [x] 补齐缺失文档或缺失章节，避免新旧基线并存导致误用
+- [x] 更新 README / 文档导航或新增审查结论文档
+- **Status:** complete
+
+#### Phase R3: 验证与交付
+- [x] 校验新增/修改文档之间引用关系
+- [x] 记录本轮补齐结果与后续待实现项
+- **Status:** complete
