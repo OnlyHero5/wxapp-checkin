@@ -1,131 +1,96 @@
-# Task Plan: 手机 Web 动态验证码签到改造设计
+# 手机 Web 改造审查与半程推进计划
 
-## Goal
-在完整阅读 `wxapp-checkin` 现有前后端、脚本、测试与文档后，形成一套面向手机浏览器 Web 端的改造方案，并输出新的需求文档、设计文档、兼容性文档与实施计划。新方案以“管理员手机展示动态 6 位验证码，签到人员在 7.5 秒内输入验证码完成签到/签退”为核心，同时保留 `suda_union` 只读校验与现有扩展库/同步链路的可复用部分。
+## 目标
 
-## Current Phase
-Phase 6
+- 完整复核 `wxapp-checkin` 当前文档基线、历史代码与 `web/` 首批改造成果。
+- 对已完成的前四分之一代码做真正的代码审查，而不是只复用上一轮“测试通过”的结论。
+- 若发现 bug，则先按 TDD 修复；若首批实现可接受，则继续推进到“总改造进度二分之一”。
+- 将审查发现、修复动作、后续实施与验证结果持续沉淀到仓库文档，便于回溯。
 
-## Phases
-### Phase 1: 仓库现状补全阅读
-- [x] 理解用户目标与重点问题
-- [x] 初步定位扫码相关代码与 `wx.*` 依赖
-- [x] 阅读核心前端页面、后端主链路服务、数据库迁移、同步任务、测试与核心文档
-- [x] 将初步发现写入 findings.md
-- **Status:** complete
+## 当前阶段
 
-### Phase 2: 新业务约束与能力边界确认
-- [x] 逐条确认新的业务规则与安全约束
-- [x] 确认认证方案为“学号+姓名绑定 + Passkey + 临时会话”
-- [x] 确认解绑需管理员审核、活动独立 6 位码、签到/签退均 7.5 秒时窗
-- [x] 确认管理员支持“一键全部签退”
-- [x] 将约束沉淀为需求与设计草案结构
-- **Status:** complete
+- 状态：complete
+- 阶段 1：复核文档基线、现有计划与首批 Web 代码
+- 阶段 2：按 TDD 修复首批代码审查发现的问题
+- 阶段 3：推进到半程目标（默认按 `M2.2` 普通用户活动与输入码页执行）
+- 阶段 4：运行验证并同步 `progress.md` / `findings.md` / `docs/plans/2026-03-09-web-todo-list.md`
 
-### Phase 3: 官方资料与兼容性核验
-- [x] 核验 Passkey / WebAuthn 在主流手机浏览器的能力边界
-- [x] 核验移动 Web 生命周期、输入体验与页面恢复策略
-- [x] 形成可引用的官方依据
-- **Status:** complete
+## 任务拆分
 
-### Phase 4: 方案比较与推荐
-- [x] 输出 2-3 个改造方案与取舍
-- [x] 给出推荐方案与明确不采用项
-- **Status:** complete
+| 阶段 | 状态 | 说明 |
+| --- | --- | --- |
+| 复核正式基线文档 | complete | 已重读 `REQUIREMENTS` / `FUNCTIONAL_SPEC` / `API_SPEC` / `WEB_DETAIL_DESIGN` / 实施计划 |
+| 复核现有首批实现边界 | complete | 已确认首批范围为 `web/` 骨架 + shared 基础层 + `/login` `/bind` |
+| 审查首批 Web 代码 | complete | 已发现路由保护、根路由、能力探测、HTTP 归一化、存储降级等问题 |
+| 修复首批代码问题 | complete | 已按 TDD 修复路由保护、根路由、能力探测、HTTP 归一化、存储降级与登录跳绑定 |
+| 推进半程目标 | complete | 已完成 `M2.2`：活动列表 / 活动详情 / 签到页 / 签退页 |
+| 全量验证与清单回写 | complete | 已重新跑 `npm test -- --run`、`npm run build` 并同步 `docs/plans/2026-03-09-web-todo-list.md` |
 
-### Phase 5: 需求文档与设计文档草案
-- [x] 输出需求文档草案
-- [x] 输出设计文档草案
-- [x] 按用户“直接生成文档”的要求直接落盘到 `docs/`
-- **Status:** complete
+## 已知约束
 
-### Phase 6: 实施计划与兼容性专项文档
-- [x] 输出浏览器家族与屏幕适配专项文档
-- [x] 输出可直接开工的实施迁移计划
-- [x] 同步更新计划、发现与进度记录
-- **Status:** complete
+- 只允许修改 `wxapp-checkin/`。
+- `suda_union/` 与 `suda-gs-ams/` 仅可读取和联调参考。
+- 新 Web 功能必须以 `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` 为正式基线。
+- 最终目标是删除小程序正式链路，但本轮只推进到“半程”，不提前删旧。
 
-## Key Questions
-1. 新的 Web 端认证如何在不修改 `suda_union` 逻辑的前提下完成实名校验、防切号与降低代签风险？
-2. 6 位动态码如何在“活动独立 + 签到/签退双动作 + 7.5 秒时窗”下稳定生成、展示、校验与防重放？
-3. 哪些现有后端能力可复用，哪些接口/表/测试/文档必须重写？
+## 范围决策
 
-## Decisions Made
-| Decision | Rationale |
-|----------|-----------|
-| 不改 `suda_union` 与 `suda-gs-ams` 业务逻辑 | 用户明确禁止，且已写入工作区 `AGENTS.md` |
-| 认证采用“学号+姓名绑定 + Passkey + 临时会话” | 这是用户确认的推荐方案 2，可在 Web 端显著提高代签成本 |
-| 解绑必须管理员审核 | 避免用户自助切换浏览器/设备绕过绑定约束 |
-| 普通用户必须先进入具体活动再输入 6 位码 | 6 位码空间过小，不能用全局码自动猜活动 |
-| 6 位码按“活动 + 动作 + 时间片”统一生成 | 同活动同动作同一时刻所有管理员看到同一组码，便于现场管理 |
-| 签到与签退都仅在 7.5 秒内有效 | 用户已确认放弃当前 `10s + 20s` 宽限模型 |
-| 管理员保留“一键全部签退” | 只作用于“已签到未签退”用户，并以服务端时间统一记账 |
+- “前四分之一”沿用现有计划定义：`M1 + M2.1`，即：
+  - 建立 `web/` 工程骨架
+  - 建立 Web 公共基础层
+  - 实现实名绑定与 Passkey 登录前端
+- “推进到二分之一”默认解释为完成下一个独立批次 `M2.2`：
+  - 活动列表页
+  - 活动详情页
+  - 签到 6 位码输入页
+  - 签退 6 位码输入页
+- M0 决策锁口仍不作为本轮编码完成条件，但相关风险需要持续记录。
 
-## Errors Encountered
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-|       | 1       |            |
+## 当前审查问题清单
 
-## Notes
-- 本次文档输出对象是 `wxapp-checkin` 新 Web 版，不再以微信小程序为基线
-- `miniprogram_npm` 等第三方生成产物不作为“项目自有代码设计基线”
+- 已修：`web/src/app/router.tsx` 补根路由 `/ -> /login|/activities` 与受保护路由。
+- 已修：`web/src/shared/device/browser-capability.ts` 收紧 Passkey 基线判断。
+- 已修：`web/src/shared/http/client.ts` 补非 JSON / 非 2xx 响应归一化。
+- 已修：`web/src/shared/session/session-store.ts` 补 `localStorage` 不可用时降级。
+- 已修：`web/src/pages/bind/BindPage.tsx` 与 `web/src/pages/login/LoginPage.tsx` 补不支持浏览器与“未注册 Passkey 跳绑定”处理。
 
-## 2026-03-09 新需求追加：动态 6 位签到码 Web 化改造
+## 错误记录
 
-### 新目标
-- 不再沿用微信小程序扫码签到模式，改为手机浏览器 Web 端。
-- 管理员手机展示动态 6 位数验证码。
-- 签到人员在 7.5 秒窗口内输入验证码完成签到。
-- `suda_union/` 与 `suda-gs-ams/` 禁止做任何代码逻辑改动，仅允许 `wxapp-checkin/` 改造。
+- 修复阶段的失败测试已全部转绿：
+  - `src/app/App.test.tsx`
+  - `src/shared/device/browser-capability.test.ts`
+  - `src/shared/session/session-store.test.ts`
+  - `src/shared/http/client.test.ts`
+  - `src/pages/login/LoginPage.test.tsx`
+  - `src/pages/bind/BindPage.test.tsx`
+- 新鲜验证结果：
+  - 首批修复后：`cd web && npm test -- --run` => 7 个测试文件、23 个测试通过
+  - 半程实现后：`cd web && npm test -- --run` => 10 个测试文件、28 个测试通过
+  - 半程实现后：`cd web && npm run build` => 构建通过
 
-### 新阶段
-#### Phase A: 现状复核
-- [x] 阅读 `wxapp-checkin` 前端页面、工具层、后端控制器、服务与数据库模型
-- [x] 确认可复用的领域规则与必须重写的运行时能力
-- **Status:** complete
+## 2026-03-09 第二阶段任务
 
-#### Phase B: 新方案约束分析
-- [x] 评估 6 位动态码替代二维码后的后端校验路径
-- [x] 识别 Web 端身份体系、活动选择、码冲突与时钟同步风险
-- [x] 联网调研移动浏览器输入、视口、保活与后台节流约束
-- **Status:** complete
+### 目标
 
-#### Phase C: 输出改造设计
-- [x] 给出推荐架构、接口变更、前端重建策略、兼容矩阵与迁移步骤
-- [x] 在用户明确“不需要寻求确认，直接生成文档”后完成文档输出
-- **Status:** complete
+- 对已完成的首批 Web 改造做代码审查，并修复明确的功能性 bug。
+- 若首批质量达标，则继续推进到“整体改造进度二分之一”的下一批前端能力。
+- 将审查结论、根因、测试补充和实现过程持续沉淀到仓库内文档。
 
-#### Phase D: 文档补完与实施落地准备
-- [x] 输出 Web 需求正式基线 `REQUIREMENTS.md`
-- [x] 输出 `WEB_DESIGN.md`
-- [x] 输出 `WEB_COMPATIBILITY.md`
-- [x] 输出 `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
-- **Status:** complete
+### 当前阶段
 
-## 2026-03-09 补充任务：审查 Web 改造文档完备性与合理性
+- 状态：in_progress
+- 阶段 1：复核文档基线与首批实现一致性
+- 阶段 2：完成首批 Web 代码审查并定位根因
+- 阶段 3：按 TDD 修复确认的问题
+- 阶段 4：补充“从四分之一到二分之一”的设计与实施记录
+- 阶段 5：继续推进下一批前端页面并完成验证
 
-### Goal
-- 结合当前 `wxapp-checkin` 代码与文档现状，审查“转手机 Web 前端”改造计划是否合理。
-- 识别文档之间的冲突、缺口与实施风险。
-- 若缺少关键文档或缺少关键章节，则在 `docs/` 内补齐。
+### 本轮重点检查项
 
-### Current Phase
-- Phase R2
-
-### Phases
-#### Phase R1: 文档与代码交叉盘点
-- [x] 盘点 `REQUIREMENTS.md`、`FUNCTIONAL_SPEC.md`、`API_SPEC.md`、`WEB_DESIGN.md`、`WEB_COMPATIBILITY.md` 与实施计划的关系
-- [x] 复核当前 `frontend/`、`backend/` 代码对 Web 方案的支撑边界
-- [x] 记录明显冲突与高风险缺口
-- **Status:** complete
-
-#### Phase R2: 审查结论与文档补齐
-- [x] 输出“计划是否合理”的结论与证据
-- [x] 补齐缺失文档或缺失章节，避免新旧基线并存导致误用
-- [x] 更新 README / 文档导航或新增审查结论文档
-- **Status:** complete
-
-#### Phase R3: 验证与交付
-- [x] 校验新增/修改文档之间引用关系
-- [x] 记录本轮补齐结果与后续待实现项
-- **Status:** complete
+- 路由是否落实：
+  - 未登录跳 `/login`
+  - 未绑定跳 `/bind`
+  - 管理员与普通用户页面边界
+- 绑定页与登录页是否正确处理浏览器 Passkey 能力差异。
+- `shared/http/client.ts` 是否对后端异常、非 JSON 响应、会话失效和 API 契约偏差有足够韧性。
+- 当前测试是否覆盖关键边界，而不是只覆盖 happy path。

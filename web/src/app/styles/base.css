@@ -1,0 +1,337 @@
+/* =========================================================
+ * 全局基线
+ * ---------------------------------------------------------
+ * 这一段负责：
+ * 1. 统一颜色、字体、背景基调
+ * 2. 让整个 Web 看起来像“手机优先”的单页应用
+ * 3. 为所有页面共享相同的视觉语言
+ * ========================================================= */
+/* 维护建议：
+ * - 如果后续要接品牌色，优先先从这里抽 CSS 变量；
+ * - 如果只改单页观感，不要直接动这里的全局底色；
+ * - 全局字体一旦切换，先验证动态码输入框的字距是否仍然可读。 */
+:root {
+  color-scheme: light;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f5f7fb;
+  color: #10213a;
+}
+
+/* 所有元素默认走 border-box，避免宽度和 padding 叠加失控。 */
+* {
+  box-sizing: border-box;
+}
+
+/* 根节点统一吃满视口高度，给页面级居中布局提供基础。 */
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+/* 背景使用柔和的径向渐变和线性渐变叠加，避免纯白页面过于生硬。 */
+body {
+  min-width: 320px;
+  background:
+    radial-gradient(circle at top, rgba(53, 109, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
+}
+
+/* 让按钮、输入框继承页面字体，避免原生控件风格割裂。 */
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* 根容器用 flex，是为了让 `MobilePage` 可以可靠地铺满可用宽度。 */
+#root {
+  display: flex;
+}
+
+/* 如果后续引入抽屉、全屏弹层或 toast root，
+ * 也建议继续挂在 `#root` 内统一管理，避免多套定位上下文互相打架。 */
+
+/* =========================================================
+ * 页面壳层
+ * ---------------------------------------------------------
+ * `MobilePage` 组件依赖这些类完成：
+ * - 整页垂直居中
+ * - 卡片式内容区域
+ * - 标题与正文分区
+ * ========================================================= */
+/* 这部分样式和 `MobilePage.tsx` 是一对一关系：
+ * JSX 结构一旦调整，记得回头同步这里，不要只改其中一边。 */
+.mobile-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px 40px;
+}
+
+/* 内容卡片限制最大宽度，保证手机端阅读密度舒适。 */
+.mobile-page__card {
+  width: min(100%, 480px);
+  padding: 28px 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 48px rgba(16, 33, 58, 0.12);
+}
+
+/* 页面主标题比正文明显更大，但仍控制在手机端可一屏阅读的范围。 */
+.mobile-page__header h1 {
+  margin: 8px 0 12px;
+  font-size: 2rem;
+  line-height: 1.15;
+}
+
+/* 所有页面正文统一用 grid 垂直堆叠，减少每页自己处理间距。 */
+.mobile-page__content {
+  display: grid;
+  gap: 12px;
+}
+
+/* 正文字体颜色略浅，降低阅读压迫感。 */
+.mobile-page__content p {
+  margin: 0;
+  line-height: 1.6;
+  color: #40506a;
+}
+
+/* =========================================================
+ * 视觉辅助说明
+ * ---------------------------------------------------------
+ * 下面这些样式虽然看起来分散，但都在服务同一件事：
+ * “让用户在手机上快速判断当前页面能做什么、该点哪里”
+ *
+ * 因此维护时的优先级建议：
+ * 1. 不要轻易破坏主按钮和次按钮的层级差异
+ * 2. 不要让活动卡片的信息密度超过一屏可扫读范围
+ * 3. 动态码输入框一定要保持足够醒目
+ * ========================================================= */
+
+/* 样式维护的基本策略：
+ * - 先保结构一致，再谈视觉个性
+ * - 能抽到共用类的，不要在单页里写局部补丁
+ * - 如果未来需要深色模式，优先改颜色层，不要改布局层 */
+
+/* eyebrow 是页面辅助标签，例如“欢迎回来”“首次访问”“活动详情”。 */
+.mobile-page__eyebrow {
+  margin: 0;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #356dff;
+}
+
+/* =========================================================
+ * 表单与内容区块
+ * ---------------------------------------------------------
+ * 统一处理表单、活动卡片、详情卡片等“纵向内容块”。
+ * ========================================================= */
+
+/* 这些区块类在当前阶段属于“低风险复用件”：
+ * 登录页、绑定页、活动详情页、结果页都在依赖它们，
+ * 改动前最好先跑一遍全量截图或至少全量单测。 */
+.stack-form {
+  display: grid;
+  gap: 16px;
+}
+
+/* 活动列表卡片区域采用一列堆叠，后续如需平板适配可在媒体查询里扩成多列。 */
+.activity-grid {
+  display: grid;
+  gap: 12px;
+}
+
+/* 每个活动分组自身也是一个独立区块。 */
+.activity-section {
+  display: grid;
+  gap: 12px;
+}
+
+/* 分组标题比普通正文更醒目，但不抢主标题层级。 */
+.activity-section__header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+/* 活动卡片和详情面板共用浅底卡片样式，减少视觉心智切换。 */
+.activity-card,
+.detail-panel {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid rgba(16, 33, 58, 0.08);
+  border-radius: 18px;
+  background: rgba(245, 248, 255, 0.9);
+}
+
+/* 如果后续觉得卡片信息太满，优先先调 `gap` 和 `padding`，
+ * 不要一开始就缩字体，因为手机端字太小会直接影响可用性。 */
+
+/* 卡片头部把标题信息和状态标签左右分开。 */
+.activity-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* 活动标题是卡片里最重要的信息。 */
+.activity-card__header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+/* 元信息统一用较浅颜色，保证视觉主次清晰。 */
+.activity-card__meta,
+.activity-card__meta-list p,
+.detail-panel p,
+.empty-hint {
+  margin: 0;
+  color: #40506a;
+  line-height: 1.6;
+}
+
+/* 状态标签统一用圆角胶囊样式，后续管理员态也可以复用。 */
+.status-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+/* 进行中的标签使用蓝色系，传达“当前可操作”。 */
+.status-chip--ongoing {
+  background: rgba(53, 109, 255, 0.14);
+  color: #1744bb;
+}
+
+/* 已完成标签使用中性色，避免和可操作态抢视觉优先级。 */
+.status-chip--completed {
+  background: rgba(16, 33, 58, 0.1);
+  color: #10213a;
+}
+
+/* 单个字段统一采用 label + input 的垂直排列。 */
+.field {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+
+/* 输入框统一圆角与边框，增强移动端触控区域。 */
+.field input {
+  padding: 14px 16px;
+  border: 1px solid #cfd7e6;
+  border-radius: 14px;
+  background: #fdfefe;
+  color: #10213a;
+}
+
+/* 由于绑定页和登录页都大量依赖表单，所以输入框样式尽量保持克制，不做花哨动画。 */
+
+/* 聚焦态给出柔和但清晰的视觉反馈。 */
+.field input:focus {
+  outline: 2px solid rgba(53, 109, 255, 0.2);
+  border-color: #356dff;
+}
+
+/* 动态码输入框需要明显区别于普通文本输入框。 */
+.code-input {
+  text-align: center;
+  letter-spacing: 0.32em;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+/* 对动态码输入框的维护建议：
+ * - 字距是为了让用户更像在看“六码”，不是普通文本；
+ * - 如果以后改成 6 个独立格子，这个类可以保留给“隐藏真实输入框”；
+ * - 不建议把字号调得太小，否则数字输入的“确认感”会明显下降。 */
+
+/* =========================================================
+ * 按钮与链接
+ * ---------------------------------------------------------
+ * 这里把“主按钮 / 次按钮 / 文本链接 / 主动作链接”统一管理，
+ * 防止不同页面各自发明一套样式。
+ * ========================================================= */
+
+/* 一条经验规则：
+ * - 能触发主流程推进的动作用主按钮/主链接
+ * - 只是辅助操作或回退的动作放次按钮/文本链接
+ * 这样新页面即使快速搭建，也不会很快失去交互层级。 */
+.primary-button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #356dff 0%, #1744bb 100%);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 这几种交互元素虽然语义不同，但在视觉尺寸上保持一致。 */
+.primary-link,
+.secondary-button,
+.secondary-link,
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+/* 主动作链接用于详情页“去签到”等最重要跳转。 */
+.primary-link {
+  background: linear-gradient(135deg, #356dff 0%, #1744bb 100%);
+  color: #fff;
+  padding: 0 20px;
+}
+
+/* 次按钮和次链接用于“重新加载”“去签退”等次一级动作。 */
+.secondary-button,
+.secondary-link {
+  border: 1px solid rgba(53, 109, 255, 0.2);
+  background: rgba(53, 109, 255, 0.08);
+  color: #1744bb;
+  padding: 0 20px;
+}
+
+/* button 需要鼠标指针反馈，link 本身已有浏览器交互语义。 */
+.secondary-button {
+  cursor: pointer;
+}
+
+/* 文本链接用于返回上一级，不抢主按钮视觉层级。 */
+.text-link {
+  justify-content: flex-start;
+  min-height: auto;
+  border-radius: 0;
+  color: #1744bb;
+}
+
+/* 维护提示：
+ * 如果后续想给链接增加下划线或 hover 动画，优先只改 `.text-link`，
+ * 不要影响 `.primary-link` 和 `.secondary-link` 的按钮感。 */
+
+/* 禁用态统一降低不透明度，让用户一眼知道按钮当前不可用。 */
+.primary-button:disabled {
+  opacity: 0.55;
+}
+
+/* 错误态目前只处理文本颜色，不额外加背景块，
+ * 是为了避免移动端小页面里红色区域过大造成视觉压迫。 */
+
+/* 错误文案统一使用红色，提高识别度。 */
+.form-error {
+  margin: 0;
+  color: #c23b35;
+}

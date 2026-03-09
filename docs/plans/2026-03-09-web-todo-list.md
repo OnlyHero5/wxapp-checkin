@@ -1,7 +1,7 @@
 # 手机 Web 动态验证码签到 TODO List
 
 文档版本: v1.0
-状态: 待执行
+状态: 进行中（已完成前半程 M1 + M2）
 更新日期: 2026-03-09
 项目: `wxapp-checkin`
 用途: 作为后续分批次实施编码的执行清单，与 `2026-03-09-web-detailed-coding-plan.md` 配套使用。
@@ -29,61 +29,61 @@
 
 ## 3. M1 前端基础设施
 
-- [ ] T-011 创建 `web/package.json`
-- [ ] T-012 创建 `web/tsconfig.json`
-- [ ] T-013 创建 `web/vite.config.ts`
-- [ ] T-014 创建 `web/index.html`
-- [ ] T-015 创建 `web/src/main.tsx`
-- [ ] T-016 创建 `web/src/app/App.tsx`
-- [ ] T-017 创建 `web/src/app/router.tsx`
-- [ ] T-018 创建 `web/src/app/styles/base.css`
-- [ ] T-019 创建 `web/src/test/setup.ts`
-- [ ] T-020 补 `web/src/app/App.test.tsx`
-- [ ] T-021 建立 `shared/http/client.ts`
-- [ ] T-022 建立 `shared/http/errors.ts`
-- [ ] T-023 建立 `shared/session/session-store.ts`
-- [ ] T-024 建立 `shared/device/browser-capability.ts`
-- [ ] T-025 建立 `shared/device/page-lifecycle.ts`
-- [ ] T-026 建立 `shared/ui/MobilePage.tsx`
-- [ ] T-027 建立 `shared/ui/UnsupportedBrowser.tsx`
-- [ ] T-028 补 `session-store.test.ts`
-- [ ] T-029 补 `browser-capability.test.ts`
-- [ ] T-030 跑 `npm test -- --run`
-- [ ] T-031 跑 `npm run build`
+- [x] T-011 创建 `web/package.json`
+- [x] T-012 创建 `web/tsconfig.json`
+- [x] T-013 创建 `web/vite.config.ts`
+- [x] T-014 创建 `web/index.html`
+- [x] T-015 创建 `web/src/main.tsx`
+- [x] T-016 创建 `web/src/app/App.tsx`
+- [x] T-017 创建 `web/src/app/router.tsx`
+- [x] T-018 创建 `web/src/app/styles/base.css`
+- [x] T-019 创建 `web/src/test/setup.ts`
+- [x] T-020 补 `web/src/app/App.test.tsx`
+- [x] T-021 建立 `shared/http/client.ts`
+- [x] T-022 建立 `shared/http/errors.ts`
+- [x] T-023 建立 `shared/session/session-store.ts`
+- [x] T-024 建立 `shared/device/browser-capability.ts`
+- [x] T-025 建立 `shared/device/page-lifecycle.ts`
+- [x] T-026 建立 `shared/ui/MobilePage.tsx`
+- [x] T-027 建立 `shared/ui/UnsupportedBrowser.tsx`
+- [x] T-028 补 `session-store.test.ts`
+- [x] T-029 补 `browser-capability.test.ts`
+- [x] T-030 跑 `npm test -- --run`
+- [x] T-031 跑 `npm run build`
 
 ## 4. M2 前端主链路
 
 ### 4.1 认证与绑定
 
-- [ ] T-032 建立 `features/auth/api.ts`
-- [ ] T-033 建立 `features/auth/webauthn.ts`
-- [ ] T-034 建立 `IdentityBindForm.tsx`
-- [ ] T-035 建立 `PasskeyLoginPanel.tsx`
-- [ ] T-036 建立 `pages/login/LoginPage.tsx`
-- [ ] T-037 建立 `pages/bind/BindPage.tsx`
-- [ ] T-038 补 `LoginPage.test.tsx`
-- [ ] T-039 补 `BindPage.test.tsx`
-- [ ] T-040 打通实名校验流程
-- [ ] T-041 打通 Passkey 注册流程
-- [ ] T-042 打通 Passkey 登录流程
-- [ ] T-043 登录成功后写入会话并跳转活动页
+- [x] T-032 建立 `features/auth/api.ts`
+- [x] T-033 建立 `features/auth/webauthn.ts`
+- [x] T-034 建立 `IdentityBindForm.tsx`
+- [x] T-035 建立 `PasskeyLoginPanel.tsx`
+- [x] T-036 建立 `pages/login/LoginPage.tsx`
+- [x] T-037 建立 `pages/bind/BindPage.tsx`
+- [x] T-038 补 `LoginPage.test.tsx`
+- [x] T-039 补 `BindPage.test.tsx`
+- [x] T-040 打通实名校验流程
+- [x] T-041 打通 Passkey 注册流程
+- [x] T-042 打通 Passkey 登录流程
+- [x] T-043 登录成功后写入会话并跳转活动页
 
 ### 4.2 普通用户活动与输入码
 
-- [ ] T-044 建立 `features/activities/api.ts`
-- [ ] T-045 建立 `ActivityCard.tsx`
-- [ ] T-046 建立 `features/attendance/components/CodeInput.tsx`
-- [ ] T-047 建立 `pages/activities/ActivitiesPage.tsx`
-- [ ] T-048 建立 `pages/activity-detail/ActivityDetailPage.tsx`
-- [ ] T-049 建立 `pages/checkin/CheckinPage.tsx`
-- [ ] T-050 建立 `pages/checkout/CheckoutPage.tsx`
-- [ ] T-051 补 `ActivitiesPage.test.tsx`
-- [ ] T-052 补 `CheckinPage.test.tsx`
-- [ ] T-053 实现活动列表展示
-- [ ] T-054 实现活动详情展示
-- [ ] T-055 实现签到码输入页
-- [ ] T-056 实现签退码输入页
-- [ ] T-057 补齐错误码、过期码、重复提交反馈
+- [x] T-044 建立 `features/activities/api.ts`
+- [x] T-045 建立 `ActivityCard.tsx`
+- [x] T-046 建立 `features/attendance/components/CodeInput.tsx`
+- [x] T-047 建立 `pages/activities/ActivitiesPage.tsx`
+- [x] T-048 建立 `pages/activity-detail/ActivityDetailPage.tsx`
+- [x] T-049 建立 `pages/checkin/CheckinPage.tsx`
+- [x] T-050 建立 `pages/checkout/CheckoutPage.tsx`
+- [x] T-051 补 `ActivitiesPage.test.tsx`
+- [x] T-052 补 `CheckinPage.test.tsx`
+- [x] T-053 实现活动列表展示
+- [x] T-054 实现活动详情展示
+- [x] T-055 实现签到码输入页
+- [x] T-056 实现签退码输入页
+- [x] T-057 补齐错误码、过期码、重复提交反馈
 
 ### 4.3 管理员页面
 
