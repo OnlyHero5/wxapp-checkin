@@ -211,8 +211,7 @@ public class WebIdentityService {
   @Transactional(readOnly = true)
   public WebPasskeyLoginOptionsResponse getLoginOptions(String browserBindingKey) {
     String normalizedBrowserKey = requireBrowserBindingKey(browserBindingKey);
-    WebBrowserBindingEntity binding = findActiveBindingByBrowser(normalizedBrowserKey)
-        .orElseThrow(() -> new BusinessException("forbidden", "当前浏览器尚未完成绑定", "passkey_not_registered"));
+    WebBrowserBindingEntity binding = requireLoginBinding(normalizedBrowserKey);
     WebPasskeyCredentialEntity credential = credentialRepository.findByBinding_IdAndActiveTrue(binding.getId())
         .orElseThrow(() -> new BusinessException("forbidden", "当前浏览器尚未完成绑定", "passkey_not_registered"));
 
@@ -248,8 +247,7 @@ public class WebIdentityService {
       throw new BusinessException("forbidden", "Passkey 校验失败，请重试", "passkey_verification_failed");
     }
 
-    WebBrowserBindingEntity binding = findActiveBindingByBrowser(normalizedBrowserKey)
-        .orElseThrow(() -> new BusinessException("forbidden", "当前浏览器尚未完成绑定", "passkey_not_registered"));
+    WebBrowserBindingEntity binding = requireLoginBinding(normalizedBrowserKey);
     WebPasskeyCredentialEntity credential = credentialRepository.findByBinding_IdAndActiveTrue(binding.getId())
         .orElseThrow(() -> new BusinessException("forbidden", "当前浏览器尚未完成绑定", "passkey_not_registered"));
     if (!normalize(credential.getCredentialId()).equals(normalize(request.assertionResponse().id()))) {
@@ -456,8 +454,23 @@ public class WebIdentityService {
     return browserBindingRepository.findByBindingFingerprintHashAndStatus(browserBindingKey, ACTIVE_STATUS);
   }
 
+  private Optional<WebBrowserBindingEntity> findLatestBindingByBrowser(String browserBindingKey) {
+    return browserBindingRepository.findTopByBindingFingerprintHashOrderByUpdatedAtDesc(browserBindingKey);
+  }
+
   private Optional<WebBrowserBindingEntity> findActiveBindingByUser(Long userId) {
     return browserBindingRepository.findByUser_IdAndStatus(userId, ACTIVE_STATUS);
+  }
+
+  private WebBrowserBindingEntity requireLoginBinding(String browserBindingKey) {
+    return findActiveBindingByBrowser(browserBindingKey)
+        .orElseGet(() -> {
+          WebBrowserBindingEntity latestBinding = findLatestBindingByBrowser(browserBindingKey).orElse(null);
+          if (latestBinding != null && UNBOUND_STATUS.equalsIgnoreCase(normalize(latestBinding.getStatus()))) {
+            throw new BusinessException("forbidden", "当前浏览器绑定已失效，请重新绑定", "binding_revoked");
+          }
+          throw new BusinessException("forbidden", "当前浏览器尚未完成绑定", "passkey_not_registered");
+        });
   }
 
   private UserProfileDto buildProfile(WxUserAuthExtEntity user) {

@@ -50,8 +50,8 @@ public class ActivityQueryService {
   }
 
   @Transactional(readOnly = true)
-  public ActivityListResponse listActivities(String sessionToken) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
+  public ActivityListResponse listActivities(String sessionToken, String browserBindingKey) {
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
     List<WxActivityProjectionEntity> activities = activityRepository.findByActiveTrueOrderByStartTimeDesc();
 
     Map<String, WxUserActivityStatusEntity> statusMap = statusRepository.findByUserId(principal.user().getId())
@@ -67,8 +67,8 @@ public class ActivityQueryService {
   }
 
   @Transactional(readOnly = true)
-  public ActivityDetailResponse detail(String sessionToken, String activityId) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
+  public ActivityDetailResponse detail(String sessionToken, String browserBindingKey, String activityId) {
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
     String normalizedActivityId = normalize(activityId);
     if (normalizedActivityId.isEmpty()) {
       throw new BusinessException("invalid_param", "activity_id 参数缺失");

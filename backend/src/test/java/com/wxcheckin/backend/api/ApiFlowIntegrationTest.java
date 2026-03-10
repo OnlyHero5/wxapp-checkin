@@ -256,14 +256,16 @@ class ApiFlowIntegrationTest {
     String staffSession = bindAndRegister("browser-web-staff-list", "2025000007", "刘洋");
 
     mockMvc.perform(get("/api/web/activities")
-            .header("Authorization", "Bearer " + staffSession))
+            .header("Authorization", "Bearer " + staffSession)
+            .header("X-Browser-Binding-Key", "browser-web-staff-list"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andExpect(jsonPath("$.activities[0].activity_id", is("act_hackathon_20260215")))
         .andExpect(jsonPath("$.server_time_ms").exists());
 
     mockMvc.perform(get("/api/web/activities/{activityId}", "act_hackathon_20260215")
-            .header("Authorization", "Bearer " + staffSession))
+            .header("Authorization", "Bearer " + staffSession)
+            .header("X-Browser-Binding-Key", "browser-web-staff-list"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andExpect(jsonPath("$.activity_id", is("act_hackathon_20260215")))
@@ -280,6 +282,7 @@ class ApiFlowIntegrationTest {
 
     MvcResult codeResult = mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
             .header("Authorization", "Bearer " + staffSession)
+            .header("X-Browser-Binding-Key", "browser-web-staff-code")
             .param("action_type", "checkin"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
@@ -293,6 +296,7 @@ class ApiFlowIntegrationTest {
     mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + normalSession)
+            .header("X-Browser-Binding-Key", "browser-web-normal-code")
             .content("""
                 {
                   "action_type":"checkin",
@@ -307,6 +311,7 @@ class ApiFlowIntegrationTest {
     mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + normalSession)
+            .header("X-Browser-Binding-Key", "browser-web-normal-code")
             .content("""
                 {
                   "action_type":"checkin",
@@ -315,6 +320,58 @@ class ApiFlowIntegrationTest {
                 """.formatted(code)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("duplicate")));
+  }
+
+  @Test
+  void shouldRequireMatchingBrowserBindingKeyForWebApis() throws Exception {
+    String normalSession = bindAndRegister("browser-web-binding-lock", "2025000011", "测试用户");
+
+    mockMvc.perform(get("/api/web/activities")
+            .header("Authorization", "Bearer " + normalSession)
+            .header("X-Browser-Binding-Key", "browser-web-binding-other"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")))
+        .andExpect(jsonPath("$.error_code", is("session_expired")));
+  }
+
+  @Test
+  void shouldRejectCheckinWhenActivityDisablesCheckin() throws Exception {
+    String staffSession = bindAndRegister("browser-web-staff-checkin-disabled", "2025000007", "刘洋");
+    String normalSession = bindAndRegister("browser-web-normal-checkin-disabled", "2025000011", "测试用户");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    MvcResult codeResult = mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + staffSession)
+            .header("X-Browser-Binding-Key", "browser-web-staff-checkin-disabled")
+            .param("action_type", "checkin"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andReturn();
+
+    String code = objectMapper.readTree(codeResult.getResponse().getContentAsString()).get("code").asText();
+    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue("act_hackathon_20260215").orElseThrow();
+    activity.setSupportCheckin(false);
+    activityRepository.save(activity);
+
+    mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + normalSession)
+            .header("X-Browser-Binding-Key", "browser-web-normal-checkin-disabled")
+            .content("""
+                {
+                  "action_type":"checkin",
+                  "code":"%s"
+                }
+                """.formatted(code)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")));
+
+    mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + staffSession)
+            .header("X-Browser-Binding-Key", "browser-web-staff-checkin-disabled")
+            .param("action_type", "checkin"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")));
   }
 
   @Test
@@ -328,6 +385,7 @@ class ApiFlowIntegrationTest {
     mockMvc.perform(post("/api/web/staff/activities/{activityId}/bulk-checkout", "act_hackathon_20260215")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + staffSession)
+            .header("X-Browser-Binding-Key", "browser-web-staff-manage")
             .content("""
                 {
                   "confirm":true,
@@ -347,6 +405,7 @@ class ApiFlowIntegrationTest {
     MvcResult createReviewResult = mockMvc.perform(post("/api/web/unbind-reviews")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + normalSession)
+            .header("X-Browser-Binding-Key", "browser-web-normal-review")
             .content("""
                 {
                   "reason":"更换手机",
@@ -361,6 +420,7 @@ class ApiFlowIntegrationTest {
 
     mockMvc.perform(get("/api/web/staff/unbind-reviews")
             .header("Authorization", "Bearer " + staffSession)
+            .header("X-Browser-Binding-Key", "browser-web-staff-manage")
             .param("status", "pending"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
@@ -369,6 +429,7 @@ class ApiFlowIntegrationTest {
     mockMvc.perform(post("/api/web/staff/unbind-reviews/{reviewId}/approve", reviewId)
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + staffSession)
+            .header("X-Browser-Binding-Key", "browser-web-staff-manage")
             .content("""
                 {
                   "review_comment":"确认已更换设备"
@@ -386,7 +447,7 @@ class ApiFlowIntegrationTest {
             .content("{}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("forbidden")))
-        .andExpect(jsonPath("$.error_code", is("passkey_not_registered")));
+        .andExpect(jsonPath("$.error_code", is("binding_revoked")));
   }
 
   private String bindAndRegister(String browserKey, String studentId, String name) throws Exception {

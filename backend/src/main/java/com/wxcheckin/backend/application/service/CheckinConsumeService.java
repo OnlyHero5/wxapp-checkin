@@ -87,8 +87,8 @@ public class CheckinConsumeService {
   }
 
   @Transactional
-  public ConsumeCheckinResponse consume(ConsumeCheckinRequest request) {
-    SessionPrincipal principal = sessionService.requirePrincipal(request.sessionToken());
+  public ConsumeCheckinResponse consume(ConsumeCheckinRequest request, String browserBindingKey) {
+    SessionPrincipal principal = sessionService.requirePrincipal(request.sessionToken(), browserBindingKey);
     if (principal.role() != RoleType.NORMAL) {
       throw new BusinessException("forbidden", "仅普通用户可扫码签到/签退");
     }
@@ -99,6 +99,9 @@ public class CheckinConsumeService {
         .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
     if (ActivityProgressStatus.fromCode(activity.getProgressStatus()) == ActivityProgressStatus.COMPLETED) {
       throw new BusinessException("forbidden", "活动已结束，无法再签到/签退");
+    }
+    if (payload.actionType() == ActionType.CHECKIN && !Boolean.TRUE.equals(activity.getSupportCheckin())) {
+      throw new BusinessException("forbidden", "该活动暂不支持签到");
     }
     if (payload.actionType() == ActionType.CHECKOUT && !Boolean.TRUE.equals(activity.getSupportCheckout())) {
       throw new BusinessException("forbidden", "该活动暂不支持签退");

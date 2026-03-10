@@ -65,12 +65,13 @@ public class QrSessionService {
   @Transactional
   public CreateQrSessionResponse issue(
       String sessionToken,
+      String browserBindingKey,
       String activityId,
       String actionTypeText,
       Integer rotateSecondsOverride,
       Integer graceSecondsOverride
   ) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
     if (principal.role() != RoleType.STAFF) {
       throw new BusinessException("forbidden", "仅工作人员可获取二维码配置");
     }
@@ -90,6 +91,9 @@ public class QrSessionService {
 
     if (ActivityProgressStatus.fromCode(activity.getProgressStatus()) == ActivityProgressStatus.COMPLETED) {
       throw new BusinessException("forbidden", "活动已结束，无法生成二维码");
+    }
+    if (actionType == ActionType.CHECKIN && !Boolean.TRUE.equals(activity.getSupportCheckin())) {
+      throw new BusinessException("forbidden", "该活动暂不支持签到动态码");
     }
     if (actionType == ActionType.CHECKOUT && !Boolean.TRUE.equals(activity.getSupportCheckout())) {
       throw new BusinessException("forbidden", "该活动暂不支持签退二维码");

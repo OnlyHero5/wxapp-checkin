@@ -311,3 +311,96 @@
   - `cd backend && ./mvnw test` => 27 个测试通过
   - `cd web && npm test -- --run` => 15 个测试文件、48 个测试通过
   - `cd web && npm run build` => 构建通过
+
+### Web 完成度复核与 URL 冲突整改
+
+- 已重新读取并交叉验证：
+  - `README.md`
+  - `backend/README.md`
+  - `docs/API_SPEC.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+  - `web/vite.config.ts`
+  - `web/src/shared/http/client.ts`
+  - `web/src/app/App.tsx`
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/*.java`
+- 已读取跨项目参考：
+  - `suda-gs-ams/vite.config.ts`
+  - `suda-gs-ams/src/shared/http/client.ts`
+  - `suda_union/src/main/java/com/suda_union/controller/*.java`
+- 已完成新的实证验证：
+  - `cd web && npm test -- --run` => 15 个测试文件、48 个测试通过
+  - `cd web && npm run build` => 构建通过
+  - `cd backend && ./mvnw test` => 27 个测试通过
+- 已确认“改造是否完成”的结论：
+  - Web-only 主链路已完成
+  - 旧 controller / 小程序目录已删除
+  - 文档里声称的测试通过结论真实成立
+- 已确认“仍需修复”的真实问题：
+  - `web` 默认请求 `/api/web`，但此前没有 dev proxy / env base path，README 的本地联调步骤会真实 404
+  - 与 `suda-gs-ams` 共域时，SPA 根路径和通用 `/api/*` 代理存在部署级冲突风险
+- 已按 TDD 新增失败测试：
+  - `web/src/shared/runtime/runtime-config.test.ts`
+  - `web/src/test/vite-config.test.ts`
+- 已完成对应实现：
+  - 新增 `web/src/shared/runtime/runtime-config.ts`
+  - `App.tsx` 接入 `routerBasename`
+  - `shared/http/client.ts` 改为使用 `apiBasePath`
+  - `vite.config.ts` 改为可配置 `base` 和精确 API proxy
+  - `web/src/test/setup.ts` 补 Node 环境保护，避免配置测试被 `HTMLElement` 假设拖坏
+  - 新增 `web/.env.example`
+- 已完成新的目标回归验证：
+  - `cd web && npm test -- --run src/shared/runtime/runtime-config.test.ts src/test/vite-config.test.ts` => 2 个测试文件、6 个测试通过
+
+### 2026-03-10 联调前全面复核与补洞
+
+- 已重新读取并审查：
+  - `README.md`
+  - `backend/README.md`
+  - `backend/TEST_ENV_TESTING.md`
+  - `docs/REQUIREMENTS.md`
+  - `docs/FUNCTIONAL_SPEC.md`
+  - `docs/API_SPEC.md`
+  - `docs/WEB_COMPATIBILITY.md`
+  - `docs/WEB_MIGRATION_REVIEW.md`
+  - `web/src/**`
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/**`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/**`
+- 已新增并跑红的回归测试：
+  - `web/src/app/App.test.tsx`：`review_admin` 可进入解绑审核路由
+  - `web/src/pages/staff-manage/StaffManagePage.test.tsx`：
+    - 旧动态码请求不得回写新页签
+    - 倒计时递减并在到期后自动刷新
+    - 不支持 wake lock 时展示非阻塞提示
+  - `backend/src/test/java/com/wxcheckin/backend/api/ApiFlowIntegrationTest.java`：
+    - Web API 必须校验 `X-Browser-Binding-Key`
+    - `support_checkin=false` 时发码 / 验码都失败
+    - 解绑审批后返回 `binding_revoked`
+- 已完成对应实现：
+  - `web/src/shared/session/session-store.ts`
+  - `web/src/pages/activities/ActivitiesPage.tsx`
+  - `web/src/features/staff/components/DynamicCodePanel.tsx`
+  - `web/src/pages/staff-manage/StaffManagePage.tsx`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/SessionService.java`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/ActivityQueryService.java`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/QrSessionService.java`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/DynamicCodeService.java`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/CheckinConsumeService.java`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/BulkCheckoutService.java`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/UnbindReviewService.java`
+  - `backend/src/main/java/com/wxcheckin/backend/application/service/WebIdentityService.java`
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/WebActivityController.java`
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/WebAttendanceController.java`
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/WebStaffController.java`
+  - `backend/src/main/java/com/wxcheckin/backend/api/dto/WebUnbindReviewCreateResponse.java`
+  - `backend/src/main/java/com/wxcheckin/backend/api/dto/WebUnbindReviewItemDto.java`
+  - `backend/src/main/java/com/wxcheckin/backend/infrastructure/persistence/repository/WebBrowserBindingRepository.java`
+  - `backend/scripts/test-env.example.sh`
+  - `README.md`
+  - `backend/README.md`
+  - `backend/TEST_ENV_TESTING.md`
+  - `docs/WEB_COMPATIBILITY.md`
+  - `docs/WEB_MIGRATION_REVIEW.md`
+- 已完成口径锁定：
+  - 动态码正式需求已统一为 10 秒窗口，并同步回写正式基线与补充设计文档。

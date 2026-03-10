@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/web/activities")
 public class WebActivityController {
 
+  private static final String BROWSER_BINDING_KEY_HEADER = "X-Browser-Binding-Key";
+
   private final ActivityQueryService activityQueryService;
   private final SessionTokenExtractor sessionTokenExtractor;
   private final Clock clock;
@@ -37,7 +39,10 @@ public class WebActivityController {
   @GetMapping
   public WebActivityListResponse list(HttpServletRequest request) {
     String token = sessionTokenExtractor.extract(null, request);
-    ActivityListResponse response = activityQueryService.listActivities(token);
+    ActivityListResponse response = activityQueryService.listActivities(
+        token,
+        request.getHeader(BROWSER_BINDING_KEY_HEADER)
+    );
     return new WebActivityListResponse(
         response.status(),
         response.message(),
@@ -52,7 +57,11 @@ public class WebActivityController {
       HttpServletRequest request
   ) {
     String token = sessionTokenExtractor.extract(null, request);
-    ActivityDetailResponse response = activityQueryService.detail(token, activityId);
+    ActivityDetailResponse response = activityQueryService.detail(
+        token,
+        request.getHeader(BROWSER_BINDING_KEY_HEADER),
+        activityId
+    );
     ActivityDetailDto data = response.data();
     return new WebActivityDetailResponse(
         response.status(),

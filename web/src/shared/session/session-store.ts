@@ -224,8 +224,12 @@ export function isStaffSession() {
   return getSessionRole() === "staff" || hasSessionPermission("activity:manage");
 }
 
+export function isReviewAdminSession() {
+  return getSessionRole() === "review_admin";
+}
+
 export function canReviewUnbind() {
-  return getSessionRole() === "staff" || hasSessionPermission("unbind:review");
+  return isStaffSession() || isReviewAdminSession() || hasSessionPermission("unbind:review");
 }
 
 export function clearSession() {

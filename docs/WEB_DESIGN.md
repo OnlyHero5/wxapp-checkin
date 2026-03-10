@@ -393,7 +393,7 @@
 
 - `activity_id`
 - `action_type`
-- `slot = floor(server_time_ms / 7500)`
+- `slot = floor(server_time_ms / 10000)`
 - `server_secret`
 
 输出：
@@ -410,7 +410,7 @@
 
 - 以后端时间为准
 - 默认仅校验当前时间片
-- 为吸收边界延迟，可设计为校验“当前 slot + 前一个 slot”，但对外业务口径仍表述为“7.5 秒内有效”
+- 为吸收边界延迟，可设计为校验“当前 slot + 前一个 slot”，但对外业务口径仍表述为“10 秒内有效”
 
 ### 8.3 防重放
 

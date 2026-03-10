@@ -2,7 +2,7 @@
 
 文档版本: v1.0
 状态: 正式基线
-更新日期: 2026-03-09
+更新日期: 2026-03-10
 项目: `wxapp-checkin`
 
 ## 1. 文档目标与适用范围
@@ -32,6 +32,22 @@
 ### 3.1 Base Path
 
 - 正式 Web 接口统一放在 `/api/web/**`。
+
+### 3.1.1 与 `suda-gs-ams` / `suda_union` 共域时的路径约束
+
+- `suda_union` 当前历史 controller 前缀主要是 `/activity`、`/user`、`/session`、`/department`、`/suda_login`、`/token`，不直接占用 `/api/web/**`。
+- 因此从“接口命名”本身看，`wxapp-checkin` 与 `suda_union` 没有直接重名冲突。
+- 但若与 `suda-gs-ams` 共用同一个域名 / 网关，需要注意两层冲突：
+  - SPA 页面路由：`wxapp-checkin` 与 `suda-gs-ams` 都会使用 `/`、`/login`
+  - API 网关路由：`suda-gs-ams` 生态里常见的是更宽的 `/api/*` 代理规则
+- 推荐方案：
+  - `wxapp-checkin` 前端部署到独立子路径，例如 `/checkin/`
+  - `wxapp-checkin` API 要么保留 `/api/web/**` 并在网关上优先匹配 `/api/web/`
+  - 要么由前端改用独立外部前缀（例如 `/checkin-api/web`），再在网关层重写到本服务实际的 `/api/web/**`
+- 当前 `web/` 已支持通过环境变量覆盖：
+  - `VITE_APP_BASE_PATH`
+  - `VITE_API_BASE_PATH`
+  - `VITE_API_PROXY_TARGET`
 
 ### 3.2 Content-Type
 
@@ -351,7 +367,7 @@
   "action_type": "checkin",
   "code": "483920",
   "slot": 234666666,
-  "expires_at": 1760000007500,
+  "expires_at": 1760000010000,
   "expires_in_ms": 4200,
   "server_time_ms": 1760000003300,
   "checkin_count": 18,

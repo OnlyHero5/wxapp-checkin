@@ -6,12 +6,15 @@
  * 也应该放在这一层，避免页面组件各自重复接线。
  */
 import { BrowserRouter } from "react-router-dom";
+import { resolveRuntimeConfig } from "../shared/runtime/runtime-config";
 import { AppRoutes } from "./router";
 
 export default function App() {
+  const { routerBasename } = resolveRuntimeConfig(import.meta.env as Record<string, string | undefined>);
+
   return (
-    // 生产环境会以浏览器真实 URL 作为单一事实来源，因此这里使用 BrowserRouter。
-    <BrowserRouter>
+    // basename 允许 Web-only 前端在 `/checkin/` 这类子路径下独立挂载，避免和其他 SPA 抢根路由。
+    <BrowserRouter basename={routerBasename}>
       <AppRoutes />
     </BrowserRouter>
   );

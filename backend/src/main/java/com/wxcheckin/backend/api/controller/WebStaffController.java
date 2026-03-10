@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/web")
 public class WebStaffController {
 
+  private static final String BROWSER_BINDING_KEY_HEADER = "X-Browser-Binding-Key";
+
   private final BulkCheckoutService bulkCheckoutService;
   private final UnbindReviewService unbindReviewService;
   private final SessionTokenExtractor sessionTokenExtractor;
@@ -45,7 +47,13 @@ public class WebStaffController {
       HttpServletRequest request
   ) {
     String token = sessionTokenExtractor.extract(requestBody.sessionToken(), request);
-    return bulkCheckoutService.bulkCheckout(token, activityId, requestBody.confirm(), requestBody.reason());
+    return bulkCheckoutService.bulkCheckout(
+        token,
+        request.getHeader(BROWSER_BINDING_KEY_HEADER),
+        activityId,
+        requestBody.confirm(),
+        requestBody.reason()
+    );
   }
 
   @PostMapping("/unbind-reviews")
@@ -54,7 +62,12 @@ public class WebStaffController {
       HttpServletRequest request
   ) {
     String token = sessionTokenExtractor.extract(requestBody.sessionToken(), request);
-    return unbindReviewService.create(token, requestBody.reason(), requestBody.requestedNewBindingHint());
+    return unbindReviewService.create(
+        token,
+        request.getHeader(BROWSER_BINDING_KEY_HEADER),
+        requestBody.reason(),
+        requestBody.requestedNewBindingHint()
+    );
   }
 
   @GetMapping("/staff/unbind-reviews")
@@ -63,7 +76,7 @@ public class WebStaffController {
       HttpServletRequest request
   ) {
     String token = sessionTokenExtractor.extract(null, request);
-    return unbindReviewService.list(token, status);
+    return unbindReviewService.list(token, request.getHeader(BROWSER_BINDING_KEY_HEADER), status);
   }
 
   @PostMapping("/staff/unbind-reviews/{reviewId}/approve")
@@ -73,7 +86,12 @@ public class WebStaffController {
       HttpServletRequest request
   ) {
     String token = sessionTokenExtractor.extract(requestBody.sessionToken(), request);
-    return unbindReviewService.approve(token, reviewId, requestBody.reviewComment());
+    return unbindReviewService.approve(
+        token,
+        request.getHeader(BROWSER_BINDING_KEY_HEADER),
+        reviewId,
+        requestBody.reviewComment()
+    );
   }
 
   @PostMapping("/staff/unbind-reviews/{reviewId}/reject")
@@ -83,6 +101,11 @@ public class WebStaffController {
       HttpServletRequest request
   ) {
     String token = sessionTokenExtractor.extract(requestBody.sessionToken(), request);
-    return unbindReviewService.reject(token, reviewId, requestBody.reviewComment());
+    return unbindReviewService.reject(
+        token,
+        request.getHeader(BROWSER_BINDING_KEY_HEADER),
+        reviewId,
+        requestBody.reviewComment()
+    );
   }
 }

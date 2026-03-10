@@ -73,20 +73,26 @@ export function ActivitiesPage() {
 
   const isStaff = isStaffSession();
   const allowReview = canReviewUnbind();
+  const eyebrow = isStaff ? "工作人员" : allowReview ? "审核管理员" : "普通用户";
+  const description = isStaff
+    ? "查看活动并进入管理页展示动态码、处理批量签退与审核事项。"
+    : allowReview
+      ? "查看你可见的活动，并进入解绑审核处理待办。"
+      : "查看你当前可见的活动，并进入详情页继续签到或签退。";
   // 页面只渲染分组结果，不再自己关心筛选和排序细节。
   const sections = groupVisibleActivities(activities, {
     allowAll: isStaff
   });
 
   return (
-    <MobilePage eyebrow={isStaff ? "工作人员" : "普通用户"} title="活动列表">
-      <p>{isStaff ? "查看活动并进入管理页展示动态码、处理批量签退与审核事项。" : "查看你当前可见的活动，并进入详情页继续签到或签退。"}</p>
-      {isStaff && allowReview ? (
+    <MobilePage eyebrow={eyebrow} title="活动列表">
+      <p>{description}</p>
+      {allowReview ? (
         <Link className="text-link" to="/staff/unbind-reviews">
           查看解绑审核
         </Link>
       ) : null}
-      {!isStaff ? (
+      {!isStaff && !allowReview ? (
         <Link className="text-link" to="/unbind-request">
           申请解绑当前浏览器
         </Link>

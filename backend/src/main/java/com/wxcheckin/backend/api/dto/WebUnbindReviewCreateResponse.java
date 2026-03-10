@@ -5,6 +5,6 @@ public record WebUnbindReviewCreateResponse(
     String message,
     String reviewId,
     String reviewStatus,
-    String submittedAt
+    Long submittedAt
 ) {
 }

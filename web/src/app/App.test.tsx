@@ -143,4 +143,15 @@ describe("AppRoutes", () => {
 
     expect(await screen.findByRole("heading", { name: "解绑审核" })).toBeInTheDocument();
   });
+
+  it("allows explicit review_admin sessions to access the unbind review route", async () => {
+    saveAuthSession({
+      permissions: [],
+      role: "review_admin",
+      session_token: "sess_review_admin_123"
+    });
+    renderPath("/staff/unbind-reviews");
+
+    expect(await screen.findByRole("heading", { name: "解绑审核" })).toBeInTheDocument();
+  });
 });

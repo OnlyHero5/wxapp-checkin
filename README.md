@@ -14,6 +14,7 @@
 - `web/` 是唯一正式前端；历史小程序目录已删除。
 - 正式后端入口统一为 `/api/web/**`。
 - `backend/` 继续承接活动查询、会话、状态机、解绑审核、动态码与同步回写主干。
+- 默认独立部署时，当前 URL 命名空间与 `suda_union` 不直接重名；若要和 `suda-gs-ams` 共域部署，建议给前端配置子路径，并给网关单独保留 `wxapp-checkin` 的 API 前缀。
 
 ## 目标架构
 
@@ -56,7 +57,8 @@
 - 设计文档：`docs/WEB_DESIGN.md`
 - 兼容性文档：`docs/WEB_COMPATIBILITY.md`
 - 审查与迁移说明：`docs/WEB_MIGRATION_REVIEW.md`
-- 实施计划：`docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+- 收尾设计：`docs/plans/2026-03-10-web-only-cutover-design.md`
+- 收尾实施计划：`docs/plans/2026-03-10-web-only-cutover-implementation-plan.md`
 
 迁移参考：
 
@@ -67,7 +69,22 @@
 
 ## 本地启动
 
-前端：
+推荐顺序：
+
+0. 先准备后端测试环境变量文件：
+
+```bash
+cp backend/scripts/test-env.example.sh ~/.wxapp-checkin-test-env.sh
+```
+
+1. 启动后端测试环境（默认监听 `9989`）：
+
+```bash
+cd backend
+./scripts/start-test-env.sh
+```
+
+2. 启动前端开发服务器：
 
 ```bash
 cd web
@@ -75,25 +92,37 @@ npm install
 npm run dev
 ```
 
-后端：
+说明：
 
-```bash
-cd backend
-./mvnw test
-./scripts/start-test-env.sh
-```
+- `web/.env.example` 给出了默认开发配置；如需覆盖，复制为 `web/.env.local` 后按环境修改。
+- 当前前端开发服务器默认把 `VITE_API_BASE_PATH` 对应的路径代理到 `VITE_API_PROXY_TARGET`，默认值是 `http://127.0.0.1:9989`。
+- 如果你不是用 `start-test-env.sh`，而是直接运行 `backend/scripts/start-dev.sh` 的默认 `8080` 端口，请同步把 `VITE_API_PROXY_TARGET` 改为 `http://127.0.0.1:8080`。
+- 若要和 `suda-gs-ams` 共域部署，建议至少设置：
+  - `VITE_APP_BASE_PATH=/checkin/`
+  - `VITE_API_BASE_PATH=/checkin-api/web`
+
+部署路由建议：
+
+- `wxapp-checkin` 前端静态资源挂在 `/checkin/` 这类独立子路径下，避免与 `suda-gs-ams` 的 `/`、`/login` 路由冲突。
+- 如果仍使用 `/api/web/**`，网关必须先匹配 `wxapp-checkin` 的 `/api/web/`，再匹配 `suda-gs-ams` / `suda_union` 的通用 `/api/`。
+- 如果不想依赖网关优先级，建议把前端入口改为 `VITE_API_BASE_PATH=/checkin-api/web`，再由网关把该前缀转发或重写到 `wxapp-checkin` 后端的 `/api/web/**`。
 
 ## 推荐阅读顺序
 
-如果你现在要推进 Web 改造，建议按下面顺序阅读：
+如果你现在要推进 Web-only 联调，建议先读当前正式基线，再按需补充历史复盘：
 
-1. `docs/WEB_MIGRATION_REVIEW.md`
-2. `docs/REQUIREMENTS.md`
-3. `docs/FUNCTIONAL_SPEC.md`
-4. `docs/API_SPEC.md`
+1. `docs/REQUIREMENTS.md`
+2. `docs/FUNCTIONAL_SPEC.md`
+3. `docs/API_SPEC.md`
+4. `backend/README.md`
 5. `docs/WEB_DESIGN.md`
 6. `docs/WEB_COMPATIBILITY.md`
-7. `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+
+历史复盘 / 计划文档请按“参考资料”阅读，不要把它们当成当前仓库状态：
+
+- `docs/WEB_MIGRATION_REVIEW.md`
+- `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+- `docs/plans/2026-03-09-web-todo-list.md`
 
 ## 当前最重要的约束
 

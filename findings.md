@@ -259,6 +259,51 @@
 - `web/src/app/styles/base.css` 存在较强“手写质感样式”倾向：
   - 已收敛为更克制的浅色移动端基线，降低大渐变、超大圆角和伪按钮样式占比。
 
+## 2026-03-10 Web 完成度复核与 URL 冲突审查
+
+### 真实完成度判断
+
+- 以当前仓库代码而非文档自述为准，`wxapp-checkin` 的 Web-only 主链路已经完成：
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller` 当前只剩 `WebAuthController`、`WebActivityController`、`WebAttendanceController`、`WebStaffController`
+  - `web/` 已覆盖普通用户、staff、解绑申请、解绑审核等正式页面
+  - `frontend/` 与根级小程序配置已删除
+- 当前自动化结果仍然真实成立：
+  - `cd backend && ./mvnw test` => 27 个测试通过
+  - `cd web && npm test -- --run` => 48 个测试通过
+  - `cd web && npm run build` => 构建通过
+
+### 审查新增发现：本地联调断链
+
+- `web/src/shared/http/client.ts` 之前把请求固定写成 `fetch("/api/web${path}")`。
+- `web/vite.config.ts` 之前没有 `server.proxy`，也没有任何 API/base path 环境变量。
+- 因此当开发者按 README 分别启动：
+  - `cd backend && ./scripts/start-test-env.sh`
+  - `cd web && npm run dev`
+  前端请求会落到 Vite 本身，而不是后端 `9989`，真实结果是 404。
+- 这是“自动化测试测不出，但本地联调一定会踩”的未完成项，必须修。
+
+### 审查新增发现：跨项目冲突边界
+
+- 与 `suda_union` 的 controller 命名本身不直接冲突：
+  - `suda_union` 仍是 `/activity`、`/user`、`/session`、`/department`、`/suda_login`、`/token`
+  - `wxapp-checkin` 是 `/api/web/**`
+- 但如果与 `suda-gs-ams` 共用同一域名 / 网关，会有两类实际风险：
+  - 两个 SPA 都默认占用 `/` 和 `/login`
+  - `suda-gs-ams` 生态里存在更宽的 `/api/*` 代理规则，可能把 `wxapp-checkin` 的 `/api/web/*` 错路由
+- 这不是“接口名重名”，而是“路由前缀优先级和部署边界没写清楚”。
+
+### 本轮修复结果
+
+- 新增 `web/src/shared/runtime/runtime-config.ts`，统一管理：
+  - `VITE_APP_BASE_PATH`
+  - `VITE_API_BASE_PATH`
+  - `VITE_API_PROXY_TARGET`
+- `App.tsx`、`shared/http/client.ts`、`vite.config.ts` 已统一接入。
+- 新增回归测试：
+  - `web/src/shared/runtime/runtime-config.test.ts`
+  - `web/src/test/vite-config.test.ts`
+- 新增 `web/.env.example`，并回写 README / backend README / API_SPEC / changes。
+
 ## 2026-03-10
 
 ### Web-only 收尾重新定界
@@ -381,3 +426,47 @@
   - 未绑定访问 `/activities` 时的跳转行为；
   - 绑定页在不支持 Passkey 时的拦截行为；
   - `requestJson()` 对非 JSON / 非 2xx / 缺少 `status` 的异常响应处理。
+
+## 2026-03-10 联调前全面复核新增发现
+
+### 已修复的真实问题
+
+- `web/src/pages/staff-manage/StaffManagePage.tsx` 原先没有“只认最后一次请求”的保护：
+  - 快速切换签到码 / 签退码时，旧响应可能回写新页面。
+  - 现已为详情请求和动态码请求分别加版本保护，并把详情拉取与动作页签切换解耦。
+- `web/src/features/staff/components/DynamicCodePanel.tsx` 原先只展示一次性 `expires_in_ms` 快照：
+  - 倒计时不会递减，到期也不会自动刷新当前动态码。
+  - 现已按 `expires_at + server_time_ms` 做本地对时、视觉倒计时和到期自动刷新。
+- `web/src/pages/staff-manage/StaffManagePage.tsx` 原先没有任何防息屏提示：
+  - 管理员长时间亮屏展示动态码时，页面不会尝试 `Wake Lock`，也不会提示手动常亮。
+  - 现已在支持时尝试申请 `screen wake lock`，不支持或失败时给出非阻塞提示。
+- `web/src/shared/session/session-store.ts` 与 `web/src/pages/activities/ActivitiesPage.tsx` 原先没有显式支持 `review_admin`：
+  - 审核管理员会被误判成普通用户，首页入口和审核路由都会错。
+  - 现已显式支持 `review_admin`，并把首页审核入口与解绑申请入口拆开判断。
+- `backend` 原先只在登录/绑定阶段使用 `X-Browser-Binding-Key`：
+  - 进入业务态后，`/api/web/**` 大部分接口实际上只校验 `session_token`，浏览器绑定约束失效。
+  - 现已把活动、发码、验码、批量签退、解绑申请与审核链路统一接入“session + browser binding key”双校验。
+- `backend` 原先只对 `support_checkout` 生效，`support_checkin` 形同展示字段：
+  - 现已在 staff 发码与 normal 验码两侧同时补齐 `support_checkin=false` 拦截。
+- `backend` 原先在解绑审批后只返回 `passkey_not_registered`：
+  - 前端无法区分“从未绑定”与“刚被管理员解绑”。
+  - 现已对被撤销的浏览器绑定优先返回 `binding_revoked`。
+- `backend` 原先把解绑申请时间返回为展示字符串：
+  - 这与 API 规范“时间字段统一毫秒时间戳”冲突。
+  - 现已把 `submitted_at` 改为毫秒时间戳。
+
+### 已修复的文档问题
+
+- 根 `README.md` 已把“正式基线”和“历史复盘 / 历史计划”阅读顺序分开。
+- `backend/README.md` 已补本地测试环境变量模板使用方式，并说明 Passkey 本地 / 自定义域名联调填写规则。
+- 新增 `backend/scripts/test-env.example.sh`，避免第一次接手时直接卡在缺失 `~/.wxapp-checkin-test-env.sh`。
+- `backend/TEST_ENV_TESTING.md` 已从历史小程序口径改成 Web-only 联调口径。
+- `docs/WEB_MIGRATION_REVIEW.md` 已修正“当前完成态”和“历史审查时态”混写。
+- `docs/WEB_COMPATIBILITY.md` 已标出“自动化已验证 / 真机矩阵仍待补录”的当前状态。
+
+### 口径决策补记
+
+- 2026-03-10 已确认把动态码正式口径统一为 10 秒窗口：
+  - 保持当前后端实现、配置和测试基线不变；
+  - 正式需求与补充设计文档已同步收口到 10 秒；
+  - 后续不再使用旧动态码窗口口径作为联调或验收标准。

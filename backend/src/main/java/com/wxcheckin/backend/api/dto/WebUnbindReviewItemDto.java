@@ -9,6 +9,6 @@ public record WebUnbindReviewItemDto(
     String requestedNewBindingHint,
     String reviewComment,
     String reviewerName,
-    String submittedAt
+    Long submittedAt
 ) {
 }

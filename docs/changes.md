@@ -1,6 +1,14 @@
 # Changes Log
 
 ## 2026-03-10
+- 审查并补强 URL/部署边界：
+  - `web/` 新增 `VITE_APP_BASE_PATH`、`VITE_API_BASE_PATH`、`VITE_API_PROXY_TARGET`
+  - `BrowserRouter`、HTTP base 与 Vite `base/proxy` 已接入统一运行时配置
+  - 默认本地开发改为代理 `http://127.0.0.1:9989` 的 `/api/web`
+  - 补齐同域部署说明：`/api/web/**` 需优先于通用 `/api/**`，前端建议挂在 `/checkin/`
+- 配套测试：
+  - 新增 `web/src/shared/runtime/runtime-config.test.ts`
+  - 新增 `web/src/test/vite-config.test.ts`
 - 完成 Web-only 收尾：
   - 新增后端 Web 认证主链路：`WebAuthController`、`WebIdentityService`、`PasskeyChallengeService`
   - 新增 `web_browser_binding`、`web_passkey_credential`、`web_passkey_challenge`、`web_admin_audit_log`

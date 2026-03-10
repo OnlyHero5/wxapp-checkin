@@ -641,7 +641,7 @@ backend/src/main/java/com/wxcheckin/backend/
 
 - `activity_id`
 - `action_type`
-- `slot = floor(server_time_ms / 7500)`
+- `slot = floor(server_time_ms / 10000)`
 - `server_secret`
 
 输出：
@@ -659,7 +659,7 @@ backend/src/main/java/com/wxcheckin/backend/
 
 - 唯一键：`user_id + activity_id + action_type + slot`
 - 当前时间片重复提交返回 `duplicate`
-- 允许校验当前 slot 与上一个 slot 以吸收边界延迟，但对外口径仍保持“7.5 秒内有效”
+- 允许校验当前 slot 与上一个 slot 以吸收边界延迟，但对外口径仍保持“10 秒内有效”
 
 ## 7.5 统计一致性规则
 

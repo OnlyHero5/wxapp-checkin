@@ -56,8 +56,14 @@ public class BulkCheckoutService {
   }
 
   @Transactional
-  public WebBulkCheckoutResponse bulkCheckout(String sessionToken, String activityId, Boolean confirm, String reason) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
+  public WebBulkCheckoutResponse bulkCheckout(
+      String sessionToken,
+      String browserBindingKey,
+      String activityId,
+      Boolean confirm,
+      String reason
+  ) {
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
     if (principal.role() != RoleType.STAFF) {
       throw new BusinessException("forbidden", "仅工作人员可执行批量签退");
     }

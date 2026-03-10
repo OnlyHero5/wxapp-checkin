@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getActivityDetail, type ActivityActionType, type ActivityDetail } from "../../features/activities/api";
 import { DynamicCodePanel } from "../../features/staff/components/DynamicCodePanel";
@@ -9,6 +9,16 @@ import { SessionExpiredError } from "../../shared/http/errors";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
+
+type WakeLockSentinelLike = {
+  release?: () => Promise<void> | void;
+};
+
+type WakeLockNavigator = Navigator & {
+  wakeLock?: {
+    request: (type: "screen") => Promise<WakeLockSentinelLike>;
+  };
+};
 
 function resolveErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -28,51 +38,162 @@ export function StaffManagePage() {
   const [actionType, setActionType] = useState<ActivityActionType>("checkin");
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [codeSession, setCodeSession] = useState<CodeSessionResponse | null>(null);
+  const [detailLoading, setDetailLoading] = useState(true);
+  const [codeSessionLoading, setCodeSessionLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [resultMessage, setResultMessage] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [wakeLockMessage, setWakeLockMessage] = useState("");
   const [bulkPending, setBulkPending] = useState(false);
+  const detailRequestVersionRef = useRef(0);
+  const codeSessionRequestVersionRef = useRef(0);
+  const previousActivityIdRef = useRef("");
+  const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
 
-  async function loadDetail() {
-    const detailResult = await getActivityDetail(activityId);
-    setDetail(detailResult);
-  }
+  const loading = detailLoading || codeSessionLoading;
 
-  async function loadCodeSession(nextActionType: ActivityActionType) {
-    const sessionResult = await getCodeSession(activityId, nextActionType);
-    setCodeSession(sessionResult);
-  }
+  async function loadDetail(resetBeforeLoad: boolean) {
+    const requestVersion = detailRequestVersionRef.current + 1;
+    detailRequestVersionRef.current = requestVersion;
 
-  async function loadPage(nextActionType: ActivityActionType) {
     if (!activityId) {
-      setErrorMessage("活动不存在");
-      setLoading(false);
+      if (detailRequestVersionRef.current === requestVersion) {
+        setDetail(null);
+        setDetailLoading(false);
+        setErrorMessage("活动不存在");
+      }
       return;
     }
 
-    setErrorMessage("");
-    setLoading(true);
+    setDetailLoading(true);
+    if (resetBeforeLoad) {
+      setDetail(null);
+    }
 
     try {
-      // 详情和动态码都是当前页的首屏信息，直接并行拉取最省等待时间。
-      await Promise.all([loadDetail(), loadCodeSession(nextActionType)]);
+      const detailResult = await getActivityDetail(activityId);
+      if (detailRequestVersionRef.current === requestVersion) {
+        setDetail(detailResult);
+      }
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
         return;
       }
-      setErrorMessage(resolveErrorMessage(error));
+      if (detailRequestVersionRef.current === requestVersion) {
+        setErrorMessage(resolveErrorMessage(error));
+      }
     } finally {
-      setLoading(false);
+      if (detailRequestVersionRef.current === requestVersion) {
+        setDetailLoading(false);
+      }
+    }
+  }
+
+  async function loadCodeSession(nextActionType: ActivityActionType, resetBeforeLoad: boolean) {
+    const requestVersion = codeSessionRequestVersionRef.current + 1;
+    codeSessionRequestVersionRef.current = requestVersion;
+
+    if (!activityId) {
+      if (codeSessionRequestVersionRef.current === requestVersion) {
+        setCodeSession(null);
+        setCodeSessionLoading(false);
+        setErrorMessage("活动不存在");
+      }
+      return;
+    }
+
+    setCodeSessionLoading(true);
+    if (resetBeforeLoad) {
+      setCodeSession(null);
+    }
+
+    try {
+      const sessionResult = await getCodeSession(activityId, nextActionType);
+      if (codeSessionRequestVersionRef.current === requestVersion) {
+        setCodeSession(sessionResult);
+      }
+    } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        navigate("/login");
+        return;
+      }
+      if (codeSessionRequestVersionRef.current === requestVersion) {
+        setErrorMessage(resolveErrorMessage(error));
+      }
+    } finally {
+      if (codeSessionRequestVersionRef.current === requestVersion) {
+        setCodeSessionLoading(false);
+      }
+    }
+  }
+
+  async function refreshPage(options: { reloadDetail: boolean; resetDetail: boolean; resetCodeSession: boolean }) {
+    setErrorMessage("");
+    await Promise.all([
+      options.reloadDetail ? loadDetail(options.resetDetail) : Promise.resolve(),
+      loadCodeSession(actionType, options.resetCodeSession)
+    ]);
+  }
+
+  async function releaseWakeLock() {
+    const currentWakeLock = wakeLockRef.current;
+    wakeLockRef.current = null;
+    if (!currentWakeLock?.release) {
+      return;
+    }
+
+    try {
+      await currentWakeLock.release();
+    } catch {
+      return;
+    }
+  }
+
+  async function requestWakeLock() {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
+
+    const wakeLock = (navigator as WakeLockNavigator | undefined)?.wakeLock;
+    if (!wakeLock || typeof wakeLock.request !== "function") {
+      setWakeLockMessage("当前浏览器不支持自动保持屏幕常亮，请手动关闭自动锁屏或保持屏幕常亮。");
+      return;
+    }
+
+    try {
+      wakeLockRef.current = await wakeLock.request("screen");
+      setWakeLockMessage("");
+    } catch {
+      setWakeLockMessage("无法自动保持屏幕常亮，请手动关闭自动锁屏或保持屏幕常亮。");
     }
   }
 
   useEffect(() => {
-    void loadPage(actionType);
+    void requestWakeLock();
+
+    return () => {
+      void releaseWakeLock();
+    };
+  }, []);
+
+  useEffect(() => {
+    const activityChanged = previousActivityIdRef.current !== activityId;
+    previousActivityIdRef.current = activityId;
+
+    void refreshPage({
+      reloadDetail: activityChanged,
+      resetCodeSession: true,
+      resetDetail: activityChanged
+    });
 
     return subscribePageVisible(() => {
       // staff 页回到前台时，以“当前动作页签”为准重拉最新动态码和统计。
-      void loadPage(actionType);
+      void requestWakeLock();
+      void refreshPage({
+        reloadDetail: true,
+        resetCodeSession: true,
+        resetDetail: false
+      });
     });
   }, [activityId, actionType, navigate]);
 
@@ -86,7 +207,11 @@ export function StaffManagePage() {
         reason
       });
       setResultMessage(result.message ?? "批量签退完成");
-      await loadPage(actionType);
+      await refreshPage({
+        reloadDetail: true,
+        resetCodeSession: true,
+        resetDetail: false
+      });
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
@@ -100,6 +225,7 @@ export function StaffManagePage() {
 
   return (
     <MobilePage eyebrow="工作人员" title="活动管理">
+      {wakeLockMessage ? <InlineNotice message={wakeLockMessage} theme="warning" /> : null}
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
       {resultMessage ? <InlineNotice message={resultMessage} theme="success" /> : null}
       {detail ? (
@@ -118,9 +244,13 @@ export function StaffManagePage() {
       <DynamicCodePanel
         actionType={actionType}
         codeSession={codeSession}
-        loading={loading}
+        loading={codeSessionLoading}
         onActionChange={setActionType}
-        onRefresh={() => void loadPage(actionType)}
+        onRefresh={() => void refreshPage({
+          reloadDetail: true,
+          resetCodeSession: true,
+          resetDetail: false
+        })}
       />
       <BulkCheckoutButton disabled={loading || !detail} loading={bulkPending} onConfirm={handleBulkCheckout} />
     </MobilePage>

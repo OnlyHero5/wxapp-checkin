@@ -7,7 +7,6 @@ import com.wxcheckin.backend.api.dto.WebUnbindReviewListResponse;
 import com.wxcheckin.backend.api.error.BusinessException;
 import com.wxcheckin.backend.application.model.SessionPrincipal;
 import com.wxcheckin.backend.application.support.JsonCodec;
-import com.wxcheckin.backend.application.support.TimeFormatter;
 import com.wxcheckin.backend.application.support.TokenGenerator;
 import com.wxcheckin.backend.domain.model.RoleType;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WebAdminAuditLogEntity;
@@ -41,7 +40,6 @@ public class UnbindReviewService {
   private final WxSessionRepository sessionRepository;
   private final TokenGenerator tokenGenerator;
   private final JsonCodec jsonCodec;
-  private final TimeFormatter timeFormatter;
   private final Clock clock;
 
   public UnbindReviewService(
@@ -53,7 +51,6 @@ public class UnbindReviewService {
       WxSessionRepository sessionRepository,
       TokenGenerator tokenGenerator,
       JsonCodec jsonCodec,
-      TimeFormatter timeFormatter,
       Clock clock
   ) {
     this.sessionService = sessionService;
@@ -64,13 +61,17 @@ public class UnbindReviewService {
     this.sessionRepository = sessionRepository;
     this.tokenGenerator = tokenGenerator;
     this.jsonCodec = jsonCodec;
-    this.timeFormatter = timeFormatter;
     this.clock = clock;
   }
 
   @Transactional
-  public WebUnbindReviewCreateResponse create(String sessionToken, String reason, String requestedNewBindingHint) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
+  public WebUnbindReviewCreateResponse create(
+      String sessionToken,
+      String browserBindingKey,
+      String reason,
+      String requestedNewBindingHint
+  ) {
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
     String normalizedReason = normalize(reason);
     if (normalizedReason.isEmpty()) {
       throw new BusinessException("invalid_param", "reason 不能为空");
@@ -93,13 +94,13 @@ public class UnbindReviewService {
         "解绑申请已提交",
         review.getReviewId(),
         review.getStatus(),
-        timeFormatter.toDisplay(review.getSubmittedAt())
+        review.getSubmittedAt().toEpochMilli()
     );
   }
 
   @Transactional(readOnly = true)
-  public WebUnbindReviewListResponse list(String sessionToken, String status) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
+  public WebUnbindReviewListResponse list(String sessionToken, String browserBindingKey, String status) {
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
     if (principal.role() != RoleType.STAFF) {
       throw new BusinessException("forbidden", "仅工作人员可查看解绑审核");
     }
@@ -118,8 +119,13 @@ public class UnbindReviewService {
   }
 
   @Transactional
-  public WebUnbindReviewActionResponse approve(String sessionToken, String reviewId, String reviewComment) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
+  public WebUnbindReviewActionResponse approve(
+      String sessionToken,
+      String browserBindingKey,
+      String reviewId,
+      String reviewComment
+  ) {
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
     requireStaff(principal);
     WebUnbindReviewEntity review = loadPendingReview(reviewId);
     WebBrowserBindingEntity binding = requireActiveBinding(review.getUser());
@@ -152,8 +158,13 @@ public class UnbindReviewService {
   }
 
   @Transactional
-  public WebUnbindReviewActionResponse reject(String sessionToken, String reviewId, String reviewComment) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken);
+  public WebUnbindReviewActionResponse reject(
+      String sessionToken,
+      String browserBindingKey,
+      String reviewId,
+      String reviewComment
+  ) {
+    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
     requireStaff(principal);
     WebUnbindReviewEntity review = loadPendingReview(reviewId);
     review.setStatus("rejected");
@@ -198,7 +209,7 @@ public class UnbindReviewService {
         review.getRequestedNewBindingHint(),
         review.getReviewComment(),
         reviewer == null ? "" : normalize(reviewer.getName()),
-        timeFormatter.toDisplay(review.getSubmittedAt())
+        review.getSubmittedAt() == null ? null : review.getSubmittedAt().toEpochMilli()
     );
   }
 

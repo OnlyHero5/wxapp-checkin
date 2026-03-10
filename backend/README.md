@@ -191,6 +191,21 @@ curl http://127.0.0.1:8080/actuator/health
 
 默认读取：`~/.wxapp-checkin-test-env.sh`（可用 `WXAPP_TEST_ENV_FILE` 覆盖路径）
 
+推荐先复制仓库内模板：
+
+```bash
+cd /path/to/wxapp-checkin
+cp backend/scripts/test-env.example.sh ~/.wxapp-checkin-test-env.sh
+```
+
+最小检查项：
+
+- `DB_*` 能连接 `wxcheckin_ext`
+- `LEGACY_DB_*` 能连接 `suda_union`
+- `REDIS_*` 能连接本地 Redis
+- `QR_SIGNING_KEY` 不为空
+- 若本地联调不是 `http://127.0.0.1:5173`，同步填写 `WEBAUTHN_RP_ID` / `WEBAUTHN_ALLOWED_ORIGIN`
+
 ### 3.2 一键启动（会覆盖测试数据）
 
 ```bash
@@ -204,6 +219,22 @@ chmod +x scripts/*.sh
 - `SERVER_PORT=9989`（可通过环境变量覆盖）
 - 开启 legacy sync / outbox relay
 
+前端联调建议：
+
+```bash
+cd ../web
+npm install
+npm run dev
+```
+
+说明：
+
+- `web/` 当前默认把 `VITE_API_BASE_PATH` 代理到 `VITE_API_PROXY_TARGET=http://127.0.0.1:9989`，刚好对齐本节测试环境脚本。
+- 若你把后端改跑到其他端口，请同步调整 `web/.env.local` 中的 `VITE_API_PROXY_TARGET`。
+- 若要与 `suda-gs-ams` 共域部署，建议额外设置：
+  - `VITE_APP_BASE_PATH=/checkin/`
+  - `VITE_API_BASE_PATH=/checkin-api/web`
+
 健康检查（按实际端口）：
 
 ```bash
@@ -211,6 +242,17 @@ curl http://127.0.0.1:9989/actuator/health
 ```
 
 详细说明与测试账号见：`TEST_ENV_TESTING.md`
+
+### 3.3 Passkey 本地 / 测试环境填写建议
+
+- 本地直接用 Vite 默认地址联调：
+  - 前端：`http://127.0.0.1:5173`
+  - 后端：`http://127.0.0.1:9989`
+  - `WEBAUTHN_RP_ID` 与 `WEBAUTHN_ALLOWED_ORIGIN` 可先留空，走当前开发宽松口径
+- 若你通过自定义域名或 HTTPS 反代联调：
+  - `WEBAUTHN_ALLOWED_ORIGIN` 必须填写前端真实 Origin，例如 `https://checkin.example.edu`
+  - `WEBAUTHN_RP_ID` 应填写该 Origin 对应的 RP ID，例如 `checkin.example.edu`
+  - 前后端、网关与浏览器访问地址必须保持一致，否则 Passkey challenge 会被后端拒绝
 
 ## 4) 环境变量清单（速查）
 
@@ -235,6 +277,17 @@ curl http://127.0.0.1:9989/actuator/health
 | 同步 | `LEGACY_SYNC_ENABLED` `LEGACY_SYNC_INTERVAL_MS` | legacy pull 同步开关与间隔 |
 | 同步 | `OUTBOX_RELAY_ENABLED` `OUTBOX_RELAY_INTERVAL_MS` | outbox relay 开关与间隔 |
 | 注册 | `REGISTER_PAYLOAD_VERIFY_ENABLED` | 历史占位配置，当前 Web-only 主链路不再使用 |
+
+## 4.1 与 `suda-gs-ams` / `suda_union` 共域时的路由建议
+
+- `suda_union` 当前真实 controller 仍是 `/activity`、`/user`、`/session`、`/department`、`/suda_login`、`/token` 等旧前缀，不直接占用 `/api/web/**`。
+- 真正的冲突点不在 controller 名字，而在“同域网关怎么分流”：
+  - `suda-gs-ams` 当前大量依赖通用 `/api/*`
+  - `wxapp-checkin` 正式接口走 `/api/web/**`
+- 若同域共存，请至少满足以下一条：
+  - 网关先匹配 `/api/web/` 再匹配通用 `/api/`
+  - 或者前端改用独立外部前缀（例如 `VITE_API_BASE_PATH=/checkin-api/web`），再把它转发/重写到本服务的 `/api/web/**`
+- 前端静态资源建议同时挂在独立子路径（例如 `/checkin/`），避免与另一个 SPA 共享 `/` 和 `/login`。
 
 历史实现将每次发码都落库到 `wx_qr_issue_log`，且 consume 依赖它校验“二维码确实由 staff 发出”。在真实生产下：
 - staff 页面每 `rotate_seconds` 自动刷新二维码

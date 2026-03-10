@@ -1,4 +1,5 @@
 import { clearSession, getBrowserBindingKey, getSession } from "../session/session-store";
+import { resolveRuntimeConfig } from "../runtime/runtime-config";
 import { ApiError, NetworkError, SessionExpiredError } from "./errors";
 
 /**
@@ -29,6 +30,7 @@ type ApiResponse = {
  * - GET 是幂等读取，最适合共享 in-flight Promise
  */
 const inflightGetRequests = new Map<string, Promise<unknown>>();
+const { apiBasePath } = resolveRuntimeConfig(import.meta.env as Record<string, string | undefined>);
 
 function isSessionExpired(payload: ApiResponse) {
   // `session_expired` 是当前 Web 端最关键的统一错误信号。
@@ -87,7 +89,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   async function executeRequest() {
     let response: Response;
     try {
-      response = await fetch(`/api/web${path}`, {
+      response = await fetch(`${apiBasePath}${path}`, {
         method,
         headers: {
           // 统一在这一层注入会话，页面和 API 封装层不必各自重复拼 Authorization。

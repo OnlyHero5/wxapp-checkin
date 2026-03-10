@@ -205,3 +205,87 @@
   - `cd backend && ./mvnw test` => 27 个测试通过
   - `cd web && npm test -- --run` => 15 个测试文件、48 个测试通过
   - `cd web && npm run build` => 构建通过
+
+## 2026-03-10 Web 改造完成度复核与 URL 冲突审查
+
+### 目标
+
+- 重新审查 `wxapp-checkin` 当前 Web-only 收口是否真实完成，而不是只复述现有文档结论。
+- 复核 `wxapp-checkin` 与 `suda-gs-ams` / `suda_union` 的 URL、网关前缀与部署边界是否冲突。
+- 若发现前后端真实 bug 或未完成项，直接修复并补验证。
+- 同步更新 README、接口文档、变更记录与规划文件。
+
+### 当前阶段
+
+- 状态：complete
+- 阶段 1：复核前后端真实代码、测试和文档基线
+- 阶段 2：审查跨项目 URL / 路由 / 代理冲突
+- 阶段 3：按 TDD 修复配置断链与部署边界问题
+- 阶段 4：回写正式文档与仓库内进度文件
+
+### 审查结论
+
+- Web-only 改造主链路已完成：
+  - `backend/` 当前只暴露 `/api/web/**`
+  - `web/` 已覆盖登录、绑定、活动、动态码、staff、解绑申请与解绑审核
+  - 历史 `frontend/` 与旧正式 controller 已删除
+- 自动化验证真实通过：
+  - `cd backend && ./mvnw test`
+  - `cd web && npm test -- --run`
+  - `cd web && npm run build`
+- 但审查发现仍有一个“测试之外的真实断链”：
+  - `web` 所有请求默认走同源 `/api/web`
+  - 之前 `vite.config.ts` 没有 dev proxy，也没有可配置 API/base path
+  - 导致 README 所写的“本地分别启动前后端”在真实开发环境下会直接 404
+- URL 冲突判断：
+  - 与 `suda_union` controller 命名本身不直接冲突
+  - 与 `suda-gs-ams` 在“同域同网关”部署时存在根路径与通用 `/api/*` 代理冲突风险
+
+### 已完成修复
+
+- `web/` 新增运行时路径配置：
+  - `VITE_APP_BASE_PATH`
+  - `VITE_API_BASE_PATH`
+  - `VITE_API_PROXY_TARGET`
+- `BrowserRouter`、HTTP base、Vite `base/proxy` 已统一接入这套配置。
+- 默认本地联调改为对齐 `backend/scripts/start-test-env.sh` 的 `9989` 端口。
+- 文档已补充：
+  - 独立部署与共域部署的推荐路径
+  - `/api/web/**` 与通用 `/api/**` 的网关优先级说明
+  - `web/.env.example` 使用方式
+
+## 2026-03-10 联调前全面复核与补洞
+
+### 目标
+
+- 在三端联调与真机测试前，重新对 `wxapp-checkin` 的 Web-only 代码和文档做一次工程化复核。
+- 不只看“测试是不是绿”，还要补齐：
+  - staff 动态码页的并发安全和倒计时体验
+  - Web 业务接口对浏览器绑定键的真实校验
+  - `support_checkin`、`binding_revoked`、解绑时间字段等契约漂移
+  - 本地联调和阅读入口中最容易误导人的文档缺口
+
+### 当前阶段
+
+- 状态：complete
+- 阶段 1：重新审查代码、文档与自动化基线
+- 阶段 2：按 TDD 修复前端并发 / 倒计时 / 审核入口问题
+- 阶段 3：按 TDD 修复后端浏览器绑定校验与契约漂移
+- 阶段 4：回写联调文档和测试环境模板
+- 阶段 5：重新跑前后端验证
+
+### 结果
+
+- 已完成：
+  - `review_admin` 路由与活动列表入口收口
+  - staff 动态码页请求乱序保护
+  - staff 动态码页视觉倒计时与到期自动刷新
+  - staff 页 wake lock 尝试与降级提示
+  - `/api/web/**` 业务态浏览器绑定键校验
+  - `support_checkin` 在发码 / 验码链路生效
+  - 解绑审批后返回 `binding_revoked`
+  - 解绑申请时间字段改为毫秒时间戳
+  - 本地测试环境模板与联调文档收口
+  - 动态码正式口径统一为 10 秒窗口，并同步回写需求 / 设计 / 审查记录
+- 当前仍保留到后续阶段：
+  - Playwright / 真机兼容矩阵补录

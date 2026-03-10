@@ -42,7 +42,7 @@ export type UnbindReviewItem = {
   reviewer_name?: string;
   status: UnbindReviewStatus;
   student_id?: string;
-  submitted_at?: string;
+  submitted_at?: number;
   user_name?: string;
 };
 
@@ -72,7 +72,7 @@ export type CreateUnbindReviewResponse = {
   review_id: string;
   review_status?: string;
   status?: string;
-  submitted_at?: string;
+  submitted_at?: number;
 };
 
 function encodePathSegment(value: string) {
