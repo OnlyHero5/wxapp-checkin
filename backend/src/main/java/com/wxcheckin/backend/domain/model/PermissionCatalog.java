@@ -12,7 +12,10 @@ public final class PermissionCatalog {
   public static final List<String> STAFF_PERMISSIONS = List.of(
       "activity:checkin",
       "activity:checkout",
-      "activity:detail"
+      "activity:detail",
+      "activity:manage",
+      "activity:bulk-checkout",
+      "unbind:review"
   );
 
   public static final List<String> NORMAL_PERMISSIONS = List.of();

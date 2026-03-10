@@ -52,6 +52,7 @@ public class CheckinConsumeService {
   private final QrNonceSigner qrNonceSigner;
   private final AppProperties appProperties;
   private final Clock clock;
+  private final DynamicCodeService dynamicCodeService;
 
   public CheckinConsumeService(
       SessionService sessionService,
@@ -66,7 +67,8 @@ public class CheckinConsumeService {
       JsonCodec jsonCodec,
       QrNonceSigner qrNonceSigner,
       AppProperties appProperties,
-      Clock clock
+      Clock clock,
+      DynamicCodeService dynamicCodeService
   ) {
     this.sessionService = sessionService;
     this.qrPayloadCodec = qrPayloadCodec;
@@ -81,6 +83,7 @@ public class CheckinConsumeService {
     this.qrNonceSigner = qrNonceSigner;
     this.appProperties = appProperties;
     this.clock = clock;
+    this.dynamicCodeService = dynamicCodeService;
   }
 
   @Transactional
@@ -90,101 +93,58 @@ public class CheckinConsumeService {
       throw new BusinessException("forbidden", "仅普通用户可扫码签到/签退");
     }
 
-    ParsedQrPayload parsed = qrPayloadCodec.parse(extractPayload(request));
-    validateRedundantFields(request, parsed);
+    ResolvedConsumePayload payload = resolveConsumePayload(request);
 
-    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(parsed.activityId())
+    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(payload.activityId())
         .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
     if (ActivityProgressStatus.fromCode(activity.getProgressStatus()) == ActivityProgressStatus.COMPLETED) {
       throw new BusinessException("forbidden", "活动已结束，无法再签到/签退");
     }
-    if (parsed.actionType() == ActionType.CHECKOUT && !Boolean.TRUE.equals(activity.getSupportCheckout())) {
+    if (payload.actionType() == ActionType.CHECKOUT && !Boolean.TRUE.equals(activity.getSupportCheckout())) {
       throw new BusinessException("forbidden", "该活动暂不支持签退");
     }
-
-    int rotateSeconds = (activity.getRotateSeconds() == null || activity.getRotateSeconds() <= 0)
-        ? appProperties.getQr().getDefaultRotateSeconds() : activity.getRotateSeconds();
-    int graceSeconds = (activity.getGraceSeconds() == null || activity.getGraceSeconds() <= 0)
-        ? appProperties.getQr().getDefaultGraceSeconds() : activity.getGraceSeconds();
-
     long now = Instant.now(clock).toEpochMilli();
-    long displayStartAt = parsed.slot() * rotateSeconds * 1000L;
-    long displayExpireAt = displayStartAt + rotateSeconds * 1000L;
-    long acceptExpireAt = displayExpireAt + graceSeconds * 1000L;
-    if (now < displayStartAt) {
-      throw new BusinessException("invalid_qr", "二维码时间异常，请重新扫码");
-    }
-    if (now > acceptExpireAt) {
-      throw new BusinessException("expired", "二维码已过期，请重新获取");
-    }
-
-    if (qrNonceSigner.isSigned(parsed.nonce())) {
-      if (!qrNonceSigner.verify(parsed.activityId(), parsed.actionType(), parsed.slot(), parsed.nonce())) {
-        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
-      }
-    } else {
-      if (!appProperties.getQr().isAllowLegacyUnsigned()) {
-        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
-      }
-      boolean issueExists = qrIssueLogRepository
-          .existsByActivityIdAndActionTypeAndSlotAndNonce(
-              parsed.activityId(),
-              parsed.actionType().getCode(),
-              parsed.slot(),
-              parsed.nonce()
-          );
-      if (!issueExists) {
-        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
-      }
-    }
-
-    acquireReplayGuard(principal.user(), parsed, acceptExpireAt);
+    acquireReplayGuard(principal.user(), payload.activityId(), payload.actionType(), payload.slot(), now);
 
     WxUserActivityStatusEntity status = statusRepository
-        .lockByUserIdAndActivityId(principal.user().getId(), parsed.activityId())
+        .lockByUserIdAndActivityId(principal.user().getId(), payload.activityId())
         .orElseThrow(() -> new BusinessException("forbidden", "你未报名该活动，无法签到/签退"));
     if (!Boolean.TRUE.equals(status.getRegistered())) {
       throw new BusinessException("forbidden", "你未报名该活动，无法签到/签退");
     }
 
     UserActivityState currentState = UserActivityState.fromCode(status.getStatus());
-    UserActivityState nextState = decideNextState(currentState, parsed.actionType());
+    UserActivityState nextState = decideNextState(currentState, payload.actionType());
     status.setStatus(nextState.getCode());
     statusRepository.save(status);
 
-    int checkinCount = activity.getCheckinCount() == null ? 0 : activity.getCheckinCount();
-    int checkoutCount = activity.getCheckoutCount() == null ? 0 : activity.getCheckoutCount();
-    if (parsed.actionType() == ActionType.CHECKIN) {
-      checkinCount += 1;
+    if (payload.actionType() == ActionType.CHECKIN) {
+      activityRepository.adjustCounts(activity.getActivityId(), 1, 0);
     } else {
-      checkinCount = Math.max(0, checkinCount - 1);
-      checkoutCount += 1;
+      activityRepository.adjustCounts(activity.getActivityId(), -1, 1);
     }
-    activity.setCheckinCount(checkinCount);
-    activity.setCheckoutCount(checkoutCount);
-    activityRepository.save(activity);
 
     String recordId = tokenGenerator.newRecordId();
     WxCheckinEventEntity event = new WxCheckinEventEntity();
     event.setRecordId(recordId);
     event.setUser(principal.user());
-    event.setActivityId(parsed.activityId());
-    event.setActionType(parsed.actionType().getCode());
-    event.setSlot(parsed.slot());
-    event.setNonce(parsed.nonce());
-    event.setInGraceWindow(now > displayExpireAt);
+    event.setActivityId(payload.activityId());
+    event.setActionType(payload.actionType().getCode());
+    event.setSlot(payload.slot());
+    event.setNonce(payload.nonce());
+    event.setInGraceWindow(payload.inGraceWindow());
     event.setSubmittedAt(Instant.ofEpochMilli(now));
     event.setServerTime(now);
-    event.setQrPayload(parsed.rawPayload());
+    event.setQrPayload(payload.rawPayload());
     checkinEventRepository.save(event);
 
     Map<String, Object> outboxPayload = new HashMap<>();
     outboxPayload.put("record_id", recordId);
     outboxPayload.put("user_id", principal.user().getId());
-    outboxPayload.put("activity_id", parsed.activityId());
-    outboxPayload.put("action_type", parsed.actionType().getCode());
-    outboxPayload.put("slot", parsed.slot());
-    outboxPayload.put("nonce", parsed.nonce());
+    outboxPayload.put("activity_id", payload.activityId());
+    outboxPayload.put("action_type", payload.actionType().getCode());
+    outboxPayload.put("slot", payload.slot());
+    outboxPayload.put("nonce", payload.nonce());
     outboxPayload.put("server_time", now);
 
     WxSyncOutboxEntity outbox = new WxSyncOutboxEntity();
@@ -199,27 +159,29 @@ public class CheckinConsumeService {
     return new ConsumeCheckinResponse(
         "success",
         "提交成功",
-        parsed.actionType().getCode(),
-        parsed.activityId(),
+        payload.actionType().getCode(),
+        payload.activityId(),
         activity.getActivityTitle(),
         recordId,
-        now > displayExpireAt,
+        payload.inGraceWindow(),
         now
     );
   }
 
   private void acquireReplayGuard(
       com.wxcheckin.backend.infrastructure.persistence.entity.WxUserAuthExtEntity user,
-      ParsedQrPayload parsed,
-      long acceptExpireAt
+      String activityId,
+      ActionType actionType,
+      long slot,
+      long now
   ) {
     WxReplayGuardEntity guard = new WxReplayGuardEntity();
     guard.setUser(user);
-    guard.setActivityId(parsed.activityId());
-    guard.setActionType(parsed.actionType().getCode());
-    guard.setSlot(parsed.slot());
+    guard.setActivityId(activityId);
+    guard.setActionType(actionType.getCode());
+    guard.setSlot(slot);
     long ttl = appProperties.getQr().getReplayKeyTtlSeconds();
-    guard.setExpiresAt(Instant.ofEpochMilli(acceptExpireAt + ttl * 1000L));
+    guard.setExpiresAt(Instant.ofEpochMilli(now + ttl * 1000L));
     try {
       replayGuardRepository.save(guard);
     } catch (DataIntegrityViolationException ex) {
@@ -276,7 +238,98 @@ public class CheckinConsumeService {
     throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
   }
 
+  private ResolvedConsumePayload resolveConsumePayload(ConsumeCheckinRequest request) {
+    String code = normalize(request.code());
+    if (!code.isEmpty()) {
+      ActionType actionType = ActionType.fromCode(request.actionType());
+      if (actionType == null) {
+        throw new BusinessException("invalid_param", "action_type 仅支持 checkin/checkout");
+      }
+      String activityId = normalize(request.activityId());
+      if (activityId.isEmpty()) {
+        throw new BusinessException("invalid_param", "activity_id 参数缺失");
+      }
+      DynamicCodeService.ValidatedCode validatedCode = dynamicCodeService.validateCode(activityId, actionType, code);
+      return new ResolvedConsumePayload(
+          activityId,
+          actionType,
+          validatedCode.slot(),
+          code,
+          validatedCode.rawPayload(),
+          false
+      );
+    }
+
+    ParsedQrPayload parsed = qrPayloadCodec.parse(extractPayload(request));
+    validateRedundantFields(request, parsed);
+
+    int rotateSeconds = parsedRotateSeconds(parsed.activityId());
+    int graceSeconds = parsedGraceSeconds(parsed.activityId());
+    long now = Instant.now(clock).toEpochMilli();
+    long displayStartAt = parsed.slot() * rotateSeconds * 1000L;
+    long displayExpireAt = displayStartAt + rotateSeconds * 1000L;
+    long acceptExpireAt = displayExpireAt + graceSeconds * 1000L;
+    if (now < displayStartAt) {
+      throw new BusinessException("invalid_qr", "二维码时间异常，请重新扫码");
+    }
+    if (now > acceptExpireAt) {
+      throw new BusinessException("expired", "二维码已过期，请重新获取");
+    }
+
+    if (qrNonceSigner.isSigned(parsed.nonce())) {
+      if (!qrNonceSigner.verify(parsed.activityId(), parsed.actionType(), parsed.slot(), parsed.nonce())) {
+        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
+      }
+    } else {
+      if (!appProperties.getQr().isAllowLegacyUnsigned()) {
+        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
+      }
+      boolean issueExists = qrIssueLogRepository
+          .existsByActivityIdAndActionTypeAndSlotAndNonce(
+              parsed.activityId(),
+              parsed.actionType().getCode(),
+              parsed.slot(),
+              parsed.nonce()
+          );
+      if (!issueExists) {
+        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
+      }
+    }
+
+    return new ResolvedConsumePayload(
+        parsed.activityId(),
+        parsed.actionType(),
+        parsed.slot(),
+        parsed.nonce(),
+        parsed.rawPayload(),
+        now > displayExpireAt
+    );
+  }
+
+  private int parsedRotateSeconds(String activityId) {
+    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(activityId)
+        .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
+    return (activity.getRotateSeconds() == null || activity.getRotateSeconds() <= 0)
+        ? appProperties.getQr().getDefaultRotateSeconds() : activity.getRotateSeconds();
+  }
+
+  private int parsedGraceSeconds(String activityId) {
+    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(activityId)
+        .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
+    return (activity.getGraceSeconds() == null || activity.getGraceSeconds() <= 0)
+        ? appProperties.getQr().getDefaultGraceSeconds() : activity.getGraceSeconds();
+  }
+
   private String normalize(String value) {
     return value == null ? "" : value.trim();
   }
+
+  private record ResolvedConsumePayload(
+      String activityId,
+      ActionType actionType,
+      long slot,
+      String nonce,
+      String rawPayload,
+      boolean inGraceWindow
+  ) {}
 }

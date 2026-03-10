@@ -1,8 +1,0 @@
-{
-  "navigationBarTitleText": "二维码",
-  "usingComponents": {
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-tag": "tdesign-miniprogram/tag/tag",
-    "t-qrcode": "tdesign-miniprogram/qrcode/qrcode"
-  }
-}

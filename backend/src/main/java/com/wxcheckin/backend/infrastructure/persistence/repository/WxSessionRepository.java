@@ -9,4 +9,6 @@ public interface WxSessionRepository extends JpaRepository<WxSessionEntity, Long
   Optional<WxSessionEntity> findBySessionToken(String sessionToken);
 
   long deleteByExpiresAtBefore(Instant now);
+
+  long deleteByUser_Id(Long userId);
 }

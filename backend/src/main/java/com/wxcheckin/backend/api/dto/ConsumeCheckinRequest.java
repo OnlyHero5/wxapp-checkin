@@ -15,6 +15,7 @@ public record ConsumeCheckinRequest(
     String activityId,
     String actionType,
     Long slot,
-    String nonce
+    String nonce,
+    String code
 ) {
 }

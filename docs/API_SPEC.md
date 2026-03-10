@@ -24,8 +24,8 @@
 ## 2. 当前状态与历史链路
 
 - 本文档是当前正式 API 基线。
-- 仓库现有代码中仍存在 `/api/auth/wx-login`、`/api/staff/activities/{id}/qr-session`、`/api/checkin/consume` 等历史接口，它们只用于迁移对照。
-- 新 Web 实现应统一落在 `/api/web/**` 下，并逐步替换旧链路。
+- 当前正式后端入口已统一收口到 `/api/web/**`。
+- 历史小程序与旧微信登录正式入口已从主干删除；若文档中提到历史链路，均只作为迁移背景说明。
 
 ## 3. 全局协议约定
 
@@ -42,6 +42,7 @@
 推荐口径：
 
 - `Authorization: Bearer <session_token>`
+- `X-Browser-Binding-Key: <browser_binding_key>`
 
 兼容口径：
 
@@ -52,7 +53,8 @@
 说明：
 
 - 当前后端已有 `SessionTokenExtractor`，已支持上述几种入口；
-- 新 Web 前端应优先使用 `Authorization: Bearer`，避免继续放大旧接口风格差异。
+- 新 Web 前端应优先使用 `Authorization: Bearer`；
+- `X-Browser-Binding-Key` 用于识别“当前是否还是同一浏览器绑定环境”，是 Web-only 认证闭环的一部分。
 
 ### 3.4 通用响应
 

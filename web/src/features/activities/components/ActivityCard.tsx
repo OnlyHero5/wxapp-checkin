@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
-import type { ActivitySummary } from "../api";
+import { buildActivityDetailPath, buildActivityManagePath, type ActivitySummary } from "../api";
 import { resolveJoinStatus, resolveProgressStatus } from "../view-model";
+import { ActivityMetaPanel } from "../../../shared/ui/ActivityMetaPanel";
+import { StatusTag } from "../../../shared/ui/StatusTag";
 
 /**
  * 活动卡片是列表页最小展示单元。
@@ -11,37 +13,39 @@ import { resolveJoinStatus, resolveProgressStatus } from "../view-model";
  */
 type ActivityCardProps = {
   activity: ActivitySummary;
+  showManageEntry?: boolean;
 };
 
-export function ActivityCard({ activity }: ActivityCardProps) {
+export function ActivityCard({ activity, showManageEntry = false }: ActivityCardProps) {
   // 统一通过 view-model 归一化，避免卡片自己复制一份业务判断。
   const progressStatus = resolveProgressStatus(activity);
   const joinStatus = resolveJoinStatus(activity);
 
   return (
-    <article className="activity-card">
-      <div className="activity-card__header">
-        <div>
-          <h3>{activity.activity_title}</h3>
-          {activity.activity_type ? <p className="activity-card__meta">{activity.activity_type}</p> : null}
-        </div>
-        {/* 进度标签给用户一个“能不能继续操作”的第一眼判断。 */}
-        <span className={`status-chip status-chip--${progressStatus}`}>
-          {progressStatus === "completed" ? "已完成" : "进行中"}
-        </span>
-      </div>
-      <div className="activity-card__meta-list">
-        {activity.start_time ? <p>时间：{activity.start_time}</p> : null}
-        {activity.location ? <p>地点：{activity.location}</p> : null}
-        <p>我的状态：{joinStatus}</p>
-        <p>
-          统计：签到 {activity.checkin_count ?? 0} / 签退 {activity.checkout_count ?? 0}
-        </p>
-      </div>
-      {/* 列表页只提供详情入口，动作入口统一在详情页判定。 */}
-      <Link className="text-link" to={`/activities/${activity.activity_id}`}>
-        查看详情
-      </Link>
-    </article>
+    <ActivityMetaPanel
+      as="article"
+      counts={{
+        checkin: activity.checkin_count,
+        checkout: activity.checkout_count
+      }}
+      footer={(
+        <>
+          <Link className="text-link" to={buildActivityDetailPath(activity.activity_id)}>
+            查看详情
+          </Link>
+          {showManageEntry ? (
+            <Link className="text-link" to={buildActivityManagePath(activity.activity_id)}>
+              进入管理
+            </Link>
+          ) : null}
+        </>
+      )}
+      joinStatusText={joinStatus}
+      locationText={activity.location}
+      statusSlot={<StatusTag status={progressStatus} />}
+      subtitle={activity.activity_type}
+      timeText={activity.start_time}
+      title={activity.activity_title}
+    />
   );
 }

@@ -5,7 +5,10 @@ import { BindPage } from "../pages/bind/BindPage";
 import { CheckinPage } from "../pages/checkin/CheckinPage";
 import { CheckoutPage } from "../pages/checkout/CheckoutPage";
 import { LoginPage } from "../pages/login/LoginPage";
-import { getSession } from "../shared/session/session-store";
+import { StaffManagePage } from "../pages/staff-manage/StaffManagePage";
+import { UnbindRequestPage } from "../pages/unbind-request/UnbindRequestPage";
+import { UnbindReviewPage } from "../pages/unbind-reviews/UnbindReviewPage";
+import { canReviewUnbind, getSession, isStaffSession } from "../shared/session/session-store";
 import { MobilePage } from "../shared/ui/MobilePage";
 
 /**
@@ -51,6 +54,26 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
     return <Navigate replace to="/login" />;
   }
 
+  return children;
+}
+
+function StaffRoute({ children }: { children: JSX.Element }) {
+  if (!hasSession()) {
+    return <Navigate replace to="/login" />;
+  }
+  if (!isStaffSession()) {
+    return <Navigate replace to="/activities" />;
+  }
+  return children;
+}
+
+function ReviewRoute({ children }: { children: JSX.Element }) {
+  if (!hasSession()) {
+    return <Navigate replace to="/login" />;
+  }
+  if (!canReviewUnbind()) {
+    return <Navigate replace to="/activities" />;
+  }
   return children;
 }
 
@@ -134,11 +157,37 @@ export function AppRoutes() {
         }
       />
       <Route
+        path="/unbind-request"
+        element={
+          <ProtectedRoute>
+            {/* 普通用户提交解绑申请的入口。 */}
+            <UnbindRequestPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/activities/:activityId/manage"
+        element={
+          <StaffRoute>
+            {/* 管理员动态码管理页与批量签退入口。 */}
+            <StaffManagePage />
+          </StaffRoute>
+        }
+      />
+      <Route
+        path="/staff/unbind-reviews"
+        element={
+          <ReviewRoute>
+            {/* 解绑审核页当前先允许 staff 进入，后续可继续收紧到 review_admin。 */}
+            <UnbindReviewPage />
+          </ReviewRoute>
+        }
+      />
+      <Route
         path="*"
         // 这里故意不做自动重定向，避免用户访问错误链接时失去排查线索。
         element={<PlaceholderPage title="页面不存在" description="请检查访问地址是否正确。" />}
       />
-      {/* 后续若新增 staff/review 路由，继续沿用 PublicRoute / ProtectedRoute 这套骨架。 */}
     </Routes>
   );
 }

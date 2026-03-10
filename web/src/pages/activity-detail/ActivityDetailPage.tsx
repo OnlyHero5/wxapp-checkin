@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getActivityDetail, type ActivityDetail } from "../../features/activities/api";
+import {
+  buildActivityActionPath,
+  buildActivityManagePath,
+  getActivityDetail,
+  type ActivityDetail
+} from "../../features/activities/api";
 import {
   resolveCanCheckin,
   resolveCanCheckout,
@@ -8,7 +13,12 @@ import {
   resolveProgressStatus
 } from "../../features/activities/view-model";
 import { SessionExpiredError } from "../../shared/http/errors";
+import { isStaffSession } from "../../shared/session/session-store";
+import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
+import { AppButton } from "../../shared/ui/AppButton";
+import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
+import { StatusTag } from "../../shared/ui/StatusTag";
 
 /**
  * 详情页是普通用户动作决策的“闸门页”。
@@ -24,15 +34,29 @@ function resolveErrorMessage(error: unknown) {
 }
 
 export function ActivityDetailPage() {
-  const navigate = useNavigate();
-  // 详情页完全依赖路径参数里的 activityId 决定要查询哪条活动。
   const { activityId = "" } = useParams();
+
+  // 路由参数变化时强制 remount，确保上一条活动的 state 不会漏进下一条活动。
+  return <ActivityDetailPageContent activityId={activityId} key={activityId} />;
+}
+
+type ActivityDetailPageContentProps = {
+  activityId: string;
+};
+
+function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProps) {
+  const navigate = useNavigate();
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  // 详情页可能因为快速切路由或重试出现响应乱序，因此只接收最新版本。
+  const requestVersionRef = useRef(0);
 
   useEffect(() => {
     // 用 active 标记避免组件卸载后异步请求仍然回写 state。
     let active = true;
+    // 版本号和 active 配合使用：前者防乱序，后者防卸载后回写。
+    const requestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = requestVersion;
 
     /**
      * 详情加载没有抽到共享 hook，是因为当前阶段它只服务这个页面，
@@ -41,10 +65,11 @@ export function ActivityDetailPage() {
      */
     async function loadDetail() {
       setErrorMessage("");
+      setDetail(null);
 
       try {
         const result = await getActivityDetail(activityId);
-        if (active) {
+        if (active && requestVersionRef.current === requestVersion) {
           setDetail(result);
         }
       } catch (error) {
@@ -52,7 +77,7 @@ export function ActivityDetailPage() {
           navigate("/login");
           return;
         }
-        if (active) {
+        if (active && requestVersionRef.current === requestVersion) {
           setErrorMessage(resolveErrorMessage(error));
         }
       }
@@ -69,7 +94,7 @@ export function ActivityDetailPage() {
   if (!detail) {
     return (
       <MobilePage eyebrow="活动详情" title="活动详情">
-        {errorMessage ? <p className="form-error">{errorMessage}</p> : <p>活动详情加载中...</p>}
+        {errorMessage ? <InlineNotice message={errorMessage} /> : <p>活动详情加载中...</p>}
         <Link className="text-link" to="/activities">
           返回活动列表
         </Link>
@@ -81,34 +106,40 @@ export function ActivityDetailPage() {
   const progressStatus = resolveProgressStatus(detail);
   const canCheckin = resolveCanCheckin(detail);
   const canCheckout = resolveCanCheckout(detail);
+  const isStaff = isStaffSession();
 
   return (
     <MobilePage eyebrow="活动详情" title={detail.activity_title}>
-      <section className="detail-panel">
-        {/* 详情页的字段顺序按“先确认活动，再确认自己状态，再确认统计”组织。 */}
-        {detail.description ? <p>{detail.description}</p> : null}
-        {detail.start_time ? <p>时间：{detail.start_time}</p> : null}
-        {detail.location ? <p>地点：{detail.location}</p> : null}
-        <p>当前状态：{progressStatus === "completed" ? "已完成" : "进行中"}</p>
-        <p>我的状态：{resolveJoinStatus(detail)}</p>
-        <p>
-          统计：签到 {detail.checkin_count ?? 0} / 签退 {detail.checkout_count ?? 0}
-        </p>
-      </section>
+      <ActivityMetaPanel
+        counts={{
+          checkin: detail.checkin_count,
+          checkout: detail.checkout_count
+        }}
+        description={detail.description}
+        joinStatusText={resolveJoinStatus(detail)}
+        locationText={detail.location}
+        progressText={progressStatus === "completed" ? "已完成" : "进行中"}
+        statusSlot={<StatusTag status={progressStatus} />}
+        subtitle={detail.activity_type}
+        timeText={detail.start_time}
+        title={detail.activity_title}
+        titleAs="p"
+      />
       <section className="stack-form">
-        {/* 签到和签退入口互相独立显示，避免用一个按钮切来切去造成误操作。 */}
-        {canCheckin ? (
-          <Link className="primary-link" to={`/activities/${detail.activity_id}/checkin`}>
-            去签到
-          </Link>
+        {isStaff ? (
+          <AppButton onClick={() => navigate(buildActivityManagePath(detail.activity_id))}>进入管理</AppButton>
         ) : null}
-        {canCheckout ? (
-          <Link className="secondary-link" to={`/activities/${detail.activity_id}/checkout`}>
+        {/* 签到和签退入口互相独立显示，避免用一个按钮切来切去造成误操作。 */}
+        {!isStaff && canCheckin ? (
+          <AppButton onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkin"))}>去签到</AppButton>
+        ) : null}
+        {!isStaff && canCheckout ? (
+          <AppButton onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkout"))} tone="secondary">
             去签退
-          </Link>
+          </AppButton>
         ) : null}
         {/* 两个动作都不可用时，也明确告诉用户是“当前状态不允许”，而不是页面坏了。 */}
-        {!canCheckin && !canCheckout ? <p>当前状态下暂无可执行动作。</p> : null}
+        {!isStaff && !canCheckin && !canCheckout ? <p>当前状态下暂无可执行动作。</p> : null}
       </section>
     </MobilePage>
   );

@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getSession, setSession } from "../session/session-store";
+import { getBrowserBindingKey, getSession, setSession } from "../session/session-store";
 import { ApiError, SessionExpiredError } from "./errors";
 import { requestJson } from "./client";
+
+function createJsonResponse(payload: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(payload), {
+    headers: {
+      "Content-Type": "application/json"
+    },
+    ...init
+  });
+}
 
 describe("requestJson", () => {
   beforeEach(() => {
@@ -44,19 +53,68 @@ describe("requestJson", () => {
   it("clears the local session when the backend reports session_expired", async () => {
     setSession("sess_123");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+      createJsonResponse({
         error_code: "session_expired",
         message: "会话失效，请重新登录",
         status: "forbidden"
-      }), {
-        headers: {
-          "Content-Type": "application/json"
-        },
+      }, {
         status: 403
       })
     ));
 
     await expect(requestJson("/activities")).rejects.toBeInstanceOf(SessionExpiredError);
     expect(getSession()).toBe("");
+  });
+
+  it("reuses the same inflight GET request for identical paths", async () => {
+    let resolveResponse: ((value: Response) => void) | undefined;
+    const fetchMock = vi.fn().mockImplementation(() => {
+      return new Promise<Response>((resolve) => {
+        resolveResponse = resolve;
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const firstRequest = requestJson("/activities");
+    const secondRequest = requestJson("/activities");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolveResponse?.(createJsonResponse({
+      activities: [],
+      status: "success"
+    }, {
+      status: 200
+    }));
+
+    await expect(firstRequest).resolves.toEqual({
+      activities: [],
+      status: "success"
+    });
+    await expect(secondRequest).resolves.toEqual({
+      activities: [],
+      status: "success"
+    });
+  });
+
+  it("injects the browser binding key header into requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({
+      status: "success"
+    }, {
+      status: 200
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const browserBindingKey = getBrowserBindingKey();
+
+    await requestJson("/activities");
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/web/activities", expect.objectContaining({
+      headers: expect.objectContaining({
+        "Content-Type": "application/json",
+        "X-Browser-Binding-Key": browserBindingKey
+      }),
+      method: "GET"
+    }));
   });
 });

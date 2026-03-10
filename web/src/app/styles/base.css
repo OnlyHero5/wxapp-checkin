@@ -13,8 +13,8 @@
 :root {
   color-scheme: light;
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: #f5f7fb;
-  color: #10213a;
+  background: #eef1f5;
+  color: #1f2937;
 }
 
 /* 所有元素默认走 border-box，避免宽度和 padding 叠加失控。 */
@@ -30,12 +30,10 @@ body,
   margin: 0;
 }
 
-/* 背景使用柔和的径向渐变和线性渐变叠加，避免纯白页面过于生硬。 */
+/* 背景保持浅色和克制，不再用大面积光晕去制造“伪质感”。 */
 body {
   min-width: 320px;
-  background:
-    radial-gradient(circle at top, rgba(53, 109, 255, 0.12), transparent 42%),
-    linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
+  background: linear-gradient(180deg, #f8f9fb 0%, #eef1f5 100%);
 }
 
 /* 让按钮、输入框继承页面字体，避免原生控件风格割裂。 */
@@ -77,16 +75,17 @@ select {
 .mobile-page__card {
   width: min(100%, 480px);
   padding: 28px 24px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 48px rgba(16, 33, 58, 0.12);
+  border: 1px solid #dce2ea;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
 /* 页面主标题比正文明显更大，但仍控制在手机端可一屏阅读的范围。 */
 .mobile-page__header h1 {
-  margin: 8px 0 12px;
-  font-size: 2rem;
-  line-height: 1.15;
+  margin: 6px 0 12px;
+  font-size: 1.75rem;
+  line-height: 1.2;
 }
 
 /* 所有页面正文统一用 grid 垂直堆叠，减少每页自己处理间距。 */
@@ -99,7 +98,7 @@ select {
 .mobile-page__content p {
   margin: 0;
   line-height: 1.6;
-  color: #40506a;
+  color: #4b5563;
 }
 
 /* =========================================================
@@ -122,10 +121,9 @@ select {
 /* eyebrow 是页面辅助标签，例如“欢迎回来”“首次访问”“活动详情”。 */
 .mobile-page__eyebrow {
   margin: 0;
-  font-size: 0.875rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #356dff;
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+  color: #6b7280;
 }
 
 /* =========================================================
@@ -157,65 +155,71 @@ select {
 /* 分组标题比普通正文更醒目，但不抢主标题层级。 */
 .activity-section__header h2 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1rem;
 }
 
-/* 活动卡片和详情面板共用浅底卡片样式，减少视觉心智切换。 */
-.activity-card,
+/* 信息面板是当前阶段最稳定的重复结构，列表/详情/输入页都在复用。 */
+.activity-meta-panel,
 .detail-panel {
   display: grid;
   gap: 10px;
   padding: 18px;
-  border: 1px solid rgba(16, 33, 58, 0.08);
-  border-radius: 18px;
-  background: rgba(245, 248, 255, 0.9);
+  border: 1px solid #dce2ea;
+  border-radius: 14px;
+  background: #f8fafc;
 }
 
-/* 如果后续觉得卡片信息太满，优先先调 `gap` 和 `padding`，
- * 不要一开始就缩字体，因为手机端字太小会直接影响可用性。 */
-
-/* 卡片头部把标题信息和状态标签左右分开。 */
-.activity-card__header {
+/* 标题块和状态位左右分栏，优先保证标题区能自然换行。 */
+.activity-meta-panel__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-/* 活动标题是卡片里最重要的信息。 */
-.activity-card__header h3 {
-  margin: 0;
-  font-size: 1.125rem;
+/* 标题区保持一套结构，避免列表和详情自己发明字号层级。 */
+.activity-meta-panel__title-block {
+  display: grid;
+  gap: 4px;
 }
 
-/* 元信息统一用较浅颜色，保证视觉主次清晰。 */
-.activity-card__meta,
-.activity-card__meta-list p,
-.detail-panel p,
-.empty-hint {
+.activity-meta-panel__title {
   margin: 0;
-  color: #40506a;
+  font-size: 1.125rem;
+  line-height: 1.35;
+}
+
+.activity-meta-panel__subtitle {
+  margin: 0;
+  color: #6b7280;
   line-height: 1.6;
 }
 
-/* 状态标签统一用圆角胶囊样式，后续管理员态也可以复用。 */
-.status-chip {
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 0.8125rem;
-  font-weight: 700;
+.activity-meta-panel__status {
+  display: flex;
+  justify-content: flex-end;
 }
 
-/* 进行中的标签使用蓝色系，传达“当前可操作”。 */
-.status-chip--ongoing {
-  background: rgba(53, 109, 255, 0.14);
-  color: #1744bb;
+.activity-meta-panel__rows {
+  display: grid;
+  gap: 8px;
 }
 
-/* 已完成标签使用中性色，避免和可操作态抢视觉优先级。 */
-.status-chip--completed {
-  background: rgba(16, 33, 58, 0.1);
-  color: #10213a;
+.activity-meta-panel__rows p,
+.detail-panel p,
+.empty-hint {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.activity-meta-panel__footer {
+  padding-top: 2px;
+}
+
+/* Tag 已由组件库提供样式，这里只补布局，不再自己画胶囊。 */
+.status-tag {
+  flex-shrink: 0;
 }
 
 /* 单个字段统一采用 label + input 的垂直排列。 */
@@ -228,18 +232,18 @@ select {
 /* 输入框统一圆角与边框，增强移动端触控区域。 */
 .field input {
   padding: 14px 16px;
-  border: 1px solid #cfd7e6;
-  border-radius: 14px;
-  background: #fdfefe;
-  color: #10213a;
+  border: 1px solid #d1d9e6;
+  border-radius: 12px;
+  background: #fff;
+  color: #1f2937;
 }
 
 /* 由于绑定页和登录页都大量依赖表单，所以输入框样式尽量保持克制，不做花哨动画。 */
 
 /* 聚焦态给出柔和但清晰的视觉反馈。 */
 .field input:focus {
-  outline: 2px solid rgba(53, 109, 255, 0.2);
-  border-color: #356dff;
+  outline: 2px solid rgba(0, 82, 217, 0.12);
+  border-color: #0052d9;
 }
 
 /* 动态码输入框需要明显区别于普通文本输入框。 */
@@ -256,82 +260,85 @@ select {
  * - 不建议把字号调得太小，否则数字输入的“确认感”会明显下降。 */
 
 /* =========================================================
- * 按钮与链接
+ * 组件库拼接层
  * ---------------------------------------------------------
- * 这里把“主按钮 / 次按钮 / 文本链接 / 主动作链接”统一管理，
- * 防止不同页面各自发明一套样式。
+ * 组件库负责交互控件，这里只补项目特定的间距和文本链接。
  * ========================================================= */
 
-/* 一条经验规则：
- * - 能触发主流程推进的动作用主按钮/主链接
- * - 只是辅助操作或回退的动作放次按钮/文本链接
- * 这样新页面即使快速搭建，也不会很快失去交互层级。 */
-.primary-button {
-  min-height: 48px;
-  border: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #356dff 0%, #1744bb 100%);
-  color: #fff;
-  font-weight: 700;
+.app-button {
+  /* 组件库按钮负责皮肤，
+   * 这里仅保留项目级约束：
+   * - 宽度始终占满单列容器
+   * - 不再给页面额外加局部宽度补丁
+   */
+  width: 100%;
 }
 
-/* 这几种交互元素虽然语义不同，但在视觉尺寸上保持一致。 */
-.primary-link,
-.secondary-button,
-.secondary-link,
+.inline-notice {
+  /* NoticeBar 默认是窄条信息条，
+   * 这里补圆角是为了和页面卡片的 12/14/16px 体系对齐，
+   * 不是重新发明错误样式。
+   */
+  border-radius: 12px;
+}
+
+/* 文本链接仍保留原生链接语义，避免所有导航都伪装成按钮。 */
 .text-link {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  border-radius: 999px;
+  width: fit-content;
+  color: #0052d9;
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 600;
 }
 
-/* 主动作链接用于详情页“去签到”等最重要跳转。 */
-.primary-link {
-  background: linear-gradient(135deg, #356dff 0%, #1744bb 100%);
-  color: #fff;
-  padding: 0 20px;
+.text-link:hover {
+  text-decoration: underline;
 }
 
-/* 次按钮和次链接用于“重新加载”“去签退”等次一级动作。 */
-.secondary-button,
-.secondary-link {
-  border: 1px solid rgba(53, 109, 255, 0.2);
-  background: rgba(53, 109, 255, 0.08);
-  color: #1744bb;
-  padding: 0 20px;
+.text-link:focus-visible {
+  outline: 2px solid rgba(0, 82, 217, 0.18);
+  outline-offset: 2px;
 }
 
-/* button 需要鼠标指针反馈，link 本身已有浏览器交互语义。 */
-.secondary-button {
-  cursor: pointer;
+/* =========================================================
+ * staff / review 页面扩展
+ * ---------------------------------------------------------
+ * 新增页面继续复用同一套浅色卡片语言，
+ * 这里只补管理员态特有的“动态码大字”、“审核动作排布”等局部样式。
+ * ========================================================= */
+
+.staff-panel,
+.review-list {
+  display: grid;
+  gap: 16px;
 }
 
-/* 文本链接用于返回上一级，不抢主按钮视觉层级。 */
-.text-link {
-  justify-content: flex-start;
-  min-height: auto;
-  border-radius: 0;
-  color: #1744bb;
+.staff-code-panel {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid #dce2ea;
+  border-radius: 14px;
+  background: #f8fafc;
+  text-align: center;
 }
 
-/* 维护提示：
- * 如果后续想给链接增加下划线或 hover 动画，优先只改 `.text-link`，
- * 不要影响 `.primary-link` 和 `.secondary-link` 的按钮感。 */
-
-/* 禁用态统一降低不透明度，让用户一眼知道按钮当前不可用。 */
-.primary-button:disabled {
-  opacity: 0.55;
-}
-
-/* 错误态目前只处理文本颜色，不额外加背景块，
- * 是为了避免移动端小页面里红色区域过大造成视觉压迫。 */
-
-/* 错误文案统一使用红色，提高识别度。 */
-.form-error {
+.staff-code-panel__value {
   margin: 0;
-  color: #c23b35;
+  color: #111827;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+}
+
+.staff-code-panel__meta {
+  margin: 0;
+  color: #6b7280;
+}
+
+.review-list__actions {
+  display: grid;
+  gap: 12px;
+  padding: 12px 16px 16px;
 }

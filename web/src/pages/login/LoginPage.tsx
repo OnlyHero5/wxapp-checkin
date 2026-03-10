@@ -5,7 +5,7 @@ import { PasskeyLoginPanel } from "../../features/auth/components/PasskeyLoginPa
 import { getPasskeyAssertion } from "../../features/auth/webauthn";
 import { detectBrowserCapability } from "../../shared/device/browser-capability";
 import { ApiError } from "../../shared/http/errors";
-import { setSession } from "../../shared/session/session-store";
+import { saveAuthSession } from "../../shared/session/session-store";
 import { MobilePage } from "../../shared/ui/MobilePage";
 import { UnsupportedBrowser } from "../../shared/ui/UnsupportedBrowser";
 
@@ -49,8 +49,8 @@ export function LoginPage() {
         request_id: loginOptions.request_id
       });
 
-      // 登录成功后，前端只持久化 session token，用户信息延后按页面接口拉取。
-      setSession(completeResult.session_token);
+      // 登录完成时把 token、角色和权限一起写入，后续路由守卫直接复用。
+      saveAuthSession(completeResult);
       navigate("/activities");
     } catch (error) {
       // 当前浏览器没绑定过 Passkey 时，直接引导去绑定页，比停留错误文案更符合主链路。

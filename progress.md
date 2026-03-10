@@ -171,3 +171,143 @@
   - 路由守卫缺失
   - 绑定页缺少浏览器能力拦截
   - HTTP 客户端对异常响应不够稳健
+
+### 2026-03-09 半程复审整改补充
+
+- 已新增并跑红以下回归测试：
+  - `src/shared/http/client.test.ts`：相同 GET 请求复用同一 in-flight Promise
+  - `src/features/activities/view-model.test.ts`：`progress_status` 缺失时不误判为 `completed`
+  - `src/features/activities/components/ActivityCard.test.tsx`：特殊字符活动 ID 的详情链接编码
+  - `src/pages/activity-detail/ActivityDetailPage.test.tsx`：切换活动路由时清掉旧详情
+  - `src/pages/checkin/CheckinPage.test.tsx`：切换活动路由时清掉旧结果态
+- 已完成对应实现：
+  - `src/shared/http/client.ts`
+  - `src/features/activities/api.ts`
+  - `src/features/activities/view-model.ts`
+  - `src/pages/activities/ActivitiesPage.tsx`
+  - `src/pages/activity-detail/ActivityDetailPage.tsx`
+  - `src/pages/checkin/CheckinPage.tsx`
+- 已新增共享 UI 原语并接入组件库：
+  - `src/shared/ui/AppButton.tsx`
+  - `src/shared/ui/InlineNotice.tsx`
+  - `src/shared/ui/StatusTag.tsx`
+  - `src/shared/ui/ActivityMetaPanel.tsx`
+  - `src/main.tsx` 引入 `tdesign-mobile-react/es/style/index.css`
+- 已将以下页面 / 组件切到“组件库控件 + 自定义布局”的混合模式：
+  - `src/features/auth/components/IdentityBindForm.tsx`
+  - `src/features/auth/components/PasskeyLoginPanel.tsx`
+  - `src/features/attendance/components/CodeInput.tsx`
+  - `src/features/activities/components/ActivityCard.tsx`
+  - `src/pages/activities/ActivitiesPage.tsx`
+  - `src/pages/activity-detail/ActivityDetailPage.tsx`
+  - `src/pages/checkin/CheckinPage.tsx`
+- 已完成新鲜验证：
+  - `cd web && npm test -- --run` => 12 个测试文件、34 个测试全部通过
+  - `cd web && npm run build` => 构建通过
+- 已完成规范与文档回写：
+  - 根 `AGENTS.md` 增补“注释行数占源码四分之一到三分之一”的规则
+  - `task_plan.md`、`findings.md`、`progress.md`、`docs/changes.md` 已同步本轮整改结论
+
+### 2026-03-09 三分之三推进
+
+- 已完成范围收敛：
+  - 用户确认采用“前端四分之一 + 必要后端支撑”
+  - 不只补管理员前端，也补当前 `web/` 已依赖但 backend 尚未落地的最小 `/api/web/**`
+- 已完成设计与计划落盘：
+  - `docs/plans/2026-03-09-web-admin-bridge-design.md`
+  - `docs/plans/2026-03-09-web-admin-bridge-implementation-plan.md`
+- 已完成补充探索：
+  - 复核 `todo_list` 当前停在 `T-057`
+  - 复核 `web/` 当前最明显缺口是角色态、staff/review 页面、管理员入口
+  - 复核 backend 当前可复用主干是会话、活动查询、二维码发码、签到事务和 outbox
+  - 复核 backend 当前最缺的是 `/api/web/**` 适配层和最小解绑审核持久化
+- 已确认本轮还需要顺手修复的半程问题：
+  - staff 在活动列表会被普通用户可见性过滤误伤
+  - `/api/web/activities/**` 尚无真实 backend 支撑
+- 已完成前端三分之三实现：
+  - `session-store` 持久化 `role / permissions / user_profile`
+  - `ActivitiesPage`、`ActivityDetailPage` 补 staff 管理入口
+  - `router.tsx` 补 `StaffRoute` / `ReviewRoute`
+  - 新增 `features/staff/api.ts`
+  - 新增 `DynamicCodePanel.tsx`
+  - 新增 `BulkCheckoutButton.tsx`
+  - 新增 `features/review/components/UnbindReviewList.tsx`
+  - 新增 `pages/staff-manage/StaffManagePage.tsx`
+  - 新增 `pages/unbind-reviews/UnbindReviewPage.tsx`
+- 已完成前端验证：
+  - `cd web && npm test -- --run src/shared/session/session-store.test.ts src/pages/activities/ActivitiesPage.test.tsx src/pages/activity-detail/ActivityDetailPage.test.tsx` => 3 个文件、10 个测试通过
+  - `cd web && npm test -- --run src/pages/staff-manage/StaffManagePage.test.tsx src/pages/unbind-reviews/UnbindReviewPage.test.tsx` => 2 个文件、5 个测试通过
+  - `cd web && npm test -- --run src/app/App.test.tsx src/pages/activities/ActivitiesPage.test.tsx src/pages/activity-detail/ActivityDetailPage.test.tsx src/pages/staff-manage/StaffManagePage.test.tsx src/pages/unbind-reviews/UnbindReviewPage.test.tsx src/shared/session/session-store.test.ts` => 6 个文件、24 个测试通过
+  - `cd web && npm test -- --run` => 14 个文件、45 个测试通过
+  - `cd web && npm run build` => 构建通过
+- 已完成后端测试环境修复：
+  - 新增 `backend/src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker`
+  - 解决当前 WSL/JDK 17 下 Mockito inline mock maker 自附加失败导致 `ApiFlowIntegrationTest` 无法运行的问题
+- 已完成后端最小 Web 适配层：
+  - 新增 `WebActivityController`、`WebAttendanceController`、`WebStaffController`
+  - 新增 `DynamicCodeService`
+  - 新增 `BulkCheckoutService`
+  - 新增 `UnbindReviewService`
+  - 新增 `web_unbind_review` 迁移、实体、仓储
+  - 修改 `CheckinConsumeService` 接入 Web `code` 链路
+  - 修改 `WxActivityProjectionRepository` 以支持原子计数
+- 已完成后端验证：
+  - `cd backend && ./mvnw -q -DskipTests compile` => 编译通过
+  - `cd backend && ./mvnw test -Dtest=ApiFlowIntegrationTest` => 13 个测试通过
+  - `cd backend && ./mvnw test -Dtest=ApiFlowNoIssueLogIntegrationTest` => 1 个测试通过
+  - `cd backend && ./mvnw test` => 34 个测试通过
+
+## 2026-03-10
+
+### 本轮新增进度
+
+- 已按 `brainstorming` 过程收口最后四分之一的方案，并得到用户确认：
+  - 采用“本地可运行切流方案（B）”
+- 已新增并落盘：
+  - `docs/plans/2026-03-10-web-only-cutover-design.md`
+  - `docs/plans/2026-03-10-web-only-cutover-implementation-plan.md`
+- 已同步 `task_plan.md`、`findings.md`、`progress.md`，把本轮目标、范围和删旧边界写回仓库。
+
+### 进行中
+
+- 正在补充后端 Web 身份、浏览器绑定、challenge 与审计模型探索。
+- 正在梳理旧微信 / 小程序 / 二维码正式链路需要删除或改写的入口。
+- 正在准备先补失败测试，再进入后端认证与删旧实现。
+
+### 已完成
+
+- 已补后端 Web-only 认证与绑定主链路：
+  - `WebAuthController`
+  - `WebIdentityService`
+  - `PasskeyChallengeService`
+  - `WebBrowserBindingEntity`
+  - `WebPasskeyCredentialEntity`
+  - `WebPasskeyChallengeEntity`
+  - `WebAdminAuditLogEntity`
+- 已补解绑审批闭环：
+  - 审批通过后失效旧绑定
+  - 审批通过后失效旧凭据
+  - 审批通过后清理旧会话
+  - 写管理员审计日志
+- 已删除旧正式入口：
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/AuthController.java`
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/ActivityController.java`
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/CheckinController.java`
+  - `backend/src/main/java/com/wxcheckin/backend/api/controller/CompatibilityController.java`
+  - `frontend/`
+  - 根级小程序配置
+- 已完成前端 Web-only 收尾：
+  - 浏览器绑定键持久化与请求头注入
+  - 普通用户解绑申请页与入口
+- 已完成文档回写：
+  - `README.md`
+  - `backend/README.md`
+  - `docs/REQUIREMENTS.md`
+  - `docs/FUNCTIONAL_SPEC.md`
+  - `docs/API_SPEC.md`
+  - `docs/changes.md`
+  - `docs/plans/2026-03-09-web-todo-list.md`
+- 已完成新鲜验证：
+  - `cd backend && ./mvnw test` => 27 个测试通过
+  - `cd web && npm test -- --run` => 15 个测试文件、48 个测试通过
+  - `cd web && npm run build` => 构建通过

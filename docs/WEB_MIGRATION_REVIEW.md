@@ -17,7 +17,7 @@
 
 ### 2.1 结论摘要
 
-结论：当前改造大方向合理，且已经可以进入实现准备阶段；真正需要收口的是文档基线，而不是再继续补一套并行的 `WEB_REQUIREMENTS` / `WEB_API_SPEC` 文档。
+结论：改造大方向已被证明合理，且 2026-03-10 已完成 Web-only 主链路收口；本文后续内容保留为迁移复盘，而不是“仍待开始的改造方案”。
 
 合理之处：
 
@@ -77,11 +77,10 @@
 
 以下文档不再定义产品基线，只用于理解现状代码、部署和测试环境：
 
-- `frontend/README.md`
 - `backend/README.md`
 - `backend/DB_DATABASE_DEEP_DIVE.md`
 - `backend/TEST_ENV_TESTING.md`
-- `frontend/`、`backend/` 当前仍在仓库中的历史实现代码
+- 2026-03-10 删旧前的历史审查结论
 
 ### 3.4 本轮收口动作
 
@@ -90,7 +89,7 @@
   - `docs/FUNCTIONAL_SPEC.md`
   - `docs/API_SPEC.md`
 - 保留 `docs/WEB_DESIGN.md`、`docs/WEB_COMPATIBILITY.md`、本文档和实施计划作为补充文档。
-- 更新根 `README.md` 以及 `frontend/README.md`、`backend/README.md`、`backend/DB_DATABASE_DEEP_DIVE.md`、`backend/TEST_ENV_TESTING.md` 的定位说明。
+- 更新根 `README.md`、`backend/README.md`、`backend/DB_DATABASE_DEEP_DIVE.md`、`backend/TEST_ENV_TESTING.md` 的定位说明。
 - 删除重复文档：
   - `docs/WEB_REQUIREMENTS.md`
   - `docs/WEB_API_SPEC.md`
@@ -109,11 +108,10 @@
 
 如果目标是排查当前历史实现或联调基座，再回看：
 
-1. `frontend/README.md`
-2. `backend/README.md`
-3. `backend/DB_DATABASE_DEEP_DIVE.md`
-4. `backend/TEST_ENV_TESTING.md`
-5. `frontend/`、`backend/` 当前代码
+1. `backend/README.md`
+2. `backend/DB_DATABASE_DEEP_DIVE.md`
+3. `backend/TEST_ENV_TESTING.md`
+4. 本文中的历史审查证据
 
 ## 5. 仍需在实现前锁定的口径
 

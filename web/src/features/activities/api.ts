@@ -81,6 +81,21 @@ function encodePathSegment(value: string) {
   return encodeURIComponent(`${value}`.trim());
 }
 
+export function buildActivityDetailPath(activityId: string) {
+  // UI 路由和 API path 必须共用同一套编码规则，避免“接口能查到、页面却跳错路由”。
+  return `/activities/${encodePathSegment(activityId)}`;
+}
+
+export function buildActivityActionPath(activityId: string, actionType: ActivityActionType) {
+  // 动作页路径统一在这一层拼接，页面不再自己手写字符串模板。
+  return `${buildActivityDetailPath(activityId)}/${actionType}`;
+}
+
+export function buildActivityManagePath(activityId: string) {
+  // 管理员页走单独 staff 路径，避免与普通用户动作页混在一起。
+  return `/staff${buildActivityDetailPath(activityId)}/manage`;
+}
+
 // 拉取当前用户可见活动列表。
 export function getActivities() {
   return requestJson<ActivityListResponse>("/activities");
@@ -88,12 +103,12 @@ export function getActivities() {
 
 // 拉取单个活动详情。
 export function getActivityDetail(activityId: string) {
-  return requestJson<ActivityDetailResponse>(`/activities/${encodePathSegment(activityId)}`);
+  return requestJson<ActivityDetailResponse>(buildActivityDetailPath(activityId));
 }
 
 // 提交签到/签退动态码。
 export function consumeActivityCode(activityId: string, input: CodeConsumeInput) {
-  return requestJson<CodeConsumeResponse>(`/activities/${encodePathSegment(activityId)}/code-consume`, {
+  return requestJson<CodeConsumeResponse>(`${buildActivityDetailPath(activityId)}/code-consume`, {
     body: input,
     method: "POST"
   });

@@ -1,0 +1,173 @@
+import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { saveAuthSession, clearSession } from "../../shared/session/session-store";
+import { StaffManagePage } from "./StaffManagePage";
+
+const activitiesApiMocks = vi.hoisted(() => ({
+  getActivityDetail: vi.fn()
+}));
+
+const staffApiMocks = vi.hoisted(() => ({
+  bulkCheckout: vi.fn(),
+  getCodeSession: vi.fn()
+}));
+
+vi.mock("../../features/activities/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../features/activities/api")>();
+  return {
+    ...actual,
+    getActivityDetail: activitiesApiMocks.getActivityDetail
+  };
+});
+
+vi.mock("../../features/staff/api", () => ({
+  bulkCheckout: staffApiMocks.bulkCheckout,
+  getCodeSession: staffApiMocks.getCodeSession
+}));
+
+function renderStaffManagePage() {
+  render(
+    <MemoryRouter initialEntries={["/staff/activities/act_101/manage"]}>
+      <Routes>
+        <Route path="/staff/activities/:activityId/manage" element={<StaffManagePage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+describe("StaffManagePage", () => {
+  beforeEach(() => {
+    saveAuthSession({
+      permissions: ["activity:manage"],
+      role: "staff",
+      session_token: "sess_staff_manage_123"
+    });
+    activitiesApiMocks.getActivityDetail.mockResolvedValue({
+      activity_id: "act_101",
+      activity_title: "校园志愿活动",
+      activity_type: "志愿",
+      start_time: "2026-03-10 09:00:00",
+      location: "本部操场",
+      description: "负责现场秩序维护",
+      progress_status: "ongoing",
+      support_checkin: true,
+      support_checkout: true,
+      can_checkin: false,
+      can_checkout: false,
+      my_registered: false,
+      my_checked_in: false,
+      my_checked_out: false,
+      checkin_count: 18,
+      checkout_count: 3
+    });
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+    clearSession();
+  });
+
+  it("loads the current code session and allows switching action type", async () => {
+    const user = userEvent.setup();
+    staffApiMocks.getCodeSession
+      .mockResolvedValueOnce({
+        action_type: "checkin",
+        activity_id: "act_101",
+        checkin_count: 18,
+        checkout_count: 3,
+        code: "483920",
+        expires_at: 1760000007500,
+        expires_in_ms: 4200,
+        server_time_ms: 1760000003300,
+        status: "success"
+      })
+      .mockResolvedValueOnce({
+        action_type: "checkout",
+        activity_id: "act_101",
+        checkin_count: 18,
+        checkout_count: 3,
+        code: "654321",
+        expires_at: 1760000015000,
+        expires_in_ms: 5000,
+        server_time_ms: 1760000010000,
+        status: "success"
+      });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByRole("heading", { name: "活动管理" })).toBeInTheDocument();
+    expect(screen.getByText("483920")).toBeInTheDocument();
+
+    await user.click(screen.getByText("签退码"));
+
+    expect(await screen.findByText("654321")).toBeInTheDocument();
+    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_101", "checkout");
+  });
+
+  it("refreshes the current code session when the page becomes visible again", async () => {
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible"
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("confirms bulk checkout and refreshes the page state", async () => {
+    const user = userEvent.setup();
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+    staffApiMocks.bulkCheckout.mockResolvedValue({
+      activity_id: "act_101",
+      affected_count: 12,
+      batch_id: "batch_123",
+      message: "批量签退完成",
+      server_time_ms: 1760000005000,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "一键全部签退" }));
+    await user.click(screen.getByRole("button", { name: "确认全部签退" }));
+
+    expect(staffApiMocks.bulkCheckout).toHaveBeenCalledWith("act_101", {
+      confirm: true,
+      reason: "活动结束统一签退"
+    });
+    expect(await screen.findByText("批量签退完成")).toBeInTheDocument();
+  });
+});

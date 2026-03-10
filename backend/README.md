@@ -1,10 +1,10 @@
 # wxapp-checkin 后端（`backend/`）部署与配置
 
-> 说明：`backend/` 仍是手机 Web 改造的主要复用基座，但本文档只描述当前 Spring Boot 服务的部署、配置和联调方式，不定义产品需求与接口基线。正式产品基线请以 `../docs/REQUIREMENTS.md`、`../docs/FUNCTIONAL_SPEC.md`、`../docs/API_SPEC.md` 为准；文中涉及微信、小程序、二维码的内容属于历史实现或迁移兼容说明。
+> 说明：当前仓库已完成 Web-only 收口。`backend/` 是唯一正式业务后端，正式产品基线请以 `../docs/REQUIREMENTS.md`、`../docs/FUNCTIONAL_SPEC.md`、`../docs/API_SPEC.md` 为准。本文档只描述部署、配置和本地联调方式。
 
 这份文档面向第一次接手项目的人，重点回答：
 1. **生产环境如何一键启动**
-2. **数据库/Redis/微信配置写到哪里**（例如数据库账号密码写哪个文件）
+2. **数据库/Redis/WebAuth 配置写到哪里**（例如数据库账号密码写哪个文件）
 3. 本地联调脚本怎么跑
 
 ## 0) 目录速览
@@ -53,7 +53,7 @@ mysql -h <DB_HOST> -P <DB_PORT> -u <DB_ADMIN_USER> -p wxcheckin_ext < scripts/bo
 sudo install -m 600 /dev/null /etc/wxcheckin/backend.prod.env
 ```
 
-内容示例（把 `DB_PASSWORD/LEGACY_DB_PASSWORD/QR_SIGNING_KEY/WECHAT_SECRET` 换成真实值）：
+内容示例（把 `DB_PASSWORD/LEGACY_DB_PASSWORD/QR_SIGNING_KEY` 换成真实值）：
 
 ```bash
 SPRING_PROFILES_ACTIVE=prod
@@ -86,10 +86,12 @@ QR_CLEANUP_ENABLED=true
 QR_CLEANUP_INTERVAL_MS=300000
 SESSION_TTL_SECONDS=7200
 
-# 微信（真实小程序必须开启并填写）
-WECHAT_API_ENABLED=true
-WECHAT_APPID=请填微信小程序AppID
-WECHAT_SECRET=请填微信小程序Secret
+# WebAuth / Passkey
+WEBAUTHN_RP_ID=
+WEBAUTHN_RP_NAME=wxapp-checkin
+WEBAUTHN_ALLOWED_ORIGIN=
+WEBAUTHN_BIND_TICKET_TTL_SECONDS=600
+WEBAUTHN_CHALLENGE_TTL_SECONDS=300
 ```
 
 生成强密钥示例：
@@ -219,44 +221,20 @@ curl http://127.0.0.1:9989/actuator/health
 | 扩展库 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` | MySQL（`wxcheckin_ext`） |
 | 遗留库 | `LEGACY_DB_URL` `LEGACY_DB_USER` `LEGACY_DB_PASSWORD` | MySQL（`suda_union`） |
 | Redis | `REDIS_HOST` `REDIS_PORT` `REDIS_PASSWORD` | Redis 连接 |
-| 二维码 | `QR_SIGNING_KEY` | 二维码签名密钥（生产必须替换；**prod profile 会强制校验不可为空/不可用默认占位符**） |
-| 二维码 | `QR_DEFAULT_ROTATE_SECONDS` `QR_DEFAULT_GRACE_SECONDS` | 默认换码/宽限秒数（可被活动配置覆盖） |
-| 二维码 | `QR_REPLAY_TTL_SECONDS` | 防重放键额外 TTL（秒），会叠加在 `accept_expire_at` 之后 |
-| 二维码 | `QR_ISSUE_LOG_ENABLED` | 是否写 `wx_qr_issue_log`（审计用；生产建议关闭以避免持续增长） |
-| 二维码 | `QR_ALLOW_LEGACY_UNSIGNED` | 是否允许旧版未签名 nonce（建议联调/灰度期为 true，稳定后设为 false） |
-| 二维码 | `QR_ISSUE_LOG_RETENTION_SECONDS` | issue log 数据保留秒数（定期清理用） |
-| 二维码 | `QR_REPLAY_GUARD_RETENTION_SECONDS` | replay guard 额外保留秒数（默认 0 表示到期即可删除） |
-| 二维码 | `QR_CLEANUP_ENABLED` `QR_CLEANUP_INTERVAL_MS` | 是否开启二维码相关表的定期清理任务/清理间隔（毫秒） |
+| 动态码 | `QR_SIGNING_KEY` | 动态码签名密钥（生产必须替换；**prod profile 会强制校验不可为空/不可用默认占位符**） |
+| 动态码 | `QR_DEFAULT_ROTATE_SECONDS` `QR_DEFAULT_GRACE_SECONDS` | 默认换码/宽限秒数（当前 Web 管理页仍复用这组配置键） |
+| 动态码 | `QR_REPLAY_TTL_SECONDS` | 防重放键额外 TTL（秒） |
+| 动态码 | `QR_ISSUE_LOG_ENABLED` | 是否写 `wx_qr_issue_log`（当前仅保留内部兼容清理，不作为正式接口输出） |
+| 动态码 | `QR_ALLOW_LEGACY_UNSIGNED` | 是否允许旧版未签名 nonce |
+| 动态码 | `QR_ISSUE_LOG_RETENTION_SECONDS` | issue log 数据保留秒数（定期清理用） |
+| 动态码 | `QR_REPLAY_GUARD_RETENTION_SECONDS` | replay guard 额外保留秒数 |
+| 动态码 | `QR_CLEANUP_ENABLED` `QR_CLEANUP_INTERVAL_MS` | 是否开启动态码相关表的定期清理任务/清理间隔（毫秒） |
 | 会话 | `SESSION_TTL_SECONDS` | session 过期秒数 |
-| 微信 | `WECHAT_API_ENABLED` `WECHAT_APPID` `WECHAT_SECRET` | 微信登录换取 openid/session_key |
+| WebAuth | `WEBAUTHN_RP_ID` `WEBAUTHN_RP_NAME` `WEBAUTHN_ALLOWED_ORIGIN` | Passkey / WebAuthn RP 配置 |
+| WebAuth | `WEBAUTHN_BIND_TICKET_TTL_SECONDS` `WEBAUTHN_CHALLENGE_TTL_SECONDS` | bind ticket 与 challenge 有效期 |
 | 同步 | `LEGACY_SYNC_ENABLED` `LEGACY_SYNC_INTERVAL_MS` | legacy pull 同步开关与间隔 |
 | 同步 | `OUTBOX_RELAY_ENABLED` `OUTBOX_RELAY_INTERVAL_MS` | outbox relay 开关与间隔 |
-| 注册 | `REGISTER_PAYLOAD_VERIFY_ENABLED` | 是否校验注册载荷签名 |
-
-## 5) 二维码签名与日志增长控制（Point 2/3/4，2026-02-28）
-
-本项目二维码票据协议保持不变：
-
-```text
-wxcheckin:v1:<activity_id>:<action_type>:<slot>:<nonce>
-```
-
-### 5.1 Signed nonce（`QR_SIGNING_KEY` 真正生效）
-
-为避免“伪造二维码”与“篡改二维码内容”（例如改 `activity_id`/`action_type`），后端将签名嵌入到 `nonce` 中：
-
-- `nonce = randomPart + sigPart`
-- `randomPart`：16 字节随机数的 base64url（无 padding），长度 22
-- `sigPart`：`HMAC-SHA256` 结果的 base64url（无 padding），长度 43
-- 合计 `nonce` 长度固定为 65
-
-签名密钥来源：`app.qr.signing-key`（环境变量 `QR_SIGNING_KEY`）。
-
-consume 侧规则：
-- 若 nonce 是 signed nonce（长度 65），则必须验签通过才允许继续（不再依赖 `wx_qr_issue_log` 存在性校验）。
-- 若 nonce 不是 signed nonce：仅当 `QR_ALLOW_LEGACY_UNSIGNED=true` 时，才会走旧逻辑（校验 `wx_qr_issue_log` 存在性）。
-
-### 5.2 `wx_qr_issue_log` 为什么会无限增长，以及怎么止血
+| 注册 | `REGISTER_PAYLOAD_VERIFY_ENABLED` | 历史占位配置，当前 Web-only 主链路不再使用 |
 
 历史实现将每次发码都落库到 `wx_qr_issue_log`，且 consume 依赖它校验“二维码确实由 staff 发出”。在真实生产下：
 - staff 页面每 `rotate_seconds` 自动刷新二维码
@@ -305,4 +283,4 @@ mysql -h <DB_HOST> -P <DB_PORT> -u <DB_ADMIN_USER> -p wxcheckin_ext < src/main/r
 
 ## 6) 前端如何连接
 
-前端 `baseUrl` 填后端地址，不要加 `/api`（见 `../frontend/README.md`）。
+手机 Web 前端默认通过同源 `/api/web/**` 访问后端；若本地分开启动，请在 `web/` 的开发配置中指向当前后端地址，并保持 `X-Browser-Binding-Key` 与 `Authorization` 头由前端请求层自动注入。

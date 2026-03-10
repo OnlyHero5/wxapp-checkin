@@ -21,19 +21,21 @@ import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepo
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSyncOutboxRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
-import java.nio.charset.StandardCharsets;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebAdminAuditLogRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebBrowserBindingRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebPasskeyChallengeRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebPasskeyCredentialRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebUnbindReviewRepository;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
-import java.util.UUID;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -76,12 +78,35 @@ class ApiFlowIntegrationTest {
   @Autowired
   private WxSyncOutboxRepository outboxRepository;
 
+  @Autowired
+  private WebUnbindReviewRepository webUnbindReviewRepository;
+
+  @Autowired
+  private JdbcTemplate jdbcTemplate;
+
+  @Autowired
+  private WebPasskeyChallengeRepository webPasskeyChallengeRepository;
+
+  @Autowired
+  private WebPasskeyCredentialRepository webPasskeyCredentialRepository;
+
+  @Autowired
+  private WebBrowserBindingRepository webBrowserBindingRepository;
+
+  @Autowired
+  private WebAdminAuditLogRepository webAdminAuditLogRepository;
+
   @BeforeEach
   void prepareData() {
     checkinEventRepository.deleteAll();
     replayGuardRepository.deleteAll();
     qrIssueLogRepository.deleteAll();
     outboxRepository.deleteAll();
+    webAdminAuditLogRepository.deleteAll();
+    webUnbindReviewRepository.deleteAll();
+    webPasskeyCredentialRepository.deleteAll();
+    webBrowserBindingRepository.deleteAll();
+    webPasskeyChallengeRepository.deleteAll();
     statusRepository.deleteAll();
     sessionRepository.deleteAll();
     adminRosterRepository.deleteAll();
@@ -112,329 +137,341 @@ class ApiFlowIntegrationTest {
     activity.setGraceSeconds(20);
     activity.setActive(true);
     activityRepository.save(activity);
+
+    jdbcTemplate.execute("DROP TABLE IF EXISTS suda_user");
+    jdbcTemplate.execute("""
+        CREATE TABLE suda_user (
+          id BIGINT PRIMARY KEY,
+          username VARCHAR(32) NOT NULL,
+          name VARCHAR(64) NOT NULL,
+          role INT NOT NULL
+        )
+        """);
+    jdbcTemplate.update(
+        "INSERT INTO suda_user (id, username, name, role) VALUES (?, ?, ?, ?)",
+        7L,
+        "2025000007",
+        "刘洋",
+        1
+    );
+    jdbcTemplate.update(
+        "INSERT INTO suda_user (id, username, name, role) VALUES (?, ?, ?, ?)",
+        11L,
+        "2025000011",
+        "测试用户",
+        9
+    );
   }
 
   @Test
   void shouldReturnSessionExpiredSignalWhenTokenInvalid() throws Exception {
-    mockMvc.perform(get("/api/staff/activities")
-            .param("session_token", "invalid-token"))
+    mockMvc.perform(get("/api/web/activities")
+            .header("Authorization", "Bearer invalid-token"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("forbidden")))
         .andExpect(jsonPath("$.error_code", is("session_expired")));
   }
 
   @Test
-  void shouldRejectRegisterWithoutSignedPayload() throws Exception {
-    String session = login("code-register-missing-payload");
-    mockMvc.perform(post("/api/register")
+  void shouldCompleteWebBindRegisterAndLoginFlow() throws Exception {
+    String registerSession = bindAndRegister("browser-normal", "2025000011", "测试用户");
+
+    MvcResult loginOptionsResult = mockMvc.perform(post("/api/web/passkey/login/options")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {
-                  "session_token":"%s",
-                  "student_id":"2025000011",
-                  "name":"测试用户",
-                  "department":"信息工程学院",
-                  "club":"测试社团"
-                }
-                """.formatted(session)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("invalid_payload_signature")));
-  }
-
-  @Test
-  void shouldRejectRegisterWithTamperedPayloadSignature() throws Exception {
-    String session = login("code-register-tampered-payload");
-    String payloadEncrypted = buildRegisterPayload(session, "2025000012", "篡改用户", "信息工程学院", "测试社团");
-    String tampered = payloadEncrypted.substring(0, payloadEncrypted.length() - 1)
-        + (payloadEncrypted.endsWith("A") ? "B" : "A");
-
-    mockMvc.perform(post("/api/register")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {
-                  "session_token":"%s",
-                  "student_id":"2025000012",
-                  "name":"篡改用户",
-                  "department":"信息工程学院",
-                  "club":"测试社团",
-                  "payload_encrypted":"%s"
-                }
-                """.formatted(session, tampered)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("invalid_payload_signature")));
-  }
-
-  @Test
-  void shouldRejectRegisterPayloadReplay() throws Exception {
-    String session = login("code-register-replay");
-    String payloadEncrypted = buildRegisterPayload(session, "2025000013", "重放用户", "信息工程学院", "测试社团");
-
-    mockMvc.perform(post("/api/register")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {
-                  "session_token":"%s",
-                  "student_id":"2025000013",
-                  "name":"重放用户",
-                  "department":"信息工程学院",
-                  "club":"测试社团",
-                  "payload_encrypted":"%s"
-                }
-                """.formatted(session, payloadEncrypted)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("success")));
-
-    mockMvc.perform(post("/api/register")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {
-                  "session_token":"%s",
-                  "student_id":"2025000013",
-                  "name":"重放用户",
-                  "department":"信息工程学院",
-                  "club":"测试社团",
-                  "payload_encrypted":"%s"
-                }
-                """.formatted(session, payloadEncrypted)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("payload_replay")));
-  }
-
-  @Test
-  void shouldCompleteStaffIssueAndNormalConsumeFlow() throws Exception {
-    String staffSession = login("code-staff");
-    register(staffSession, "2025000007", "刘洋");
-
-    String normalSession = login("code-normal");
-    bindUserActivity(normalSession, "act_hackathon_20260215");
-
-    String qrPayload = issueQr(staffSession, "act_hackathon_20260215", "checkin");
-    // QR payload should carry a signed nonce so that it can be validated without DB issue logs.
-    String[] parts = qrPayload.split(":");
-    org.junit.jupiter.api.Assertions.assertEquals(6, parts.length);
-    org.junit.jupiter.api.Assertions.assertEquals(65, parts[5].length());
-
-    mockMvc.perform(post("/api/checkin/consume")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {
-                  "session_token":"%s",
-                  "qr_payload":"%s"
-                }
-                """.formatted(normalSession, qrPayload)))
+            .header("X-Browser-Binding-Key", "browser-normal")
+            .content("{}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
-        .andExpect(jsonPath("$.action_type", is("checkin")));
+        .andReturn();
 
-    mockMvc.perform(post("/api/checkin/consume")
+    JsonNode loginOptionsJson = objectMapper.readTree(loginOptionsResult.getResponse().getContentAsString());
+    String requestId = loginOptionsJson.get("request_id").asText();
+    String challenge = loginOptionsJson.get("public_key_options").get("challenge").asText();
+
+    mockMvc.perform(post("/api/web/passkey/login/complete")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Browser-Binding-Key", "browser-normal")
             .content("""
                 {
-                  "session_token":"%s",
-                  "qr_payload":"%s"
+                  "request_id":"%s",
+                  "assertion_response":{
+                    "id":"%s",
+                    "raw_id":"%s",
+                    "type":"public-key",
+                    "response":{
+                      "client_data_json":"%s",
+                      "authenticator_data":"authenticator-data",
+                      "signature":"signature",
+                      "user_handle":"%s"
+                    }
+                  }
                 }
-                """.formatted(normalSession, qrPayload)))
+                """.formatted(
+                requestId,
+                credentialIdForBrowser("browser-normal"),
+                rawCredentialIdForBrowser("browser-normal"),
+                encodeClientDataJson(challenge, "webauthn.get"),
+                userHandleForId(1L)
+            )))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.session_token").exists());
+
+    org.junit.jupiter.api.Assertions.assertFalse(registerSession.isBlank());
+  }
+
+  @Test
+  void shouldReturnPasskeyNotRegisteredWhenBrowserHasNoBinding() throws Exception {
+    mockMvc.perform(post("/api/web/passkey/login/options")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Browser-Binding-Key", "browser-missing")
+            .content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")))
+        .andExpect(jsonPath("$.error_code", is("passkey_not_registered")));
+  }
+
+  @Test
+  void shouldRejectBindWhenAccountAlreadyBoundElsewhere() throws Exception {
+    String existingSession = bindAndRegister("browser-old", "2025000011", "测试用户");
+
+    mockMvc.perform(post("/api/web/bind/verify-identity")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Browser-Binding-Key", "browser-new")
+            .content("""
+                {
+                  "student_id":"2025000011",
+                  "name":"测试用户"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")))
+        .andExpect(jsonPath("$.error_code", is("account_bound_elsewhere")));
+
+    org.junit.jupiter.api.Assertions.assertFalse(existingSession.isBlank());
+  }
+
+  @Test
+  void shouldExposeWebActivitiesListAndDetail() throws Exception {
+    String staffSession = bindAndRegister("browser-web-staff-list", "2025000007", "刘洋");
+
+    mockMvc.perform(get("/api/web/activities")
+            .header("Authorization", "Bearer " + staffSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.activities[0].activity_id", is("act_hackathon_20260215")))
+        .andExpect(jsonPath("$.server_time_ms").exists());
+
+    mockMvc.perform(get("/api/web/activities/{activityId}", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + staffSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.activity_id", is("act_hackathon_20260215")))
+        .andExpect(jsonPath("$.activity_title", is("校园 HackDay")))
+        .andExpect(jsonPath("$.server_time_ms").exists());
+  }
+
+  @Test
+  void shouldIssueWebCodeSessionAndConsumeCode() throws Exception {
+    String staffSession = bindAndRegister("browser-web-staff-code", "2025000007", "刘洋");
+
+    String normalSession = bindAndRegister("browser-web-normal-code", "2025000011", "测试用户");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    MvcResult codeResult = mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + staffSession)
+            .param("action_type", "checkin"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.action_type", is("checkin")))
+        .andExpect(jsonPath("$.activity_id", is("act_hackathon_20260215")))
+        .andExpect(jsonPath("$.code").exists())
+        .andReturn();
+
+    String code = objectMapper.readTree(codeResult.getResponse().getContentAsString()).get("code").asText();
+
+    mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + normalSession)
+            .content("""
+                {
+                  "action_type":"checkin",
+                  "code":"%s"
+                }
+                """.formatted(code)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.action_type", is("checkin")))
+        .andExpect(jsonPath("$.activity_id", is("act_hackathon_20260215")));
+
+    mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + normalSession)
+            .content("""
+                {
+                  "action_type":"checkin",
+                  "code":"%s"
+                }
+                """.formatted(code)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("duplicate")));
   }
 
   @Test
-  void shouldAllowConsumeSignedQrEvenWhenIssueLogMissing() throws Exception {
-    String staffSession = login("code-staff-no-issue-log");
-    register(staffSession, "2025000007", "刘洋");
+  void shouldSupportBulkCheckoutAndUnbindReviewFlow() throws Exception {
+    String staffSession = bindAndRegister("browser-web-staff-manage", "2025000007", "刘洋");
 
-    String normalSession = login("code-normal-no-issue-log");
+    String normalSession = bindAndRegister("browser-web-normal-review", "2025000011", "测试用户");
     bindUserActivity(normalSession, "act_hackathon_20260215");
+    setUserActivityState(normalSession, "act_hackathon_20260215", "checked_in");
 
-    String qrPayload = issueQr(staffSession, "act_hackathon_20260215", "checkin");
-
-    // Simulate production where we no longer persist issue logs once nonce signing is enabled.
-    qrIssueLogRepository.deleteAll();
-
-    mockMvc.perform(post("/api/checkin/consume")
+    mockMvc.perform(post("/api/web/staff/activities/{activityId}/bulk-checkout", "act_hackathon_20260215")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + staffSession)
             .content("""
                 {
-                  "session_token":"%s",
-                  "qr_payload":"%s"
+                  "confirm":true,
+                  "reason":"活动结束统一签退"
                 }
-                """.formatted(normalSession, qrPayload)))
+                """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
-        .andExpect(jsonPath("$.action_type", is("checkin")));
-  }
+        .andExpect(jsonPath("$.affected_count", is(1)));
 
-  @Test
-  void shouldRejectConsumeWhenSignedNonceTamperedEvenWhenIssueLogMissing() throws Exception {
-    String staffSession = login("code-staff-tamper-nonce");
-    register(staffSession, "2025000007", "刘洋");
+    WxSessionEntity session = sessionRepository.findBySessionToken(normalSession).orElseThrow();
+    WxUserActivityStatusEntity status = statusRepository
+        .findByUserIdAndActivityId(session.getUser().getId(), "act_hackathon_20260215")
+        .orElseThrow();
+    org.junit.jupiter.api.Assertions.assertEquals("checked_out", status.getStatus());
 
-    String normalSession = login("code-normal-tamper-nonce");
-    bindUserActivity(normalSession, "act_hackathon_20260215");
-
-    String qrPayload = issueQr(staffSession, "act_hackathon_20260215", "checkin");
-    String[] parts = qrPayload.split(":");
-    String nonce = parts[5];
-    // Keep length unchanged; only alter one character in the signature portion.
-    int tamperIndex = 22 + 10;
-    char original = nonce.charAt(tamperIndex);
-    char replacement = original == 'A' ? 'B' : 'A';
-    String tamperedNonce = nonce.substring(0, tamperIndex) + replacement + nonce.substring(tamperIndex + 1);
-    String tamperedPayload = String.join(":", parts[0], parts[1], parts[2], parts[3], parts[4], tamperedNonce);
-
-    qrIssueLogRepository.deleteAll();
-
-    mockMvc.perform(post("/api/checkin/consume")
+    MvcResult createReviewResult = mockMvc.perform(post("/api/web/unbind-reviews")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + normalSession)
             .content("""
                 {
-                  "session_token":"%s",
-                  "qr_payload":"%s"
+                  "reason":"更换手机",
+                  "requested_new_binding_hint":"iPhone 16"
                 }
-                """.formatted(normalSession, tamperedPayload)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("invalid_qr")));
-  }
-
-  @Test
-  void shouldPersistRotateGraceOverridesForActivityProjection() throws Exception {
-    String staffSession = login("code-staff-override");
-    register(staffSession, "2025000007", "刘洋");
-
-    mockMvc.perform(post("/api/staff/activities/{activityId}/qr-session", "act_hackathon_20260215")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {
-                  "session_token":"%s",
-                  "action_type":"checkin",
-                  "rotate_seconds":15,
-                  "grace_seconds":25
-                }
-                """.formatted(staffSession)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("success")))
-        .andExpect(jsonPath("$.rotate_seconds", is(15)))
-        .andExpect(jsonPath("$.grace_seconds", is(25)));
-
-    WxActivityProjectionEntity updated = activityRepository.findById("act_hackathon_20260215").orElseThrow();
-    org.junit.jupiter.api.Assertions.assertEquals(15, updated.getRotateSeconds());
-    org.junit.jupiter.api.Assertions.assertEquals(25, updated.getGraceSeconds());
-  }
-
-  @Test
-  void shouldRejectStaffIssueOutsideActivityTimeWindow() throws Exception {
-    String staffSession = login("code-staff-outside-window");
-    register(staffSession, "2025000007", "刘洋");
-
-    WxActivityProjectionEntity activity = activityRepository.findById("act_hackathon_20260215").orElseThrow();
-    Instant now = Instant.now();
-    activity.setStartTime(now.minusSeconds(3 * 60 * 60L));
-    activity.setEndTime(now.minusSeconds(2 * 60 * 60L));
-    activityRepository.save(activity);
-
-    mockMvc.perform(post("/api/staff/activities/{activityId}/qr-session", "act_hackathon_20260215")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {
-                  "session_token":"%s",
-                  "action_type":"checkin"
-                }
-                """.formatted(staffSession)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("forbidden")))
-        .andExpect(jsonPath("$.error_code", is("outside_activity_time_window")));
-  }
-
-  @Test
-  void shouldRejectRecordDetailAccessFromAnotherUser() throws Exception {
-    String staffSession = login("code-staff");
-    register(staffSession, "2025000007", "刘洋");
-
-    String ownerSession = login("code-normal-owner");
-    bindUserActivity(ownerSession, "act_hackathon_20260215");
-
-    String otherSession = login("code-normal-other");
-    bindUserActivity(otherSession, "act_hackathon_20260215");
-
-    String qrPayload = issueQr(staffSession, "act_hackathon_20260215", "checkin");
-
-    MvcResult consumeResult = mockMvc.perform(post("/api/checkin/consume")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {
-                  "session_token":"%s",
-                  "qr_payload":"%s"
-                }
-                """.formatted(ownerSession, qrPayload)))
+                """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andReturn();
 
-    JsonNode consumeJson = objectMapper.readTree(consumeResult.getResponse().getContentAsString());
-    String recordId = consumeJson.get("checkin_record_id").asText();
+    String reviewId = objectMapper.readTree(createReviewResult.getResponse().getContentAsString()).get("review_id").asText();
 
-    mockMvc.perform(get("/api/checkin/records/{recordId}", recordId)
-            .param("session_token", ownerSession))
+    mockMvc.perform(get("/api/web/staff/unbind-reviews")
+            .header("Authorization", "Bearer " + staffSession)
+            .param("status", "pending"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
-        .andExpect(jsonPath("$.record_id", is(recordId)));
+        .andExpect(jsonPath("$.items[0].review_id", is(reviewId)));
 
-    mockMvc.perform(get("/api/checkin/records/{recordId}", recordId)
-            .param("session_token", otherSession))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("forbidden")));
-  }
-
-  private void register(String sessionToken, String studentId, String name) throws Exception {
-    String department = "学生工作部";
-    String club = "活动执行组";
-    String payloadEncrypted = buildRegisterPayload(sessionToken, studentId, name, department, club);
-    mockMvc.perform(post("/api/register")
+    mockMvc.perform(post("/api/web/staff/unbind-reviews/{reviewId}/approve", reviewId)
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + staffSession)
             .content("""
                 {
-                  "session_token":"%s",
-                  "student_id":"%s",
-                  "name":"%s",
-                  "department":"%s",
-                  "club":"%s",
-                  "payload_encrypted":"%s"
+                  "review_comment":"确认已更换设备"
                 }
-                """.formatted(sessionToken, studentId, name, department, club, payloadEncrypted)))
+                """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")));
+
+    org.junit.jupiter.api.Assertions.assertTrue(sessionRepository.findBySessionToken(normalSession).isEmpty());
+    org.junit.jupiter.api.Assertions.assertEquals(1L, webAdminAuditLogRepository.count());
+
+    mockMvc.perform(post("/api/web/passkey/login/options")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Browser-Binding-Key", "browser-web-normal-review")
+            .content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")))
+        .andExpect(jsonPath("$.error_code", is("passkey_not_registered")));
   }
 
-  private String issueQr(String staffSession, String activityId, String actionType) throws Exception {
-    MvcResult qrResult = mockMvc.perform(post("/api/staff/activities/{activityId}/qr-session", activityId)
+  private String bindAndRegister(String browserKey, String studentId, String name) throws Exception {
+    MvcResult verifyResult = mockMvc.perform(post("/api/web/bind/verify-identity")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Browser-Binding-Key", browserKey)
             .content("""
                 {
-                  "session_token":"%s",
-                  "action_type":"%s"
+                  "student_id":"%s",
+                  "name":"%s"
                 }
-                """.formatted(staffSession, actionType)))
+                """.formatted(studentId, name)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andReturn();
 
-    JsonNode json = objectMapper.readTree(qrResult.getResponse().getContentAsString());
-    return json.get("qr_payload").asText();
-  }
+    String bindTicket = objectMapper.readTree(verifyResult.getResponse().getContentAsString()).get("bind_ticket").asText();
 
-  private String login(String wxCode) throws Exception {
-    MvcResult loginResult = mockMvc.perform(post("/api/auth/wx-login")
+    MvcResult registerOptionsResult = mockMvc.perform(post("/api/web/passkey/register/options")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Browser-Binding-Key", browserKey)
             .content("""
                 {
-                  "wx_login_code":"%s"
+                  "bind_ticket":"%s"
                 }
-                """.formatted(wxCode)))
+                """.formatted(bindTicket)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andReturn();
-    JsonNode json = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+
+    JsonNode registerOptionsJson = objectMapper.readTree(registerOptionsResult.getResponse().getContentAsString());
+    String requestId = registerOptionsJson.get("request_id").asText();
+    String challenge = registerOptionsJson.get("public_key_options").get("challenge").asText();
+
+    MvcResult completeResult = mockMvc.perform(post("/api/web/passkey/register/complete")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Browser-Binding-Key", browserKey)
+            .content("""
+                {
+                  "request_id":"%s",
+                  "bind_ticket":"%s",
+                  "attestation_response":{
+                    "id":"cred-%s",
+                    "raw_id":"%s",
+                    "type":"public-key",
+                    "response":{
+                      "client_data_json":"%s",
+                      "attestation_object":"attestation-object"
+                    }
+                  }
+                }
+                """.formatted(
+                requestId,
+                bindTicket,
+                browserKey,
+                rawCredentialIdForBrowser(browserKey),
+                encodeClientDataJson(challenge, "webauthn.create")
+            )))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andReturn();
+
+    JsonNode json = objectMapper.readTree(completeResult.getResponse().getContentAsString());
     return json.get("session_token").asText();
+  }
+
+  private String encodeClientDataJson(String challenge, String type) throws Exception {
+    String payload = objectMapper.writeValueAsString(Map.of(
+        "challenge", challenge,
+        "type", type,
+        "origin", "http://localhost"
+    ));
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes());
+  }
+
+  private String credentialIdForBrowser(String browserKey) {
+    return "cred-" + browserKey;
+  }
+
+  private String rawCredentialIdForBrowser(String browserKey) {
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(("raw-" + browserKey).getBytes());
+  }
+
+  private String userHandleForId(Long userId) {
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(("user:" + userId).getBytes());
   }
 
   private void bindUserActivity(String sessionToken, String activityId) {
@@ -447,47 +484,13 @@ class ApiFlowIntegrationTest {
     statusRepository.save(status);
   }
 
-  private String buildRegisterPayload(
-      String sessionToken,
-      String studentId,
-      String name,
-      String department,
-      String club
-  ) throws Exception {
-    long timestamp = System.currentTimeMillis();
-    String nonce = "nonce_" + UUID.randomUUID().toString().replace("-", "");
-    String bodyJson = objectMapper.writeValueAsString(Map.of(
-        "student_id", studentId,
-        "name", name,
-        "department", department,
-        "club", club
-    ));
-    String bodyBase64 = Base64.getEncoder().encodeToString(bodyJson.getBytes(StandardCharsets.UTF_8));
-    String signText = "v1.%d.%s.%s".formatted(timestamp, nonce, bodyBase64);
-    String signature = hmacSha256Hex(sessionToken, signText);
-    String envelopeJson = objectMapper.writeValueAsString(Map.of(
-        "v", 1,
-        "alg", "HMAC-SHA256",
-        "ts", timestamp,
-        "nonce", nonce,
-        "body", bodyBase64,
-        "sig", signature
-    ));
-    return Base64.getEncoder().encodeToString(envelopeJson.getBytes(StandardCharsets.UTF_8));
+  private void setUserActivityState(String sessionToken, String activityId, String state) {
+    WxSessionEntity session = sessionRepository.findBySessionToken(sessionToken).orElseThrow();
+    WxUserActivityStatusEntity status = statusRepository
+        .findByUserIdAndActivityId(session.getUser().getId(), activityId)
+        .orElseThrow();
+    status.setStatus(state);
+    statusRepository.save(status);
   }
 
-  private String hmacSha256Hex(String key, String plainText) throws Exception {
-    Mac mac = Mac.getInstance("HmacSHA256");
-    mac.init(new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-    byte[] digest = mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-    StringBuilder builder = new StringBuilder(digest.length * 2);
-    for (byte b : digest) {
-      String hex = Integer.toHexString(b & 0xff);
-      if (hex.length() == 1) {
-        builder.append('0');
-      }
-      builder.append(hex);
-    }
-    return builder.toString();
-  }
 }

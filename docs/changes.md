@@ -1,11 +1,49 @@
 # Changes Log
 
+## 2026-03-10
+- 完成 Web-only 收尾：
+  - 新增后端 Web 认证主链路：`WebAuthController`、`WebIdentityService`、`PasskeyChallengeService`
+  - 新增 `web_browser_binding`、`web_passkey_credential`、`web_passkey_challenge`、`web_admin_audit_log`
+  - `/api/web/bind/verify-identity`、`/passkey/register/*`、`/passkey/login/*` 真实落地
+  - 解绑审批通过后同时失效旧绑定、旧凭据、旧会话，并写管理员审计日志
+- 前端补齐 Web-only 收尾：
+  - 请求层自动注入 `X-Browser-Binding-Key`
+  - 新增普通用户解绑申请页 `/unbind-request`
+  - 活动列表页增加解绑申请入口
+- 删旧：
+  - 删除 `frontend/` 历史小程序前端目录
+  - 删除根级小程序配置 `project.config.json`、`project.private.config.json`
+  - 删除旧微信登录 / 注册 / 兼容控制器与对应 service / DTO
+- 验证：
+  - `cd backend && ./mvnw test`
+  - `cd web && npm test -- --run`
+  - `cd web && npm run build`
+
 ## 2026-03-09
 - 文档体系正式切换为“手机 Web + Passkey + 动态 6 位码”基线。
 - `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` 重写为当前唯一正式需求、功能、接口基线。
 - `docs/WEB_DESIGN.md`、`docs/WEB_COMPATIBILITY.md`、`docs/WEB_MIGRATION_REVIEW.md` 与 `docs/plans/2026-03-09-web-only-migration-implementation-plan.md` 保留为补充设计、兼容性、审查与实施文档。
 - 根 `README.md` 改为 Web 项目入口；`frontend/README.md`、`backend/README.md`、`backend/DB_DATABASE_DEEP_DIVE.md`、`backend/TEST_ENV_TESTING.md` 增补“历史参考 / 迁移基座”说明。
 - 删除重复文档 `docs/WEB_REQUIREMENTS.md`、`docs/WEB_API_SPEC.md`，收口“双正式基线”问题。
+- Web 半程复审整改：
+  - `shared/http/client.ts` 增加 GET in-flight 去重，降低 StrictMode / 重试 / 回前台刷新带来的重复读取。
+  - `features/activities/view-model.ts` 修正 `progress_status` 缺失时的误判，避免把仍在进行中的活动错误归到“已完成”。
+  - `features/activities/api.ts` 增加活动路由构造辅助函数，统一 UI 路由与 API path 编码。
+  - 活动列表、活动详情、签到页补“只认最后一次请求”的状态保护，避免旧响应覆盖新状态。
+  - `web/` 引入 `tdesign-mobile-react`，按钮、Tag、错误提示改由组件库承接。
+  - 新增 `ActivityMetaPanel`、`AppButton`、`InlineNotice`、`StatusTag`，收口重复 UI 结构与手写交互样式。
+  - 全局样式回调为更克制的手机 Web 基线，减少大渐变、胶囊按钮和页面级重复视觉定义。
+- Web 三分之三推进：
+  - 前端补齐 staff/review 链路：`features/staff/api.ts`、`DynamicCodePanel`、`BulkCheckoutButton`、`UnbindReviewList`、`StaffManagePage`、`UnbindReviewPage`。
+  - 会话存储升级为 `session_token + role + permissions + user_profile`，活动列表和详情页补 staff 管理入口与路由守卫。
+  - backend 新增最小 `/api/web/**` 适配层：`WebActivityController`、`WebAttendanceController`、`WebStaffController`。
+  - backend 新增 `DynamicCodeService`，为 staff 发码与普通用户 6 位码验码提供同一套 slot 计算。
+  - `CheckinConsumeService` 补 Web `code` 入参兼容，同时保留旧 `qr_payload` 链路。
+  - 新增 `web_unbind_review` 最小持久化模型、`UnbindReviewService` 与审批后旧会话失效。
+  - `BulkCheckoutService` 打通批量签退，并同步写事件/outbox。
+  - `WxActivityProjectionRepository` 增加原子计数更新，`CheckinConsumeService` 与 `BulkCheckoutService` 改走原子路径。
+  - backend 测试基线修复：新增 `src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker`，解决当前 WSL/JDK 17 环境下 Mockito inline 无法自附加的问题。
+  - 注释说明：本轮新增了较多 DTO / controller / migration 这类薄适配文件，不适合机械堆高注释密度；已优先在状态机、动态码、批量签退、解绑审核等复杂 service 与页面流转层补充中文维护注释。
 
 ## 2026-02-03
 - 新增 `frontend/` 下完整微信小程序结构与页面代码（签到、注册、记录、详情）。

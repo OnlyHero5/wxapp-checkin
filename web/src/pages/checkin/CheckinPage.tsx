@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { CodeInput } from "../../features/attendance/components/CodeInput";
 import {
+  buildActivityDetailPath,
   consumeActivityCode,
   getActivityDetail,
   type ActivityActionType,
@@ -11,6 +12,8 @@ import {
 import { formatServerTime, resolveCanCheckin, resolveCanCheckout } from "../../features/activities/view-model";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { ApiError, SessionExpiredError } from "../../shared/http/errors";
+import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
+import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 
 /**
@@ -83,8 +86,18 @@ function isActionAllowed(detail: ActivityDetail, actionType: ActivityActionType)
 }
 
 function AttendanceActionPage({ actionType }: AttendanceActionPageProps) {
-  const navigate = useNavigate();
   const { activityId = "" } = useParams();
+  // 动作页切活动或切 checkin/checkout 时，直接重建内部状态最稳妥。
+  return <AttendanceActionPageContent actionType={actionType} activityId={activityId} key={`${actionType}:${activityId}`} />;
+}
+
+type AttendanceActionPageContentProps = {
+  actionType: ActivityActionType;
+  activityId: string;
+};
+
+function AttendanceActionPageContent({ actionType, activityId }: AttendanceActionPageContentProps) {
+  const navigate = useNavigate();
   // `code` 作为受控输入，便于统一做数字规整与按钮禁用判断。
   const [code, setCode] = useState("");
   // `detail` 决定当前页面显示什么活动、是否允许提交。
@@ -95,6 +108,8 @@ function AttendanceActionPage({ actionType }: AttendanceActionPageProps) {
   const [pending, setPending] = useState(false);
   // 一旦提交成功，页面直接切到结果态，而不是停留在输入表单。
   const [result, setResult] = useState<CodeConsumeResponse | null>(null);
+  // 详情刷新会在首进页和回前台两个时机触发，因此需要乱序保护。
+  const detailRequestVersionRef = useRef(0);
 
   /**
    * 为什么输入页也要拉详情，而不是只带着 `activityId` 直接提交？
@@ -105,25 +120,34 @@ function AttendanceActionPage({ actionType }: AttendanceActionPageProps) {
    * 3. 页面从后台切回来后，详情是最便宜、最可靠的刷新来源。
    */
   async function loadDetail() {
+    // 任何较早返回的请求，只要版本落后，就不允许覆盖最新活动状态。
+    const requestVersion = detailRequestVersionRef.current + 1;
+    detailRequestVersionRef.current = requestVersion;
     if (!activityId) {
       // 路由参数缺失时，不再继续请求后端，直接停在页面级错误。
       setPageError("活动不存在");
+      setDetail(null);
       return;
     }
 
     setPageError("");
+    setDetail(null);
 
     try {
       const detailResult = await getActivityDetail(activityId);
       // 详情总是以最后一次请求结果覆盖，避免用户看到旧状态。
-      setDetail(detailResult);
+      if (detailRequestVersionRef.current === requestVersion) {
+        setDetail(detailResult);
+      }
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
         return;
       }
 
-      setPageError(error instanceof Error && error.message ? error.message : "活动信息加载失败");
+      if (detailRequestVersionRef.current === requestVersion) {
+        setPageError(error instanceof Error && error.message ? error.message : "活动信息加载失败");
+      }
     }
   }
 
@@ -186,7 +210,7 @@ function AttendanceActionPage({ actionType }: AttendanceActionPageProps) {
           <p>{result.activity_title}</p>
           {result.server_time_ms ? <p>服务器时间：{formatServerTime(result.server_time_ms)}</p> : null}
         </section>
-        <Link className="text-link" to={`/activities/${activityId}`}>
+        <Link className="text-link" to={buildActivityDetailPath(activityId)}>
           返回活动详情
         </Link>
       </MobilePage>
@@ -196,17 +220,15 @@ function AttendanceActionPage({ actionType }: AttendanceActionPageProps) {
   return (
     <MobilePage eyebrow="动态验证码" title={resolveActionTitle(actionType)}>
       {/* 页面级错误一般出现在详情拉取失败阶段。 */}
-      {pageError ? <p className="form-error">{pageError}</p> : null}
+      {pageError ? <InlineNotice message={pageError} /> : null}
       {detail ? (
         <>
           {/* 详情头部在输入页重复出现，是为了降低“我现在在哪个活动下输入”的心智负担。 */}
-          <section className="detail-panel">
-            {/* 输入页必须始终展示活动标题，避免用户在多个活动间串码。 */}
-            <p>{detail.activity_title}</p>
-            {/* 时间和地点是辅助确认信息，帮助用户再次确认自己在正确活动下。 */}
-            {detail.start_time ? <p>时间：{detail.start_time}</p> : null}
-            {detail.location ? <p>地点：{detail.location}</p> : null}
-          </section>
+          <ActivityMetaPanel
+            locationText={detail.location}
+            timeText={detail.start_time}
+            title={detail.activity_title}
+          />
           {isActionAllowed(detail, actionType) ? (
             /* 真正的输入与提交行为下沉到 `CodeInput`，
              * 当前页面只保留动作语义和结果切换逻辑。 */
@@ -227,7 +249,7 @@ function AttendanceActionPage({ actionType }: AttendanceActionPageProps) {
       ) : (
         <p>活动信息加载中...</p>
       )}
-      <Link className="text-link" to={`/activities/${activityId}`}>
+      <Link className="text-link" to={buildActivityDetailPath(activityId)}>
         返回活动详情
       </Link>
     </MobilePage>

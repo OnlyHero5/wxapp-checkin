@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { ActivityCard } from "../../features/activities/components/ActivityCard";
 import { getActivities, type ActivitySummary } from "../../features/activities/api";
 import { groupVisibleActivities } from "../../features/activities/view-model";
 import { SessionExpiredError } from "../../shared/http/errors";
+import { canReviewUnbind, isStaffSession } from "../../shared/session/session-store";
+import { AppButton } from "../../shared/ui/AppButton";
+import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 
 /**
@@ -26,28 +30,39 @@ export function ActivitiesPage() {
   const [activities, setActivities] = useState<ActivitySummary[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  // 只认最后一次请求结果，避免手动重试时旧响应反写新状态。
+  const requestVersionRef = useRef(0);
 
   /**
    * 列表加载逻辑独立成函数，而不是直接写在 `useEffect` 里，
    * 是为了让“首次加载”和“手动重试”共用同一套行为。
    */
   async function loadActivities() {
+    // 每次发起新请求都推进一个版本号，后返回的旧请求会被自动丢弃。
+    const requestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = requestVersion;
     // 每次重新加载都把页面切回“加载中 + 无错误”的干净状态。
     setLoading(true);
     setErrorMessage("");
 
     try {
       const result = await getActivities();
-      setActivities(result.activities ?? []);
+      if (requestVersionRef.current === requestVersion) {
+        setActivities(result.activities ?? []);
+      }
     } catch (error) {
       // 一旦后端确认会话失效，列表页不继续停留，直接回登录入口。
       if (error instanceof SessionExpiredError) {
         navigate("/login");
         return;
       }
-      setErrorMessage(resolveErrorMessage(error));
+      if (requestVersionRef.current === requestVersion) {
+        setErrorMessage(resolveErrorMessage(error));
+      }
     } finally {
-      setLoading(false);
+      if (requestVersionRef.current === requestVersion) {
+        setLoading(false);
+      }
     }
   }
 
@@ -56,18 +71,32 @@ export function ActivitiesPage() {
     void loadActivities();
   }, []);
 
+  const isStaff = isStaffSession();
+  const allowReview = canReviewUnbind();
   // 页面只渲染分组结果，不再自己关心筛选和排序细节。
-  const sections = groupVisibleActivities(activities);
+  const sections = groupVisibleActivities(activities, {
+    allowAll: isStaff
+  });
 
   return (
-    <MobilePage eyebrow="普通用户" title="活动列表">
-      <p>查看你当前可见的活动，并进入详情页继续签到或签退。</p>
+    <MobilePage eyebrow={isStaff ? "工作人员" : "普通用户"} title="活动列表">
+      <p>{isStaff ? "查看活动并进入管理页展示动态码、处理批量签退与审核事项。" : "查看你当前可见的活动，并进入详情页继续签到或签退。"}</p>
+      {isStaff && allowReview ? (
+        <Link className="text-link" to="/staff/unbind-reviews">
+          查看解绑审核
+        </Link>
+      ) : null}
+      {!isStaff ? (
+        <Link className="text-link" to="/unbind-request">
+          申请解绑当前浏览器
+        </Link>
+      ) : null}
       {errorMessage ? (
         <section className="stack-form">
-          <p className="form-error">{errorMessage}</p>
-          <button className="secondary-button" onClick={() => void loadActivities()} type="button">
+          <InlineNotice message={errorMessage} />
+          <AppButton onClick={() => void loadActivities()} tone="secondary">
             重新加载
-          </button>
+          </AppButton>
         </section>
       ) : null}
       {loading ? <p>活动列表加载中...</p> : null}
@@ -81,7 +110,7 @@ export function ActivitiesPage() {
             <div className="activity-grid">
               {section.items.map((activity) => (
                 // 卡片组件负责单活动展示，列表页只保留分组与布局职责。
-                <ActivityCard activity={activity} key={activity.activity_id} />
+                <ActivityCard activity={activity} key={activity.activity_id} showManageEntry={isStaff} />
               ))}
             </div>
           ) : (

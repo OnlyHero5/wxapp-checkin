@@ -87,33 +87,33 @@
 
 ### 4.3 管理员页面
 
-- [ ] T-058 建立 `features/staff/api.ts`
-- [ ] T-059 建立 `DynamicCodePanel.tsx`
-- [ ] T-060 建立 `BulkCheckoutButton.tsx`
-- [ ] T-061 建立 `features/review/components/UnbindReviewList.tsx`
-- [ ] T-062 建立 `pages/staff-manage/StaffManagePage.tsx`
-- [ ] T-063 建立 `pages/unbind-reviews/UnbindReviewPage.tsx`
-- [ ] T-064 补 `StaffManagePage.test.tsx`
-- [ ] T-065 补 `UnbindReviewPage.test.tsx`
-- [ ] T-066 实现签到码/签退码切换
-- [ ] T-067 实现前后台切换后自动刷新
-- [ ] T-068 实现一键全部签退确认与调用
-- [ ] T-069 实现解绑审核列表
-- [ ] T-070 实现解绑审批动作
+- [x] T-058 建立 `features/staff/api.ts`
+- [x] T-059 建立 `DynamicCodePanel.tsx`
+- [x] T-060 建立 `BulkCheckoutButton.tsx`
+- [x] T-061 建立 `features/review/components/UnbindReviewList.tsx`
+- [x] T-062 建立 `pages/staff-manage/StaffManagePage.tsx`
+- [x] T-063 建立 `pages/unbind-reviews/UnbindReviewPage.tsx`
+- [x] T-064 补 `StaffManagePage.test.tsx`
+- [x] T-065 补 `UnbindReviewPage.test.tsx`
+- [x] T-066 实现签到码/签退码切换
+- [x] T-067 实现前后台切换后自动刷新
+- [x] T-068 实现一键全部签退确认与调用
+- [x] T-069 实现解绑审核列表
+- [x] T-070 实现解绑审批动作
 
 ## 5. M3 后端数据模型与认证
 
 ### 5.1 数据模型
 
-- [ ] T-071 创建 `V6__add_web_identity_tables.sql`
-- [ ] T-072 创建 `WebPasskeyCredentialEntity.java`
-- [ ] T-073 创建 `WebBrowserBindingEntity.java`
-- [ ] T-074 创建 `WebUnbindReviewEntity.java`
-- [ ] T-075 创建 `WebAdminAuditLogEntity.java`
-- [ ] T-076 创建 `WebPasskeyCredentialRepository.java`
-- [ ] T-077 创建 `WebBrowserBindingRepository.java`
-- [ ] T-078 创建 `WebUnbindReviewRepository.java`
-- [ ] T-079 创建 `WebAdminAuditLogRepository.java`
+- [x] T-071 创建 Web identity tables migration（实际落地为 `V7__add_web_identity_tables.sql`）
+- [x] T-072 创建 `WebPasskeyCredentialEntity.java`
+- [x] T-073 创建 `WebBrowserBindingEntity.java`
+- [x] T-074 创建 `WebUnbindReviewEntity.java`
+- [x] T-075 创建 `WebAdminAuditLogEntity.java`
+- [x] T-076 创建 `WebPasskeyCredentialRepository.java`
+- [x] T-077 创建 `WebBrowserBindingRepository.java`
+- [x] T-078 创建 `WebUnbindReviewRepository.java`
+- [x] T-079 创建 `WebAdminAuditLogRepository.java`
 - [ ] T-080 修改 `WxUserAuthExtEntity.java`
 - [ ] T-081 补 `FlywayMigrationTest.java`
 - [ ] T-082 验证唯一约束：
@@ -122,71 +122,71 @@
 
 ### 5.2 身份与登录接口
 
-- [ ] T-083 创建 `WebAuthController.java`
-- [ ] T-084 创建 `WebBindVerifyRequest.java`
-- [ ] T-085 创建 `WebPasskeyRegisterOptionsResponse.java`
-- [ ] T-086 创建 `WebPasskeyRegisterCompleteRequest.java`
-- [ ] T-087 创建 `WebPasskeyLoginOptionsResponse.java`
-- [ ] T-088 创建 `WebPasskeyLoginCompleteRequest.java`
-- [ ] T-089 创建 `WebIdentityService.java`
-- [ ] T-090 创建 `PasskeyChallengeService.java`
+- [x] T-083 创建 `WebAuthController.java`
+- [x] T-084 创建 `WebBindVerifyRequest.java`
+- [x] T-085 创建 `WebPasskeyRegisterOptionsResponse.java`
+- [x] T-086 创建 `WebPasskeyRegisterCompleteRequest.java`
+- [x] T-087 创建 `WebPasskeyLoginOptionsResponse.java`
+- [x] T-088 创建 `WebPasskeyLoginCompleteRequest.java`
+- [x] T-089 创建 `WebIdentityService.java`
+- [x] T-090 创建 `PasskeyChallengeService.java`
 - [ ] T-091 修改 `SessionService.java`
 - [ ] T-092 修改 `LegacyUserLookupService.java`
 - [ ] T-093 补 `WebIdentityServiceTest.java`
 - [ ] T-094 补 `WebAuthControllerTest.java`
-- [ ] T-095 打通 `verify-identity`
-- [ ] T-096 打通 `register/options`
-- [ ] T-097 打通 `register/complete`
-- [ ] T-098 打通 `login/options`
-- [ ] T-099 打通 `login/complete`
+- [x] T-095 打通 `verify-identity`
+- [x] T-096 打通 `register/options`
+- [x] T-097 打通 `register/complete`
+- [x] T-098 打通 `login/options`
+- [x] T-099 打通 `login/complete`
 
 ## 6. M4 后端活动、动态码与管理员能力
 
 ### 6.1 活动与动态码
 
-- [ ] T-100 创建 `WebActivityController.java`
-- [ ] T-101 创建 `WebAttendanceController.java`
-- [ ] T-102 创建 `WebCodeConsumeRequest.java`
-- [ ] T-103 创建 `DynamicCodeService.java`
+- [x] T-100 创建 `WebActivityController.java`
+- [x] T-101 创建 `WebAttendanceController.java`
+- [x] T-102 创建 `WebCodeConsumeRequest.java`
+- [x] T-103 创建 `DynamicCodeService.java`
 - [ ] T-104 修改 `ActivityQueryService.java`
 - [ ] T-105 修改 `QrSessionService.java`
-- [ ] T-106 修改 `CheckinConsumeService.java`
+- [x] T-106 修改 `CheckinConsumeService.java`
 - [ ] T-107 修改 `WxCheckinEventEntity.java`
 - [ ] T-108 修改 `WxReplayGuardEntity.java`
 - [ ] T-109 补 `DynamicCodeServiceTest.java`
 - [ ] T-110 补 `CheckinConsumeServiceTest.java`
-- [ ] T-111 打通 `/api/web/activities`
-- [ ] T-112 打通 `/api/web/activities/{id}`
-- [ ] T-113 打通 `/code-session`
-- [ ] T-114 打通 `/code-consume`
-- [ ] T-115 移除正式 Web 路径对 `qr_payload` 的依赖
+- [x] T-111 打通 `/api/web/activities`
+- [x] T-112 打通 `/api/web/activities/{id}`
+- [x] T-113 打通 `/code-session`
+- [x] T-114 打通 `/code-consume`
+- [x] T-115 移除正式 Web 路径对 `qr_payload` 的依赖
 
 ### 6.2 管理员高权限能力
 
-- [ ] T-116 创建 `WebStaffController.java`
-- [ ] T-117 创建 `BulkCheckoutService.java`
-- [ ] T-118 创建 `UnbindReviewService.java`
+- [x] T-116 创建 `WebStaffController.java`
+- [x] T-117 创建 `BulkCheckoutService.java`
+- [x] T-118 创建 `UnbindReviewService.java`
 - [ ] T-119 修改 `RecordQueryService.java`
 - [ ] T-120 修改 `OutboxRelayService.java`
 - [ ] T-121 补 `BulkCheckoutServiceTest.java`
 - [ ] T-122 补 `UnbindReviewServiceTest.java`
-- [ ] T-123 打通 `bulk-checkout`
-- [ ] T-124 打通解绑申请接口
-- [ ] T-125 打通待审列表接口
-- [ ] T-126 打通批准接口
-- [ ] T-127 打通拒绝接口
-- [ ] T-128 补管理员审计日志写入
+- [x] T-123 打通 `bulk-checkout`
+- [x] T-124 打通解绑申请接口
+- [x] T-125 打通待审列表接口
+- [x] T-126 打通批准接口
+- [x] T-127 打通拒绝接口
+- [x] T-128 补管理员审计日志写入
 
 ## 7. M5 并发治理与稳定性
 
-- [ ] T-129 修改 `WxActivityProjectionRepository.java`
-- [ ] T-130 让 `CheckinConsumeService` 走原子计数路径
-- [ ] T-131 让 `BulkCheckoutService` 走原子计数路径
+- [x] T-129 修改 `WxActivityProjectionRepository.java`
+- [x] T-130 让 `CheckinConsumeService` 走原子计数路径
+- [x] T-131 让 `BulkCheckoutService` 走原子计数路径
 - [ ] T-132 补 `AttendanceCounterConcurrencyTest.java`
 - [ ] T-133 验证并发签到计数不丢失
 - [ ] T-134 验证并发签退计数不丢失
 - [ ] T-135 补动态码错误尝试限流实现
-- [ ] T-136 验证解绑通过后旧会话失效
+- [x] T-136 验证解绑通过后旧会话失效
 
 ## 8. M6 联调回归与兼容性验证
 
@@ -210,19 +210,19 @@
 ## 9. M7 删旧与正式切换
 
 - [ ] T-153 逐条核对删旧前检查清单
-- [ ] T-154 删除 `frontend/`
-- [ ] T-155 修改 `AuthController.java`
-- [ ] T-156 修改 `CheckinController.java`
-- [ ] T-157 修改 `AuthService.java`
-- [ ] T-158 修改 `WeChatIdentityResolver.java`
+- [x] T-154 删除 `frontend/`
+- [x] T-155 修改 `AuthController.java`
+- [x] T-156 修改 `CheckinController.java`
+- [x] T-157 修改 `AuthService.java`
+- [x] T-158 修改 `WeChatIdentityResolver.java`
 - [ ] T-159 修改 `QrSessionService.java`
-- [ ] T-160 更新 `docs/REQUIREMENTS.md`
-- [ ] T-161 更新 `docs/FUNCTIONAL_SPEC.md`
-- [ ] T-162 更新 `docs/API_SPEC.md`
-- [ ] T-163 更新 `docs/changes.md`
-- [ ] T-164 跑 `cd backend && ./mvnw test`
-- [ ] T-165 跑 `cd web && npm test -- --run && npm run build`
-- [ ] T-166 确认仓库中不再存在小程序正式链路说明
+- [x] T-160 更新 `docs/REQUIREMENTS.md`
+- [x] T-161 更新 `docs/FUNCTIONAL_SPEC.md`
+- [x] T-162 更新 `docs/API_SPEC.md`
+- [x] T-163 更新 `docs/changes.md`
+- [x] T-164 跑 `cd backend && ./mvnw test`
+- [x] T-165 跑 `cd web && npm test -- --run && npm run build`
+- [x] T-166 确认仓库中不再存在小程序正式链路说明
 
 ## 10. 阻塞项记录
 
@@ -236,10 +236,10 @@
 
 以下条件全部满足后，可将本清单整体标记完成：
 
-- [ ] C-001 `web/` 成为唯一正式前端
-- [ ] C-002 `/api/web/**` 成为唯一正式 Web 接口
-- [ ] C-003 绑定、登录、活动浏览、签到、签退全链路可用
-- [ ] C-004 管理员展示码、批量签退、解绑审核可用
+- [x] C-001 `web/` 成为唯一正式前端
+- [x] C-002 `/api/web/**` 成为唯一正式 Web 接口
+- [x] C-003 绑定、登录、活动浏览、签到、签退全链路可用
+- [x] C-004 管理员展示码、批量签退、解绑审核可用
 - [ ] C-005 并发计数稳定
 - [ ] C-006 与 `suda_union` 的同步回写正常
-- [ ] C-007 小程序与旧微信/二维码正式链路已删除
+- [x] C-007 小程序与旧微信/二维码正式链路已删除

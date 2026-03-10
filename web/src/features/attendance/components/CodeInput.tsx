@@ -1,3 +1,6 @@
+import { AppButton } from "../../../shared/ui/AppButton";
+import { InlineNotice } from "../../../shared/ui/InlineNotice";
+
 /**
  * 动态码输入组件负责“输入体验”而不是“业务动作”：
  * 1. 限制只能保留 6 位数字
@@ -51,11 +54,10 @@ export function CodeInput({
           value={normalizedValue}
         />
       </label>
-      {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-      <button className="primary-button" disabled={!canSubmit} onClick={() => void onSubmit()} type="button">
-        {/* 这里不用动作名 + pending 组合太复杂的文案，保持一眼可懂。 */}
-        {pending ? "提交中..." : submitText}
-      </button>
+      {errorMessage ? <InlineNotice message={errorMessage} /> : null}
+      <AppButton disabled={!canSubmit} loading={pending} onClick={() => void onSubmit()}>
+        {submitText}
+      </AppButton>
     </section>
   );
 }

@@ -100,13 +100,9 @@ export function resolveProgressStatus(activity: Pick<ActivitySummary, "progress_
     return "completed";
   }
 
-  const timeValue = parseActivityTime(activity.start_time);
-  if (!timeValue) {
-    // 时间不可解析时默认按“进行中”处理，避免把本可操作活动误伤成已完成。
-    return "ongoing";
-  }
-
-  return timeValue >= Date.now() ? "ongoing" : "completed";
+  // 只有开始时间而没有显式状态时，前端无法可靠区分“已开始仍在进行”
+  // 和“已经结束”，此时保守地按进行中处理，避免把可操作活动误伤成已完成。
+  return "ongoing";
 }
 
 /**
@@ -130,11 +126,17 @@ export function resolveJoinStatus(activity: Pick<ActivitySummary, "my_registered
  * 列表页的可见性再收口一次：
  * 即便后端阶段性返回了“当前用户不该看到的活动”，前端也不会直接渲染。
  */
-export function groupVisibleActivities(activities: ActivitySummary[]) {
-  const visibleActivities = (activities ?? []).filter((activity) => {
-    // 这里的三元关系对应需求文档：已报名、已签到、已签退任一满足即可可见。
-    return !!activity.my_registered || !!activity.my_checked_in || !!activity.my_checked_out;
-  });
+type GroupVisibleActivitiesOptions = {
+  allowAll?: boolean;
+};
+
+export function groupVisibleActivities(activities: ActivitySummary[], options: GroupVisibleActivitiesOptions = {}) {
+  const visibleActivities = options.allowAll
+    ? activities ?? []
+    : (activities ?? []).filter((activity) => {
+        // 这里的三元关系对应需求文档：已报名、已签到、已签退任一满足即可可见。
+        return !!activity.my_registered || !!activity.my_checked_in || !!activity.my_checked_out;
+      });
 
   // 时间倒序更符合“最近活动最值得先看”的移动端浏览习惯。
   const sorted = visibleActivities.slice().sort((left, right) => {

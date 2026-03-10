@@ -19,6 +19,11 @@ spring:
         enabled: false
 
 app:
+  legacy:
+    datasource:
+      url:
+      username:
+      password:
   sync:
     legacy:
       enabled: false

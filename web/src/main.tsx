@@ -11,6 +11,7 @@
  */
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "tdesign-mobile-react/es/style/index.css";
 import App from "./app/App";
 import "./app/styles/base.css";
 

@@ -238,6 +238,140 @@
   - `cd web && npm run build`
 - 但首批实现与设计基线存在两个高风险偏差：
   - `src/app/router.tsx` 仅声明了静态路由，没有落实文档要求的登录态 / 绑定态守卫，导致未登录或未绑定用户仍可直接进入 `/activities` 占位页。
+
+### 半程复审新增发现与修复
+
+- `web/src/shared/http/client.ts` 缺少 GET 并发去重：
+  - 在 React StrictMode、手动重试和回前台刷新下会重复发起相同读取请求。
+  - 已补 `inflightGetRequests` 去重，并新增回归测试。
+- `web/src/features/activities/view-model.ts` 在 `progress_status` 缺失时把“开始时间早于当前时间”的活动直接判为 `completed`：
+  - 会误伤仍在进行中的活动，并连带隐藏签到 / 签退入口。
+  - 已改为在缺少显式状态时保守回落到 `ongoing`，并新增 `view-model.test.ts`。
+- `web/src/features/activities/api.ts` 和页面路由拼接策略不一致：
+  - API 会对 `activity_id` 做 path segment 编码，但 `Link` 之前直接拼原值。
+  - 已新增 `buildActivityDetailPath` / `buildActivityActionPath` 并在卡片、详情页、签到页统一复用。
+- `web/src/pages/activity-detail/ActivityDetailPage.tsx`、`web/src/pages/checkin/CheckinPage.tsx`、`web/src/pages/activities/ActivitiesPage.tsx` 存在旧请求覆盖新状态风险：
+  - 已补 request version 保护，并在活动详情 / 签到页新增路由切换回归测试。
+- `web/src` 的交互控件仍主要依赖手写 CSS：
+  - 已引入 `tdesign-mobile-react`
+  - 已新增 `AppButton`、`InlineNotice`、`StatusTag`
+  - 已新增 `ActivityMetaPanel` 收口活动信息块，减少列表 / 详情 / 输入页重复结构
+- `web/src/app/styles/base.css` 存在较强“手写质感样式”倾向：
+  - 已收敛为更克制的浅色移动端基线，降低大渐变、超大圆角和伪按钮样式占比。
+
+## 2026-03-10
+
+### Web-only 收尾重新定界
+
+- 用户已明确确认本轮完成判定采用：
+  - 本地开发环境可启动
+  - 前后端自动化测试通过
+  - Web 主链路代码完整可联调
+- 用户未要求把真机 Passkey 实测作为本轮阻塞项，因此本轮可以采用“开发可运行”的后端 WebAuthn 闭环。
+
+### 当前缺口确认
+
+- `web/` 前端与 `/api/web/activities/**`、管理员页、解绑审核页已基本存在，但“后端 Web 身份与浏览器绑定”仍未真实落地。
+- `backend/` 当前仍保留：
+  - `/api/auth/wx-login`
+  - 旧二维码签发与消费正式入口
+  - `WeChatIdentityResolver`
+  - `frontend/` 小程序目录与小程序配置文件
+- 这意味着仓库仍处于“双链路并存”状态，不满足 Web-only 收尾目标。
+
+### 本轮实施策略
+
+- 后端认证采用“真实 challenge + 真实落库 + 真实会话流转 + 开发可运行”的收口方案。
+- 不在本轮引入重型 WebAuthn 服务端库，避免超出用户确认的验收口径。
+- 删旧目标明确包含：
+  - 删除 `frontend/`
+  - 删除根级小程序配置
+  - 删掉旧微信登录与旧二维码正式接口入口
+  - README / API / 功能文档全部切到 Web-only
+
+### 本轮收尾结果
+
+- 后端现已新增并打通：
+  - `WebAuthController`
+  - `WebIdentityService`
+  - `PasskeyChallengeService`
+  - `web_browser_binding`
+  - `web_passkey_credential`
+  - `web_passkey_challenge`
+  - `web_admin_audit_log`
+- 后端认证当前具备：
+  - `verify-identity`
+  - `register/options`
+  - `register/complete`
+  - `login/options`
+  - `login/complete`
+  - `client_data_json` 的 challenge/type/origin 基础校验
+- 解绑审批现已不只是“删 session”：
+  - 同时失效旧浏览器绑定
+  - 同时失效旧 Passkey 凭据
+  - 写管理员审计日志
+- 前端现已补齐：
+  - `X-Browser-Binding-Key` 自动注入
+  - 浏览器绑定键本地持久化
+  - 普通用户解绑申请页 `/unbind-request`
+  - 活动列表页普通用户解绑入口
+- 删旧已完成：
+  - 删除 `frontend/`
+  - 删除根级 `project.config.json` / `project.private.config.json`
+  - 删除旧 `AuthController` / `CheckinController` / `CompatibilityController` / `ActivityController`
+  - 删除旧 `AuthService` / `RegistrationService` / `WeChatIdentityResolver` / `RegisterPayloadIntegrityService`
+
+### 三分之三阶段新增发现
+
+- 当前 `web/` 半程并不只是缺管理员页，后端 `/api/web/**` 也基本未真实落地：
+  - `web/src/features/activities/api.ts` 指向 `/api/web/activities/**`
+  - backend 现状仍主要暴露 `/api/staff/**`、`/api/checkin/**`、`/api/auth/**`
+- 前端当前会话模型只有 `session_token`，没有把已有响应字段里的 `role / permissions / user_profile` 持久化：
+  - 导致 staff 无法在 Web 前端进入真正的角色化页面
+  - 也导致现有活动列表对 staff 会被普通用户过滤逻辑误伤
+- backend 可直接复用的主干比预估更高：
+  - `SessionService`
+  - `ActivityQueryService`
+  - `CheckinConsumeService`
+  - `QrSessionService`
+  - `OutboxRelayService`
+- 本轮最合适的后端策略不是完整重构，而是：
+  - 新增 Web DTO / Controller 适配层
+  - 新增最小 `DynamicCodeService`
+  - 在 `CheckinConsumeService` 内兼容 6 位码输入
+  - 新增最小 `web_unbind_review` 表支撑审核页
+- 已联网核对当前组件库依据：
+  - 本地依赖为 `tdesign-mobile-react@0.21.2`
+  - 官方包与官方仓库均可确认 `Tabs`、`Dialog`、`NoticeBar`、`Cell`、`CellGroup`、`List`、`Toast` 等组件仍可用
+  - 因此管理员页与审核页继续优先复用组件库能力
+
+### 三分之三阶段实现后结论
+
+- 前端层面：
+  - `session-store` 已支持角色、权限与用户画像持久化。
+  - `ActivitiesPage` 已修正 staff 被普通用户过滤逻辑误伤的问题。
+  - `ActivityDetailPage` 已在 staff 身份下展示“进入管理”入口，并关闭普通用户动作按钮。
+  - `router.tsx` 已补 `/staff/activities/:id/manage` 与 `/staff/unbind-reviews`，并增加 `StaffRoute` / `ReviewRoute`。
+  - `StaffManagePage` 已支持：
+    - `checkin/checkout` 切换
+    - 回前台刷新
+    - 一键全部签退确认
+  - `UnbindReviewPage` 已支持：
+    - `pending/approved/rejected` 状态切换
+    - approve / reject 动作后刷新
+- 后端层面：
+  - `/api/web/activities`、`/api/web/activities/{id}` 已真实落地，不再是前端空对空调用。
+  - `/api/web/activities/{id}/code-session` 已返回 6 位动态码而不是旧 `qr_payload`。
+  - `/api/web/activities/{id}/code-consume` 已支持 `action_type + code`，同时不破坏旧二维码消费。
+  - `/api/web/staff/activities/{id}/bulk-checkout` 与 `/api/web/unbind-reviews` / `/api/web/staff/unbind-reviews/**` 已打通最小闭环。
+  - `web_unbind_review` 当前只承载审核流与旧会话失效，不包含完整浏览器绑定失效语义；这仍是后续 `web_browser_binding` 阶段要补的点。
+- 测试与环境层面：
+  - backend 原有测试环境在当前 WSL/JDK 17 下会因为 Mockito inline mock maker 自附加失败而整体不可测。
+  - 通过在 `src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker` 切回 subclass mock maker 后，测试基线恢复可用。
+- 当前 `web/src` 非测试源码注释统计更新为：
+  - 注释行数约 `653`
+  - 总行数约 `2608`
+  - 注释占比约 `25.0%`
   - `src/pages/bind/BindPage.tsx` 未在发起实名绑定前检查 Passkey 能力，当前不支持 Passkey 的浏览器可以进入实名校验流程，直到调用 `navigator.credentials.create()` 才以运行时错误失败。
 - `src/shared/http/client.ts` 还有一个明显的 API 韧性风险：
   - 默认假设所有响应都是 JSON，且只看响应体里的 `status` 字段决定成功或失败；

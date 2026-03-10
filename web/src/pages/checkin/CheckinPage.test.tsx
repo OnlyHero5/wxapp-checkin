@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/http/errors";
 import { clearSession, setSession } from "../../shared/session/session-store";
@@ -12,21 +13,43 @@ const activitiesApiMocks = vi.hoisted(() => ({
   getActivityDetail: vi.fn()
 }));
 
-vi.mock("../../features/activities/api", () => ({
-  consumeActivityCode: activitiesApiMocks.consumeActivityCode,
-  getActivityDetail: activitiesApiMocks.getActivityDetail
-}));
+vi.mock("../../features/activities/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../features/activities/api")>();
+  return {
+    ...actual,
+    consumeActivityCode: activitiesApiMocks.consumeActivityCode,
+    getActivityDetail: activitiesApiMocks.getActivityDetail
+  };
+});
 
-function renderAttendancePage(path: string) {
-  render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/activities/:activityId/checkin" element={<CheckinPage />} />
-        <Route path="/activities/:activityId/checkout" element={<CheckoutPage />} />
-        <Route path="/activities/:activityId" element={<h1>详情页已打开</h1>} />
-      </Routes>
+function AttendanceRouteHarness({ nextPath }: { nextPath?: string }) {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (nextPath) {
+      navigate(nextPath);
+    }
+  }, [navigate, nextPath]);
+
+  return (
+    <Routes>
+      <Route path="/activities/:activityId/checkin" element={<CheckinPage />} />
+      <Route path="/activities/:activityId/checkout" element={<CheckoutPage />} />
+      <Route path="/activities/:activityId" element={<h1>详情页已打开</h1>} />
+    </Routes>
+  );
+}
+
+function AttendanceTestApp({ initialPath, nextPath }: { initialPath: string; nextPath?: string }) {
+  return (
+    <MemoryRouter initialEntries={[initialPath]}>
+      <AttendanceRouteHarness nextPath={nextPath} />
     </MemoryRouter>
   );
+}
+
+function renderAttendancePage(path: string) {
+  return render(<AttendanceTestApp initialPath={path} />);
 }
 
 describe("CheckinPage", () => {
@@ -105,7 +128,9 @@ describe("CheckinPage", () => {
     await user.type(await screen.findByLabelText("签到验证码"), "123456");
     await user.click(screen.getByRole("button", { name: "提交签到码" }));
 
-    expect(await screen.findByText("验证码已过期，请重新输入最新验证码")).toBeInTheDocument();
+    expect(await screen.findByText("验证码已过期，请重新输入最新验证码", {
+      selector: ".t-notice-bar__content"
+    })).toBeInTheDocument();
   });
 
   it("renders checkout copy and submits checkout codes", async () => {
@@ -131,5 +156,61 @@ describe("CheckinPage", () => {
       });
     });
     expect(screen.getByRole("heading", { name: "签退结果" })).toBeInTheDocument();
+  });
+
+  it("resets the previous result state when switching to another activity route", async () => {
+    const user = userEvent.setup();
+    let resolveSecondDetail: ((value: unknown) => void) | undefined;
+    activitiesApiMocks.getActivityDetail
+      .mockResolvedValueOnce({
+        activity_id: "act_101",
+        activity_title: "校园志愿活动",
+        progress_status: "ongoing",
+        can_checkin: true,
+        can_checkout: true,
+        my_registered: true,
+        my_checked_in: false,
+        my_checked_out: false
+      })
+      .mockImplementationOnce(() => {
+        return new Promise((resolve) => {
+          resolveSecondDetail = resolve;
+        });
+      });
+    activitiesApiMocks.consumeActivityCode.mockResolvedValue({
+      activity_id: "act_101",
+      activity_title: "校园志愿活动",
+      action_type: "checkin",
+      message: "提交成功"
+    });
+
+    const view = renderAttendancePage("/activities/act_101/checkin");
+
+    await user.type(await screen.findByLabelText("签到验证码"), "123456");
+    await user.click(screen.getByRole("button", { name: "提交签到码" }));
+
+    expect(await screen.findByRole("heading", { name: "签到结果" })).toBeInTheDocument();
+    expect(screen.getByText("提交成功")).toBeInTheDocument();
+
+    view.rerender(<AttendanceTestApp initialPath="/activities/act_101/checkin" nextPath="/activities/act_202/checkin" />);
+
+    expect(screen.getByRole("heading", { name: "活动签到" })).toBeInTheDocument();
+    expect(screen.getByText("活动信息加载中...")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "签到结果" })).not.toBeInTheDocument();
+    expect(screen.queryByText("提交成功")).not.toBeInTheDocument();
+    expect(screen.queryByText("校园志愿活动")).not.toBeInTheDocument();
+
+    resolveSecondDetail?.({
+      activity_id: "act_202",
+      activity_title: "创新论坛",
+      progress_status: "ongoing",
+      can_checkin: true,
+      can_checkout: false,
+      my_registered: true,
+      my_checked_in: false,
+      my_checked_out: false
+    });
+
+    expect(await screen.findByText("创新论坛")).toBeInTheDocument();
   });
 });

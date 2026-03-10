@@ -8,7 +8,7 @@ import {
 import { IdentityBindForm } from "../../features/auth/components/IdentityBindForm";
 import { createPasskeyCredential } from "../../features/auth/webauthn";
 import { detectBrowserCapability } from "../../shared/device/browser-capability";
-import { setSession } from "../../shared/session/session-store";
+import { saveAuthSession } from "../../shared/session/session-store";
 import { MobilePage } from "../../shared/ui/MobilePage";
 import { UnsupportedBrowser } from "../../shared/ui/UnsupportedBrowser";
 
@@ -54,7 +54,7 @@ export function BindPage() {
         request_id: registerOptions.request_id
       });
 
-      setSession(completeResult.session_token);
+      saveAuthSession(completeResult);
       navigate("/activities");
     } catch (error) {
       // 当前阶段统一把错误文案展示在表单下方，避免 toast 一闪而过。

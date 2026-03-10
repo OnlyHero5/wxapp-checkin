@@ -1,4 +1,6 @@
 import { FormEvent, useState } from "react";
+import { AppButton } from "../../../shared/ui/AppButton";
+import { InlineNotice } from "../../../shared/ui/InlineNotice";
 
 /**
  * 绑定页表单只关心三件事：
@@ -68,11 +70,10 @@ export function IdentityBindForm({
           value={name}
         />
       </label>
-      {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-      <button className="primary-button" disabled={!canSubmit} type="submit">
-        {/* pending 文案直接告诉用户现在卡在“注册”链路，而不是静默等待。 */}
-        {pending ? "注册中..." : "验证身份并注册 Passkey"}
-      </button>
+      {errorMessage ? <InlineNotice message={errorMessage} /> : null}
+      <AppButton disabled={!canSubmit} loading={pending} type="submit">
+        验证身份并注册 Passkey
+      </AppButton>
     </form>
   );
 }
