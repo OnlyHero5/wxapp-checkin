@@ -2,3 +2,9 @@
 .backup-untracked/
 node_modules/
 src/miniprogram_npm/
+
+# ===== Local-only env files (do not commit) =====
+web/.env*.local
+
+# ===== Runtime artifacts (logs/pids) =====
+local_dev/runtime/
