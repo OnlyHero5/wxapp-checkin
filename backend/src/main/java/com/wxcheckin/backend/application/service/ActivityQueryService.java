@@ -25,7 +25,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Activity read model APIs (A-03/A-04).
@@ -63,7 +62,10 @@ public class ActivityQueryService {
     this.clock = clock;
   }
 
-  @Transactional(readOnly = true)
+  // 注意：这里刻意不加 @Transactional 包住整个方法。
+  // 原因：首次进入列表时会先读 status.exists，再触发 REQUIRES_NEW 的 on-demand legacy sync 写入 status。
+  // 在 MySQL 默认 RR 隔离级别下，若外层事务已建立快照，后续读取看不到新写入的数据，
+  // 会导致“首次改密后列表仍为空（或详情仍 forbidden）”的体验问题。
   public WebActivityListResponse listForWeb(String sessionToken, Integer page, Integer pageSize) {
     SessionPrincipal principal = sessionService.requireWebPrincipal(sessionToken);
     // 普通用户的可见活动依赖 wx_user_activity_status（报名/状态），
@@ -123,7 +125,7 @@ public class ActivityQueryService {
     legacySyncService.syncLegacyUserContextOnDemand(legacyUserId);
   }
 
-  @Transactional
+  // 同 listForWeb：避免把“on-demand sync 写入”与“详情读取/可见性校验”放进同一个事务快照里。
   public WebActivityDetailResponse detailForWeb(String sessionToken, String activityId) {
     SessionPrincipal principal = sessionService.requireWebPrincipal(sessionToken);
     // 同 listForWeb：避免首次登录改密后直接进详情页时因为 status 未同步而被误判“无权查看”。
