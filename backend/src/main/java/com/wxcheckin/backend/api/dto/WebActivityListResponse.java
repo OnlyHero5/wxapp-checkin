@@ -6,6 +6,9 @@ public record WebActivityListResponse(
     String status,
     String message,
     List<ActivitySummaryDto> activities,
+    Integer page,
+    Integer pageSize,
+    Boolean hasMore,
     Long serverTimeMs
 ) {
 }

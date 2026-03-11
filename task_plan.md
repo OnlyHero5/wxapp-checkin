@@ -1,5 +1,28 @@
 # 手机 Web 改造审查与半程推进计划
 
+> **重要变更（2026-03-10）：** 由于部署形态调整为 **HTTP + 内网 IP + 端口号**，本仓库已从“Passkey/WebAuthn”认证方案切换为 **账号密码（默认 123，首次登录强制改密）**，并进一步取消“浏览器唯一绑定 + 解绑审核”的防代签逻辑。下文早期“半程审查/Passkey/绑定/解绑”相关内容仅保留为历史回溯；当前实施请以 `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` 为准。
+
+## 2026-03-10 认证基线变更（HTTP 内网账号密码）
+
+### 目标
+
+- 移除 Passkey/WebAuthn 主链路代码与前端页面。
+- 新增账号密码登录：
+  - 账号：`student_id`（学号）
+  - 默认密码：`123`
+  - 首次登录后强制修改密码
+- 密码与强制改密状态落库到 `wxcheckin_ext.wx_user_auth_ext`（仅保存 bcrypt hash）。
+- 取消浏览器唯一绑定 `X-Browser-Binding-Key` 与解绑审核能力（不再要求与浏览器捆绑）。
+
+### 任务清单（按执行顺序）
+
+| 任务 | 状态 | 说明 |
+| --- | --- | --- |
+| 清理 Passkey/WebAuthn 业务逻辑 | complete | 删除后端 passkey controller/service/DTO/entity/repo；前端移除 `/bind`、`webauthn.ts` 与“不支持 Passkey”提示页 |
+| 新增账号密码登录与强制改密 | complete | 新增 `/api/web/auth/login`、`/api/web/auth/change-password`；前端新增 `/change-password` 并在路由/请求层统一拦截 `password_change_required` |
+| 数据库迁移与生产 schema 同步 | complete | Flyway 新增 `V9__add_web_password_auth.sql`；同步更新 `backend/scripts/bootstrap-prod-schema.sql` 与运维配置模板 |
+| 文档全量同步 | complete | 更新正式基线与历史计划备注，确保不再把 Passkey 作为当前口径 |
+
 ## 目标
 
 - 完整复核 `wxapp-checkin` 当前文档基线、历史代码与 `web/` 首批改造成果。
@@ -289,3 +312,8 @@
   - 动态码正式口径统一为 10 秒窗口，并同步回写需求 / 设计 / 审查记录
 - 当前仍保留到后续阶段：
   - Playwright / 真机兼容矩阵补录
+
+## 2026-03-10 Web 改造审查（补记）
+
+- 状态：complete
+- 结论摘要：代码主链路已基本收口，但仍存在解绑自助死角、活动动作可执行性契约不一致、文档口径残留 Passkey 历史内容、以及三项目全链路缺少可复核验收记录等问题。

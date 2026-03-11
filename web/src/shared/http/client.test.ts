@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getBrowserBindingKey, getSession, setSession } from "../session/session-store";
-import { ApiError, SessionExpiredError } from "./errors";
+import { getMustChangePassword, getSession, setSession } from "../session/session-store";
+import { ApiError, PasswordChangeRequiredError, SessionExpiredError } from "./errors";
 import { requestJson } from "./client";
 
 function createJsonResponse(payload: unknown, init?: ResponseInit) {
@@ -66,6 +66,24 @@ describe("requestJson", () => {
     expect(getSession()).toBe("");
   });
 
+  it("marks must_change_password when the backend reports password_change_required", async () => {
+    setSession("sess_123");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      createJsonResponse({
+        error_code: "password_change_required",
+        message: "请先修改密码",
+        status: "forbidden"
+      }, {
+        status: 403
+      })
+    ));
+
+    await expect(requestJson("/activities")).rejects.toBeInstanceOf(PasswordChangeRequiredError);
+    expect(getMustChangePassword()).toBe(true);
+    // 强制改密不是会话失效，因此不清理 token。
+    expect(getSession()).toBe("sess_123");
+  });
+
   it("reuses the same inflight GET request for identical paths", async () => {
     let resolveResponse: ((value: Response) => void) | undefined;
     const fetchMock = vi.fn().mockImplementation(() => {
@@ -97,7 +115,7 @@ describe("requestJson", () => {
     });
   });
 
-  it("injects the browser binding key header into requests", async () => {
+  it("injects the Authorization header into requests", async () => {
     const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({
       status: "success"
     }, {
@@ -105,14 +123,14 @@ describe("requestJson", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const browserBindingKey = getBrowserBindingKey();
+    setSession("sess_auth_123");
 
     await requestJson("/activities");
 
     expect(fetchMock).toHaveBeenCalledWith("/api/web/activities", expect.objectContaining({
       headers: expect.objectContaining({
         "Content-Type": "application/json",
-        "X-Browser-Binding-Key": browserBindingKey
+        Authorization: "Bearer sess_auth_123"
       }),
       method: "GET"
     }));

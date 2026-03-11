@@ -40,12 +40,11 @@ public class DynamicCodeService {
     );
   }
 
-  public WebCodeSessionResponse issue(String sessionToken, String browserBindingKey, String activityId, String actionTypeText) {
+  public WebCodeSessionResponse issue(String sessionToken, String activityId, String actionTypeText) {
     // 发码入口继续复用既有的 staff 权限、活动时间窗和配置持久化规则，
     // 避免 Web 动态码和旧二维码在“什么时候允许发码”上分叉。
     CreateQrSessionResponse qrSession = qrSessionService.issue(
         sessionToken,
-        browserBindingKey,
         activityId,
         actionTypeText,
         null,

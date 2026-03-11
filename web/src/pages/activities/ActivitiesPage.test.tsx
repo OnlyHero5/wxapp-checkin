@@ -99,7 +99,6 @@ describe("ActivitiesPage", () => {
     expect(screen.getByText(/我的状态：已签退/)).toBeInTheDocument();
     expect(screen.queryByText("不应展示的活动")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "查看详情" })).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "申请解绑当前浏览器" })).toBeInTheDocument();
   });
 
   it("shows all activities and management entries for staff sessions", async () => {
@@ -149,6 +148,5 @@ describe("ActivitiesPage", () => {
     expect(screen.getByText("管理态活动 A")).toBeInTheDocument();
     expect(screen.getByText("管理态活动 B")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "进入管理" })).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "查看解绑审核" })).toBeInTheDocument();
   });
 });

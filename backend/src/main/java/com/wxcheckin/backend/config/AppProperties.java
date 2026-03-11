@@ -13,7 +13,6 @@ public class AppProperties {
 
   private final SessionProperties session = new SessionProperties();
   private final QrProperties qr = new QrProperties();
-  private final WebAuthProperties webAuth = new WebAuthProperties();
   private final WechatProperties wechat = new WechatProperties();
   private final LegacyProperties legacy = new LegacyProperties();
   private final SyncProperties sync = new SyncProperties();
@@ -25,10 +24,6 @@ public class AppProperties {
 
   public QrProperties getQr() {
     return qr;
-  }
-
-  public WebAuthProperties getWebAuth() {
-    return webAuth;
   }
 
   public WechatProperties getWechat() {
@@ -170,61 +165,6 @@ public class AppProperties {
 
     public void setJscode2sessionUrl(String jscode2sessionUrl) {
       this.jscode2sessionUrl = jscode2sessionUrl;
-    }
-  }
-
-  /**
-   * WebAuth 配置只服务当前 Web-only 认证链路。
-   *
-   * 这里故意把 RP 与 challenge TTL 放进统一配置对象，
-   * 这样本地开发、测试和未来正式部署都能通过环境变量覆盖，
-   * 避免把认证域名和有效期散落在 service 常量里。
-   */
-  public static class WebAuthProperties {
-    private long bindTicketTtlSeconds = 600;
-    private long challengeTtlSeconds = 300;
-    private String rpId = "";
-    private String rpName = "wxapp-checkin";
-    private String allowedOrigin = "";
-
-    public long getBindTicketTtlSeconds() {
-      return bindTicketTtlSeconds;
-    }
-
-    public void setBindTicketTtlSeconds(long bindTicketTtlSeconds) {
-      this.bindTicketTtlSeconds = bindTicketTtlSeconds;
-    }
-
-    public long getChallengeTtlSeconds() {
-      return challengeTtlSeconds;
-    }
-
-    public void setChallengeTtlSeconds(long challengeTtlSeconds) {
-      this.challengeTtlSeconds = challengeTtlSeconds;
-    }
-
-    public String getRpId() {
-      return rpId;
-    }
-
-    public void setRpId(String rpId) {
-      this.rpId = rpId;
-    }
-
-    public String getRpName() {
-      return rpName;
-    }
-
-    public void setRpName(String rpName) {
-      this.rpName = rpName;
-    }
-
-    public String getAllowedOrigin() {
-      return allowedOrigin;
-    }
-
-    public void setAllowedOrigin(String allowedOrigin) {
-      this.allowedOrigin = allowedOrigin;
     }
   }
 

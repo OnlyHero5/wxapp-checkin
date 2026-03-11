@@ -42,31 +42,19 @@
 
 - 兼容性以“浏览器家族 + 关键能力”判断，不按品牌名称做模糊承诺。
 - 登录、动态码倒计时、签到/签退状态统一以后端时间为准。
-- 所有正式环境必须运行在 HTTPS。
-- 若浏览器不满足 Passkey 基线，不提供降级密码登录，而是明确提示“不支持当前浏览器”。
+- 当前部署基线为 **HTTP + 内网 IP + 端口号**，不再依赖 Passkey/WebAuthn。
+- 登录基线为账号密码（默认 `123`，首次登录强制改密），不再需要“Passkey 不支持”的兼容兜底页。
 - `Screen Wake Lock API`、`VisualViewport` 等能力可用于增强体验，但不能作为主链路硬依赖。
 
 ## 3. 关键能力基线
 
 ### 3.1 登录能力
 
-项目登录依赖的是“Passkey 可用性”，而不是“仅有基础 WebAuthn API”。
+项目登录改为账号密码，不再依赖 WebAuthn/Passkey，因此登录能力基线降为：
 
-截至 2026-03-09，公开兼容数据给出的主要基线如下：
-
-- Passkeys：
-  - Chrome / Chrome Android `108+`
-  - Edge `108+`
-  - iOS Safari `16.0+`
-  - macOS Safari `16.1+`
-  - Firefox / Firefox Android `122+`
-  - Samsung Internet `21+`
-- `PublicKeyCredential` 基础 WebAuthn API：
-  - Chrome Android `70+`
-  - iOS Safari mirror Safari `13+`
-  - Firefox Android `92+`
-
-因此，本项目的正式口径应以“Passkey 可用”作为准入门槛，而不是只看基础 WebAuthn 是否存在。
+- 支持基本表单输入（`<input>`）与安全键盘弹起；
+- 支持 `fetch`；
+- 支持 `localStorage`（用于持久化 `session_token` 与会话上下文）。
 
 ### 3.2 交互能力
 
@@ -87,14 +75,14 @@
 
 | 浏览器家族 | 支持级别 | 准入前提 | 说明 |
 | --- | --- | --- | --- |
-| iPhone Safari | 重点支持 | iOS Safari `16+`，Passkey 可用 | iPhone 主基线，必须完整验证登录、活动、签到、签退、管理员页 |
-| iPhone Chrome / Edge | 重点支持 | iOS `16+`，Passkey 可用 | iOS 第三方浏览器通常仍受 WebKit 约束，能力边界按 Safari 同类看待 |
-| Android Chrome | 重点支持 | Chrome Android `108+`，Passkey 可用 | Android 主基线 |
-| Android Edge | 重点支持 | Edge `108+`，Passkey 可用 | 核心流程纳入回归 |
-| Samsung Internet | 重点支持 | Samsung Internet `21+`，Passkey 可用 | 三星机型覆盖必须单独验收 |
-| Firefox Android | 尽力支持 | Firefox Android `122+`，Passkey 可用 | 应可完成主流程，但不作为第一验收优先级 |
-| 微信内普通 H5 | 重点支持 | 宿主内核满足 Passkey 与 HTTPS 要求 | 不依赖 JS-SDK；按 iOS WebKit / Android Chromium 家族分别验收 |
-| HarmonyOS 浏览器 / ArkWeb 浏览器 | 专项验证 | 真机确认 Passkey、键盘、会话恢复行为 | 可参考 Chromium-like 行为，但文档口径必须保守 |
+| iPhone Safari | 重点支持 | iOS 主流版本 | iPhone 主基线，必须完整验证登录、改密、活动、签到、签退、管理员页 |
+| iPhone Chrome / Edge | 重点支持 | iOS 主流版本 | iOS 第三方浏览器通常仍受 WebKit 约束，能力边界按 Safari 同类看待 |
+| Android Chrome | 重点支持 | Android 主流版本 | Android 主基线 |
+| Android Edge | 重点支持 | Android 主流版本 | 核心流程纳入回归 |
+| Samsung Internet | 重点支持 | Android 主流版本 | 三星机型覆盖必须单独验收 |
+| Firefox Android | 尽力支持 | Android 主流版本 | 应可完成主流程，但不作为第一验收优先级 |
+| 微信内普通 H5 | 重点支持 | 宿主内核满足基础 Web 能力 | 不依赖 JS-SDK；按 iOS WebKit / Android Chromium 家族分别验收 |
+| HarmonyOS 浏览器 / ArkWeb 浏览器 | 专项验证 | 真机确认键盘、会话恢复行为 | 可参考 Chromium-like 行为，但文档口径必须保守 |
 | App 内嵌 WebView / 来源不明浏览器 | 不承诺 | 无 | 宿主权限桥接不透明，不作为正式兼容承诺 |
 
 ## 5. 屏幕与布局基线
@@ -182,7 +170,6 @@
 
 - 本项目目标是“普通 Web 可用”，因此不把微信 JS-SDK 当主链路。
 - 微信内 H5 仍需真机验证以下问题：
-  - Passkey 弹窗与系统生物识别流程
   - 页面从会话页切回后的 `visibilitychange`
   - 键盘遮挡与滚动行为
 
@@ -209,9 +196,8 @@
 
 每个组合至少验证：
 
-- 首次实名绑定
-- Passkey 注册
-- Passkey 登录
+- 账号密码登录（默认 `123`）
+- 首次登录强制改密
 - 活动列表与活动详情
 - 输入签到码成功
 - 输入签退码成功
@@ -227,16 +213,12 @@
 - 桌面浏览器最佳体验
 - 老旧 Android 浏览器
 - 来源不明的 App 内嵌浏览器
-- 未开启 HTTPS 的正式环境
+- 禁止 `localStorage` 或不允许持久化存储的环境（无法稳定保持会话）
 
 ## 10. 参考资料
 
 以下资料于 2026-03-09 核验：
 
-- MDN `PublicKeyCredential`  
-  https://developer.mozilla.org/docs/Web/API/PublicKeyCredential
-- Can I Use Passkeys  
-  https://caniuse.com/passkeys
 - MDN `inputmode`  
   https://developer.mozilla.org/docs/Web/HTML/Reference/Global_attributes/inputmode
 - MDN `Document.visibilityState`  

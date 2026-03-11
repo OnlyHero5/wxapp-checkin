@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 /**
- * Extension user table that stores miniapp-specific identity/auth fields.
+ * Extension user table that stores cross-channel identity/auth fields.
  *
  * <p>This keeps the legacy user schema unchanged and satisfies OCP by adding
  * new capabilities in an isolated table.</p>
@@ -44,6 +44,29 @@ public class WxUserAuthExtEntity {
 
   @Column(name = "name", length = 64)
   private String name;
+
+  /**
+   * Web 端账号密码登录的密码哈希（bcrypt），不保存明文。
+   *
+   * 说明：
+   * - 本项目的 Web 访问形态要求支持 HTTP + 内网 IP + 端口，因此不能依赖 Passkey/WebAuthn；
+   * - 密码默认值是业务约束（统一为 123），但落库时只允许保存 hash。
+   */
+  @Column(name = "password_hash", length = 255)
+  private String passwordHash;
+
+  /**
+   * 是否强制用户修改密码。
+   *
+   * 该字段允许为 null：
+   * - 兼容历史数据（早期只有小程序登录时并不存在密码字段）
+   * - 由服务端在首次 Web 登录时初始化为 true，并在改密成功后置为 false
+   */
+  @Column(name = "must_change_password")
+  private Boolean mustChangePassword;
+
+  @Column(name = "password_updated_at")
+  private Instant passwordUpdatedAt;
 
   @Column(name = "department", length = 128)
   private String department;
@@ -145,6 +168,30 @@ public class WxUserAuthExtEntity {
 
   public void setName(String name) {
     this.name = name;
+  }
+
+  public String getPasswordHash() {
+    return passwordHash;
+  }
+
+  public void setPasswordHash(String passwordHash) {
+    this.passwordHash = passwordHash;
+  }
+
+  public Boolean getMustChangePassword() {
+    return mustChangePassword;
+  }
+
+  public void setMustChangePassword(Boolean mustChangePassword) {
+    this.mustChangePassword = mustChangePassword;
+  }
+
+  public Instant getPasswordUpdatedAt() {
+    return passwordUpdatedAt;
+  }
+
+  public void setPasswordUpdatedAt(Instant passwordUpdatedAt) {
+    this.passwordUpdatedAt = passwordUpdatedAt;
   }
 
   public String getDepartment() {

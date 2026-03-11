@@ -1,6 +1,6 @@
-import { clearSession, getBrowserBindingKey, getSession } from "../session/session-store";
+import { clearSession, getSession, setMustChangePassword } from "../session/session-store";
 import { resolveRuntimeConfig } from "../runtime/runtime-config";
-import { ApiError, NetworkError, SessionExpiredError } from "./errors";
+import { ApiError, NetworkError, PasswordChangeRequiredError, SessionExpiredError } from "./errors";
 
 /**
  * 当前阶段只需要 GET / POST 两种方法，
@@ -35,6 +35,10 @@ const { apiBasePath } = resolveRuntimeConfig(import.meta.env as Record<string, s
 function isSessionExpired(payload: ApiResponse) {
   // `session_expired` 是当前 Web 端最关键的统一错误信号。
   return `${payload.error_code ?? ""}`.trim().toLowerCase() === "session_expired";
+}
+
+function isPasswordChangeRequired(payload: ApiResponse) {
+  return `${payload.error_code ?? ""}`.trim().toLowerCase() === "password_change_required";
 }
 
 function stableSerialize(value: unknown): string {
@@ -82,7 +86,6 @@ async function parseResponsePayload(response: Response) {
 }
 
 export async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const browserBindingKey = getBrowserBindingKey();
   const sessionToken = getSession();
   const method = options.method ?? "GET";
 
@@ -94,7 +97,6 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
         headers: {
           // 统一在这一层注入会话，页面和 API 封装层不必各自重复拼 Authorization。
           "Content-Type": "application/json",
-          ...(browserBindingKey ? { "X-Browser-Binding-Key": browserBindingKey } : {}),
           ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
           ...options.headers
         },
@@ -110,6 +112,11 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
       // 只要服务端明确说会话失效，就立刻清本地 token，避免继续带着脏会话请求。
       clearSession();
       throw new SessionExpiredError(payload.message, payload);
+    }
+    if (isPasswordChangeRequired(payload)) {
+      // 只要服务端明确要求改密，就把本地会话打上强制改密标记，路由守卫会统一导流。
+      setMustChangePassword(true);
+      throw new PasswordChangeRequiredError(payload.message, payload);
     }
 
     if (!response.ok) {

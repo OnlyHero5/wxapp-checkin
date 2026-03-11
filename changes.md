@@ -4,8 +4,11 @@
 
 ## 2026-03-10
 - 审查并补强 URL/部署边界：`web/` 新增可配置的子路径、API base 和本地代理目标，支持与 `suda-gs-ams` 共域时做路径隔离。
-- 完成 Web-only 收尾：后端新增 Web 认证闭环、解绑审批失效绑定/会话、管理员审计日志。
-- 前端新增浏览器绑定键注入与普通用户解绑申请页。
+- 完成 Web-only 收尾并调整认证基线：从 Passkey/WebAuthn 改为账号密码（默认 `123`，首次登录强制改密），适配 HTTP 内网访问形态。
+- 后端新增 `/api/web/auth/login`、`/api/web/auth/change-password` 与强制改密拦截；取消浏览器唯一绑定与解绑审核，仅依赖 `session_token`。
+- 修复时间窗契约：详情 `can_checkin/can_checkout` 与 staff 发码统一按“开始前30分钟~结束后30分钟”判断。
+- 活动列表补分页：`GET /api/web/activities` 支持 `page/page_size`，响应增加 `has_more`。
+- 前端登录页改为账号密码表单，新增强制改密页；会话存储新增 `must_change_password`。
 - 删除历史小程序前端 `frontend/` 与根级小程序配置。
 - 删除旧微信登录/注册/兼容控制器与对应 service / DTO。
 

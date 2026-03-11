@@ -15,12 +15,9 @@ import com.wxcheckin.backend.infrastructure.persistence.entity.WxQrIssueLogEntit
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxQrIssueLogRepository;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,45 +30,44 @@ public class QrSessionService {
   private final SessionService sessionService;
   private final WxActivityProjectionRepository activityRepository;
   private final WxQrIssueLogRepository qrIssueLogRepository;
+  private final ActivityTimeWindowService activityTimeWindowService;
   private final TokenGenerator tokenGenerator;
   private final QrPayloadCodec qrPayloadCodec;
   private final QrNonceSigner qrNonceSigner;
   private final AppProperties appProperties;
   private final Clock clock;
-  private final JdbcTemplate legacyJdbcTemplate;
 
   public QrSessionService(
       SessionService sessionService,
       WxActivityProjectionRepository activityRepository,
       WxQrIssueLogRepository qrIssueLogRepository,
+      ActivityTimeWindowService activityTimeWindowService,
       TokenGenerator tokenGenerator,
       QrPayloadCodec qrPayloadCodec,
       QrNonceSigner qrNonceSigner,
       AppProperties appProperties,
-      Clock clock,
-      @Qualifier("legacyJdbcTemplate") JdbcTemplate legacyJdbcTemplate
+      Clock clock
   ) {
     this.sessionService = sessionService;
     this.activityRepository = activityRepository;
     this.qrIssueLogRepository = qrIssueLogRepository;
+    this.activityTimeWindowService = activityTimeWindowService;
     this.tokenGenerator = tokenGenerator;
     this.qrPayloadCodec = qrPayloadCodec;
     this.qrNonceSigner = qrNonceSigner;
     this.appProperties = appProperties;
     this.clock = clock;
-    this.legacyJdbcTemplate = legacyJdbcTemplate;
   }
 
   @Transactional
   public CreateQrSessionResponse issue(
       String sessionToken,
-      String browserBindingKey,
       String activityId,
       String actionTypeText,
       Integer rotateSecondsOverride,
       Integer graceSecondsOverride
   ) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
+    SessionPrincipal principal = sessionService.requireWebPrincipal(sessionToken);
     if (principal.role() != RoleType.STAFF) {
       throw new BusinessException("forbidden", "仅工作人员可获取二维码配置");
     }
@@ -99,7 +95,7 @@ public class QrSessionService {
       throw new BusinessException("forbidden", "该活动暂不支持签退二维码");
     }
 
-    ensureWithinIssueWindow(activity);
+    activityTimeWindowService.ensureWithinIssueWindow(activity);
 
     int rotateSeconds = resolveSeconds(
         rotateSecondsOverride,
@@ -179,54 +175,4 @@ public class QrSessionService {
   private String normalize(String text) {
     return text == null ? "" : text.trim();
   }
-
-  private void ensureWithinIssueWindow(WxActivityProjectionEntity activity) {
-    Instant startTime = activity.getStartTime();
-    Instant endTime = activity.getEndTime();
-    Integer legacyActivityId = activity.getLegacyActivityId();
-    boolean looksPlaceholder = legacyActivityId != null && startTime != null && startTime.equals(endTime);
-    if (legacyActivityId != null && (looksPlaceholder || startTime == null || endTime == null || endTime.isBefore(startTime))) {
-      LegacyTime legacyTime = queryLegacyTime(legacyActivityId);
-      if (legacyTime != null) {
-        startTime = legacyTime.startTime;
-        endTime = legacyTime.endTime;
-        activity.setStartTime(startTime);
-        activity.setEndTime(endTime);
-        activityRepository.save(activity);
-      }
-    }
-    if (startTime == null || endTime == null || endTime.isBefore(startTime)) {
-      throw new BusinessException("failed", "活动时间信息异常，无法生成二维码", "activity_time_invalid");
-    }
-
-    Instant now = Instant.now(clock);
-    Instant allowedFrom = startTime.minus(Duration.ofMinutes(30));
-    Instant allowedUntil = endTime.plus(Duration.ofMinutes(30));
-    if (now.isBefore(allowedFrom) || now.isAfter(allowedUntil)) {
-      throw new BusinessException(
-          "forbidden",
-          "仅可在活动开始前30分钟到结束后30分钟内生成二维码",
-          "outside_activity_time_window"
-      );
-    }
-  }
-
-  private LegacyTime queryLegacyTime(Integer legacyActivityId) {
-    try {
-      List<LegacyTime> result = legacyJdbcTemplate.query(
-          "SELECT activity_stime, activity_etime FROM suda_activity WHERE id = ? LIMIT 1",
-          (rs, rowNum) -> {
-            Instant start = rs.getTimestamp("activity_stime").toInstant();
-            Instant end = rs.getTimestamp("activity_etime").toInstant();
-            return new LegacyTime(start, end);
-          },
-          legacyActivityId
-      );
-      return result.stream().findFirst().orElse(null);
-    } catch (DataAccessException | NullPointerException ex) {
-      return null;
-    }
-  }
-
-  private record LegacyTime(Instant startTime, Instant endTime) {}
 }

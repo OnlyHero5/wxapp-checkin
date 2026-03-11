@@ -1,6 +1,5 @@
 const SESSION_STORAGE_KEY = "session_token";
 const SESSION_CONTEXT_STORAGE_KEY = "session_context";
-const BROWSER_BINDING_KEY_STORAGE_KEY = "browser_binding_key";
 
 type SessionUserProfile = {
   club?: string;
@@ -10,6 +9,7 @@ type SessionUserProfile = {
 };
 
 type StoredSessionContext = {
+  must_change_password?: boolean;
   permissions?: string[];
   role?: string;
   user_profile?: SessionUserProfile;
@@ -48,17 +48,9 @@ function normalizePermissions(value: string[] | null | undefined) {
   return (value ?? []).map((item) => `${item ?? ""}`.trim()).filter(Boolean);
 }
 
-function createBrowserBindingKey() {
-  /**
-   * 浏览器绑定键当前承担“当前 Web 宿主的稳定本地标识”。
-   *
-   * 它不是强安全指纹，也不试图跨浏览器或跨设备识别用户；
-   * 它的目标只是让后端能够区分“这是同一浏览器重新打开”还是“换了一个新浏览器”。
-   */
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `browser_${crypto.randomUUID()}`;
-  }
-  return `browser_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+function normalizeMustChangePassword(value: unknown) {
+  // 强制改密是布尔开关，只接受严格 boolean，其它类型一律视为 false，避免脏数据把用户锁死。
+  return value === true;
 }
 
 function readSessionContext(storage: Storage | null) {
@@ -73,6 +65,7 @@ function readSessionContext(storage: Storage | null) {
     }
     const parsed = JSON.parse(raw) as StoredSessionContext;
     return {
+      must_change_password: normalizeMustChangePassword(parsed.must_change_password),
       permissions: normalizePermissions(parsed.permissions),
       role: normalizeRole(parsed.role),
       user_profile: parsed.user_profile
@@ -96,6 +89,7 @@ function writeSessionContext(storage: Storage | null, context: StoredSessionCont
     storage.setItem(
       SESSION_CONTEXT_STORAGE_KEY,
       JSON.stringify({
+        must_change_password: normalizeMustChangePassword(context.must_change_password),
         permissions: normalizePermissions(context.permissions),
         role: normalizeRole(context.role),
         user_profile: context.user_profile ?? null
@@ -116,27 +110,6 @@ export function getSession() {
     // 读取失败时直接视为“没有会话”，比让页面崩掉更可控。
     return normalizeSessionToken(storage.getItem(SESSION_STORAGE_KEY));
   } catch {
-    return "";
-  }
-}
-
-export function getBrowserBindingKey() {
-  const storage = getStorage();
-  if (!storage) {
-    return "";
-  }
-
-  try {
-    const existing = `${storage.getItem(BROWSER_BINDING_KEY_STORAGE_KEY) ?? ""}`.trim();
-    if (existing) {
-      return existing;
-    }
-
-    const nextKey = createBrowserBindingKey();
-    storage.setItem(BROWSER_BINDING_KEY_STORAGE_KEY, nextKey);
-    return nextKey;
-  } catch {
-    // 浏览器键拿不到时返回空串，让请求层继续工作但不阻塞页面渲染。
     return "";
   }
 }
@@ -170,6 +143,7 @@ export function setSession(sessionToken: string) {
 }
 
 type AuthSessionPayload = {
+  must_change_password?: boolean;
   permissions?: string[];
   role?: string;
   session_token: string;
@@ -191,6 +165,7 @@ export function saveAuthSession(payload: AuthSessionPayload) {
   try {
     storage.setItem(SESSION_STORAGE_KEY, normalizedToken);
     writeSessionContext(storage, {
+      must_change_password: payload.must_change_password,
       permissions: payload.permissions,
       role: payload.role,
       user_profile: payload.user_profile
@@ -212,6 +187,27 @@ export function getSessionUserProfile() {
   return readSessionContext(getStorage())?.user_profile ?? null;
 }
 
+export function getMustChangePassword() {
+  return readSessionContext(getStorage())?.must_change_password ?? false;
+}
+
+export function setMustChangePassword(value: boolean) {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    const existing = readSessionContext(storage) ?? {};
+    writeSessionContext(storage, {
+      ...existing,
+      must_change_password: value
+    });
+  } catch {
+    return;
+  }
+}
+
 export function hasSessionPermission(permission: string) {
   const normalizedPermission = `${permission ?? ""}`.trim();
   if (!normalizedPermission) {
@@ -224,14 +220,6 @@ export function isStaffSession() {
   return getSessionRole() === "staff" || hasSessionPermission("activity:manage");
 }
 
-export function isReviewAdminSession() {
-  return getSessionRole() === "review_admin";
-}
-
-export function canReviewUnbind() {
-  return isStaffSession() || isReviewAdminSession() || hasSessionPermission("unbind:review");
-}
-
 export function clearSession() {
   const storage = getStorage();
   if (!storage) {
@@ -241,6 +229,8 @@ export function clearSession() {
   try {
     storage.removeItem(SESSION_STORAGE_KEY);
     writeSessionContext(storage, null);
+    // 兼容历史版本：曾经用于浏览器绑定的本地 key 仍可能残留，统一清掉避免误判。
+    storage.removeItem("browser_binding_key");
   } catch {
     // 清理失败时同样不抛错，避免“本来是要跳登录页，结果先崩页面”。
     return;

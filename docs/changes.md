@@ -9,19 +9,21 @@
 - 配套测试：
   - 新增 `web/src/shared/runtime/runtime-config.test.ts`
   - 新增 `web/src/test/vite-config.test.ts`
-- 完成 Web-only 收尾：
-  - 新增后端 Web 认证主链路：`WebAuthController`、`WebIdentityService`、`PasskeyChallengeService`
-  - 新增 `web_browser_binding`、`web_passkey_credential`、`web_passkey_challenge`、`web_admin_audit_log`
-  - `/api/web/bind/verify-identity`、`/passkey/register/*`、`/passkey/login/*` 真实落地
-  - 解绑审批通过后同时失效旧绑定、旧凭据、旧会话，并写管理员审计日志
-- 前端补齐 Web-only 收尾：
-  - 请求层自动注入 `X-Browser-Binding-Key`
-  - 新增普通用户解绑申请页 `/unbind-request`
-  - 活动列表页增加解绑申请入口
+- 完成 Web-only 收尾并调整认证基线（适配 HTTP 内网）：
+  - 认证从 Passkey/WebAuthn 改为账号密码（默认 `123`，首次登录强制改密）
+  - 后端新增 `/api/web/auth/login`、`/api/web/auth/change-password`，并统一拦截 `password_change_required`
+  - `wx_user_auth_ext` 增加密码 hash 与强制改密字段
+  - 基线调整：取消浏览器唯一绑定与解绑审核，Web 端仅依赖 `session_token` + “首次强制改密”
+  - 修复契约不一致：`can_checkin/can_checkout` 与 staff 发码统一按“开始前30分钟~结束后30分钟”时间窗判断
+  - 活动列表补分页：`GET /api/web/activities` 支持 `page/page_size`，响应增加 `has_more`
+  - 性能修复：为 `wx_user_auth_ext(legacy_user_id)` 增加索引（Flyway + bootstrap schema 同步）
+- 前端补齐认证与会话联动：
+  - 请求层仅注入 `Authorization: Bearer <session_token>`
+  - `/login` 改为账号密码表单，新增 `/change-password` 强制改密页
+  - 会话存储新增 `must_change_password`，路由守卫强制拦截未改密用户
 - 删旧：
-  - 删除 `frontend/` 历史小程序前端目录
-  - 删除根级小程序配置 `project.config.json`、`project.private.config.json`
-  - 删除旧微信登录 / 注册 / 兼容控制器与对应 service / DTO
+  - 删除历史小程序前端目录与旧微信登录正式入口
+  - 移除 Passkey/WebAuthn 相关接口与业务逻辑代码
 - 验证：
   - `cd backend && ./mvnw test`
   - `cd web && npm test -- --run`

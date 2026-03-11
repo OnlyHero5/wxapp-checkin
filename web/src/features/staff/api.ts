@@ -32,49 +32,6 @@ export type BulkCheckoutResponse = {
   status?: string;
 };
 
-export type UnbindReviewStatus = "pending" | "approved" | "rejected";
-
-export type UnbindReviewItem = {
-  reason?: string;
-  requested_new_binding_hint?: string;
-  review_comment?: string;
-  review_id: string;
-  reviewer_name?: string;
-  status: UnbindReviewStatus;
-  student_id?: string;
-  submitted_at?: number;
-  user_name?: string;
-};
-
-export type UnbindReviewListResponse = {
-  items: UnbindReviewItem[];
-  message?: string;
-  status?: string;
-};
-
-export type UnbindReviewActionInput = {
-  review_comment: string;
-};
-
-export type UnbindReviewActionResponse = {
-  message?: string;
-  review_id: string;
-  status?: string;
-};
-
-export type CreateUnbindReviewInput = {
-  reason: string;
-  requested_new_binding_hint?: string;
-};
-
-export type CreateUnbindReviewResponse = {
-  message?: string;
-  review_id: string;
-  review_status?: string;
-  status?: string;
-  submitted_at?: number;
-};
-
 function encodePathSegment(value: string) {
   return encodeURIComponent(`${value}`.trim());
 }
@@ -91,42 +48,6 @@ export function getCodeSession(activityId: string, actionType: ActivityActionTyp
 
 export function bulkCheckout(activityId: string, input: BulkCheckoutInput) {
   return requestJson<BulkCheckoutResponse>(`/staff/activities/${encodePathSegment(activityId)}/bulk-checkout`, {
-    body: input,
-    method: "POST"
-  });
-}
-
-/**
- * 普通用户发起解绑申请时只提交最小必要信息：
- * - 为什么要解绑
- * - 如果有的话，新设备提示是什么
- *
- * 审核动作和 staff 列表仍放在同一模块，是因为它们共享同一组后端契约，
- * 当前阶段继续拆出 account 模块反而会把接口定义分散。
- */
-export function createUnbindReview(input: CreateUnbindReviewInput) {
-  return requestJson<CreateUnbindReviewResponse>("/unbind-reviews", {
-    body: input,
-    method: "POST"
-  });
-}
-
-export function getUnbindReviews(input: { status: UnbindReviewStatus }) {
-  const search = new URLSearchParams({
-    status: input.status
-  });
-  return requestJson<UnbindReviewListResponse>(`/staff/unbind-reviews?${search.toString()}`);
-}
-
-export function approveUnbindReview(reviewId: string, input: UnbindReviewActionInput) {
-  return requestJson<UnbindReviewActionResponse>(`/staff/unbind-reviews/${encodePathSegment(reviewId)}/approve`, {
-    body: input,
-    method: "POST"
-  });
-}
-
-export function rejectUnbindReview(reviewId: string, input: UnbindReviewActionInput) {
-  return requestJson<UnbindReviewActionResponse>(`/staff/unbind-reviews/${encodePathSegment(reviewId)}/reject`, {
     body: input,
     method: "POST"
   });

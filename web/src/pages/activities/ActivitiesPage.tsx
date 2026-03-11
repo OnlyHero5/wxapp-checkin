@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { ActivityCard } from "../../features/activities/components/ActivityCard";
 import { getActivities, type ActivitySummary } from "../../features/activities/api";
 import { groupVisibleActivities } from "../../features/activities/view-model";
-import { SessionExpiredError } from "../../shared/http/errors";
-import { canReviewUnbind, isStaffSession } from "../../shared/session/session-store";
+import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/http/errors";
+import { isStaffSession } from "../../shared/session/session-store";
 import { AppButton } from "../../shared/ui/AppButton";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
@@ -30,30 +29,59 @@ export function ActivitiesPage() {
   const [activities, setActivities] = useState<ActivitySummary[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   // 只认最后一次请求结果，避免手动重试时旧响应反写新状态。
   const requestVersionRef = useRef(0);
+
+  const pageSize = 50;
+
+  function mergeActivitiesById(previous: ActivitySummary[], incoming: ActivitySummary[]) {
+    // 追加分页数据时做一次去重，避免并发刷新或后端数据变化导致重复渲染同一活动卡片。
+    const map = new Map<string, ActivitySummary>();
+    for (const item of previous) {
+      map.set(item.activity_id, item);
+    }
+    for (const item of incoming) {
+      map.set(item.activity_id, item);
+    }
+    return Array.from(map.values());
+  }
 
   /**
    * 列表加载逻辑独立成函数，而不是直接写在 `useEffect` 里，
    * 是为了让“首次加载”和“手动重试”共用同一套行为。
    */
-  async function loadActivities() {
+  async function loadFirstPage() {
     // 每次发起新请求都推进一个版本号，后返回的旧请求会被自动丢弃。
     const requestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = requestVersion;
     // 每次重新加载都把页面切回“加载中 + 无错误”的干净状态。
     setLoading(true);
+    setLoadingMore(false);
     setErrorMessage("");
+    setPage(1);
+    setHasMore(false);
 
     try {
-      const result = await getActivities();
+      const result = await getActivities({
+        page: 1,
+        page_size: pageSize
+      });
       if (requestVersionRef.current === requestVersion) {
         setActivities(result.activities ?? []);
+        setPage(result.page ?? 1);
+        setHasMore(result.has_more ?? false);
       }
     } catch (error) {
       // 一旦后端确认会话失效，列表页不继续停留，直接回登录入口。
       if (error instanceof SessionExpiredError) {
         navigate("/login");
+        return;
+      }
+      if (error instanceof PasswordChangeRequiredError) {
+        navigate("/change-password");
         return;
       }
       if (requestVersionRef.current === requestVersion) {
@@ -66,19 +94,56 @@ export function ActivitiesPage() {
     }
   }
 
+  async function loadMorePage() {
+    if (loadingMore || loading || !hasMore) {
+      return;
+    }
+
+    const targetPage = page + 1;
+    const requestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = requestVersion;
+    setLoadingMore(true);
+    setErrorMessage("");
+
+    try {
+      const result = await getActivities({
+        page: targetPage,
+        page_size: pageSize
+      });
+      if (requestVersionRef.current === requestVersion) {
+        setActivities((previous) => mergeActivitiesById(previous, result.activities ?? []));
+        setPage(result.page ?? targetPage);
+        setHasMore(result.has_more ?? false);
+      }
+    } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        navigate("/login");
+        return;
+      }
+      if (error instanceof PasswordChangeRequiredError) {
+        navigate("/change-password");
+        return;
+      }
+      if (requestVersionRef.current === requestVersion) {
+        setErrorMessage(resolveErrorMessage(error));
+      }
+    } finally {
+      if (requestVersionRef.current === requestVersion) {
+        setLoadingMore(false);
+      }
+    }
+  }
+
   useEffect(() => {
     // 首次进入列表页立即拉数据，不依赖用户手动触发。
-    void loadActivities();
+    void loadFirstPage();
   }, []);
 
   const isStaff = isStaffSession();
-  const allowReview = canReviewUnbind();
-  const eyebrow = isStaff ? "工作人员" : allowReview ? "审核管理员" : "普通用户";
+  const eyebrow = isStaff ? "工作人员" : "普通用户";
   const description = isStaff
-    ? "查看活动并进入管理页展示动态码、处理批量签退与审核事项。"
-    : allowReview
-      ? "查看你可见的活动，并进入解绑审核处理待办。"
-      : "查看你当前可见的活动，并进入详情页继续签到或签退。";
+    ? "查看活动并进入管理页展示动态码、处理批量签退。"
+    : "查看你当前可见的活动，并进入详情页继续签到或签退。";
   // 页面只渲染分组结果，不再自己关心筛选和排序细节。
   const sections = groupVisibleActivities(activities, {
     allowAll: isStaff
@@ -87,20 +152,10 @@ export function ActivitiesPage() {
   return (
     <MobilePage eyebrow={eyebrow} title="活动列表">
       <p>{description}</p>
-      {allowReview ? (
-        <Link className="text-link" to="/staff/unbind-reviews">
-          查看解绑审核
-        </Link>
-      ) : null}
-      {!isStaff && !allowReview ? (
-        <Link className="text-link" to="/unbind-request">
-          申请解绑当前浏览器
-        </Link>
-      ) : null}
       {errorMessage ? (
         <section className="stack-form">
           <InlineNotice message={errorMessage} />
-          <AppButton onClick={() => void loadActivities()} tone="secondary">
+          <AppButton onClick={() => void loadFirstPage()} tone="secondary">
             重新加载
           </AppButton>
         </section>
@@ -124,6 +179,13 @@ export function ActivitiesPage() {
           )}
         </section>
       ))}
+      {!loading && hasMore ? (
+        <section className="stack-form">
+          <AppButton disabled={loadingMore} loading={loadingMore} onClick={() => void loadMorePage()} tone="secondary">
+            加载更多
+          </AppButton>
+        </section>
+      ) : null}
     </MobilePage>
   );
 }

@@ -4,9 +4,7 @@ import com.wxcheckin.backend.api.error.BusinessException;
 import com.wxcheckin.backend.application.model.SessionPrincipal;
 import com.wxcheckin.backend.application.support.JsonCodec;
 import com.wxcheckin.backend.domain.model.RoleType;
-import com.wxcheckin.backend.infrastructure.persistence.entity.WebBrowserBindingEntity;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxSessionEntity;
-import com.wxcheckin.backend.infrastructure.persistence.repository.WebBrowserBindingRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -20,22 +18,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SessionService {
 
-  private static final String ACTIVE_BINDING_STATUS = "active";
   private static final String SESSION_EXPIRED_MESSAGE = "会话失效，请重新登录";
+  private static final String PASSWORD_CHANGE_REQUIRED_MESSAGE = "请先修改密码";
 
   private final WxSessionRepository sessionRepository;
-  private final WebBrowserBindingRepository browserBindingRepository;
   private final JsonCodec jsonCodec;
   private final Clock clock;
 
   public SessionService(
       WxSessionRepository sessionRepository,
-      WebBrowserBindingRepository browserBindingRepository,
       JsonCodec jsonCodec,
       Clock clock
   ) {
     this.sessionRepository = sessionRepository;
-    this.browserBindingRepository = browserBindingRepository;
     this.jsonCodec = jsonCodec;
     this.clock = clock;
   }
@@ -53,27 +48,24 @@ public class SessionService {
   }
 
   @Transactional(readOnly = true)
-  public SessionPrincipal requirePrincipal(String sessionToken, String browserBindingKey) {
-    WxSessionEntity session = requireSession(sessionToken);
-    String normalizedBrowserBindingKey = normalize(browserBindingKey);
-    if (normalizedBrowserBindingKey.isEmpty()) {
-      throw expired();
+  public SessionPrincipal requireWebPrincipal(String sessionToken) {
+    // Web 端账号密码登录要求“首次登录强制改密”，因此这里做统一拦截：
+    // - 改密接口自身需要绕过该检查（使用 allowPasswordChange 版本）
+    SessionPrincipal principal = requireWebPrincipalAllowPasswordChange(sessionToken);
+    if (mustChangePassword(principal.user())) {
+      throw new BusinessException("forbidden", PASSWORD_CHANGE_REQUIRED_MESSAGE, "password_change_required");
     }
+    return principal;
+  }
 
-    WebBrowserBindingEntity binding = browserBindingRepository
-        .findByUser_IdAndStatus(session.getUser().getId(), ACTIVE_BINDING_STATUS)
-        .orElseThrow(this::expired);
-    if (!normalizedBrowserBindingKey.equals(normalize(binding.getBindingFingerprintHash()))) {
-      throw expired();
-    }
-
-    List<String> permissions = jsonCodec.readStringList(session.getPermissionsJson());
-    return new SessionPrincipal(
-        session,
-        session.getUser(),
-        RoleType.fromCode(session.getRoleSnapshot()),
-        permissions
-    );
+  /**
+   * 仅用于“改密接口”等少数允许在强制改密态下访问的入口。
+   *
+   * 该方法仍会校验 session token 有效，但不会拦截 must_change_password。
+   */
+  @Transactional(readOnly = true)
+  public SessionPrincipal requireWebPrincipalAllowPasswordChange(String sessionToken) {
+    return requirePrincipal(sessionToken);
   }
 
   @Transactional
@@ -89,6 +81,12 @@ public class SessionService {
 
   private BusinessException expired() {
     return new BusinessException("forbidden", SESSION_EXPIRED_MESSAGE, "session_expired");
+  }
+
+  private boolean mustChangePassword(com.wxcheckin.backend.infrastructure.persistence.entity.WxUserAuthExtEntity user) {
+    // 允许为 null：代表历史数据尚未初始化密码字段，Web 端按“需要改密”处理更安全。
+    Boolean flag = user == null ? null : user.getMustChangePassword();
+    return flag == null || Boolean.TRUE.equals(flag);
   }
 
   private WxSessionEntity requireSession(String sessionToken) {

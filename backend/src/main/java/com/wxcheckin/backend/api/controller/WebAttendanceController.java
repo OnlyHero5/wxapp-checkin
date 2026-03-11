@@ -22,8 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/web/activities")
 public class WebAttendanceController {
 
-  private static final String BROWSER_BINDING_KEY_HEADER = "X-Browser-Binding-Key";
-
   private final DynamicCodeService dynamicCodeService;
   private final CheckinConsumeService checkinConsumeService;
   private final SessionTokenExtractor sessionTokenExtractor;
@@ -45,7 +43,7 @@ public class WebAttendanceController {
       HttpServletRequest request
   ) {
     String token = sessionTokenExtractor.extract(null, request);
-    return dynamicCodeService.issue(token, request.getHeader(BROWSER_BINDING_KEY_HEADER), activityId, actionType);
+    return dynamicCodeService.issue(token, activityId, actionType);
   }
 
   @PostMapping("/{activityId}/code-consume")
@@ -67,8 +65,7 @@ public class WebAttendanceController {
             null,
             null,
             requestBody.code()
-        ),
-        request.getHeader(BROWSER_BINDING_KEY_HEADER)
+        )
     );
     return new WebCodeConsumeResponse(
         response.status(),

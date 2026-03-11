@@ -71,11 +71,11 @@ table_exists() {
 
 reset_wx_identity_bindings() {
   if ! table_exists "wx_user_auth_ext"; then
-    echo "[start-test-env] Skip wx identity reset: ${EXT_SCHEMA}.wx_user_auth_ext not found."
+    echo "[start-test-env] Skip ext data reset: ${EXT_SCHEMA}.wx_user_auth_ext not found."
     return 0
   fi
 
-  echo "[start-test-env] Resetting WeChat identity bindings in ${EXT_SCHEMA}."
+  echo "[start-test-env] Resetting Web identity/session data in ${EXT_SCHEMA}."
   local reset_tables=(
     wx_session
     wx_user_activity_status

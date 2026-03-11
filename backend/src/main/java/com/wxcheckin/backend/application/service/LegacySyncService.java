@@ -5,6 +5,7 @@ import com.wxcheckin.backend.domain.model.ActivityProgressStatus;
 import com.wxcheckin.backend.domain.model.UserActivityState;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxActivityProjectionEntity;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserActivityStatusEntity;
+import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserAuthExtEntity;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
@@ -19,6 +20,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -33,6 +35,7 @@ public class LegacySyncService {
   private static final Logger log = LoggerFactory.getLogger(LegacySyncService.class);
 
   private final AppProperties appProperties;
+  private final OutboxRelayService outboxRelayService;
   private final JdbcTemplate jdbcTemplate;
   private final WxActivityProjectionRepository activityRepository;
   private final WxUserAuthExtRepository userRepository;
@@ -40,12 +43,14 @@ public class LegacySyncService {
 
   public LegacySyncService(
       AppProperties appProperties,
+      OutboxRelayService outboxRelayService,
       @Qualifier("legacyJdbcTemplate") JdbcTemplate jdbcTemplate,
       WxActivityProjectionRepository activityRepository,
       WxUserAuthExtRepository userRepository,
       WxUserActivityStatusRepository statusRepository
   ) {
     this.appProperties = appProperties;
+    this.outboxRelayService = outboxRelayService;
     this.jdbcTemplate = jdbcTemplate;
     this.activityRepository = activityRepository;
     this.userRepository = userRepository;
@@ -58,11 +63,88 @@ public class LegacySyncService {
     if (!appProperties.getSync().getLegacy().isEnabled()) {
       return;
     }
+    // 先 push(outbox) 再 pull(legacy)：
+    // 避免出现“本地已写 checked_out，但 legacy 尚未落地时 pull 把状态回退为 checked_in”的一致性窗口。
+    // 该问题在联调报告 2026-03-11（WX-SYNC-001）中有可复现证据。
+    try {
+      outboxRelayService.relayToLegacy();
+    } catch (Exception ex) {
+      // outbox relay 本身是 best-effort：失败时不应阻断 pull，但需要避免把异常放大成调度器告警。
+      log.debug("Pre-pull outbox relay skipped: {}", ex.getMessage());
+    }
     syncLegacyActivities();
     syncLegacyUserActivityStatus();
   }
 
+  /**
+   * 按用户即时同步（best-effort）。
+   *
+   * <p>用途：解决普通用户首次登录改密后的“活动列表空窗期”。
+   * 该场景下用户会立即请求活动列表，但定时 pull 可能尚未跑到，导致 wx_user_activity_status 为空，
+   * 从而活动列表返回空数组。</p>
+   *
+   * <p>策略：
+   * - 只同步该 legacyUserId 相关的报名/状态（wx_user_activity_status）
+   * - 并补齐其关联活动的投影（wx_activity_projection），避免 status 有了但活动投影缺失导致仍不可见</p>
+   *
+   * <p>注意：该方法必须可在 readOnly 事务内被调用，因此使用 REQUIRES_NEW 开启独立事务。</p>
+   */
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void syncLegacyUserContextOnDemand(Long legacyUserId) {
+    if (!appProperties.getSync().getLegacy().isEnabled()) {
+      return;
+    }
+    if (legacyUserId == null) {
+      return;
+    }
+
+    WxUserAuthExtEntity user = userRepository.findByLegacyUserId(legacyUserId).orElse(null);
+    if (user == null) {
+      return;
+    }
+
+    final String sql = """
+        SELECT
+          aa.activity_id AS legacy_activity_id,
+          aa.state AS apply_state,
+          aa.check_in AS check_in,
+          aa.check_out AS check_out
+        FROM suda_activity_apply aa
+        JOIN suda_user u ON u.username = aa.username
+        WHERE u.id = ?
+        """;
+
+    try {
+      List<LegacyApplyRow> rows = jdbcTemplate.query(sql, (rs, rowNum) -> {
+        LegacyApplyRow row = new LegacyApplyRow();
+        row.legacyUserId = legacyUserId;
+        row.legacyActivityId = rs.getInt("legacy_activity_id");
+        row.applyState = rs.getInt("apply_state");
+        row.checkIn = toBoolean(rs.getObject("check_in"));
+        row.checkOut = toBoolean(rs.getObject("check_out"));
+        return row;
+      }, legacyUserId);
+
+      if (rows.isEmpty()) {
+        return;
+      }
+
+      List<Integer> legacyActivityIds = rows.stream()
+          .map(row -> row.legacyActivityId)
+          .distinct()
+          .toList();
+
+      syncLegacyActivitiesByIds(legacyActivityIds);
+      upsertUserStatus(user, rows);
+    } catch (DataAccessException ex) {
+      log.debug("On-demand legacy user sync skipped: {}", ex.getMessage());
+    }
+  }
+
   private void syncLegacyActivities() {
+    // 说明：
+    // 1) checkin_count / checkout_count 是给 Web 管理端展示用的统计值。
+    // 2) 这里用 0/1 而不是 MySQL 专用的 b'1'/b'0' 字面量，便于在 H2(MySQL mode) 下跑集成测试。
     final String sql = """
         SELECT
           a.id,
@@ -73,8 +155,9 @@ public class LegacySyncService {
 	          a.activity_etime,
 	          a.type,
 	          a.state,
-	          COALESCE(SUM(CASE WHEN aa.check_in = b'1' THEN 1 ELSE 0 END), 0) AS checkin_count,
-	          COALESCE(SUM(CASE WHEN aa.check_in = b'1' AND aa.check_out = b'1' THEN 1 ELSE 0 END), 0) AS checkout_count
+	          -- 关键口径：checkin_count 表示“已签到未签退”，否则会被 pull 周期性覆盖出不可能状态。
+	          COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS checkin_count,
+	          COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS checkout_count
 	        FROM suda_activity a
 	        LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
 	        GROUP BY a.id, a.name, a.description, a.location, a.activity_stime, a.activity_etime, a.type, a.state
@@ -125,6 +208,83 @@ public class LegacySyncService {
     }
   }
 
+  private void syncLegacyActivitiesByIds(List<Integer> legacyActivityIds) {
+    if (legacyActivityIds == null || legacyActivityIds.isEmpty()) {
+      return;
+    }
+
+    String placeholders = legacyActivityIds.stream().map(id -> "?").reduce((a, b) -> a + "," + b).orElse("");
+    final String sql = """
+        SELECT
+          a.id,
+          a.name,
+          a.description,
+          a.location,
+          a.activity_stime,
+          a.activity_etime,
+          a.type,
+          a.state,
+          COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS checkin_count,
+          COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS checkout_count
+        FROM suda_activity a
+        LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
+        WHERE a.id IN (%s)
+        GROUP BY a.id, a.name, a.description, a.location, a.activity_stime, a.activity_etime, a.type, a.state
+        """.formatted(placeholders);
+
+    try {
+      Object[] params = legacyActivityIds.toArray();
+      List<LegacyActivityRow> rows = jdbcTemplate.query(sql, (rs, rowNum) -> {
+        LegacyActivityRow row = new LegacyActivityRow();
+        row.id = rs.getInt("id");
+        row.name = rs.getString("name");
+        row.description = rs.getString("description");
+        row.location = rs.getString("location");
+        Timestamp start = rs.getTimestamp("activity_stime");
+        row.startTime = start == null ? Instant.now() : start.toInstant();
+        Timestamp end = rs.getTimestamp("activity_etime");
+        row.endTime = end == null ? row.startTime : end.toInstant();
+        row.type = rs.getInt("type");
+        row.state = rs.getInt("state");
+        row.checkinCount = rs.getInt("checkin_count");
+        row.checkoutCount = rs.getInt("checkout_count");
+        return row;
+      }, params);
+
+      upsertActivities(rows);
+    } catch (DataAccessException ex) {
+      log.debug("On-demand legacy activity sync skipped: {}", ex.getMessage());
+    }
+  }
+
+  private void upsertActivities(List<LegacyActivityRow> rows) {
+    if (rows == null || rows.isEmpty()) {
+      return;
+    }
+    for (LegacyActivityRow row : rows) {
+      String activityId = "legacy_act_" + row.id;
+      WxActivityProjectionEntity entity = activityRepository.findById(activityId)
+          .orElseGet(WxActivityProjectionEntity::new);
+      entity.setActivityId(activityId);
+      entity.setLegacyActivityId(row.id);
+      entity.setActivityTitle(row.name);
+      entity.setActivityType(row.type == 1 ? "讲座" : "活动");
+      entity.setDescription(row.description);
+      entity.setLocation(row.location);
+      entity.setStartTime(row.startTime);
+      entity.setEndTime(row.endTime);
+      entity.setProgressStatus(row.state >= 4
+          ? ActivityProgressStatus.COMPLETED.getCode()
+          : ActivityProgressStatus.ONGOING.getCode());
+      entity.setSupportCheckout(true);
+      entity.setHasDetail(true);
+      entity.setCheckinCount(Math.max(0, row.checkinCount));
+      entity.setCheckoutCount(Math.max(0, row.checkoutCount));
+      entity.setActive(true);
+      activityRepository.save(entity);
+    }
+  }
+
   private void syncLegacyUserActivityStatus() {
     final String sql = """
         SELECT
@@ -149,31 +309,42 @@ public class LegacySyncService {
       });
 
       for (LegacyApplyRow row : rows) {
-        var userOpt = userRepository.findByLegacyUserId(row.legacyUserId);
-        var activityOpt = activityRepository.findByLegacyActivityId(row.legacyActivityId);
-        if (userOpt.isEmpty() || activityOpt.isEmpty()) {
+        WxUserAuthExtEntity user = userRepository.findByLegacyUserId(row.legacyUserId).orElse(null);
+        if (user == null) {
           continue;
         }
-
-        var user = userOpt.get();
-        var activity = activityOpt.get();
-        WxUserActivityStatusEntity status = statusRepository
-            .findByUserIdAndActivityId(user.getId(), activity.getActivityId())
-            .orElseGet(WxUserActivityStatusEntity::new);
-        status.setUser(user);
-        status.setActivityId(activity.getActivityId());
-        status.setRegistered(row.applyState != 3);
-
-        if (row.checkIn) {
-          // Legacy convention: check_out=1 means already checked out, 0 means not yet checked out.
-          status.setStatus(row.checkOut ? UserActivityState.CHECKED_OUT.getCode() : UserActivityState.CHECKED_IN.getCode());
-        } else {
-          status.setStatus(UserActivityState.NONE.getCode());
-        }
-        statusRepository.save(status);
+        upsertUserStatus(user, List.of(row));
       }
     } catch (DataAccessException ex) {
       log.debug("Legacy user-status sync skipped: {}", ex.getMessage());
+    }
+  }
+
+  private void upsertUserStatus(WxUserAuthExtEntity user, List<LegacyApplyRow> rows) {
+    if (user == null || user.getId() == null || rows == null || rows.isEmpty()) {
+      return;
+    }
+    for (LegacyApplyRow row : rows) {
+      var activityOpt = activityRepository.findByLegacyActivityId(row.legacyActivityId);
+      if (activityOpt.isEmpty()) {
+        continue;
+      }
+
+      var activity = activityOpt.get();
+      WxUserActivityStatusEntity status = statusRepository
+          .findByUserIdAndActivityId(user.getId(), activity.getActivityId())
+          .orElseGet(WxUserActivityStatusEntity::new);
+      status.setUser(user);
+      status.setActivityId(activity.getActivityId());
+      status.setRegistered(row.applyState != 3);
+
+      if (row.checkIn) {
+        // Legacy convention: check_out=1 means already checked out, 0 means not yet checked out.
+        status.setStatus(row.checkOut ? UserActivityState.CHECKED_OUT.getCode() : UserActivityState.CHECKED_IN.getCode());
+      } else {
+        status.setStatus(UserActivityState.NONE.getCode());
+      }
+      statusRepository.save(status);
     }
   }
 

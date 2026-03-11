@@ -12,6 +12,9 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./scripts/docker/mysql-init/01_suda_union_seed.sql:/docker-entrypoint-initdb.d/01_suda_union_seed.sql:ro
+      - ./scripts/docker/mysql-init/02_bootstrap_wxcheckin_ext.sh:/docker-entrypoint-initdb.d/02_bootstrap_wxcheckin_ext.sh:ro
+      - ./scripts/bootstrap-prod-schema.sql:/docker-entrypoint-initdb.d/bootstrap-prod-schema.sql.disabled:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s

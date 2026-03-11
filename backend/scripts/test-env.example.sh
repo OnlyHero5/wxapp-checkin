@@ -26,12 +26,10 @@ export REDIS_HOST=127.0.0.1
 export REDIS_PORT=6379
 export REDIS_PASSWORD=
 
-# Passkey / WebAuthn
-# 本地开发若直接用 `http://127.0.0.1:5173` 打开前端，可暂时保持为空；
-# 若你用自定义域名或 HTTPS 反代，请同步填写真实 RP/Origin。
-export WEBAUTHN_RP_ID=
-export WEBAUTHN_ALLOWED_ORIGIN=
-export WEBAUTHN_RP_NAME=wxapp-checkin
+# Web 身份（账号密码）
+# - 默认密码固定为 123
+# - 首次登录后强制改密
+# - 不再需要配置 WEBAUTHN_*（Passkey/WebAuthn 已从主链路移除）
 
 # 动态码 / 同步
 export QR_SIGNING_KEY=replace-with-a-local-dev-secret

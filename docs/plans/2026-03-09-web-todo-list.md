@@ -6,6 +6,8 @@
 项目: `wxapp-checkin`
 用途: 作为后续分批次实施编码的执行清单，与 `2026-03-09-web-detailed-coding-plan.md` 配套使用。
 
+> **注意：** 本清单基于 2026-03-10 之前的 Passkey/WebAuthn 认证方案编写，其中与 Passkey、HTTPS、`webauthn.ts` 相关的条目已不再适用。当前认证基线已调整为 **HTTP 内网账号密码（默认 123，首次登录强制改密）**，请以 `docs/plans/2026-03-10-http-password-auth-implementation-plan.md` 为准。
+
 ## 1. 使用规则
 
 - `[ ]` 未开始

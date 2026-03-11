@@ -1,21 +1,23 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ActivitiesPage } from "../pages/activities/ActivitiesPage";
 import { ActivityDetailPage } from "../pages/activity-detail/ActivityDetailPage";
-import { BindPage } from "../pages/bind/BindPage";
+import { ChangePasswordPage } from "../pages/change-password/ChangePasswordPage";
 import { CheckinPage } from "../pages/checkin/CheckinPage";
 import { CheckoutPage } from "../pages/checkout/CheckoutPage";
 import { LoginPage } from "../pages/login/LoginPage";
 import { StaffManagePage } from "../pages/staff-manage/StaffManagePage";
-import { UnbindRequestPage } from "../pages/unbind-request/UnbindRequestPage";
-import { UnbindReviewPage } from "../pages/unbind-reviews/UnbindReviewPage";
-import { canReviewUnbind, getSession, isStaffSession } from "../shared/session/session-store";
+import {
+  getMustChangePassword,
+  getSession,
+  isStaffSession
+} from "../shared/session/session-store";
 import { MobilePage } from "../shared/ui/MobilePage";
 
 /**
  * 这一层的占位页只用于“路由存在但功能还未开发完成”的场景。
  *
- * 这里保留它，是为了后续做管理员页和解绑审核页时，
- * 可以先把路由骨架挂上，再逐步把页面实现替换进去。
+ * 这里保留它，是为了后续新增页面时可以先把路由骨架挂上，
+ * 再逐步把页面实现替换进去。
  */
 type PlaceholderPageProps = {
   description: string;
@@ -45,6 +47,10 @@ function hasSession() {
   return !!getSession();
 }
 
+function mustChangePassword() {
+  return getMustChangePassword();
+}
+
 /**
  * 受保护路由：
  * 没有本地会话时直接跳到登录页。
@@ -53,7 +59,25 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
   if (!hasSession()) {
     return <Navigate replace to="/login" />;
   }
+  if (mustChangePassword()) {
+    return <Navigate replace to="/change-password" />;
+  }
 
+  return children;
+}
+
+/**
+ * 强制改密路由：
+ * - 未登录：回 /login
+ * - 已完成改密：回 /activities（避免用户误留在改密页）
+ */
+function PasswordChangeRoute({ children }: { children: JSX.Element }) {
+  if (!hasSession()) {
+    return <Navigate replace to="/login" />;
+  }
+  if (!mustChangePassword()) {
+    return <Navigate replace to="/activities" />;
+  }
   return children;
 }
 
@@ -61,17 +85,10 @@ function StaffRoute({ children }: { children: JSX.Element }) {
   if (!hasSession()) {
     return <Navigate replace to="/login" />;
   }
+  if (mustChangePassword()) {
+    return <Navigate replace to="/change-password" />;
+  }
   if (!isStaffSession()) {
-    return <Navigate replace to="/activities" />;
-  }
-  return children;
-}
-
-function ReviewRoute({ children }: { children: JSX.Element }) {
-  if (!hasSession()) {
-    return <Navigate replace to="/login" />;
-  }
-  if (!canReviewUnbind()) {
     return <Navigate replace to="/activities" />;
   }
   return children;
@@ -79,12 +96,12 @@ function ReviewRoute({ children }: { children: JSX.Element }) {
 
 /**
  * 公共路由：
- * 已经有会话的用户不应该继续停留在登录/绑定页，
+ * 已经有会话的用户不应该继续停留在登录页，
  * 否则会出现“明明已登录却还能看到登录表单”的体验问题。
  */
 function PublicRoute({ children }: { children: JSX.Element }) {
   if (hasSession()) {
-    return <Navigate replace to="/activities" />;
+    return <Navigate replace to={mustChangePassword() ? "/change-password" : "/activities"} />;
   }
 
   return children;
@@ -93,7 +110,7 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 /**
  * 路由表的设计遵循当前文档基线：
  * 1. 站点根路径 `/` 必须自动落到登录或活动页
- * 2. `/login`、`/bind` 是公共入口
+ * 2. `/login` 是公共入口
  * 3. `/activities/**` 及其子页都是登录后页面
  * 4. 未实现的路径统一给出明确 404 提示
  */
@@ -101,7 +118,10 @@ export function AppRoutes() {
   return (
     <Routes>
       {/* 根路径不暴露空白页，直接根据登录态分流到最可能的入口。 */}
-      <Route path="/" element={<Navigate replace to={hasSession() ? "/activities" : "/login"} />} />
+      <Route
+        path="/"
+        element={<Navigate replace to={hasSession() ? (mustChangePassword() ? "/change-password" : "/activities") : "/login"} />}
+      />
       <Route
         path="/login"
         element={
@@ -112,12 +132,12 @@ export function AppRoutes() {
         }
       />
       <Route
-        path="/bind"
+        path="/change-password"
         element={
-          <PublicRoute>
-            {/* 绑定页本质上也是公共页，但仅服务于未完成绑定的浏览器。 */}
-            <BindPage />
-          </PublicRoute>
+          <PasswordChangeRoute>
+            {/* 改密页是强制入口：只有 must_change_password=true 时允许进入。 */}
+            <ChangePasswordPage />
+          </PasswordChangeRoute>
         }
       />
       <Route
@@ -157,30 +177,12 @@ export function AppRoutes() {
         }
       />
       <Route
-        path="/unbind-request"
-        element={
-          <ProtectedRoute>
-            {/* 普通用户提交解绑申请的入口。 */}
-            <UnbindRequestPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/staff/activities/:activityId/manage"
         element={
           <StaffRoute>
             {/* 管理员动态码管理页与批量签退入口。 */}
             <StaffManagePage />
           </StaffRoute>
-        }
-      />
-      <Route
-        path="/staff/unbind-reviews"
-        element={
-          <ReviewRoute>
-            {/* 解绑审核页当前先允许 staff 进入，后续可继续收紧到 review_admin。 */}
-            <UnbindReviewPage />
-          </ReviewRoute>
         }
       />
       <Route

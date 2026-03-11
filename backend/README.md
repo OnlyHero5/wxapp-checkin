@@ -86,12 +86,10 @@ QR_CLEANUP_ENABLED=true
 QR_CLEANUP_INTERVAL_MS=300000
 SESSION_TTL_SECONDS=7200
 
-# WebAuth / Passkey
-WEBAUTHN_RP_ID=
-WEBAUTHN_RP_NAME=wxapp-checkin
-WEBAUTHN_ALLOWED_ORIGIN=
-WEBAUTHN_BIND_TICKET_TTL_SECONDS=600
-WEBAUTHN_CHALLENGE_TTL_SECONDS=300
+# Web 身份（账号密码）
+# - 默认密码固定为 123
+# - 首次登录必须修改密码
+# - 不再需要配置 WEBAUTHN_*（Passkey/WebAuthn 已从主链路移除）
 ```
 
 生成强密钥示例：
@@ -171,6 +169,11 @@ cp .env.example .env
 
 > 你的真实账号密码/密钥写在 `.env`（不要提交到 git）。
 
+补充说明：
+
+- 当前 compose 已通过 MySQL init 脚本自动初始化 `wxcheckin_ext` 表结构，并写入一份 `suda_union` 演示数据（仅用于本地演示）。
+- 当前认证基线为账号密码（默认 `123` + 首次强制改密），适配 HTTP 内网访问形态。
+
 2) 一键启动：
 
 ```bash
@@ -204,7 +207,6 @@ cp backend/scripts/test-env.example.sh ~/.wxapp-checkin-test-env.sh
 - `LEGACY_DB_*` 能连接 `suda_union`
 - `REDIS_*` 能连接本地 Redis
 - `QR_SIGNING_KEY` 不为空
-- 若本地联调不是 `http://127.0.0.1:5173`，同步填写 `WEBAUTHN_RP_ID` / `WEBAUTHN_ALLOWED_ORIGIN`
 
 ### 3.2 一键启动（会覆盖测试数据）
 
@@ -243,16 +245,11 @@ curl http://127.0.0.1:9989/actuator/health
 
 详细说明与测试账号见：`TEST_ENV_TESTING.md`
 
-### 3.3 Passkey 本地 / 测试环境填写建议
+### 3.3 登录说明（默认密码与强制改密）
 
-- 本地直接用 Vite 默认地址联调：
-  - 前端：`http://127.0.0.1:5173`
-  - 后端：`http://127.0.0.1:9989`
-  - `WEBAUTHN_RP_ID` 与 `WEBAUTHN_ALLOWED_ORIGIN` 可先留空，走当前开发宽松口径
-- 若你通过自定义域名或 HTTPS 反代联调：
-  - `WEBAUTHN_ALLOWED_ORIGIN` 必须填写前端真实 Origin，例如 `https://checkin.example.edu`
-  - `WEBAUTHN_RP_ID` 应填写该 Origin 对应的 RP ID，例如 `checkin.example.edu`
-  - 前后端、网关与浏览器访问地址必须保持一致，否则 Passkey challenge 会被后端拒绝
+- 账号统一使用 `student_id`（学号）。
+- 默认密码固定为 `123`。
+- 首次登录成功后必须修改密码；未改密前，后端会对业务接口统一返回 `password_change_required`。
 
 ## 4) 环境变量清单（速查）
 
@@ -272,8 +269,6 @@ curl http://127.0.0.1:9989/actuator/health
 | 动态码 | `QR_REPLAY_GUARD_RETENTION_SECONDS` | replay guard 额外保留秒数 |
 | 动态码 | `QR_CLEANUP_ENABLED` `QR_CLEANUP_INTERVAL_MS` | 是否开启动态码相关表的定期清理任务/清理间隔（毫秒） |
 | 会话 | `SESSION_TTL_SECONDS` | session 过期秒数 |
-| WebAuth | `WEBAUTHN_RP_ID` `WEBAUTHN_RP_NAME` `WEBAUTHN_ALLOWED_ORIGIN` | Passkey / WebAuthn RP 配置 |
-| WebAuth | `WEBAUTHN_BIND_TICKET_TTL_SECONDS` `WEBAUTHN_CHALLENGE_TTL_SECONDS` | bind ticket 与 challenge 有效期 |
 | 同步 | `LEGACY_SYNC_ENABLED` `LEGACY_SYNC_INTERVAL_MS` | legacy pull 同步开关与间隔 |
 | 同步 | `OUTBOX_RELAY_ENABLED` `OUTBOX_RELAY_INTERVAL_MS` | outbox relay 开关与间隔 |
 | 注册 | `REGISTER_PAYLOAD_VERIFY_ENABLED` | 历史占位配置，当前 Web-only 主链路不再使用 |

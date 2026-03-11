@@ -14,8 +14,7 @@ public final class PermissionCatalog {
       "activity:checkout",
       "activity:detail",
       "activity:manage",
-      "activity:bulk-checkout",
-      "unbind:review"
+      "activity:bulk-checkout"
   );
 
   public static final List<String> NORMAL_PERMISSIONS = List.of();

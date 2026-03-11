@@ -2,7 +2,7 @@
 
 文档版本: v0.1  
 状态: 草案  
-更新日期: 2026-03-09  
+更新日期: 2026-03-10  
 项目: `wxapp-checkin`
 
 ## 1. 设计目标
@@ -12,7 +12,7 @@
 - 用手机浏览器 Web 端替代微信小程序
 - 用动态 6 位码输入替代二维码扫码
 - 保留现有 `wxapp-checkin/backend`、扩展库表和 `suda_union` 同步主干的可复用部分
-- 引入 `学号 + 姓名 + Passkey + 浏览器绑定 + 临时会话 + 管理员审核解绑`
+- 引入 `学号 + 密码（默认 123，首次登录强制改密）+ 临时会话（session_token）`
 - 最终删除小程序正式逻辑与二维码正式链路
 
 ## 2. 总体架构
@@ -21,7 +21,7 @@
 
 - `web/`: 新手机浏览器前端
 - `backend/`: 继续作为唯一业务后端
-- `frontend/`: 现有小程序目录，实施阶段仅保留作过渡参考，最终删除
+- `frontend/`: （已删除）历史小程序目录；当前仓库已收口为 Web-only
 - `docs/`: 新旧文档共存，待实施稳定后以 Web 文档替换旧文档
 
 ### 2.2 系统关系
@@ -29,13 +29,13 @@
 ```text
 ┌──────────────────────────────┐
 │ 手机浏览器 Web 前端 (web/)   │
-│  normal / staff / review     │
+│  normal / staff              │
 └──────────────┬───────────────┘
-               │ HTTPS JSON API
+               │ HTTP JSON API（内网基线）
 ┌──────────────▼───────────────┐
 │ Spring Boot 后端 (backend/)  │
 │ identity / activity / code   │
-│ attendance / review / sync   │
+│ attendance / sync            │
 └──────────────┬───────────────┘
                │
     ┌──────────┴──────────┐
@@ -51,16 +51,15 @@
 前端负责：
 
 - 页面展示
-- Passkey 注册与登录调用
+- 账号密码登录与首次强制改密
 - 活动切换与动态码输入
 - 管理员动态码展示与批量操作入口
 - 前台恢复时刷新关键数据
 
 后端负责：
 
-- 实名校验
+- 学号存在校验与角色判定（只读查询 `suda_union`）
 - 管理员角色判定
-- 浏览器绑定与解绑审核
 - 会话签发与失效
 - 动态码生成与校验
 - 状态流转、防重放、计数与审计
@@ -71,9 +70,8 @@
 ### 3.1 前端模块
 
 - `auth-ui`
-  - 实名绑定
-  - Passkey 注册
-  - Passkey 登录
+  - 账号密码登录
+  - 首次强制改密
   - 会话恢复
 - `activity-ui`
   - 活动列表
@@ -88,17 +86,12 @@
   - 动态签退码展示
   - 实时统计
   - 一键全部签退
-- `review-ui`
-  - 解绑申请
-  - 审核列表
-  - 审批动作
 
 ### 3.2 后端模块
 
 - `identity-service`
-  - 实名校验
-  - 浏览器绑定
-  - Passkey challenge 生成和验证
+  - 账号密码校验
+  - 强制改密策略
   - 临时会话签发
 - `activity-service`
   - 活动可见性与详情
@@ -115,37 +108,27 @@
   - 一键全部签退
   - 批量审计
   - 批量 outbox 回写
-- `unbind-review-service`
-  - 提交解绑申请
-  - 管理员审核
-  - 绑定失效
 - `integration-service`
   - legacy pull
   - outbox relay
 
 ## 4. 核心流程设计
 
-### 4.1 首次绑定
+### 4.1 首次登录与强制改密
 
-1. 用户进入 `/login`
-2. 若当前浏览器无有效绑定，跳转 `/bind`
-3. 用户输入 `student_id + name`
-4. 后端只读查询 `suda_union` 校验实名
-5. 实名通过后，前端发起 Passkey 注册
-6. 后端保存：
-   - Web 身份扩展数据
-   - 浏览器绑定
-   - Passkey 凭据
-   - 临时会话
-7. 用户进入活动列表
+1. 用户进入 `/login`。
+2. 用户输入 `student_id + password`（初始密码默认为 `123`）。
+3. 后端只读查询 `suda_union` 校验学号存在，并完成密码校验。
+4. 后端签发临时会话并返回 `must_change_password`。
+5. 若 `must_change_password=true`，前端强制跳转 `/change-password` 完成改密。
+6. 改密成功后用户进入活动列表。
 
 ### 4.2 后续登录
 
-1. 用户进入 `/login`
-2. 后端基于绑定上下文生成 Passkey challenge
-3. 前端执行 WebAuthn 登录
-4. 后端验证通过后签发临时会话
-5. 用户进入活动列表
+1. 用户进入 `/login`。
+2. 用户输入 `student_id + password`。
+3. 后端校验通过后签发临时会话。
+4. 用户进入活动列表。
 
 ### 4.3 管理员展示动态码
 
@@ -162,7 +145,6 @@
 2. 输入 6 位动态码
 3. 后端校验：
    - 会话有效
-   - 浏览器绑定有效
    - 活动存在
    - 报名资格存在
    - 当前状态允许
@@ -184,16 +166,6 @@
 4. 批量写状态、事件、管理员审计与 outbox
 5. 返回影响人数与批次号
 
-### 4.6 解绑审核
-
-1. 用户发起解绑申请
-2. 管理员查看待审核列表
-3. 管理员批准后：
-   - 原浏览器绑定失效
-   - 原会话失效
-   - 用户允许新浏览器重新绑定
-4. 管理员拒绝后，原绑定保持不变
-
 ## 5. 前端设计
 
 ### 5.1 技术栈建议
@@ -202,18 +174,17 @@
 - React
 - TypeScript
 - 轻量路由与表单方案
-- WebAuthn/Passkey 客户端库可选，但不要绕开浏览器原生 API 语义
+- 密码仅存 bcrypt hash（后端实现），前端不做自定义加密协议
 
 ### 5.2 页面路由建议
 
 - `/login`
-- `/bind`
+- `/change-password`
 - `/activities`
 - `/activities/:id`
 - `/activities/:id/checkin`
 - `/activities/:id/checkout`
 - `/staff/activities/:id/manage`
-- `/staff/unbind-reviews`
 
 ### 5.3 移动端交互原则
 
@@ -250,13 +221,10 @@
 
 本章只给出接口分组与职责边界；逐字段请求/响应契约以 `docs/API_SPEC.md` 为准。
 
-### 6.1 认证与绑定
+### 6.1 认证
 
-- `POST /api/web/bind/verify-identity`
-- `POST /api/web/passkey/register/options`
-- `POST /api/web/passkey/register/complete`
-- `POST /api/web/passkey/login/options`
-- `POST /api/web/passkey/login/complete`
+- `POST /api/web/auth/login`
+- `POST /api/web/auth/change-password`
 
 ### 6.2 活动
 
@@ -271,13 +239,6 @@
 ### 6.4 管理员特权
 
 - `POST /api/web/staff/activities/{activity_id}/bulk-checkout`
-- `GET /api/web/staff/unbind-reviews`
-- `POST /api/web/staff/unbind-reviews/{review_id}/approve`
-- `POST /api/web/staff/unbind-reviews/{review_id}/reject`
-
-### 6.5 解绑申请
-
-- `POST /api/web/unbind-reviews`
 
 ## 7. 数据模型与迁移设计
 
@@ -306,7 +267,7 @@
 - `club`
 - `role_code`
 - `permissions_json`
-- `registered`
+- `registered`（历史字段，Web-only 阶段不再作为强语义使用）
 
 逐步废弃：
 
@@ -317,8 +278,9 @@
 
 建议新增：
 
-- `identity_source`
-- `bind_status`
+- `password_hash`（bcrypt hash）
+- `must_change_password`（首次登录强制改密标记）
+- `password_updated_at`
 - `last_login_at`
 
 #### `wx_checkin_event`
@@ -333,57 +295,13 @@
 - `operator_user_id`
 - `batch_id`
 
-### 7.3 新增表
+### 7.3 历史遗留表（当前 Web-only 不再依赖）
 
-#### `web_passkey_credential`
+说明：
 
-- `id`
-- `user_id`
-- `credential_id`
-- `public_key_cose`
-- `sign_count`
-- `transports_json`
-- `aaguid`
-- `backup_eligible`
-- `backup_state`
-- `created_at`
-- `last_used_at`
-- `revoked_at`
-
-#### `web_browser_binding`
-
-- `binding_id`
-- `user_id`
-- `binding_fingerprint_hash`
-- `user_agent_hash`
-- `status`
-- `created_at`
-- `last_seen_at`
-- `revoked_at`
-- `revoked_reason`
-- `approved_unbind_review_id`
-
-#### `web_unbind_review`
-
-- `review_id`
-- `user_id`
-- `current_binding_id`
-- `requested_new_binding_hint`
-- `status`
-- `submitted_at`
-- `reviewed_by`
-- `reviewed_at`
-- `review_comment`
-
-#### `web_admin_audit_log`
-
-- `id`
-- `operator_user_id`
-- `action_type`
-- `target_type`
-- `target_id`
-- `payload_json`
-- `created_at`
+- 本仓库早期方案曾引入“浏览器唯一绑定 + 解绑审核”，相关表（例如 `web_browser_binding`、`web_unbind_review`、`web_passkey_*`）仍可能保留在迁移脚本中；
+- 当前正式基线已取消浏览器绑定相关防代签逻辑，以上表不再作为业务流程的必需依赖；
+- 是否清理这些历史表应单独作为数据库治理任务推进，避免在功能整改中做破坏性变更。
 
 ## 8. 动态码算法与校验设计
 
@@ -448,24 +366,24 @@
 
 ### 10.1 认证安全
 
-- WebAuthn / Passkey 仅允许在 HTTPS 下工作
-- 登录时要求用户验证通过
+- 当前部署基线为 **HTTP + 内网 IP + 端口号**，因此不依赖 Passkey/WebAuthn。
+- 密码只存 bcrypt hash，不存明文；默认密码固定为 `123`。
+- 首次登录后强制改密，未改密前后端统一拦截业务接口（`password_change_required`）。
 - 登录后签发短期 `session_token`
 
 ### 10.2 代签风险边界
 
 本方案能显著提高代签成本，但不能绝对消除：
 
-- Passkey 能防止“只知道学号姓名就冒名登录”
-- 但登录成功后的已解锁手机仍可能被他人接手操作
-- 由于业务要求“提交签到/签退时不再二次 Passkey 验证”，这一风险需通过较短会话 TTL、日志审计和异常行为监控来降低
+- 默认密码固定为 `123`，若未完成强制改密会放大冒用风险，因此必须依赖：
+  - 后端强制 `must_change_password`
+  - 未改密统一返回 `password_change_required`
+- 登录成功后的已解锁手机仍可能被他人接手操作；由于业务要求“提交签到/签退时不再二次验证”，需通过较短会话 TTL、日志审计与异常行为监控来降低风险
 
 ### 10.3 管理员高风险操作
 
 以下动作必须写管理员审计：
 
-- 审批解绑
-- 拒绝解绑
 - 一键全部签退
 
 ## 11. 测试策略
@@ -474,8 +392,7 @@
 
 新增：
 
-- 绑定流程
-- Passkey 注册与登录流程
+- 账号密码登录与首次强制改密流程
 - 活动可见性
 - 6 位码输入页状态与错误反馈
 - 管理员展示页前台恢复
@@ -492,10 +409,8 @@
 
 新增：
 
-- 实名校验
-- 浏览器唯一绑定
-- 管理员审核解绑
-- Passkey 注册与登录
+- 学号存在校验（只读 `suda_union`）
+- 账号密码登录与强制改密拦截
 - 动态码生成与过期
 - 动态码重复提交防重放
 - 一键全部签退
@@ -521,7 +436,7 @@
 
 - 新建 `web/` 前端
 - 后端新增 `/api/web/**` 接口
-- 实现绑定、Passkey、动态码、批量签退、解绑审核
+- 实现账号密码登录、强制改密、动态码、批量签退
 
 ### Phase 3
 
@@ -574,25 +489,18 @@
 - 敏感异常行为审计
 - 明确管理员排查能力
 
-### 风险 3：Passkey 兼容性差异
+### 风险 3：默认密码与改密漏拦截
 
 对策：
 
-- 重点支持主流手机浏览器
-- 前端做能力探测
-- 对不支持环境给出明确提示，而不是隐式失败
+- 默认密码固定为 `123`，若强制改密与拦截漏做，会放大冒用风险：
+  - 后端必须在会话校验处统一阻断业务接口（`password_change_required`）
+  - 前端路由守卫必须强制跳转改密页
+  - 若后续需要进一步限制“多人共用同一账号”，应单独引入更强认证或设备约束策略，但不作为当前基线要求
 
 ## 15. 参考资料
 
-- MDN Web Authentication API  
-  https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API
-- MDN PublicKeyCredentialCreationOptions  
-  https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions
-- web.dev Discoverable credentials deep dive  
-  https://web.dev/articles/webauthn-discoverable-credentials
 - MDN `inputmode`  
   https://developer.mozilla.org/docs/Web/HTML/Reference/Global_attributes/inputmode
 - MDN Page Visibility API  
   https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
-- Can I Use Passkeys  
-  https://caniuse.com/passkeys

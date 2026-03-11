@@ -11,7 +11,7 @@ import {
 } from "../../features/activities/api";
 import { formatServerTime, resolveCanCheckin, resolveCanCheckout } from "../../features/activities/view-model";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
-import { ApiError, SessionExpiredError } from "../../shared/http/errors";
+import { ApiError, PasswordChangeRequiredError, SessionExpiredError } from "../../shared/http/errors";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
@@ -144,6 +144,10 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
         navigate("/login");
         return;
       }
+      if (error instanceof PasswordChangeRequiredError) {
+        navigate("/change-password");
+        return;
+      }
 
       if (detailRequestVersionRef.current === requestVersion) {
         setPageError(error instanceof Error && error.message ? error.message : "活动信息加载失败");
@@ -191,6 +195,10 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
+        return;
+      }
+      if (error instanceof PasswordChangeRequiredError) {
+        navigate("/change-password");
         return;
       }
 

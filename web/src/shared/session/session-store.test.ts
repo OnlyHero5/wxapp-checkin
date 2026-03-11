@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   clearSession,
-  getBrowserBindingKey,
+  getMustChangePassword,
   getSession,
   getSessionPermissions,
   getSessionRole,
   getSessionUserProfile,
   saveAuthSession,
+  setMustChangePassword,
   setSession
 } from "./session-store";
 
@@ -51,7 +52,8 @@ describe("session-store", () => {
 
   it("persists role, permissions and user profile together with auth session", () => {
     saveAuthSession({
-      permissions: ["activity:manage", "unbind:review"],
+      must_change_password: true,
+      permissions: ["activity:manage"],
       role: "staff",
       session_token: "  session-token  ",
       user_profile: {
@@ -62,20 +64,27 @@ describe("session-store", () => {
 
     expect(getSession()).toBe("session-token");
     expect(getSessionRole()).toBe("staff");
-    expect(getSessionPermissions()).toEqual(["activity:manage", "unbind:review"]);
+    expect(getMustChangePassword()).toBe(true);
+    expect(getSessionPermissions()).toEqual(["activity:manage"]);
     expect(getSessionUserProfile()).toEqual({
       name: "刘洋",
       student_id: "2025000007"
     });
   });
 
-  it("creates and reuses a stable browser binding key", () => {
-    const firstKey = getBrowserBindingKey();
-    const secondKey = getBrowserBindingKey();
+  it("allows updating must_change_password without clearing other session context", () => {
+    saveAuthSession({
+      must_change_password: true,
+      permissions: ["activity:manage"],
+      role: "staff",
+      session_token: "session-token"
+    });
 
-    expect(firstKey).toBeTruthy();
-    expect(secondKey).toBe(firstKey);
-    expect(window.localStorage.getItem("browser_binding_key")).toBe(firstKey);
+    setMustChangePassword(false);
+
+    expect(getMustChangePassword()).toBe(false);
+    expect(getSessionRole()).toBe("staff");
+    expect(getSessionPermissions()).toEqual(["activity:manage"]);
   });
 
   it("degrades safely when localStorage is unavailable", () => {

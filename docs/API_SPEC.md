@@ -12,7 +12,7 @@
 本文件覆盖：
 
 - `/api/web/**` 新接口；
-- Web 身份、Passkey、会话、动态码、签到/签退、解绑审核、一键全部签退；
+- Web 身份（账号密码）、会话、动态码、签到/签退、一键全部签退；
 - 全局错误码、时间字段、鉴权传递与实施前必须锁定的约束。
 
 本文件不覆盖：
@@ -58,7 +58,6 @@
 推荐口径：
 
 - `Authorization: Bearer <session_token>`
-- `X-Browser-Binding-Key: <browser_binding_key>`
 
 兼容口径：
 
@@ -70,7 +69,7 @@
 
 - 当前后端已有 `SessionTokenExtractor`，已支持上述几种入口；
 - 新 Web 前端应优先使用 `Authorization: Bearer`；
-- `X-Browser-Binding-Key` 用于识别“当前是否还是同一浏览器绑定环境”，是 Web-only 认证闭环的一部分。
+- 本项目不再要求浏览器唯一绑定；服务端鉴权只依赖 `session_token`（仍保留“首次登录强制改密”的统一拦截）。
 
 ### 3.4 通用响应
 
@@ -114,21 +113,22 @@
 - 字段名统一为 `*_at` 或 `*_time_ms`；
 - 一切时效判断以后端时间为准。
 
-## 4. Web 身份与 Passkey 接口
+## 4. Web 身份与账号密码接口
 
-### 4.1 `POST /api/web/bind/verify-identity`
+### 4.1 `POST /api/web/auth/login`
 
 用途：
 
-- 首次实名校验；
-- 为后续 Passkey 注册签发一次性 `bind_ticket`。
+- 使用 `student_id + password` 登录；
+- 若首次登录或仍处于强制改密状态，返回 `must_change_password=true`；
+- 并签发业务会话。
 
 请求体：
 
 ```json
 {
-  "student_id": "20234227087",
-  "name": "张三"
+  "student_id": "2025000011",
+  "password": "123"
 }
 ```
 
@@ -137,14 +137,16 @@
 ```json
 {
   "status": "success",
-  "message": "实名校验通过",
-  "bind_ticket": "bind_xxx",
-  "bind_ticket_expire_at": 1760000000000,
-  "role_hint": "normal",
+  "message": "登录成功，请修改密码",
+  "session_token": "sess_xxx",
+  "session_expires_at": 1760003600000,
+  "role": "normal",
+  "permissions": [],
+  "must_change_password": true,
   "user_profile": {
-    "student_id": "20234227087",
-    "name": "张三",
-    "department": "计算机学院",
+    "student_id": "2025000011",
+    "name": "测试用户",
+    "department": "",
     "club": ""
   }
 }
@@ -153,61 +155,22 @@
 失败语义：
 
 - `identity_not_found`：学号不存在；
-- `identity_mismatch`：学号与姓名不匹配；
-- `binding_conflict`：该浏览器已绑定其他账号；
-- `account_bound_elsewhere`：该账号已有其他活跃浏览器绑定且未审核解绑。
+- `invalid_password`：密码错误；
+- `invalid_param`：请求体缺字段（由参数校验触发）。
 
-### 4.2 `POST /api/web/passkey/register/options`
+### 4.2 `POST /api/web/auth/change-password`
 
 用途：
 
-- 生成 Passkey 注册 challenge。
+- 修改密码；
+- 用于首次登录强制改密的唯一放行入口。
 
 请求体：
 
 ```json
 {
-  "bind_ticket": "bind_xxx"
-}
-```
-
-成功响应字段：
-
-- `request_id`
-- `challenge_expires_at`
-- `public_key_options`
-- `rp_id`
-- `rp_name`
-- `user_handle`
-
-说明：
-
-- `public_key_options` 结构遵循浏览器 `navigator.credentials.create()` 所需字段；
-- 后端必须把 `request_id` 与 challenge 绑定保存，供 `register/complete` 校验；
-- `rp_id` 与 `origin` 必须与部署文档一致。
-
-### 4.3 `POST /api/web/passkey/register/complete`
-
-用途：
-
-- 完成 Passkey 注册；
-- 创建浏览器绑定与业务会话。
-
-请求体示例：
-
-```json
-{
-  "request_id": "req_xxx",
-  "bind_ticket": "bind_xxx",
-  "attestation_response": {
-    "id": "...",
-    "raw_id": "...",
-    "type": "public-key",
-    "response": {
-      "client_data_json": "...",
-      "attestation_object": "..."
-    }
-  }
+  "old_password": "123",
+  "new_password": "newStrongPass"
 }
 ```
 
@@ -216,87 +179,16 @@
 ```json
 {
   "status": "success",
-  "message": "注册并登录成功",
-  "session_token": "sess_xxx",
-  "session_expires_at": 1760003600000,
-  "role": "normal",
-  "permissions": [],
-  "registered": true,
-  "user_profile": {
-    "student_id": "20234227087",
-    "name": "张三",
-    "department": "计算机学院",
-    "club": ""
-  }
+  "message": "密码修改成功",
+  "must_change_password": false
 }
 ```
-
-### 4.4 `POST /api/web/passkey/login/options`
-
-用途：
-
-- 生成 Passkey 登录 challenge。
-
-请求体：
-
-```json
-{}
-```
-
-成功响应字段：
-
-- `request_id`
-- `challenge_expires_at`
-- `public_key_options`
-- `rp_id`
-
-说明：
-
-- 优先使用 discoverable credentials；
-- 如后端需要缩小允许凭据集合，可在 `public_key_options.allow_credentials` 中返回。
-
-### 4.5 `POST /api/web/passkey/login/complete`
-
-用途：
-
-- 完成 Passkey 登录；
-- 创建新的业务会话。
-
-请求体示例：
-
-```json
-{
-  "request_id": "req_xxx",
-  "assertion_response": {
-    "id": "...",
-    "raw_id": "...",
-    "type": "public-key",
-    "response": {
-      "client_data_json": "...",
-      "authenticator_data": "...",
-      "signature": "...",
-      "user_handle": "..."
-    }
-  }
-}
-```
-
-成功响应字段：
-
-- `session_token`
-- `session_expires_at`
-- `role`
-- `permissions`
-- `registered`
-- `user_profile`
 
 失败语义：
 
-- `unsupported_browser`
-- `challenge_expired`
-- `passkey_not_registered`
-- `passkey_verification_failed`
-- `binding_revoked`
+- `invalid_password`：旧密码不正确；
+- `invalid_param`：新密码不合法（空、过短等）；
+- `session_expired`：会话失效。
 
 ## 5. 活动与动态码接口
 
@@ -309,6 +201,11 @@
 鉴权：
 
 - 必须带有效会话。
+
+查询参数（可选）：
+
+- `page`：页码，从 1 开始；默认 1。
+- `page_size`：每页条数；默认 50，最大 200。
 
 成功响应示例：
 
@@ -330,6 +227,9 @@
       "checkout_count": 3
     }
   ],
+  "page": 1,
+  "page_size": 50,
+  "has_more": false,
   "server_time_ms": 1760000000000
 }
 ```
@@ -380,6 +280,12 @@
 - `forbidden`
 - `invalid_activity`
 - `outside_activity_time_window`
+- `activity_time_invalid`
+
+补充说明：
+
+- 发码允许窗口：活动开始前 30 分钟 ~ 活动结束后 30 分钟（包含边界）。
+- 活动时间信息异常时返回 `activity_time_invalid`（需要先修复活动时间数据）。
 
 ### 5.4 `POST /api/web/activities/{activity_id}/code-consume`
 
@@ -460,107 +366,40 @@
 - `invalid_activity`
 - `invalid_param`
 
-### 6.2 `POST /api/web/unbind-reviews`
-
-用途：
-
-- 用户发起解绑申请。
-
-请求体：
-
-```json
-{
-  "reason": "更换手机",
-  "requested_new_binding_hint": "iPhone 16"
-}
-```
-
-成功响应字段：
-
-- `review_id`
-- `status`
-- `submitted_at`
-
-### 6.3 `GET /api/web/staff/unbind-reviews`
-
-用途：
-
-- `staff` / `review_admin` 查询解绑审核列表。
-
-查询参数建议：
-
-- `status=pending|approved|rejected`
-- `page`
-- `page_size`
-
-### 6.4 `POST /api/web/staff/unbind-reviews/{review_id}/approve`
-
-请求体：
-
-```json
-{
-  "review_comment": "确认已更换设备"
-}
-```
-
-成功后必须同时发生：
-
-- 原浏览器绑定失效；
-- 原会话失效；
-- 审核日志落库。
-
-### 6.5 `POST /api/web/staff/unbind-reviews/{review_id}/reject`
-
-请求体：
-
-```json
-{
-  "review_comment": "信息不足，驳回"
-}
-```
-
 ## 7. 错误码建议表
 
 | error_code | 含义 | 典型接口 |
 | --- | --- | --- |
 | `session_expired` | 会话失效 | 全部鉴权接口 |
-| `identity_not_found` | 学号不存在 | `bind/verify-identity` |
-| `identity_mismatch` | 学号与姓名不匹配 | `bind/verify-identity` |
-| `binding_conflict` | 当前浏览器已绑定其他账号 | 绑定 / 登录 |
-| `account_bound_elsewhere` | 该账号已有活跃绑定 | 绑定 |
-| `unsupported_browser` | 当前浏览器不满足 Passkey 基线 | 登录 / 注册 |
-| `challenge_expired` | Passkey challenge 过期 | register / login complete |
-| `passkey_verification_failed` | Passkey 验证失败 | register / login complete |
+| `identity_not_found` | 学号不存在 | `auth/login` |
+| `invalid_password` | 密码错误 | `auth/login` / `auth/change-password` |
+| `password_change_required` | 必须先修改密码 | 全部业务接口 |
+| `password_too_short` | 新密码过短 | `auth/change-password` |
+| `password_too_long` | 新密码过长 | `auth/change-password` |
 | `invalid_activity` | 活动不存在或不可见 | 活动 / 动态码 |
 | `invalid_code` | 动态码错误 | `code-consume` |
 | `expired` | 动态码过期 | `code-consume` |
 | `duplicate` | 同一时段重复提交 | `code-consume` |
 | `outside_activity_time_window` | 不在发码允许时间窗 | `code-session` |
+| `activity_time_invalid` | 活动时间信息异常 | `code-session` |
 
 ## 8. 实施前必须锁定的约束
 
 以下项目必须在编码前由后端与前端共同收口，否则接口虽然能写，线上行为仍会漂：
 
-### 8.1 Passkey 部署口径
+### 8.1 密码策略口径
 
-- `RP ID`
-- 允许的 `Origin`
-- 本地开发域名
-- 正式环境 HTTPS 域名
+- 默认密码与强制改密的触发条件（本项目固定为默认 `123` + `must_change_password` 机制）。
+- 新密码最小长度与合法字符集（建议至少 6 位；避免全空格）。
+- 改密后是否要刷新会话 token（本项目以“保留会话 + 更新会话上下文”为主）。
 
-### 8.2 浏览器绑定口径
-
-- 服务端是否签发稳定 `binding_id`
-- `binding_fingerprint_hash` 的输入因子
-- 指纹是否只作为风控辅助，而不是唯一真相源
-
-### 8.3 会话策略
+### 8.2 会话策略
 
 - `session_token` TTL
-- 审核解绑后的旧会话失效策略
+- 是否允许同一账号同时存在多个会话（本项目允许多端同时登录）
 - 是否提供显式登出接口
 
-### 8.4 动态码风控
+### 8.3 动态码风控
 
 - 错误码尝试限流阈值
 - 限流维度
@@ -573,4 +412,4 @@
 - 系统结构与数据模型以 `docs/WEB_DESIGN.md` 为准；
 - 浏览器支持边界以 `docs/WEB_COMPATIBILITY.md` 为准；
 - 审查与迁移边界见 `docs/WEB_MIGRATION_REVIEW.md`；
-- 任务拆解见 `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`。
+- 任务拆解见 `docs/plans/2026-03-10-http-password-auth-implementation-plan.md`。

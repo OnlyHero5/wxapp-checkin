@@ -42,7 +42,10 @@ export type ActivityDetail = ActivitySummary & {
  */
 export type ActivityListResponse = {
   activities: ActivitySummary[];
+  has_more?: boolean;
   message?: string;
+  page?: number;
+  page_size?: number;
   server_time_ms?: number;
   status?: string;
 };
@@ -97,8 +100,16 @@ export function buildActivityManagePath(activityId: string) {
 }
 
 // 拉取当前用户可见活动列表。
-export function getActivities() {
-  return requestJson<ActivityListResponse>("/activities");
+export function getActivities(input?: { page?: number; page_size?: number }) {
+  const search = new URLSearchParams();
+  if (input?.page) {
+    search.set("page", `${input.page}`);
+  }
+  if (input?.page_size) {
+    search.set("page_size", `${input.page_size}`);
+  }
+  const suffix = search.toString();
+  return requestJson<ActivityListResponse>(`/activities${suffix ? `?${suffix}` : ""}`);
 }
 
 // 拉取单个活动详情。

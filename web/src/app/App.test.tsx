@@ -18,7 +18,6 @@ const activitiesApiMocks = vi.hoisted(() => ({
 }));
 
 const staffApiMocks = vi.hoisted(() => ({
-  approveUnbindReview: vi.fn(),
   bulkCheckout: vi.fn(),
   getCodeSession: vi.fn().mockResolvedValue({
     action_type: "checkin",
@@ -31,20 +30,6 @@ const staffApiMocks = vi.hoisted(() => ({
     server_time_ms: 1760000003300,
     status: "success"
   }),
-  getUnbindReviews: vi.fn().mockResolvedValue({
-    items: [],
-    status: "success"
-  }),
-  rejectUnbindReview: vi.fn()
-}));
-
-vi.mock("../shared/device/browser-capability", () => ({
-  detectBrowserCapability: () => ({
-    hasCredentialManager: true,
-    hasPasskeySupport: true,
-    hasVisibilityLifecycle: true,
-    hasWakeLock: false
-  })
 }));
 
 vi.mock("../features/activities/api", async (importOriginal) => {
@@ -57,11 +42,8 @@ vi.mock("../features/activities/api", async (importOriginal) => {
 });
 
 vi.mock("../features/staff/api", () => ({
-  approveUnbindReview: staffApiMocks.approveUnbindReview,
   bulkCheckout: staffApiMocks.bulkCheckout,
-  getCodeSession: staffApiMocks.getCodeSession,
-  getUnbindReviews: staffApiMocks.getUnbindReviews,
-  rejectUnbindReview: staffApiMocks.rejectUnbindReview
+  getCodeSession: staffApiMocks.getCodeSession
 }));
 
 function renderPath(path: string) {
@@ -89,10 +71,14 @@ describe("AppRoutes", () => {
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
   });
 
-  it("renders the bind shell at /bind", () => {
-    renderPath("/bind");
+  it("renders the change password shell at /change-password when required", () => {
+    saveAuthSession({
+      must_change_password: true,
+      session_token: "sess_change_123"
+    });
+    renderPath("/change-password");
 
-    expect(screen.getByRole("heading", { name: "身份绑定" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "修改密码" })).toBeInTheDocument();
   });
 
   it("renders the activities shell at /activities", async () => {
@@ -102,10 +88,27 @@ describe("AppRoutes", () => {
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
   });
 
+  it("redirects /activities to change-password when must_change_password is true", async () => {
+    saveAuthSession({
+      must_change_password: true,
+      session_token: "sess_change_123"
+    });
+    renderPath("/activities");
+
+    expect(await screen.findByRole("heading", { name: "修改密码" })).toBeInTheDocument();
+  });
+
   it("redirects /activities to login when session is missing", () => {
     renderPath("/activities");
 
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
+  });
+
+  it("redirects /change-password to activities when must_change_password is false", async () => {
+    setSession("sess_123");
+    renderPath("/change-password");
+
+    expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
   });
 
   it("redirects /login to activities when session exists", async () => {
@@ -113,6 +116,16 @@ describe("AppRoutes", () => {
     renderPath("/login");
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
+  });
+
+  it("redirects /login to change-password when must_change_password is true", async () => {
+    saveAuthSession({
+      must_change_password: true,
+      session_token: "sess_change_123"
+    });
+    renderPath("/login");
+
+    expect(await screen.findByRole("heading", { name: "修改密码" })).toBeInTheDocument();
   });
 
   it("redirects non-staff sessions away from the staff manage route", async () => {
@@ -131,27 +144,5 @@ describe("AppRoutes", () => {
     renderPath("/staff/activities/act_101/manage");
 
     expect(await screen.findByRole("heading", { name: "活动管理" })).toBeInTheDocument();
-  });
-
-  it("allows review-capable sessions to access the unbind review route", async () => {
-    saveAuthSession({
-      permissions: ["unbind:review"],
-      role: "staff",
-      session_token: "sess_review_123"
-    });
-    renderPath("/staff/unbind-reviews");
-
-    expect(await screen.findByRole("heading", { name: "解绑审核" })).toBeInTheDocument();
-  });
-
-  it("allows explicit review_admin sessions to access the unbind review route", async () => {
-    saveAuthSession({
-      permissions: [],
-      role: "review_admin",
-      session_token: "sess_review_admin_123"
-    });
-    renderPath("/staff/unbind-reviews");
-
-    expect(await screen.findByRole("heading", { name: "解绑审核" })).toBeInTheDocument();
   });
 });

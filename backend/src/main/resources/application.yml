@@ -67,12 +67,6 @@ app:
     replay-guard-retention-seconds: ${QR_REPLAY_GUARD_RETENTION_SECONDS:0}
     cleanup-enabled: ${QR_CLEANUP_ENABLED:true}
     cleanup-interval-ms: ${QR_CLEANUP_INTERVAL_MS:300000}
-  web-auth:
-    bind-ticket-ttl-seconds: ${WEBAUTHN_BIND_TICKET_TTL_SECONDS:600}
-    challenge-ttl-seconds: ${WEBAUTHN_CHALLENGE_TTL_SECONDS:300}
-    rp-id: ${WEBAUTHN_RP_ID:}
-    rp-name: ${WEBAUTHN_RP_NAME:wxapp-checkin}
-    allowed-origin: ${WEBAUTHN_ALLOWED_ORIGIN:}
   wechat:
     enabled: ${WECHAT_API_ENABLED:false}
     appid: ${WECHAT_APPID:}

@@ -2,7 +2,7 @@
 
 文档版本: v1.0
 状态: 实施执行稿
-更新日期: 2026-03-09
+更新日期: 2026-03-10
 项目: `wxapp-checkin`
 定位: 本文档把目标态 Web 方案落到当前仓库的目录、类、表和测试入口，用于后续逐阶段编码。
 
@@ -15,7 +15,7 @@
 - 正式接口基线：`docs/API_SPEC.md`
 - 补充设计：`docs/WEB_DESIGN.md`
 - 审查结论：`docs/WEB_MIGRATION_REVIEW.md`
-- 现有实施计划：`docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+- 现有实施计划：`docs/plans/2026-03-10-http-password-auth-implementation-plan.md`
 
 ### 1.2 适用范围
 
@@ -42,19 +42,17 @@ web/
       styles/base.css
     pages/
       login/LoginPage.tsx
-      bind/BindPage.tsx
+      change-password/ChangePasswordPage.tsx
       activities/ActivitiesPage.tsx
       activity-detail/ActivityDetailPage.tsx
       checkin/CheckinPage.tsx
       checkout/CheckoutPage.tsx
       staff-manage/StaffManagePage.tsx
-      unbind-reviews/UnbindReviewPage.tsx
     features/
       auth/
       activities/
       attendance/
       staff/
-      review/
     shared/
       http/
       session/
@@ -62,11 +60,12 @@ web/
       ui/
     test/
       setup.ts
-  tests/
-    auth-flow.spec.ts
-    checkin-flow.spec.ts
-    staff-flow.spec.ts
 ```
+
+说明：
+
+- 当前仓库已落地的自动化以 Vitest 单测为主（`web/src/**.test.ts(x)`），并已纳入 `npm test` 与 `npm run build` 的验证闭环。
+- `web/tests/*` 级别的 E2E（Playwright）属于建议增强项，当前仓库未默认包含；如需可按本文 10.1 节建议补齐。
 
 ### 2.2 后端目标结构
 
@@ -80,28 +79,23 @@ backend/src/main/java/com/wxcheckin/backend/
     WebAttendanceController.java
     WebStaffController.java
   api/dto/
-    WebBindVerifyRequest.java
-    WebPasskeyRegisterOptionsResponse.java
-    WebPasskeyRegisterCompleteRequest.java
-    WebPasskeyLoginOptionsResponse.java
-    WebPasskeyLoginCompleteRequest.java
+    WebAuthLoginRequest.java
+    WebAuthLoginResponse.java
+    WebAuthChangePasswordRequest.java
+    WebAuthChangePasswordResponse.java
     WebCodeConsumeRequest.java
+    WebBulkCheckoutRequest.java
+    WebBulkCheckoutResponse.java
+    WebCodeSessionResponse.java
   application/service/
-    WebIdentityService.java
-    PasskeyChallengeService.java
+    WebPasswordAuthService.java
     DynamicCodeService.java
     BulkCheckoutService.java
-    UnbindReviewService.java
-  infrastructure/persistence/entity/
-    WebPasskeyCredentialEntity.java
-    WebBrowserBindingEntity.java
-    WebUnbindReviewEntity.java
-    WebAdminAuditLogEntity.java
-  infrastructure/persistence/repository/
-    WebPasskeyCredentialRepository.java
-    WebBrowserBindingRepository.java
-    WebUnbindReviewRepository.java
-    WebAdminAuditLogRepository.java
+
+说明：
+
+- 早期方案曾引入“浏览器唯一绑定 + 解绑审核”，对应的 `web_browser_binding`、`web_unbind_review` 等表仍可能保留在迁移脚本中；
+- 当前正式基线已取消浏览器绑定相关防代签逻辑，上述表不再作为业务流程必需依赖。
 ```
 
 ## 3. 前端详细设计
@@ -110,14 +104,13 @@ backend/src/main/java/com/wxcheckin/backend/
 
 | 路由 | 角色 | 目标组件 | 主要职责 |
 | --- | --- | --- | --- |
-| `/login` | 全部 | `pages/login/LoginPage.tsx` | 登录入口、能力检测、Passkey 登录 |
-| `/bind` | 未绑定用户 | `pages/bind/BindPage.tsx` | 实名校验、Passkey 首绑 |
+| `/login` | 全部 | `pages/login/LoginPage.tsx` | 账号密码登录入口 |
+| `/change-password` | 已登录用户 | `pages/change-password/ChangePasswordPage.tsx` | 首次强制改密入口 |
 | `/activities` | 已登录用户 | `pages/activities/ActivitiesPage.tsx` | 活动列表与角色分流 |
 | `/activities/:id` | 已登录用户 | `pages/activity-detail/ActivityDetailPage.tsx` | 活动详情与入口跳转 |
 | `/activities/:id/checkin` | `normal` | `pages/checkin/CheckinPage.tsx` | 输入签到码 |
 | `/activities/:id/checkout` | `normal` | `pages/checkout/CheckoutPage.tsx` | 输入签退码 |
 | `/staff/activities/:id/manage` | `staff` | `pages/staff-manage/StaffManagePage.tsx` | 展示动态码、统计、一键全部签退 |
-| `/staff/unbind-reviews` | `staff` / `review_admin` | `pages/unbind-reviews/UnbindReviewPage.tsx` | 解绑审核列表与审批 |
 
 ## 3.2 App 壳层与共享层
 
@@ -136,7 +129,7 @@ backend/src/main/java/com/wxcheckin/backend/
 - 定义路由表。
 - 在页面级统一处理：
   - 未登录跳转 `/login`
-  - 未绑定跳转 `/bind`
+  - 首次强制改密跳转 `/change-password`
   - 非管理员访问管理页跳转 `/activities`
 
 ### 3.2.3 `src/shared/http/client.ts`
@@ -158,17 +151,12 @@ backend/src/main/java/com/wxcheckin/backend/
 - 提供 `getSession() / setSession() / clearSession()`。
 - 允许登录成功后持久化会话，失效时统一清除。
 
-### 3.2.5 `src/shared/device/browser-capability.ts`
+### 3.2.5 能力探测说明（已简化）
 
 职责：
 
-- 检测 Passkey 基线能力：
-  - `window.PublicKeyCredential`
-  - `navigator.credentials`
-- 检测增强能力：
-  - `document.visibilityState`
-  - `navigator.wakeLock`
-- 输出统一能力对象，供登录页和管理员页使用。
+- 账号密码方案不再需要 Passkey/WebAuthn 能力探测，因此已删除 `src/shared/device/browser-capability.ts` 与相关测试。
+- 若后续需要做“增强体验”的能力判断（例如 Wake Lock），建议按需在具体页面内做轻量探测，不得作为登录准入门槛。
 
 ### 3.2.6 `src/shared/device/page-lifecycle.ts`
 
@@ -184,12 +172,11 @@ backend/src/main/java/com/wxcheckin/backend/
 - 提供统一的手机宽容器。
 - 处理安全区、底部留白与标题区域。
 
-### 3.2.8 `src/shared/ui/UnsupportedBrowser.tsx`
+### 3.2.8 不支持提示页（已移除）
 
-职责：
+说明：
 
-- 对不满足 Passkey 基线的浏览器给出明确说明。
-- 不提供密码降级入口。
+- 账号密码登录不再依赖 Passkey，因此已移除“Passkey 不支持”的专用提示页组件（历史 `UnsupportedBrowser` 已删除）。
 
 ## 3.3 `auth` 模块设计
 
@@ -197,33 +184,33 @@ backend/src/main/java/com/wxcheckin/backend/
 
 | 文件 | 职责 |
 | --- | --- |
-| `features/auth/api.ts` | 绑定、注册 challenge、登录 challenge、complete 请求 |
-| `features/auth/webauthn.ts` | 调用 `navigator.credentials.create/get`，处理浏览器结构转换 |
-| `features/auth/components/IdentityBindForm.tsx` | 学号姓名表单 |
-| `features/auth/components/PasskeyLoginPanel.tsx` | 登录按钮、登录中态、失败态 |
+| `features/auth/api.ts` | 账号密码登录与改密接口封装 |
+| `features/auth/components/AccountLoginForm.tsx` | 学号 + 密码登录表单 |
+| `features/auth/components/ChangePasswordForm.tsx` | 旧密码 + 新密码改密表单 |
 
-### 3.3.2 首绑流程
+### 3.3.2 首次登录与强制改密流程
 
-1. `BindPage` 渲染 `IdentityBindForm`。
-2. 用户提交 `student_id + name`。
-3. `auth/api.ts` 调用 `POST /api/web/bind/verify-identity`。
-4. 成功后拿到 `bind_ticket`。
-5. `webauthn.ts` 调用 `register/options` -> `navigator.credentials.create()` -> `register/complete`。
-6. 返回 `session_token` 后写入 `session-store` 并跳转 `/activities`。
+1. `LoginPage` 渲染 `AccountLoginForm`。
+2. 用户提交 `student_id + password`（初始密码默认为 `123`）。
+3. `auth/api.ts` 调用 `POST /api/web/auth/login`。
+4. 登录成功写入 `session-store`：
+   - `session_token` / `role` / `permissions` / `user_profile`
+   - `must_change_password`
+5. 若 `must_change_password=true`，路由跳转 `/change-password`。
+6. `ChangePasswordPage` 调用 `POST /api/web/auth/change-password` 完成改密。
+7. 改密成功后更新本地会话上下文并进入 `/activities`。
 
 ### 3.3.3 后续登录流程
 
-1. `LoginPage` 启动时先检测浏览器能力。
-2. 支持 Passkey 时展示 `PasskeyLoginPanel`。
-3. 点击登录后调用 `login/options`。
-4. `webauthn.ts` 调用 `navigator.credentials.get()`。
-5. `login/complete` 成功后写入会话并进入 `/activities`。
+1. `LoginPage` 展示账号密码表单。
+2. 登录成功后若不需要改密，直接进入 `/activities`。
 
 ### 3.3.4 异常策略
 
-- `unsupported_browser`：显示不支持页。
-- `challenge_expired`：提示稍后重试并重新拉取 challenge。
-- `binding_conflict` / `account_bound_elsewhere`：提示联系管理员或走解绑流程。
+- `invalid_password`：提示“密码错误”。
+- `identity_not_found`：提示“学号不存在，请确认后重试”。
+- `password_change_required`：统一跳转 `/change-password`。
+- `password_too_short` / `password_too_long`：提示新密码长度不符合要求（沿用后端 message）。
 - `session_expired`：统一清除本地会话。
 
 ## 3.4 `activities` 与 `attendance` 模块设计
@@ -274,7 +261,7 @@ backend/src/main/java/com/wxcheckin/backend/
 2. 重新拉取活动详情；
 3. 清空本地倒计时偏移并重新以服务端时间为准。
 
-## 3.5 `staff` 与 `review` 模块设计
+## 3.5 `staff` 模块设计
 
 ### 3.5.1 动态码管理页
 
@@ -290,28 +277,16 @@ backend/src/main/java/com/wxcheckin/backend/
 - 调用批量签退接口。
 - 展示影响人数与结果。
 
-### 3.5.2 解绑审核页
-
-`features/review/components/UnbindReviewList.tsx` 负责：
-
-- 按 `pending / approved / rejected` 筛选与展示。
-- 审核通过或拒绝后刷新列表。
-
-`UnbindReviewPage` 负责：
-
-- 承载列表页。
-- 提供审批备注输入与结果反馈。
-
 ## 4. 后端详细设计
 
 ## 4.1 控制器设计
 
 | 目标控制器 | 对应接口 | 说明 |
 | --- | --- | --- |
-| `WebAuthController` | `/api/web/bind/**`、`/api/web/passkey/**` | Web 绑定与登录入口 |
+| `WebAuthController` | `/api/web/auth/**` | 账号密码登录与强制改密入口 |
 | `WebActivityController` | `/api/web/activities` | 活动列表和详情 |
 | `WebAttendanceController` | `/api/web/activities/{id}/code-session`、`/code-consume` | 发码与验码 |
-| `WebStaffController` | `/api/web/staff/**`、`/api/web/unbind-reviews` | 批量签退、解绑审核 |
+| `WebStaffController` | `/api/web/staff/**` | 批量签退 |
 
 当前历史控制器保留到最终删旧阶段：
 
@@ -322,35 +297,21 @@ backend/src/main/java/com/wxcheckin/backend/
 
 ## 4.2 服务设计
 
-### 4.2.1 `WebIdentityService`
+### 4.2.1 `WebPasswordAuthService`
 
 职责：
 
-- 校验 `student_id + name`。
-- 校验账户是否已有活跃绑定。
-- 校验当前浏览器是否已绑定其他账号。
-- 生成 `bind_ticket`。
-- 保存首绑完成后的身份、绑定与登录信息。
+- 校验 `student_id + password`。
+- 在本地库缺少用户记录时，只读查询 `suda_union` 确认学号存在并自动建档。
+- 登录成功后签发会话，并返回 `must_change_password`。
+- 提供改密能力：校验旧密码、保存新密码 hash，并解除强制改密标记。
 
 依赖：
 
 - `LegacyUserLookupService`
 - `WxUserAuthExtRepository`
-- `WebBrowserBindingRepository`
-- `WebPasskeyCredentialRepository`
+- `WxSessionRepository`
 - `SessionService`
-
-### 4.2.2 `PasskeyChallengeService`
-
-职责：
-
-- 生成和缓存注册/登录 challenge。
-- 绑定 `request_id` 与 challenge 生命周期。
-- 校验 `register/complete`、`login/complete` 回调。
-
-说明：
-
-- 编码时建议把 challenge 缓存与验证逻辑封在单独服务中，避免散落在控制器。
 
 ### 4.2.3 `DynamicCodeService`
 
@@ -388,16 +349,7 @@ backend/src/main/java/com/wxcheckin/backend/
 
 - 查询某活动下“已签到未签退”人员。
 - 统一以管理员点击时的服务端时间做批量签退。
-- 写事件、状态、计数、管理员审计和 outbox。
-
-### 4.2.6 `UnbindReviewService`
-
-职责：
-
-- 提交解绑申请。
-- 查询待审 / 已审列表。
-- 审批通过或拒绝。
-- 审批通过时失效旧绑定与旧会话。
+- 写事件、状态、计数与 outbox，并通过批次号为后续审计留痕。
 
 ## 4.3 现有服务修改点
 
@@ -408,7 +360,7 @@ backend/src/main/java/com/wxcheckin/backend/
 | `LegacyUserLookupService` | 增加实名校验、角色判定辅助查询 |
 | `QrSessionService` | 最终迁移为动态码服务的历史兼容层，后续删除 |
 | `OutboxRelayService` | 兼容批量签退与新事件类型 |
-| `RecordQueryService` | 兼容解绑审核、批量动作查询或统计展示 |
+| `RecordQueryService` | 兼容批量动作查询或统计展示 |
 
 ## 5. 数据模型设计
 
@@ -441,9 +393,10 @@ backend/src/main/java/com/wxcheckin/backend/
 
 建议新增字段：
 
-- `identity_source`
-- `bind_status`
-- `last_login_at`
+- `password_hash`
+- `must_change_password`
+- `password_updated_at`
+- （可选）`last_login_at`
 
 建议逐步废弃字段：
 
@@ -468,101 +421,33 @@ backend/src/main/java/com/wxcheckin/backend/
 
 - `user_id + activity_id + action_type + slot`
 
-## 5.3 新增表设计
+## 5.3 历史遗留表（当前 Web-only 不再依赖）
 
-### 5.3.1 `web_passkey_credential`
+说明：
 
-| 字段 | 说明 |
-| --- | --- |
-| `id` | 主键 |
-| `user_id` | 关联 `wx_user_auth_ext` |
-| `credential_id` | WebAuthn 凭据标识，唯一 |
-| `public_key_cose` | 公钥 |
-| `sign_count` | 计数器 |
-| `transports_json` | 传输方式 |
-| `aaguid` | 设备类型标识 |
-| `backup_eligible` | 是否支持备份 |
-| `backup_state` | 备份状态 |
-| `created_at` | 创建时间 |
-| `last_used_at` | 最近使用时间 |
-| `revoked_at` | 撤销时间 |
-
-索引建议：
-
-- `uk_web_passkey_credential_id`
-- `idx_web_passkey_user_id`
-
-### 5.3.2 `web_browser_binding`
-
-| 字段 | 说明 |
-| --- | --- |
-| `binding_id` | 主键 |
-| `user_id` | 绑定用户 |
-| `binding_fingerprint_hash` | 浏览器绑定辅助指纹 |
-| `user_agent_hash` | 浏览器环境辅助指纹 |
-| `status` | `active / revoked / pending_review` |
-| `created_at` | 创建时间 |
-| `last_seen_at` | 最近访问时间 |
-| `revoked_at` | 失效时间 |
-| `revoked_reason` | 失效原因 |
-| `approved_unbind_review_id` | 审批来源 |
-
-唯一约束建议：
-
-- 一个用户仅允许一个活跃绑定。
-- 一个浏览器辅助指纹仅允许一个活跃绑定。
-
-### 5.3.3 `web_unbind_review`
-
-| 字段 | 说明 |
-| --- | --- |
-| `review_id` | 主键 |
-| `user_id` | 申请用户 |
-| `current_binding_id` | 当前绑定 |
-| `requested_new_binding_hint` | 新设备提示 |
-| `status` | `pending / approved / rejected` |
-| `submitted_at` | 提交时间 |
-| `reviewed_by` | 审核人 |
-| `reviewed_at` | 审核时间 |
-| `review_comment` | 审核意见 |
-
-### 5.3.4 `web_admin_audit_log`
-
-| 字段 | 说明 |
-| --- | --- |
-| `id` | 主键 |
-| `operator_user_id` | 操作人 |
-| `action_type` | 动作类型 |
-| `target_type` | 目标对象类型 |
-| `target_id` | 目标对象标识 |
-| `payload_json` | 操作上下文 |
-| `created_at` | 创建时间 |
+- 早期方案曾引入“浏览器唯一绑定 + 解绑审核”，对应的 `web_browser_binding`、`web_unbind_review`、`web_passkey_*` 等表仍可能保留在迁移脚本中；
+- 当前正式基线已取消浏览器绑定相关防代签逻辑，上述表不再作为业务流程必需依赖；
+- 是否清理这些历史表应单独作为数据库治理任务推进，避免在功能整改中做破坏性变更。
 
 ## 6. 核心流程详细时序
 
-## 6.1 首绑时序
+## 6.1 首次登录与强制改密时序
 
-1. 前端提交实名信息。
-2. `WebAuthController` 调用 `WebIdentityService.verifyIdentity()`。
-3. `LegacyUserLookupService` 只读查询实名与角色。
-4. `WebIdentityService` 校验绑定冲突并签发 `bind_ticket`。
-5. 前端调用 `register/options`。
-6. `PasskeyChallengeService` 保存 challenge。
-7. 浏览器返回 attestation。
-8. `register/complete` 成功后持久化：
-   - `wx_user_auth_ext`
-   - `web_browser_binding`
-   - `web_passkey_credential`
+1. 前端提交 `student_id + password`（默认 `123`）。
+2. `WebAuthController` 调用 `WebPasswordAuthService.login()`。
+3. `LegacyUserLookupService` 只读查询 `suda_union` 校验学号存在，并完成角色判定。
+4. `WebPasswordAuthService` 完成密码校验、刷新角色权限快照并签发 `session_token`，返回 `must_change_password=true`。
+5. 前端强制跳转 `/change-password` 并提交 `old_password + new_password`。
+6. `WebAuthController` 调用 `WebPasswordAuthService.changePassword()`，更新密码 hash 并解除强制改密标记。
+7. 关键落库对象：
+   - `wx_user_auth_ext`（密码 hash、强制改密标记、角色快照等）
    - `wx_session`
 
 ## 6.2 登录时序
 
-1. 前端请求 `login/options`。
-2. `PasskeyChallengeService` 生成登录 challenge。
-3. 浏览器完成 `navigator.credentials.get()`。
-4. 后端验证 assertion。
-5. 校验绑定仍有效。
-6. `SessionService` 签发新会话并回写 `last_login_at`。
+1. 前端提交 `student_id + password`。
+2. 后端校验密码后签发新会话。
+3. `SessionService` 签发新会话并回写 `last_login_at`。
 
 ## 6.3 动态码展示时序
 
@@ -595,37 +480,11 @@ backend/src/main/java/com/wxcheckin/backend/
 2. `BulkCheckoutService` 查询“已签到未签退”列表。
 3. 批量更新状态。
 4. 批量写事件与 outbox。
-5. 写 `web_admin_audit_log`。
-6. 返回影响人数、批次号、时间。
-
-## 6.6 解绑审核时序
-
-1. 用户提交解绑申请。
-2. `UnbindReviewService` 写入 `web_unbind_review`。
-3. 管理员审批通过。
-4. 服务层失效：
-   - `web_browser_binding`
-   - `wx_session`
-5. 写 `web_admin_audit_log`。
+5. 返回影响人数、批次号、时间。
 
 ## 7. 状态机与算法设计
 
-## 7.1 浏览器绑定状态机
-
-建议状态：
-
-- `active`
-- `pending_review`
-- `revoked`
-
-状态变化：
-
-- 首绑成功：`none -> active`
-- 用户申请解绑：`active -> pending_review`
-- 管理员批准：`pending_review -> revoked`
-- 管理员拒绝：`pending_review -> active`
-
-## 7.2 活动签到状态机
+## 7.1 活动签到状态机
 
 - `none -> checked_in`
 - `checked_in -> checked_out`
@@ -635,7 +494,7 @@ backend/src/main/java/com/wxcheckin/backend/
 
 - 一键全部签退只对 `checked_in` 生效。
 
-## 7.3 动态码算法
+## 7.2 动态码算法
 
 输入：
 
@@ -655,13 +514,13 @@ backend/src/main/java/com/wxcheckin/backend/
 3. 摘要取模 `1000000` 并左补零。
 4. 前端不参与生成，只负责展示和提交。
 
-## 7.4 防重放规则
+## 7.3 防重放规则
 
 - 唯一键：`user_id + activity_id + action_type + slot`
 - 当前时间片重复提交返回 `duplicate`
 - 允许校验当前 slot 与上一个 slot 以吸收边界延迟，但对外口径仍保持“10 秒内有效”
 
-## 7.5 统计一致性规则
+## 7.4 统计一致性规则
 
 问题：
 
@@ -676,14 +535,15 @@ backend/src/main/java/com/wxcheckin/backend/
 
 ### 8.1 认证安全
 
-- 仅在 HTTPS 下启用 Passkey。
-- 不支持降级密码登录。
+- 当前部署基线为 **HTTP + 内网 IP + 端口号**，因此不依赖 Passkey/WebAuthn。
+- 密码仅存 bcrypt hash，不存明文；默认密码固定为 `123`。
+- 首次登录后必须强制改密；未改密前后端统一拦截业务接口（`password_change_required`）。
 - 登录成功后签发短期会话。
 
 ### 8.2 会话安全
 
 - 会话失效统一返回 `session_expired`。
-- 解绑审核通过后必须同步失效旧会话。
+- 本项目允许同一账号多端并发会话（多个 `session_token` 并存）。
 - 建议提供显式登出能力，但不作为首阶段阻塞项。
 
 ### 8.3 动态码风控
@@ -691,7 +551,7 @@ backend/src/main/java/com/wxcheckin/backend/
 - 对错误码尝试增加限流。
 - 推荐限流维度：
   - `user_id + activity_id`
-  - `binding_id + activity_id`
+  - `session_token + activity_id`
   - `IP + activity_id`
 - 达到阈值后返回明确业务错误，而非裸异常。
 
@@ -699,17 +559,14 @@ backend/src/main/java/com/wxcheckin/backend/
 
 以下动作必须审计：
 
-- 审批解绑
-- 驳回解绑
 - 一键全部签退
 
 ## 9. 配置设计
 
 建议在 `AppProperties` 新增或整理 Web 配置分组：
 
-- `web.passkey.rp-id`
-- `web.passkey.rp-name`
-- `web.passkey.allowed-origins`
+- `web.auth.password-min-length`
+- `web.auth.password-max-length`
 - `web.session.ttl-seconds`
 - `web.code.slot-ms`
 - `web.code.secret`
@@ -730,13 +587,11 @@ backend/src/main/java/com/wxcheckin/backend/
 
 - `web/src/app/App.test.tsx`
 - `web/src/shared/session/session-store.test.ts`
-- `web/src/shared/device/browser-capability.test.ts`
 - `web/src/pages/login/LoginPage.test.tsx`
-- `web/src/pages/bind/BindPage.test.tsx`
+- `web/src/pages/change-password/ChangePasswordPage.test.tsx`
 - `web/src/pages/activities/ActivitiesPage.test.tsx`
 - `web/src/pages/checkin/CheckinPage.test.tsx`
 - `web/src/pages/staff-manage/StaffManagePage.test.tsx`
-- `web/src/pages/unbind-reviews/UnbindReviewPage.test.tsx`
 
 E2E 建议新增：
 
@@ -749,23 +604,21 @@ E2E 建议新增：
 建议新增：
 
 - `backend/src/test/java/com/wxcheckin/backend/config/FlywayMigrationTest.java`
-- `backend/src/test/java/com/wxcheckin/backend/application/service/WebIdentityServiceTest.java`
+- `backend/src/test/java/com/wxcheckin/backend/application/service/WebPasswordAuthServiceTest.java`
 - `backend/src/test/java/com/wxcheckin/backend/api/WebAuthControllerTest.java`
 - `backend/src/test/java/com/wxcheckin/backend/application/service/DynamicCodeServiceTest.java`
 - `backend/src/test/java/com/wxcheckin/backend/application/service/CheckinConsumeServiceTest.java`
 - `backend/src/test/java/com/wxcheckin/backend/application/service/BulkCheckoutServiceTest.java`
-- `backend/src/test/java/com/wxcheckin/backend/application/service/UnbindReviewServiceTest.java`
 - `backend/src/test/java/com/wxcheckin/backend/application/service/AttendanceCounterConcurrencyTest.java`
 
 ## 11. 实施前必须钉死的开放项
 
 | 主题 | 必须锁定的点 | 默认建议 |
 | --- | --- | --- |
-| Passkey 域配置 | `RP ID`、正式域名、本地域名、HTTPS 方案 | 先采用同域部署口径 |
-| 浏览器绑定 | 绑定主键、指纹因子、是否允许无指纹回退 | 服务端持久化绑定为主，指纹只作辅助 |
-| 会话策略 | TTL、续期策略、解绑后失效策略 | 短 TTL，不自动静默续期 |
-| 动态码风控 | 限流维度、阈值、解锁策略 | `binding_id + activity_id` 为主 |
-| 前后端部署 | 同域还是跨域、CORS 是否启用 | 优先同域，减少 WebAuthn 和 Cookie/头部复杂度 |
+| 密码策略 | 默认密码、强制改密拦截点、新密码最小长度 | 默认 `123` + 统一拦截 `password_change_required` |
+| 会话策略 | TTL、续期策略、是否允许多端并发会话 | 短 TTL，不自动静默续期 |
+| 动态码风控 | 限流维度、阈值、解锁策略 | `user_id + activity_id` 与 `IP + activity_id` 为主 |
+| 前后端部署 | 同域还是跨域、CORS 是否启用 | 优先同域，减少 Cookie/头部复杂度 |
 
 ## 12. 结论
 

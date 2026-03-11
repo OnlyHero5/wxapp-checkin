@@ -87,8 +87,8 @@ public class CheckinConsumeService {
   }
 
   @Transactional
-  public ConsumeCheckinResponse consume(ConsumeCheckinRequest request, String browserBindingKey) {
-    SessionPrincipal principal = sessionService.requirePrincipal(request.sessionToken(), browserBindingKey);
+  public ConsumeCheckinResponse consume(ConsumeCheckinRequest request) {
+    SessionPrincipal principal = sessionService.requireWebPrincipal(request.sessionToken());
     if (principal.role() != RoleType.NORMAL) {
       throw new BusinessException("forbidden", "仅普通用户可扫码签到/签退");
     }

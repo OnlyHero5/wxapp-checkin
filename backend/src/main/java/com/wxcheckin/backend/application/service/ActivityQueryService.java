@@ -1,12 +1,12 @@
 package com.wxcheckin.backend.application.service;
 
-import com.wxcheckin.backend.api.dto.ActivityDetailDto;
-import com.wxcheckin.backend.api.dto.ActivityDetailResponse;
-import com.wxcheckin.backend.api.dto.ActivityListResponse;
 import com.wxcheckin.backend.api.dto.ActivitySummaryDto;
+import com.wxcheckin.backend.api.dto.WebActivityDetailResponse;
+import com.wxcheckin.backend.api.dto.WebActivityListResponse;
 import com.wxcheckin.backend.api.error.BusinessException;
 import com.wxcheckin.backend.application.model.SessionPrincipal;
 import com.wxcheckin.backend.application.support.TimeFormatter;
+import com.wxcheckin.backend.domain.model.ActivityProgressStatus;
 import com.wxcheckin.backend.domain.model.RoleType;
 import com.wxcheckin.backend.domain.model.UserActivityState;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxActivityProjectionEntity;
@@ -20,6 +20,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,46 +33,101 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ActivityQueryService {
 
+  private static final int DEFAULT_PAGE = 1;
+  private static final int DEFAULT_PAGE_SIZE = 50;
+  private static final int MAX_PAGE_SIZE = 200;
+
   private final SessionService sessionService;
   private final WxActivityProjectionRepository activityRepository;
   private final WxUserActivityStatusRepository statusRepository;
+  private final ObjectProvider<LegacySyncService> legacySyncServiceProvider;
   private final TimeFormatter timeFormatter;
+  private final ActivityTimeWindowService activityTimeWindowService;
   private final Clock clock;
 
   public ActivityQueryService(
       SessionService sessionService,
       WxActivityProjectionRepository activityRepository,
       WxUserActivityStatusRepository statusRepository,
+      ObjectProvider<LegacySyncService> legacySyncServiceProvider,
       TimeFormatter timeFormatter,
+      ActivityTimeWindowService activityTimeWindowService,
       Clock clock
   ) {
     this.sessionService = sessionService;
     this.activityRepository = activityRepository;
     this.statusRepository = statusRepository;
+    this.legacySyncServiceProvider = legacySyncServiceProvider;
     this.timeFormatter = timeFormatter;
+    this.activityTimeWindowService = activityTimeWindowService;
     this.clock = clock;
   }
 
   @Transactional(readOnly = true)
-  public ActivityListResponse listActivities(String sessionToken, String browserBindingKey) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
-    List<WxActivityProjectionEntity> activities = activityRepository.findByActiveTrueOrderByStartTimeDesc();
+  public WebActivityListResponse listForWeb(String sessionToken, Integer page, Integer pageSize) {
+    SessionPrincipal principal = sessionService.requireWebPrincipal(sessionToken);
+    // 普通用户的可见活动依赖 wx_user_activity_status（报名/状态），
+    // 但该表通常由“定时 legacy pull”填充。首次登录改密后如果 pull interval 偏大，会出现列表空窗期。
+    // 这里在“本地无任何 status”时 best-effort 触发一次按用户即时同步，尽量让用户无需等待定时任务。
+    ensureNormalUserStatusesPresent(principal);
+    int normalizedPage = normalizePage(page);
+    int normalizedPageSize = normalizePageSize(pageSize);
+    Pageable pageable = PageRequest.of(normalizedPage - 1, normalizedPageSize);
 
-    Map<String, WxUserActivityStatusEntity> statusMap = statusRepository.findByUserId(principal.user().getId())
-        .stream()
-        .collect(Collectors.toMap(WxUserActivityStatusEntity::getActivityId, Function.identity(), (a, b) -> b));
+    // staff 可见全部活动；普通用户仅返回“已报名/已签到/已签退”的活动，避免拉全表。
+    Slice<WxActivityProjectionEntity> slice = principal.role() == RoleType.STAFF
+        ? activityRepository.findByActiveTrueOrderByStartTimeDesc(pageable)
+        : activityRepository.findVisibleForUser(principal.user().getId(), pageable);
 
-    List<ActivitySummaryDto> visible = activities.stream()
-        .filter(activity -> isVisibleForRole(principal.role(), statusMap.get(activity.getActivityId())))
+    List<WxActivityProjectionEntity> activities = slice.getContent();
+    List<String> activityIds = activities.stream().map(WxActivityProjectionEntity::getActivityId).toList();
+    Map<String, WxUserActivityStatusEntity> statusMap = activityIds.isEmpty()
+        ? Map.of()
+        : statusRepository.findByUserIdAndActivityIdIn(principal.user().getId(), activityIds)
+            .stream()
+            .collect(Collectors.toMap(WxUserActivityStatusEntity::getActivityId, Function.identity(), (a, b) -> b));
+
+    List<ActivitySummaryDto> payload = activities.stream()
         .map(activity -> toSummary(activity, statusMap.get(activity.getActivityId())))
         .toList();
 
-    return new ActivityListResponse("success", "活动列表获取成功", visible);
+    return new WebActivityListResponse(
+        "success",
+        "活动列表获取成功",
+        payload,
+        normalizedPage,
+        normalizedPageSize,
+        slice.hasNext(),
+        Instant.now(clock).toEpochMilli()
+    );
   }
 
-  @Transactional(readOnly = true)
-  public ActivityDetailResponse detail(String sessionToken, String browserBindingKey, String activityId) {
-    SessionPrincipal principal = sessionService.requirePrincipal(sessionToken, browserBindingKey);
+  private void ensureNormalUserStatusesPresent(SessionPrincipal principal) {
+    if (principal == null || principal.role() != RoleType.NORMAL) {
+      return;
+    }
+    if (principal.user() == null || principal.user().getId() == null) {
+      return;
+    }
+    if (statusRepository.existsByUserId(principal.user().getId())) {
+      return;
+    }
+    Long legacyUserId = principal.user().getLegacyUserId();
+    if (legacyUserId == null) {
+      return;
+    }
+    LegacySyncService legacySyncService = legacySyncServiceProvider.getIfAvailable();
+    if (legacySyncService == null) {
+      return;
+    }
+    legacySyncService.syncLegacyUserContextOnDemand(legacyUserId);
+  }
+
+  @Transactional
+  public WebActivityDetailResponse detailForWeb(String sessionToken, String activityId) {
+    SessionPrincipal principal = sessionService.requireWebPrincipal(sessionToken);
+    // 同 listForWeb：避免首次登录改密后直接进详情页时因为 status 未同步而被误判“无权查看”。
+    ensureNormalUserStatusesPresent(principal);
     String normalizedActivityId = normalize(activityId);
     if (normalizedActivityId.isEmpty()) {
       throw new BusinessException("invalid_param", "activity_id 参数缺失");
@@ -84,7 +143,31 @@ public class ActivityQueryService {
       throw new BusinessException("forbidden", "你无权查看该活动详情");
     }
 
-    ActivityDetailDto dto = new ActivityDetailDto(
+    boolean myRegistered = status != null && Boolean.TRUE.equals(status.getRegistered());
+    UserActivityState state = status == null ? UserActivityState.NONE : UserActivityState.fromCode(status.getStatus());
+    boolean myCheckedIn = state == UserActivityState.CHECKED_IN;
+    boolean myCheckedOut = state == UserActivityState.CHECKED_OUT;
+
+    // 关键：详情页的 `can_checkin/can_checkout` 必须纳入时间窗判断，
+    // 否则会出现“显示可签到，但 staff 发码被 outside_activity_time_window 拒绝”的契约不一致。
+    boolean withinWindow = activityTimeWindowService.isWithinIssueWindow(activity);
+    boolean activityNotCompleted = ActivityProgressStatus.fromCode(activity.getProgressStatus()) != ActivityProgressStatus.COMPLETED;
+    boolean canCheckin = withinWindow
+        && activityNotCompleted
+        && Boolean.TRUE.equals(activity.getSupportCheckin())
+        && myRegistered
+        && !myCheckedIn
+        && !myCheckedOut;
+    boolean canCheckout = withinWindow
+        && activityNotCompleted
+        && Boolean.TRUE.equals(activity.getSupportCheckout())
+        && myCheckedIn
+        && !myCheckedOut;
+
+    long serverTimeMs = Instant.now(clock).toEpochMilli();
+    return new WebActivityDetailResponse(
+        "success",
+        "活动详情获取成功",
         activity.getActivityId(),
         activity.getActivityTitle(),
         activity.getActivityType(),
@@ -97,15 +180,15 @@ public class ActivityQueryService {
         activity.getHasDetail(),
         safeCount(activity.getCheckinCount()),
         safeCount(activity.getCheckoutCount()),
-        status != null && Boolean.TRUE.equals(status.getRegistered()),
-        status != null && UserActivityState.fromCode(status.getStatus()) == UserActivityState.CHECKED_IN,
-        status != null && UserActivityState.fromCode(status.getStatus()) == UserActivityState.CHECKED_OUT,
+        myRegistered,
+        myCheckedIn,
+        myCheckedOut,
         activity.getRotateSeconds(),
         activity.getGraceSeconds(),
-        Instant.now(clock).toEpochMilli()
+        canCheckin,
+        canCheckout,
+        serverTimeMs
     );
-
-    return new ActivityDetailResponse("success", "活动详情获取成功", dto);
   }
 
   private ActivitySummaryDto toSummary(WxActivityProjectionEntity activity, WxUserActivityStatusEntity status) {
@@ -142,6 +225,23 @@ public class ActivityQueryService {
 
   private Integer safeCount(Integer value) {
     return value == null ? 0 : value;
+  }
+
+  private int normalizePage(Integer page) {
+    if (page == null || page < 1) {
+      return DEFAULT_PAGE;
+    }
+    return page;
+  }
+
+  private int normalizePageSize(Integer pageSize) {
+    if (pageSize == null || pageSize < 1) {
+      return DEFAULT_PAGE_SIZE;
+    }
+    if (pageSize > MAX_PAGE_SIZE) {
+      throw new BusinessException("invalid_param", "page_size 过大，最大允许 " + MAX_PAGE_SIZE);
+    }
+    return pageSize;
   }
 
   private String normalize(String text) {

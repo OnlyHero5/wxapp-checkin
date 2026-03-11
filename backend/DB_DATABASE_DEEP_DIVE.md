@@ -122,8 +122,14 @@
 | V2 | `V2__add_sync_outbox.sql` | 新增 `wx_sync_outbox` |
 | V3 | `V3__add_support_checkin.sql` | `wx_activity_projection` 增加 `support_checkin` |
 | V4 | `V4__add_end_time_to_activity_projection.sql` | `wx_activity_projection` 增加 `end_time` 并回填 |
+| V5 | `V5__add_qr_retention_indexes.sql` | 增加 `wx_qr_issue_log` 清理索引与 retention 支撑 |
+| V6 | `V6__add_web_unbind_review.sql` | 历史遗留：解绑审核表（当前正式基线已不再依赖） |
+| V7 | `V7__add_web_identity_tables.sql` | 历史遗留：浏览器绑定/Passkey/管理员审计表（当前正式基线已不再依赖） |
+| V8 | `V8__add_passkey_verification_fields.sql` | 历史遗留：Passkey 验签字段（已停用） |
+| V9 | `V9__add_web_password_auth.sql` | 新增账号密码字段（`password_hash`/`must_change_password` 等） |
+| V10 | `V10__add_legacy_user_id_index.sql` | 为 `wx_user_auth_ext(legacy_user_id)` 增加索引 |
 
-生产若禁用 Flyway，则需执行 `scripts/bootstrap-prod-schema.sql`（其结构包含 V4 后字段）。
+生产若禁用 Flyway，则需执行 `scripts/bootstrap-prod-schema.sql`（其结构包含当前正式基线所需字段与索引）。
 
 ## 6. 扩展库 `wxcheckin_ext`：完整表说明
 
@@ -131,13 +137,17 @@
 
 ## 6.1 `wx_user_auth_ext`
 
-作用：微信身份与学号绑定主表，承载角色、权限、legacy 用户映射。
+作用：Web 身份扩展表（账号密码 + 角色权限快照），承载 legacy 用户映射。
 
 主键/唯一：
 
 - PK：`id`
-- UK：`wx_identity`
+- UK：`wx_identity`（历史字段名沿用；Web-only 形态下使用 `web:<student_id>` 作为稳定标识）
 - UK：`student_id`（允许多个 NULL，但非空必须唯一）
+
+索引：
+
+- IDX：`legacy_user_id`（V10 增补，避免按 legacy 映射查人时退化为全表扫描）
 
 关键字段：
 
@@ -145,20 +155,23 @@
 |---|---|---|
 | `id` | bigint | 扩展域用户主键 |
 | `legacy_user_id` | bigint | 指向 `suda_user.id` 的桥接值 |
-| `wx_identity` | varchar(128) | 微信身份（openid 或等价唯一标识） |
+| `wx_identity` | varchar(128) | Web-only 稳定身份标识（格式 `web:<student_id>`） |
 | `student_id` | varchar(32) | 学号 |
 | `name` | varchar(64) | 姓名 |
 | `department` | varchar(128) | 部门 |
 | `club` | varchar(128) | 社团 |
 | `role_code` | varchar(16) | `normal`/`staff` |
 | `permissions_json` | text | 权限快照（JSON 数组字符串） |
-| `registered` | tinyint(1) | 是否完成绑定 |
+| `password_hash` | text | bcrypt hash（不存明文） |
+| `must_change_password` | tinyint(1) | 首次登录强制改密标记 |
+| `password_updated_at` | datetime(3) | 最近一次改密时间（可用于排障/审计） |
+| `registered` | tinyint(1) | 历史字段（Web-only 阶段不再作为强语义使用） |
 | `created_at/updated_at` | datetime(3) | 审计时间 |
 
 读写来源：
 
-- 写：`AuthService`（首次登录建用户），`RegistrationService`（绑定信息、角色）
-- 读：几乎所有鉴权与业务服务
+- 写：`WebPasswordAuthService`（登录建档/更新快照、改密）
+- 读：`SessionService`、`ActivityQueryService`、`CheckinConsumeService` 等 Web 业务服务
 
 ## 6.2 `wx_admin_roster`
 
@@ -169,7 +182,7 @@
 
 读写来源：
 
-- 读：`RegistrationService.existsByStudentIdAndNameAndActiveTrue`
+- 读：`WebPasswordAuthService.resolveRoleDecision`（通过 `WxAdminRosterRepository.existsByStudentIdAndNameAndActiveTrue`）
 - 写：通常手工运维 SQL/初始化脚本
 
 ## 6.3 `wx_session`
@@ -184,13 +197,13 @@
 
 读写来源：
 
-- 写：`AuthService` 创建会话；`SessionService.touch` 更新时间；`RegistrationService` 更新角色快照
+- 写：`WebPasswordAuthService` 创建会话；`SessionService.touch` 更新时间
 - 读：`SessionService.requirePrincipal`
 - 清理：`SessionMaintenanceJob` 每 5 分钟删除过期会话
 
 ## 6.4 `wx_activity_projection`
 
-作用：活动读模型表，给小程序直读，不直接耦合 legacy 表。
+作用：活动读模型表，给 Web 前端直读，不直接耦合 legacy 表。
 
 主键：`activity_id`（如 `legacy_act_101`）
 
@@ -204,14 +217,14 @@
 | `progress_status` | `ongoing` / `completed` |
 | `support_checkin/support_checkout` | 功能开关 |
 | `checkin_count/checkout_count` | 投影统计 |
-| `rotate_seconds/grace_seconds` | 二维码滚动参数 |
+| `rotate_seconds/grace_seconds` | 动态码滚动/宽限参数（历史字段名沿用） |
 | `active` | 逻辑可见性 |
 
 索引：`start_time`、`progress_status`、`legacy_activity_id`
 
 读写来源：
 
-- 写：`LegacySyncService`（主同步来源），`CheckinConsumeService`（统计更新），`QrSessionService`（时间回填）
+- 写：`LegacySyncService`（主同步来源），`CheckinConsumeService`/`BulkCheckoutService`（统计更新），`QrSessionService`（时间回填）
 - 读：`ActivityQueryService`、`CompatibilityController.currentActivity`、`RecordQueryService`
 
 ## 6.5 `wx_user_activity_status`
@@ -231,7 +244,7 @@
 
 读写来源：
 
-- 写：`LegacySyncService`（从 legacy 报名状态映射）、`CheckinConsumeService`（扫码状态机更新）
+- 写：`LegacySyncService`（从 legacy 报名状态映射）、`CheckinConsumeService`（动态码提交状态机更新）、`BulkCheckoutService`（批量签退）
 - 读：`ActivityQueryService`、`CheckinConsumeService`（加锁读取）
 
 并发控制：
@@ -247,9 +260,9 @@
 关键字段：
 
 - `action_type`: `checkin` / `checkout`
-- `slot`, `nonce`: 与二维码时段和随机数绑定
-- `in_grace_window`: 是否在宽限期内提交
-- `submitted_at`, `server_time`, `qr_payload`: 审计追溯
+- `slot`, `nonce`: 与动态码时间片/随机因子绑定（批量签退会写入 `bulk:<batch_id>`）
+- `in_grace_window`: 是否在宽限期内提交（Web 动态码默认不使用宽限，字段保留用于兼容）
+- `submitted_at`, `server_time`, `qr_payload`: 审计追溯（Web 动态码会写入 `web-code:<code>` 等标识；旧扫码链路仍可能写入真实 `qr_payload`）
 
 读写来源：
 
@@ -388,30 +401,25 @@
 
 `LegacySyncService` 和 `OutboxRelayService` 已按此语义实现。
 
-## 8. 核心业务流程与读写路径
+## 8. 核心业务流程与读写路径（Web-only）
 
-## 8.1 A-01 微信登录 `/api/auth/wx-login`
+## 8.1 Web 登录 `/api/web/auth/login`
 
-1. 解析微信身份（`wx_identity`）
-2. `wx_user_auth_ext`：按 `wx_identity` 查找，不存在则插入
-3. 若权限为空，回写默认权限
-4. 新建 `wx_session`
+1. 只读查询 legacy `suda_user` 校验学号存在（`LegacyUserLookupService`）
+2. `wx_user_auth_ext`：按 `legacy_user_id`（兜底 `student_id`）查找，不存在则插入，并初始化默认密码 hash（`123`）与 `must_change_password=true`
+3. 校验密码（bcrypt）
+4. 刷新用户基本信息与角色权限快照（staff 判定见 6.2）
+5. 新建 `wx_session`（签发 `session_token`）
 
 写表：`wx_user_auth_ext`, `wx_session`
 
-## 8.2 A-02 绑定注册 `/api/register`
+## 8.2 Web 改密 `/api/web/auth/change-password`
 
-1. 校验 session
-2. 校验 payload 完整性（非 DB 逻辑）
-3. `wx_user_auth_ext` 按 `student_id` 做唯一绑定冲突检查
-4. staff 判定：
-   - `wx_admin_roster` 命中，或
-   - legacy `suda_user.role` 在 0..3 且姓名匹配
-5. 更新 `wx_user_auth_ext` 绑定字段、角色、权限
-6. 更新当前 `wx_session` 角色快照
+1. 校验 `session_token`
+2. 校验旧密码（bcrypt）
+3. 更新 `wx_user_auth_ext.password_hash`，设置 `must_change_password=false`，写入 `password_updated_at`
 
-读表：`wx_user_auth_ext`, `wx_admin_roster`, `suda_user`, `wx_session`
-写表：`wx_user_auth_ext`, `wx_session`
+写表：`wx_user_auth_ext`
 
 ## 8.3 legacy pull（定时）
 
@@ -425,26 +433,26 @@
 - 失败容错：捕获 `DataAccessException` 后 debug 记录并跳过本轮
 - 仅在 `LEGACY_SYNC_ENABLED=true` 时执行业务逻辑
 
-## 8.4 A-05 staff 发码 `/api/staff/activities/{activityId}/qr-session`
+## 8.4 staff 获取动态码 `/api/web/activities/{activityId}/code-session`
 
 1. 校验 staff 权限
 2. 读取 `wx_activity_projection` 活动信息
 3. 校验活动时间窗（必要时回查 `suda_activity` 并回填 start/end）
-4. 解析 `rotate_seconds/grace_seconds`（允许 request override；override 会持久化到 `wx_activity_projection`，以保证 issue/consume 口径一致）
-5. 使用服务端时间计算 `slot`，生成 **signed nonce** 并组装 `qr_payload`
-6. 按配置决定是否写 `wx_qr_issue_log`（审计/legacy 兼容用）
+4. 使用服务端时间计算 `slot`（默认 10 秒时间片，支持从 `wx_activity_projection.rotate_seconds` 覆盖）
+5. `DynamicCodeService` 基于 `QR_SIGNING_KEY` 对 `(activity_id, action_type, slot)` 计算稳定摘要，输出 6 位数字码
+6. 按配置决定是否写 `wx_qr_issue_log`（审计/兼容用）
 
 读表：`wx_activity_projection`, `suda_activity`（必要时）
 写表：`wx_activity_projection`（可能更新时段）、`wx_qr_issue_log`（可选）
 
-## 8.5 A-06 普通用户扫码 `/api/checkin/consume`
+## 8.5 普通用户提交动态码 `/api/web/activities/{activityId}/code-consume`
 
 单事务内关键步骤：
 
-1. 校验二维码合法性：
-   - payload 结构与字段格式
-   - rotate/grace 时间窗（含 `expired/invalid_qr`）
-   - 票据真实性：signed nonce 验签（或 legacy unsigned 模式下校验 `wx_qr_issue_log`）
+1. 校验动态码合法性：
+   - `action_type` 合法（checkin/checkout）
+   - `code` 合法（仅数字）
+   - `DynamicCodeService.validateCode` 只认当前时间片的 6 位码；命中上一时间片按 `expired` 返回
 2. 防重放（尝试插入 `wx_replay_guard`）
 3. 锁定并更新 `wx_user_activity_status`
 4. 更新 `wx_activity_projection` 统计
@@ -453,7 +461,19 @@
 
 此阶段不直接写 legacy。
 
-## 8.6 outbox relay（定时）
+补充说明：
+
+- `CheckinConsumeService` 仍保留旧扫码链路（`qr_payload`）解析与验签逻辑，用于迁移期兼容；Web-only 正式链路只走动态码提交。
+
+## 8.6 staff 批量签退 `/api/web/staff/activities/{activityId}/bulk-checkout`
+
+1. 校验 staff 权限与 `confirm=true`
+2. 锁定查询某活动下 `wx_user_activity_status(status=checked_in)` 目标列表
+3. 批量更新状态为 `checked_out`
+4. 批量写事件 `wx_checkin_event` 与 outbox `wx_sync_outbox(status=pending)`
+5. 原子更新 `wx_activity_projection` 统计（`checkin_count-=`，`checkout_count+=`）
+
+## 8.7 outbox relay（定时）
 
 任务：`OutboxRelayService.relayToLegacy()`
 
@@ -462,7 +482,7 @@
 3. 更新 `suda_activity_apply.check_in/check_out`
 4. 回写 outbox 状态：`processed/failed/skipped`
 
-## 8.7 查询 API
+## 8.8 查询 API
 
 - 活动列表/详情：`wx_activity_projection + wx_user_activity_status`
 - 签到记录：`wx_checkin_event`（关联活动标题用 `wx_activity_projection`）
@@ -551,15 +571,22 @@ WHERE username = '2025000007'
 ORDER BY id DESC;
 ```
 
-## 11.4 检查用户绑定冲突
+## 11.4 检查用户身份记录
 
 ```sql
-SELECT id, wx_identity, student_id, name, role_code, registered, legacy_user_id
+SELECT id,
+       wx_identity,
+       student_id,
+       name,
+       role_code,
+       must_change_password,
+       password_updated_at,
+       legacy_user_id
 FROM wxcheckin_ext.wx_user_auth_ext
-WHERE student_id = '2025000007' OR wx_identity = 'your_wx_identity';
+WHERE student_id = '2025000007';
 ```
 
-## 11.5 清理某学号的微信绑定（用于重复测试）
+## 11.5 清理某学号的 Web 身份数据（用于重复测试）
 
 ```sql
 -- 1) 找到 user_id
@@ -571,21 +598,13 @@ DELETE FROM wxcheckin_ext.wx_user_activity_status WHERE user_id=12;
 DELETE FROM wxcheckin_ext.wx_checkin_event WHERE user_id=12;
 DELETE FROM wxcheckin_ext.wx_replay_guard WHERE user_id=12;
 DELETE FROM wxcheckin_ext.wx_qr_issue_log WHERE issued_by_user_id=12;
+DELETE FROM wxcheckin_ext.wx_sync_outbox WHERE payload_json LIKE '%\"user_id\":12%';
 
--- 3) 清空绑定字段（保留微信身份行）
-UPDATE wxcheckin_ext.wx_user_auth_ext
-SET student_id=NULL,
-    name=NULL,
-    department=NULL,
-    club=NULL,
-    role_code='normal',
-    permissions_json='[]',
-    registered=0,
-    legacy_user_id=NULL
-WHERE id=12;
+-- 3) 删除用户行：下次登录会自动按 legacy 用户重建，并初始化默认密码 123 + 强制改密
+DELETE FROM wxcheckin_ext.wx_user_auth_ext WHERE id=12;
 ```
 
-## 11.6 完全删除用户绑定行（谨慎）
+## 11.6 仅删除用户行（谨慎）
 
 ```sql
 DELETE FROM wxcheckin_ext.wx_user_auth_ext WHERE id=12;
@@ -601,11 +620,14 @@ DELETE FROM wxcheckin_ext.wx_user_auth_ext WHERE id=12;
 
 处理：用上传的 `suda_union (1).sql` 重建 `suda_union`，再执行本地 seed。
 
-## 12.2 注册报 `student_already_bound`
+## 12.2 登录报 `identity_not_found`
 
-根因：`wx_user_auth_ext.student_id` 唯一约束命中。
+根因：legacy `suda_union.suda_user` 不存在该学号，或 `LEGACY_DB_URL` 指向错误导致查不到真实数据。
 
-处理：按上文“清理绑定”SQL 重置目标学号绑定。
+处理：
+
+- 确认 `suda_union.suda_user.username` 存在该学号；
+- 确认后端 `LEGACY_DB_URL` 指向 `suda_union`（避免误连主库导致“伪联调”）。
 
 ## 12.3 outbox 长期 `failed`
 

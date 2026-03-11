@@ -35,6 +35,22 @@ export class SessionExpiredError extends ApiError {
 }
 
 /**
+ * 强制改密是 Web 端账号密码登录引入的新门槛：
+ * - 登录成功后若 must_change_password=true，则除了改密接口外的业务接口都会被拒绝
+ * - 前端收到该错误时应统一引导用户去 /change-password
+ */
+export class PasswordChangeRequiredError extends ApiError {
+  constructor(message = "请先修改密码", payload?: unknown) {
+    super(message, {
+      code: "password_change_required",
+      payload,
+      status: "forbidden"
+    });
+    this.name = "PasswordChangeRequiredError";
+  }
+}
+
+/**
  * `NetworkError` 代表“前端没拿到可信响应”，
  * 不等同于业务失败。
  */

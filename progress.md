@@ -1,5 +1,67 @@
 # 执行进度日志
 
+## 2026-03-10
+
+### 认证基线重大变更（Passkey -> 账号密码）
+
+- 需求变更：部署形态切换为 **HTTP + 内网 IP + 端口号**，Passkey/WebAuthn 在该形态下不可用，因此主链路认证改为 **学号 + 密码**。
+- 已完成顺序：
+  - 先移除 Passkey/WebAuthn 业务逻辑与前端页面（含 `/bind`、`webauthn.ts`、“Passkey 不支持”提示页）。
+  - 再新增账号密码登录（默认 `123`）与“首次登录强制改密”闭环。
+- 后端补充：
+  - 新增接口：`POST /api/web/auth/login`、`POST /api/web/auth/change-password`
+  - 会话拦截：`must_change_password=true` 时，除改密接口外统一返回 `password_change_required`
+  - 数据落库：`wx_user_auth_ext.password_hash/must_change_password/password_updated_at`（bcrypt hash）
+- 前端补充：
+  - 登录页改为学号+密码表单
+  - 新增 `/change-password` 改密页
+  - 路由守卫与请求层统一识别 `password_change_required` 并强制导流
+
+### 基线调整：取消浏览器唯一绑定（解绑审核下线）
+
+- 需求变更：签到程序不再要求与浏览器捆绑；取消“浏览器唯一绑定 + 解绑审核”相关防代签逻辑。
+- 后端调整：
+  - 登录与业务鉴权仅依赖 `session_token`（允许同一账号多端同时登录）。
+  - 移除 `X-Browser-Binding-Key` 校验链路与解绑相关接口/错误码。
+- 前端调整：
+  - 请求层仅注入 `Authorization: Bearer <session_token>`。
+  - 清理解绑相关页面与路由骨架（Web-only 基线不再包含该流程）。
+- 验证补充：
+  - `ApiFlowIntegrationTest.shouldAllowMultipleSessionsForSameAccountAfterLogin` ✅
+
+### 验证记录
+
+- 后端测试：`cd backend && ./mvnw -s /home/psx/app/local_dev/maven/settings.proxy.xml test -q` ✅
+- Web 单测：`cd web && npm test` ✅
+- Web 构建：`cd web && npm run build` ✅
+
+## 2026-03-11
+
+### 联调测试报告问题定位（待修复）
+
+- 已读取 `docs/TEST_REPORT_2026-03-11_INTEGRATION.md` 并对照代码定位根因与改动点：
+  - P1：`LegacySyncService.syncLegacyActivities()` 统计口径不一致导致投影计数被 pull 覆盖。
+  - P2：普通用户首次改密后活动可见性依赖 pull 同步，存在空窗期。
+  - P2：`OutboxRelayService` 对 `failed/skipped` 事件不重试，存在最终一致性风险。
+  - P3：联调启动脚本登录校验账号与 seed 不一致导致误报。
+  - P3：`ProdProfileSafetyConfigTest` 出现 QR 清理任务访问空库的日志噪声。
+- 下一步按 TDD：先补失败用例（后端单测/集成测 + 必要的脚本校验），再逐项实现修复并复跑联调脚本回归。
+
+### 联调报告问题修复与回归（已完成）
+
+- P1：修复 legacy pull 活动统计口径（`checkin_count` 对齐为“已签到未签退”），避免定时 pull 覆盖投影计数造成漂移。
+- P2：普通用户首次改密后活动列表空窗期：在活动列表/详情入口做 best-effort 的按用户即时同步（仅本用户相关）。
+- P2：outbox 事件重试：引入 `retry_count` + `available_at` 指数退避，失败/依赖未齐不再永久卡死。
+- P3：联调启动脚本登录校验账号口径对齐 seed（默认 `20254227087/123456`），避免误报警告。
+- P3：测试噪声：`ProdProfileSafetyConfigTest` 关闭 `app.qr.cleanup-enabled`，避免空库定时任务日志干扰。
+
+### 验证记录
+
+- 后端：`cd wxapp-checkin/backend && ./mvnw test` ✅
+- Web：`cd wxapp-checkin/web && npm test && npm run build` ✅
+- 三项目联调脚本：`./local_dev/scripts/run_wxapp_checkin_full_integration_test.sh` ✅
+  - 最新产物：`local_dev/runtime/integration_test_20260311_132017`（含 logs + responses + DB 证据）
+
 ## 2026-03-09
 
 ### 本轮新增进度
@@ -404,3 +466,12 @@
   - `docs/WEB_MIGRATION_REVIEW.md`
 - 已完成口径锁定：
   - 动态码正式需求已统一为 10 秒窗口，并同步回写正式基线与补充设计文档。
+
+## 2026-03-10 审查执行记录
+
+- 已执行：`cd web && npm test`
+- 已执行：`cd web && npm run build`
+- 已执行：`cd backend && ./mvnw test -q`
+- 已执行：`./local_dev/scripts/start_3_projects_integration.sh`，确认脚本可拉起 `8088/5173/9989` 并打印 `login ok`。
+- 已执行：基于 `backend/scripts/start-test-env.sh` 的真实联调命令，验证账号密码登录、强制改密、活动列表读取、解绑申请/审核、旧浏览器失效与新浏览器重登。
+- 已发现：当前种子数据下 `legacy_act_102` 详情返回 `can_checkin=true`，但 staff 发码返回 `outside_activity_time_window`，需视为联调阻塞项。

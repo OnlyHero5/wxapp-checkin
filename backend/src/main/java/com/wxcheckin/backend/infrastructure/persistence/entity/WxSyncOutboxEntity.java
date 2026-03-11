@@ -35,6 +35,17 @@ public class WxSyncOutboxEntity {
   @Column(name = "status", nullable = false, length = 32)
   private String status = "pending";
 
+  /**
+   * Outbox 的重试次数（仅用于最终一致性链路的自愈）。
+   *
+   * <p>说明：
+   * - legacy 短暂不可用、依赖数据未齐（例如 activity 还没 pull 到）都属于可恢复失败；
+   * - 旧实现把这些场景直接标记为 failed/skipped 会造成事件永久卡死；
+   * - 因此引入 retry_count，并配合 available_at 做指数退避重试。</p>
+   */
+  @Column(name = "retry_count", nullable = false)
+  private Integer retryCount = 0;
+
   @Column(name = "available_at", nullable = false)
   private Instant availableAt;
 
@@ -95,6 +106,14 @@ public class WxSyncOutboxEntity {
 
   public void setStatus(String status) {
     this.status = status;
+  }
+
+  public Integer getRetryCount() {
+    return retryCount;
+  }
+
+  public void setRetryCount(Integer retryCount) {
+    this.retryCount = retryCount;
   }
 
   public Instant getAvailableAt() {

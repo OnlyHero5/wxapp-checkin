@@ -15,6 +15,10 @@ public interface WxUserActivityStatusRepository extends JpaRepository<WxUserActi
 
   List<WxUserActivityStatusEntity> findByUserId(Long userId);
 
+  boolean existsByUserId(Long userId);
+
+  List<WxUserActivityStatusEntity> findByUserIdAndActivityIdIn(Long userId, List<String> activityIds);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select s from WxUserActivityStatusEntity s where s.user.id = :userId and s.activityId = :activityId")
   Optional<WxUserActivityStatusEntity> lockByUserIdAndActivityId(@Param("userId") Long userId, @Param("activityId") String activityId);

@@ -10,6 +10,8 @@
 
 ---
 
+> **注意：** 本计划基于 2026-03-10 之前的 Passkey/WebAuthn 认证方案编写。当前认证基线已调整为 **HTTP 内网账号密码（默认 123，首次登录强制改密）**，请以 `docs/plans/2026-03-10-http-password-auth-implementation-plan.md` 为准；本文仅保留为历史回溯。
+
 ## 实施前提
 
 - 仅修改 `wxapp-checkin/`。

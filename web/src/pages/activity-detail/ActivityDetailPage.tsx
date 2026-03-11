@@ -12,7 +12,7 @@ import {
   resolveJoinStatus,
   resolveProgressStatus
 } from "../../features/activities/view-model";
-import { SessionExpiredError } from "../../shared/http/errors";
+import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/http/errors";
 import { isStaffSession } from "../../shared/session/session-store";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppButton } from "../../shared/ui/AppButton";
@@ -75,6 +75,10 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
       } catch (error) {
         if (error instanceof SessionExpiredError) {
           navigate("/login");
+          return;
+        }
+        if (error instanceof PasswordChangeRequiredError) {
+          navigate("/change-password");
           return;
         }
         if (active && requestVersionRef.current === requestVersion) {

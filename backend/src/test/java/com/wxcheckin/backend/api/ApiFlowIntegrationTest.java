@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxActivityProjectionEntity;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxAdminRosterEntity;
@@ -21,14 +20,7 @@ import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepo
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSyncOutboxRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
-import com.wxcheckin.backend.infrastructure.persistence.repository.WebAdminAuditLogRepository;
-import com.wxcheckin.backend.infrastructure.persistence.repository.WebBrowserBindingRepository;
-import com.wxcheckin.backend.infrastructure.persistence.repository.WebPasskeyChallengeRepository;
-import com.wxcheckin.backend.infrastructure.persistence.repository.WebPasskeyCredentialRepository;
-import com.wxcheckin.backend.infrastructure.persistence.repository.WebUnbindReviewRepository;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,22 +71,7 @@ class ApiFlowIntegrationTest {
   private WxSyncOutboxRepository outboxRepository;
 
   @Autowired
-  private WebUnbindReviewRepository webUnbindReviewRepository;
-
-  @Autowired
   private JdbcTemplate jdbcTemplate;
-
-  @Autowired
-  private WebPasskeyChallengeRepository webPasskeyChallengeRepository;
-
-  @Autowired
-  private WebPasskeyCredentialRepository webPasskeyCredentialRepository;
-
-  @Autowired
-  private WebBrowserBindingRepository webBrowserBindingRepository;
-
-  @Autowired
-  private WebAdminAuditLogRepository webAdminAuditLogRepository;
 
   @BeforeEach
   void prepareData() {
@@ -102,11 +79,6 @@ class ApiFlowIntegrationTest {
     replayGuardRepository.deleteAll();
     qrIssueLogRepository.deleteAll();
     outboxRepository.deleteAll();
-    webAdminAuditLogRepository.deleteAll();
-    webUnbindReviewRepository.deleteAll();
-    webPasskeyCredentialRepository.deleteAll();
-    webBrowserBindingRepository.deleteAll();
-    webPasskeyChallengeRepository.deleteAll();
     statusRepository.deleteAll();
     sessionRepository.deleteAll();
     adminRosterRepository.deleteAll();
@@ -173,99 +145,61 @@ class ApiFlowIntegrationTest {
   }
 
   @Test
-  void shouldCompleteWebBindRegisterAndLoginFlow() throws Exception {
-    String registerSession = bindAndRegister("browser-normal", "2025000011", "测试用户");
+  void shouldRequirePasswordChangeBeforeAccessingWebApis() throws Exception {
+    String staffSession = login("2025000007", "123");
 
-    MvcResult loginOptionsResult = mockMvc.perform(post("/api/web/passkey/login/options")
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Browser-Binding-Key", "browser-normal")
-            .content("{}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("success")))
-        .andReturn();
-
-    JsonNode loginOptionsJson = objectMapper.readTree(loginOptionsResult.getResponse().getContentAsString());
-    String requestId = loginOptionsJson.get("request_id").asText();
-    String challenge = loginOptionsJson.get("public_key_options").get("challenge").asText();
-
-    mockMvc.perform(post("/api/web/passkey/login/complete")
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Browser-Binding-Key", "browser-normal")
-            .content("""
-                {
-                  "request_id":"%s",
-                  "assertion_response":{
-                    "id":"%s",
-                    "raw_id":"%s",
-                    "type":"public-key",
-                    "response":{
-                      "client_data_json":"%s",
-                      "authenticator_data":"authenticator-data",
-                      "signature":"signature",
-                      "user_handle":"%s"
-                    }
-                  }
-                }
-                """.formatted(
-                requestId,
-                credentialIdForBrowser("browser-normal"),
-                rawCredentialIdForBrowser("browser-normal"),
-                encodeClientDataJson(challenge, "webauthn.get"),
-                userHandleForId(1L)
-            )))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("success")))
-        .andExpect(jsonPath("$.session_token").exists());
-
-    org.junit.jupiter.api.Assertions.assertFalse(registerSession.isBlank());
-  }
-
-  @Test
-  void shouldReturnPasskeyNotRegisteredWhenBrowserHasNoBinding() throws Exception {
-    mockMvc.perform(post("/api/web/passkey/login/options")
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Browser-Binding-Key", "browser-missing")
-            .content("{}"))
+    mockMvc.perform(get("/api/web/activities")
+            .header("Authorization", "Bearer " + staffSession))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("forbidden")))
-        .andExpect(jsonPath("$.error_code", is("passkey_not_registered")));
+        .andExpect(jsonPath("$.error_code", is("password_change_required")));
+
+    changePassword(staffSession, "123", "new-pass-staff");
+
+    mockMvc.perform(get("/api/web/activities")
+            .header("Authorization", "Bearer " + staffSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")));
   }
 
   @Test
-  void shouldRejectBindWhenAccountAlreadyBoundElsewhere() throws Exception {
-    String existingSession = bindAndRegister("browser-old", "2025000011", "测试用户");
-
-    mockMvc.perform(post("/api/web/bind/verify-identity")
+  void shouldRejectLoginWhenPasswordInvalid() throws Exception {
+    mockMvc.perform(post("/api/web/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Browser-Binding-Key", "browser-new")
             .content("""
                 {
                   "student_id":"2025000011",
-                  "name":"测试用户"
+                  "password":"wrong"
                 }
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("forbidden")))
-        .andExpect(jsonPath("$.error_code", is("account_bound_elsewhere")));
+        .andExpect(jsonPath("$.error_code", is("invalid_password")));
+  }
 
-    org.junit.jupiter.api.Assertions.assertFalse(existingSession.isBlank());
+  @Test
+  void shouldAllowMultipleSessionsForSameAccountAfterLogin() throws Exception {
+    String firstSession = login("2025000011", "123");
+    String secondSession = login("2025000011", "123");
+
+    org.junit.jupiter.api.Assertions.assertFalse(firstSession.isBlank());
+    org.junit.jupiter.api.Assertions.assertFalse(secondSession.isBlank());
+    org.junit.jupiter.api.Assertions.assertNotEquals(firstSession, secondSession);
   }
 
   @Test
   void shouldExposeWebActivitiesListAndDetail() throws Exception {
-    String staffSession = bindAndRegister("browser-web-staff-list", "2025000007", "刘洋");
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-list");
 
     mockMvc.perform(get("/api/web/activities")
-            .header("Authorization", "Bearer " + staffSession)
-            .header("X-Browser-Binding-Key", "browser-web-staff-list"))
+            .header("Authorization", "Bearer " + staffSession))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andExpect(jsonPath("$.activities[0].activity_id", is("act_hackathon_20260215")))
         .andExpect(jsonPath("$.server_time_ms").exists());
 
     mockMvc.perform(get("/api/web/activities/{activityId}", "act_hackathon_20260215")
-            .header("Authorization", "Bearer " + staffSession)
-            .header("X-Browser-Binding-Key", "browser-web-staff-list"))
+            .header("Authorization", "Bearer " + staffSession))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andExpect(jsonPath("$.activity_id", is("act_hackathon_20260215")))
@@ -274,15 +208,56 @@ class ApiFlowIntegrationTest {
   }
 
   @Test
-  void shouldIssueWebCodeSessionAndConsumeCode() throws Exception {
-    String staffSession = bindAndRegister("browser-web-staff-code", "2025000007", "刘洋");
+  void shouldAlignActivityCanCheckinWithCodeSessionTimeWindow() throws Exception {
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-window");
+    String normalSession = loginAndChangePassword("2025000011", "new-pass-normal-window");
 
-    String normalSession = bindAndRegister("browser-web-normal-code", "2025000011", "测试用户");
+    WxActivityProjectionEntity futureActivity = new WxActivityProjectionEntity();
+    futureActivity.setActivityId("act_future_window");
+    futureActivity.setActivityTitle("未来活动");
+    futureActivity.setActivityType("讲座");
+    Instant now = Instant.now();
+    futureActivity.setStartTime(now.plusSeconds(5 * 60L * 60L));
+    futureActivity.setEndTime(now.plusSeconds(6 * 60L * 60L));
+    futureActivity.setLocation("未来教室");
+    futureActivity.setDescription("用于验证 can_checkin 与发码时间窗一致。");
+    futureActivity.setProgressStatus("ongoing");
+    futureActivity.setSupportCheckin(true);
+    futureActivity.setSupportCheckout(true);
+    futureActivity.setHasDetail(true);
+    futureActivity.setCheckinCount(0);
+    futureActivity.setCheckoutCount(0);
+    futureActivity.setRotateSeconds(10);
+    futureActivity.setGraceSeconds(20);
+    futureActivity.setActive(true);
+    activityRepository.save(futureActivity);
+
+    bindUserActivity(normalSession, "act_future_window");
+
+    mockMvc.perform(get("/api/web/activities/{activityId}", "act_future_window")
+            .header("Authorization", "Bearer " + normalSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.can_checkin", is(false)))
+        .andExpect(jsonPath("$.can_checkout", is(false)));
+
+    mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_future_window")
+            .header("Authorization", "Bearer " + staffSession)
+            .param("action_type", "checkin"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")))
+        .andExpect(jsonPath("$.error_code", is("outside_activity_time_window")));
+  }
+
+  @Test
+  void shouldIssueWebCodeSessionAndConsumeCode() throws Exception {
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-code");
+
+    String normalSession = loginAndChangePassword("2025000011", "new-pass-normal-code");
     bindUserActivity(normalSession, "act_hackathon_20260215");
 
     MvcResult codeResult = mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
             .header("Authorization", "Bearer " + staffSession)
-            .header("X-Browser-Binding-Key", "browser-web-staff-code")
             .param("action_type", "checkin"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
@@ -296,7 +271,6 @@ class ApiFlowIntegrationTest {
     mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + normalSession)
-            .header("X-Browser-Binding-Key", "browser-web-normal-code")
             .content("""
                 {
                   "action_type":"checkin",
@@ -311,7 +285,6 @@ class ApiFlowIntegrationTest {
     mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + normalSession)
-            .header("X-Browser-Binding-Key", "browser-web-normal-code")
             .content("""
                 {
                   "action_type":"checkin",
@@ -323,26 +296,19 @@ class ApiFlowIntegrationTest {
   }
 
   @Test
-  void shouldRequireMatchingBrowserBindingKeyForWebApis() throws Exception {
-    String normalSession = bindAndRegister("browser-web-binding-lock", "2025000011", "测试用户");
-
-    mockMvc.perform(get("/api/web/activities")
-            .header("Authorization", "Bearer " + normalSession)
-            .header("X-Browser-Binding-Key", "browser-web-binding-other"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("forbidden")))
-        .andExpect(jsonPath("$.error_code", is("session_expired")));
-  }
-
-  @Test
   void shouldRejectCheckinWhenActivityDisablesCheckin() throws Exception {
-    String staffSession = bindAndRegister("browser-web-staff-checkin-disabled", "2025000007", "刘洋");
-    String normalSession = bindAndRegister("browser-web-normal-checkin-disabled", "2025000011", "测试用户");
+    String staffSession = loginAndChangePassword(
+        "2025000007",
+        "new-pass-staff-checkin-disabled"
+    );
+    String normalSession = loginAndChangePassword(
+        "2025000011",
+        "new-pass-normal-checkin-disabled"
+    );
     bindUserActivity(normalSession, "act_hackathon_20260215");
 
     MvcResult codeResult = mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
             .header("Authorization", "Bearer " + staffSession)
-            .header("X-Browser-Binding-Key", "browser-web-staff-checkin-disabled")
             .param("action_type", "checkin"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
@@ -356,7 +322,6 @@ class ApiFlowIntegrationTest {
     mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + normalSession)
-            .header("X-Browser-Binding-Key", "browser-web-normal-checkin-disabled")
             .content("""
                 {
                   "action_type":"checkin",
@@ -368,24 +333,25 @@ class ApiFlowIntegrationTest {
 
     mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
             .header("Authorization", "Bearer " + staffSession)
-            .header("X-Browser-Binding-Key", "browser-web-staff-checkin-disabled")
             .param("action_type", "checkin"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("forbidden")));
   }
 
   @Test
-  void shouldSupportBulkCheckoutAndUnbindReviewFlow() throws Exception {
-    String staffSession = bindAndRegister("browser-web-staff-manage", "2025000007", "刘洋");
+  void shouldSupportBulkCheckoutFlow() throws Exception {
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-manage");
 
-    String normalSession = bindAndRegister("browser-web-normal-review", "2025000011", "测试用户");
+    String normalSession = loginAndChangePassword(
+        "2025000011",
+        "new-pass-normal-review"
+    );
     bindUserActivity(normalSession, "act_hackathon_20260215");
     setUserActivityState(normalSession, "act_hackathon_20260215", "checked_in");
 
     mockMvc.perform(post("/api/web/staff/activities/{activityId}/bulk-checkout", "act_hackathon_20260215")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer " + staffSession)
-            .header("X-Browser-Binding-Key", "browser-web-staff-manage")
             .content("""
                 {
                   "confirm":true,
@@ -401,138 +367,47 @@ class ApiFlowIntegrationTest {
         .findByUserIdAndActivityId(session.getUser().getId(), "act_hackathon_20260215")
         .orElseThrow();
     org.junit.jupiter.api.Assertions.assertEquals("checked_out", status.getStatus());
-
-    MvcResult createReviewResult = mockMvc.perform(post("/api/web/unbind-reviews")
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("Authorization", "Bearer " + normalSession)
-            .header("X-Browser-Binding-Key", "browser-web-normal-review")
-            .content("""
-                {
-                  "reason":"更换手机",
-                  "requested_new_binding_hint":"iPhone 16"
-                }
-                """))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("success")))
-        .andReturn();
-
-    String reviewId = objectMapper.readTree(createReviewResult.getResponse().getContentAsString()).get("review_id").asText();
-
-    mockMvc.perform(get("/api/web/staff/unbind-reviews")
-            .header("Authorization", "Bearer " + staffSession)
-            .header("X-Browser-Binding-Key", "browser-web-staff-manage")
-            .param("status", "pending"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("success")))
-        .andExpect(jsonPath("$.items[0].review_id", is(reviewId)));
-
-    mockMvc.perform(post("/api/web/staff/unbind-reviews/{reviewId}/approve", reviewId)
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("Authorization", "Bearer " + staffSession)
-            .header("X-Browser-Binding-Key", "browser-web-staff-manage")
-            .content("""
-                {
-                  "review_comment":"确认已更换设备"
-                }
-                """))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("success")));
-
-    org.junit.jupiter.api.Assertions.assertTrue(sessionRepository.findBySessionToken(normalSession).isEmpty());
-    org.junit.jupiter.api.Assertions.assertEquals(1L, webAdminAuditLogRepository.count());
-
-    mockMvc.perform(post("/api/web/passkey/login/options")
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Browser-Binding-Key", "browser-web-normal-review")
-            .content("{}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("forbidden")))
-        .andExpect(jsonPath("$.error_code", is("binding_revoked")));
   }
 
-  private String bindAndRegister(String browserKey, String studentId, String name) throws Exception {
-    MvcResult verifyResult = mockMvc.perform(post("/api/web/bind/verify-identity")
+  private String login(String studentId, String password) throws Exception {
+    MvcResult result = mockMvc.perform(post("/api/web/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Browser-Binding-Key", browserKey)
             .content("""
                 {
                   "student_id":"%s",
-                  "name":"%s"
+                  "password":"%s"
                 }
-                """.formatted(studentId, name)))
+                """.formatted(studentId, password)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.session_token").exists())
         .andReturn();
+    return objectMapper.readTree(result.getResponse().getContentAsString()).get("session_token").asText();
+  }
 
-    String bindTicket = objectMapper.readTree(verifyResult.getResponse().getContentAsString()).get("bind_ticket").asText();
+  private String loginAndChangePassword(String studentId, String newPassword) throws Exception {
+    String sessionToken = login(studentId, "123");
+    changePassword(sessionToken, "123", newPassword);
+    return sessionToken;
+  }
 
-    MvcResult registerOptionsResult = mockMvc.perform(post("/api/web/passkey/register/options")
+  private void changePassword(
+      String sessionToken,
+      String oldPassword,
+      String newPassword
+  ) throws Exception {
+    mockMvc.perform(post("/api/web/auth/change-password")
             .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Browser-Binding-Key", browserKey)
+            .header("Authorization", "Bearer " + sessionToken)
             .content("""
                 {
-                  "bind_ticket":"%s"
+                  "old_password":"%s",
+                  "new_password":"%s"
                 }
-                """.formatted(bindTicket)))
+                """.formatted(oldPassword, newPassword)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
-        .andReturn();
-
-    JsonNode registerOptionsJson = objectMapper.readTree(registerOptionsResult.getResponse().getContentAsString());
-    String requestId = registerOptionsJson.get("request_id").asText();
-    String challenge = registerOptionsJson.get("public_key_options").get("challenge").asText();
-
-    MvcResult completeResult = mockMvc.perform(post("/api/web/passkey/register/complete")
-            .contentType(MediaType.APPLICATION_JSON)
-            .header("X-Browser-Binding-Key", browserKey)
-            .content("""
-                {
-                  "request_id":"%s",
-                  "bind_ticket":"%s",
-                  "attestation_response":{
-                    "id":"cred-%s",
-                    "raw_id":"%s",
-                    "type":"public-key",
-                    "response":{
-                      "client_data_json":"%s",
-                      "attestation_object":"attestation-object"
-                    }
-                  }
-                }
-                """.formatted(
-                requestId,
-                bindTicket,
-                browserKey,
-                rawCredentialIdForBrowser(browserKey),
-                encodeClientDataJson(challenge, "webauthn.create")
-            )))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("success")))
-        .andReturn();
-
-    JsonNode json = objectMapper.readTree(completeResult.getResponse().getContentAsString());
-    return json.get("session_token").asText();
-  }
-
-  private String encodeClientDataJson(String challenge, String type) throws Exception {
-    String payload = objectMapper.writeValueAsString(Map.of(
-        "challenge", challenge,
-        "type", type,
-        "origin", "http://localhost"
-    ));
-    return Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes());
-  }
-
-  private String credentialIdForBrowser(String browserKey) {
-    return "cred-" + browserKey;
-  }
-
-  private String rawCredentialIdForBrowser(String browserKey) {
-    return Base64.getUrlEncoder().withoutPadding().encodeToString(("raw-" + browserKey).getBytes());
-  }
-
-  private String userHandleForId(Long userId) {
-    return Base64.getUrlEncoder().withoutPadding().encodeToString(("user:" + userId).getBytes());
+        .andExpect(jsonPath("$.must_change_password", is(false)));
   }
 
   private void bindUserActivity(String sessionToken, String activityId) {

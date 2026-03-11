@@ -13,8 +13,41 @@
 :root {
   color-scheme: light;
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: #eef1f5;
-  color: #1f2937;
+
+  /* =========================================================
+   * App 视觉 Token（轻量版）
+   * ---------------------------------------------------------
+   * 目标：用一套固定变量把“卡片 / 表单 / 链接 / 组件库”观感收口，
+   * 避免页面各自发明颜色、圆角和阴影导致的“拼装感/模板感”。
+   *
+   * 约束（去 AI 味）：
+   * - 不靠渐变/光晕制造质感
+   * - 圆角不超过 12px
+   * - 阴影只做极轻的层级提示
+   * ========================================================= */
+  --app-bg: #f5f7fb;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f7f9fc;
+  --app-border: #d6dee9;
+  --app-border-subtle: #e6ebf2;
+  --app-text-strong: #111827;
+  --app-text: #374151;
+  --app-text-muted: #6b7280;
+  --app-text-placeholder: #9ca3af;
+  --app-link: var(--td-brand-color-7, #0052d9);
+  --app-focus: rgba(0, 82, 217, 0.18);
+  --app-radius-lg: 12px;
+  --app-radius-md: 10px;
+  --app-radius-sm: 8px;
+  --app-shadow-card: 0 1px 0 rgba(17, 24, 39, 0.04), 0 2px 10px rgba(17, 24, 39, 0.06);
+
+  /* 组件库字体保持一致，避免 “TDesign 一套字、业务一套字”。 */
+  --td-font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --td-font-family-medium: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --td-button-border-radius: var(--app-radius-md);
+
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 
 /* 所有元素默认走 border-box，避免宽度和 padding 叠加失控。 */
@@ -33,7 +66,8 @@ body,
 /* 背景保持浅色和克制，不再用大面积光晕去制造“伪质感”。 */
 body {
   min-width: 320px;
-  background: linear-gradient(180deg, #f8f9fb 0%, #eef1f5 100%);
+  /* 背景保持纯色更“正常”，避免用渐变去做伪质感。 */
+  background: var(--app-bg);
 }
 
 /* 让按钮、输入框继承页面字体，避免原生控件风格割裂。 */
@@ -56,7 +90,7 @@ select {
  * 页面壳层
  * ---------------------------------------------------------
  * `MobilePage` 组件依赖这些类完成：
- * - 整页垂直居中
+ * - 整页顶部对齐（更适合列表/表单滚动）
  * - 卡片式内容区域
  * - 标题与正文分区
  * ========================================================= */
@@ -65,27 +99,32 @@ select {
 .mobile-page {
   width: 100%;
   min-height: 100vh;
+  /* 100dvh 能更好适配移动端地址栏伸缩；不支持的浏览器会回落到 100vh。 */
+  min-height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px 16px 40px;
+  padding: 18px 16px 28px;
+  padding: calc(18px + constant(safe-area-inset-top)) 16px calc(28px + constant(safe-area-inset-bottom));
+  padding: calc(18px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
 }
 
 /* 内容卡片限制最大宽度，保证手机端阅读密度舒适。 */
 .mobile-page__card {
   width: min(100%, 480px);
-  padding: 28px 24px;
-  border: 1px solid #dce2ea;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  padding: 24px 20px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-card);
 }
 
 /* 页面主标题比正文明显更大，但仍控制在手机端可一屏阅读的范围。 */
 .mobile-page__header h1 {
-  margin: 6px 0 12px;
-  font-size: 1.75rem;
-  line-height: 1.2;
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+  line-height: 1.25;
+  color: var(--app-text-strong);
 }
 
 /* 所有页面正文统一用 grid 垂直堆叠，减少每页自己处理间距。 */
@@ -98,7 +137,7 @@ select {
 .mobile-page__content p {
   margin: 0;
   line-height: 1.6;
-  color: #4b5563;
+  color: var(--app-text);
 }
 
 /* =========================================================
@@ -121,9 +160,9 @@ select {
 /* eyebrow 是页面辅助标签，例如“欢迎回来”“首次访问”“活动详情”。 */
 .mobile-page__eyebrow {
   margin: 0;
-  font-size: 0.9375rem;
-  letter-spacing: 0.01em;
-  color: #6b7280;
+  font-size: 0.875rem;
+  letter-spacing: 0;
+  color: var(--app-text-muted);
 }
 
 /* =========================================================
@@ -133,7 +172,7 @@ select {
  * ========================================================= */
 
 /* 这些区块类在当前阶段属于“低风险复用件”：
- * 登录页、绑定页、活动详情页、结果页都在依赖它们，
+ * 登录页、改密页、活动详情页、结果页都在依赖它们，
  * 改动前最好先跑一遍全量截图或至少全量单测。 */
 .stack-form {
   display: grid;
@@ -155,7 +194,9 @@ select {
 /* 分组标题比普通正文更醒目，但不抢主标题层级。 */
 .activity-section__header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  color: var(--app-text-muted);
+  font-weight: 700;
 }
 
 /* 信息面板是当前阶段最稳定的重复结构，列表/详情/输入页都在复用。 */
@@ -164,9 +205,9 @@ select {
   display: grid;
   gap: 10px;
   padding: 18px;
-  border: 1px solid #dce2ea;
-  border-radius: 14px;
-  background: #f8fafc;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface-muted);
 }
 
 /* 标题块和状态位左右分栏，优先保证标题区能自然换行。 */
@@ -191,7 +232,7 @@ select {
 
 .activity-meta-panel__subtitle {
   margin: 0;
-  color: #6b7280;
+  color: var(--app-text-muted);
   line-height: 1.6;
 }
 
@@ -209,12 +250,22 @@ select {
 .detail-panel p,
 .empty-hint {
   margin: 0;
-  color: #4b5563;
+  color: var(--app-text);
   line-height: 1.6;
 }
 
+/* 空态文案需要“看得见但不抢戏”。 */
+.empty-hint {
+  color: var(--app-text-muted);
+}
+
 .activity-meta-panel__footer {
-  padding-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-border-subtle);
 }
 
 /* Tag 已由组件库提供样式，这里只补布局，不再自己画胶囊。 */
@@ -230,20 +281,40 @@ select {
 }
 
 /* 输入框统一圆角与边框，增强移动端触控区域。 */
-.field input {
+.field input,
+.field textarea {
   padding: 14px 16px;
-  border: 1px solid #d1d9e6;
-  border-radius: 12px;
-  background: #fff;
-  color: #1f2937;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+  color: var(--app-text-strong);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-/* 由于绑定页和登录页都大量依赖表单，所以输入框样式尽量保持克制，不做花哨动画。 */
+/* 登录与改密页都大量依赖表单，所以输入框样式尽量保持克制，不做花哨动画。 */
 
 /* 聚焦态给出柔和但清晰的视觉反馈。 */
-.field input:focus {
-  outline: 2px solid rgba(0, 82, 217, 0.12);
-  border-color: #0052d9;
+.field input:focus,
+.field textarea:focus {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 1px;
+  border-color: var(--app-link);
+}
+
+/* textarea 在移动端默认样式差异很大，这里明确收口到与 input 同款。 */
+.field textarea {
+  resize: vertical;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--app-text-placeholder);
+}
+
+.field input:disabled,
+.field textarea:disabled {
+  background: #f3f4f6;
+  color: var(--app-text-muted);
 }
 
 /* 动态码输入框需要明显区别于普通文本输入框。 */
@@ -252,6 +323,7 @@ select {
   letter-spacing: 0.32em;
   font-size: 1.75rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 对动态码输入框的维护建议：
@@ -287,7 +359,8 @@ select {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  color: #0052d9;
+  padding: 6px 0;
+  color: var(--app-link);
   text-decoration: none;
   font-weight: 600;
 }
@@ -297,8 +370,9 @@ select {
 }
 
 .text-link:focus-visible {
-  outline: 2px solid rgba(0, 82, 217, 0.18);
+  outline: 2px solid var(--app-focus);
   outline-offset: 2px;
+  border-radius: var(--app-radius-sm);
 }
 
 /* =========================================================
@@ -318,15 +392,15 @@ select {
   display: grid;
   gap: 8px;
   padding: 18px;
-  border: 1px solid #dce2ea;
-  border-radius: 14px;
-  background: #f8fafc;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface-muted);
   text-align: center;
 }
 
 .staff-code-panel__value {
   margin: 0;
-  color: #111827;
+  color: var(--app-text-strong);
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: 0.28em;
@@ -334,11 +408,54 @@ select {
 
 .staff-code-panel__meta {
   margin: 0;
-  color: #6b7280;
+  color: var(--app-text-muted);
 }
 
 .review-list__actions {
   display: grid;
   gap: 12px;
   padding: 12px 16px 16px;
+  border-top: 1px solid var(--app-border-subtle);
+}
+
+/* =========================================================
+ * TDesign 组件观感对齐
+ * ---------------------------------------------------------
+ * 这里不改组件交互，只做“边距/字体/圆角”收口，
+ * 让它们看起来像同一个产品里出来的。
+ * ========================================================= */
+
+/* CellGroup 的 card 模式默认左右有 margin，会破坏我们卡片内的对齐。 */
+.t-cell-group--card {
+  margin: 0;
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border);
+}
+
+/* CellGroup title 默认带灰底条和固定字体，这里改成更接近“分组标题”。 */
+.t-cell-group__title {
+  font-family: inherit;
+  background: transparent;
+  padding: 0 0 10px;
+  line-height: 1.4;
+  font-size: 0.875rem;
+  color: var(--app-text-muted);
+}
+
+/* Tabs 的背景默认是纯白；在卡片内展示时保持一致即可。 */
+.t-tabs {
+  border-radius: var(--app-radius-md);
+}
+
+/* Cell 的分割线颜色稍微收敛一点，避免和业务面板的边框抢层级。 */
+.t-cell::after {
+  border-bottom-color: var(--app-border-subtle);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .field textarea,
+  .text-link {
+    transition: none;
+  }
 }

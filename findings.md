@@ -1,5 +1,18 @@
 # 发现记录
 
+## 2026-03-10
+
+### 认证基线变更补记（HTTP 内网账号密码）
+
+- 需求变更：部署形态确定为 **HTTP + 内网 IP + 端口号**，因此 Passkey/WebAuthn 方案在主流浏览器下不可用（安全上下文限制），必须移除主链路依赖。
+- 当前认证结论：
+  - 登录账号口径统一为 `student_id`（学号）。
+  - 默认密码固定为 `123`，仅保存 bcrypt hash（不存明文）。
+  - 首次登录强制改密：`must_change_password=true` 时，除改密接口外统一返回 `password_change_required`。
+  - 密码与强制改密字段落在 `wxcheckin_ext.wx_user_auth_ext`。
+  - 已取消浏览器唯一绑定与解绑审核；Web 端仅依赖 `session_token`，同一账号允许多端同时登录（多个会话并存）。
+- 说明：本文件中 2026-03-09 的 “/bind / Passkey / WebAuthn” 相关结论仅保留为历史回溯，当前请以 `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` 与 `docs/plans/2026-03-10-http-password-auth-*.md` 为准。
+
 ## 2026-03-09
 
 ### 本轮复核结论
@@ -45,6 +58,26 @@
   - 签到页
   - 签退页
 - 活动列表仍保留服务端过滤为主，但前端额外用 `my_registered / my_checked_in / my_checked_out` 做一次可见性收口，避免后端新旧口径并存时把普通用户不该看到的活动直接渲染出来。
+
+## 2026-03-11
+
+### 三项目联调全覆盖报告（重点：数据同步）暴露问题
+
+已阅读 `docs/TEST_REPORT_2026-03-11_INTEGRATION.md`，自动化测试全绿，但联调链路暴露出以下确定性问题与整改项：
+
+- P1（确定复现）：`LegacySyncService.syncLegacyActivities()` 的统计口径与投影状态机不一致。
+  - 现状：legacy pull 的 SQL 把 `checkin_count` 统计为 `check_in=1` 的总人数（包含已签退），会周期性覆盖投影表的“已签到未签退”口径，出现 `checkin_count < checkout_count` 等不可能状态。
+  - 修复方向：对齐口径为：
+    - `checkin_count = SUM(check_in=1 AND check_out=0)`
+    - `checkout_count = SUM(check_in=1 AND check_out=1)`
+- P2（体验）：普通用户首次登录改密后，活动列表依赖 pull 同步补齐 `wx_user_activity_status`，存在“列表空白等待”空窗期。
+  - 修复方向（推荐）：当普通用户首次访问活动列表且本地无 status 时，触发一次“按 legacy_user_id 的即时同步”（只同步该用户相关状态，必要时补齐其关联活动投影）。
+- P2（可靠性）：outbox 事件被标记为 `failed/skipped` 后默认不重试，存在最终一致性风险。
+  - 修复方向：引入可重试机制（`retry_count` + 指数退避或延后 `available_at`），失败/依赖未齐场景回到 `pending`，达到上限后再标记终态 `failed`。
+- P3（脚本误报）：`local_dev/scripts/start_3_projects_integration.sh` 内置登录校验使用 `admin/123`，与当前 seed 账号不一致，导致一键启动误报警告。
+  - 修复方向：把校验账号参数化，并默认使用 seed 中 staff 账号。
+- P3（测试噪声）：`ProdProfileSafetyConfigTest` 在 H2 空库上触发 QR 清理任务，出现 `wx_qr_issue_log` 表不存在相关日志。
+  - 修复方向：该测试显式关闭 `app.qr.cleanup-enabled`（或全局关闭 scheduling），提升测试信噪比。
 - 活动详情页在后端尚未稳定输出 `can_checkin / can_checkout` 时，前端用 `support_* + my_* + progress_status` 做兜底推导，降低前后端并行迭代期的页面不可用风险。
 - 签到/签退输入页采用同一套 `AttendanceActionPage` 逻辑收口，避免两套页面后续在错误码映射、会话失效和前后台切换刷新上漂移。
 - 6 位码输入当前采用单输入框 + 数字约束，而不是 6 个独立输入格：
@@ -470,3 +503,13 @@
   - 保持当前后端实现、配置和测试基线不变；
   - 正式需求与补充设计文档已同步收口到 10 秒；
   - 后续不再使用旧动态码窗口口径作为联调或验收标准。
+
+## 2026-03-10 审查补记（代码/文档/联调）
+
+- 新鲜验证：`cd web && npm test`、`cd web && npm run build`、`cd backend && ./mvnw test -q` 均通过。
+- 实机级联调证据（命令行）：已验证 `POST /api/web/auth/login`、`POST /api/web/auth/change-password`、`GET /api/web/activities`、解绑申请/审核/旧浏览器失效/新浏览器重登成功。
+- 文档问题：`docs/REQUIREMENTS.md` 仍引用旧 Passkey 实施计划；`backend/TEST_ENV_TESTING.md` 仍写“Passkey 正式登录”；`docs/WEB_DESIGN.md` 仍写 `frontend/` 过渡目录；`backend/DB_DATABASE_DEEP_DIVE.md` 未补密码字段口径。
+- 高风险问题 1：解绑申请必须先登录且存在活跃绑定；当用户在新浏览器被 `account_bound_elsewhere` / `binding_conflict` 拒绝时，缺少 Web 自助解绑入口。
+- 高风险问题 2：`LegacySyncService` 仅按 legacy `state` 推导 `progress_status`，`WebActivityController` 又直接据此返回 `can_checkin/can_checkout`；当前联调数据中活动详情显示可签到，但 `code-session` 因真实时间窗返回 `outside_activity_time_window`，存在前后端契约不一致。
+- 性能问题：活动列表与解绑审核列表均无分页；登录路径按 `legacy_user_id` 查找但 `V1__baseline_extension_schema.sql` 未给 `wx_user_auth_ext.legacy_user_id` 建索引。
+- 联调边界：已确认 `suda_union` / `suda-gs-ams` / `wxapp-checkin/backend` 可同时拉起；但仓库内尚无 `wxapp-checkin/web -> backend -> outbox -> suda_union -> suda-gs-ams` 全闭环落盘证据。

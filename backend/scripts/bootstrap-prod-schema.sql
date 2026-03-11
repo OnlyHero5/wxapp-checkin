@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS wx_user_auth_ext (
   token_expires_at DATETIME(3) NULL,
   student_id VARCHAR(32) NULL,
   name VARCHAR(64) NULL,
+  password_hash VARCHAR(255) NULL,
+  must_change_password TINYINT(1) NULL,
+  password_updated_at DATETIME(3) NULL,
   department VARCHAR(128) NULL,
   club VARCHAR(128) NULL,
   avatar_url VARCHAR(512) NULL,
@@ -23,7 +26,8 @@ CREATE TABLE IF NOT EXISTS wx_user_auth_ext (
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   UNIQUE KEY uk_wx_user_auth_ext_wx_identity (wx_identity),
-  UNIQUE KEY uk_wx_user_auth_ext_student_id (student_id)
+  UNIQUE KEY uk_wx_user_auth_ext_student_id (student_id),
+  KEY idx_wx_user_auth_ext_legacy_user_id (legacy_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS wx_admin_roster (
@@ -148,9 +152,63 @@ CREATE TABLE IF NOT EXISTS wx_sync_outbox (
   event_type VARCHAR(64) NOT NULL,
   payload_json TEXT NOT NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  retry_count INT NOT NULL DEFAULT 0,
   available_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   processed_at DATETIME(3) NULL,
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   KEY idx_wx_sync_outbox_status_available (status, available_at),
   KEY idx_wx_sync_outbox_aggregate (aggregate_type, aggregate_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Web-only: 解绑审核（V6） =====
+CREATE TABLE IF NOT EXISTS web_unbind_review (
+  review_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  reason VARCHAR(255) NOT NULL,
+  requested_new_binding_hint VARCHAR(255) NULL,
+  review_comment VARCHAR(255) NULL,
+  reviewer_user_id BIGINT NULL,
+  submitted_at DATETIME(3) NOT NULL,
+  reviewed_at DATETIME(3) NULL,
+  KEY idx_web_unbind_review_status (status, submitted_at),
+  KEY idx_web_unbind_review_user (user_id),
+  CONSTRAINT fk_web_unbind_review_user FOREIGN KEY (user_id) REFERENCES wx_user_auth_ext(id),
+  CONSTRAINT fk_web_unbind_review_reviewer FOREIGN KEY (reviewer_user_id) REFERENCES wx_user_auth_ext(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Web-only: 浏览器绑定（V7） =====
+CREATE TABLE IF NOT EXISTS web_browser_binding (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  binding_id VARCHAR(64) NOT NULL,
+  user_id BIGINT NOT NULL,
+  binding_fingerprint_hash VARCHAR(128) NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  approved_unbind_review_id VARCHAR(64) NULL,
+  revoked_reason VARCHAR(255) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  last_seen_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  revoked_at DATETIME(3) NULL,
+  UNIQUE KEY uk_web_browser_binding_id (binding_id),
+  UNIQUE KEY uk_web_browser_binding_user_status (user_id, status),
+  UNIQUE KEY uk_web_browser_binding_fingerprint_status (binding_fingerprint_hash, status),
+  CONSTRAINT fk_web_browser_binding_user FOREIGN KEY (user_id) REFERENCES wx_user_auth_ext(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS web_admin_audit_log (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  audit_id VARCHAR(64) NOT NULL,
+  operator_user_id BIGINT NULL,
+  target_user_id BIGINT NULL,
+  action_type VARCHAR(64) NOT NULL,
+  target_type VARCHAR(64) NOT NULL,
+  target_id VARCHAR(128) NOT NULL,
+  payload_json TEXT NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uk_web_admin_audit_log_audit_id (audit_id),
+  KEY idx_web_admin_audit_log_target (target_type, target_id),
+  KEY idx_web_admin_audit_log_action (action_type, created_at),
+  CONSTRAINT fk_web_admin_audit_log_operator FOREIGN KEY (operator_user_id) REFERENCES wx_user_auth_ext(id),
+  CONSTRAINT fk_web_admin_audit_log_target_user FOREIGN KEY (target_user_id) REFERENCES wx_user_auth_ext(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -10,6 +10,8 @@
 
 ---
 
+> **注意：** 本计划基于当时的 Passkey/WebAuthn 认证方案编写。自 2026-03-10 起认证基线已调整为 **HTTP 内网账号密码（默认 123，首次登录强制改密）**。请以 `docs/plans/2026-03-10-http-password-auth-implementation-plan.md` 为准；本文仅保留为历史回溯。
+
 ### Task 1: 补齐后端 Web 身份数据模型
 
 **Files:**
