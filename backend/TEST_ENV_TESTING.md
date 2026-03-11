@@ -7,7 +7,7 @@
 ## 1. 脚本作用
 
 ### `scripts/start-test-env.sh`
-- 一键加载测试环境变量（默认 `~/.wxapp-checkin-test-env.sh`）。
+- 一键加载测试环境变量（默认 `backend/.env.test.local.sh`；仍兼容旧 `~/.wxapp-checkin-test-env.sh` 但不再推荐）。
 - 自动设置测试运行参数：
   - `SPRING_PROFILES_ACTIVE=dev`
   - `SERVER_PORT=9989`

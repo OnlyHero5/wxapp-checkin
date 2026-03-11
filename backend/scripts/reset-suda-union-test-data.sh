@@ -3,9 +3,23 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-ENV_FILE="${WXAPP_TEST_ENV_FILE:-$HOME/.wxapp-checkin-test-env.sh}"
+DEFAULT_ENV_FILE="${PROJECT_ROOT}/.env.test.local.sh"
+LEGACY_ENV_FILE="${HOME}/.wxapp-checkin-test-env.sh"
 
-if [[ -f "${ENV_FILE}" ]]; then
+# 说明：该脚本通常由 start-test-env.sh 调用，环境变量应已在父进程中加载。
+# 这里保留“可单独运行”的兼容逻辑：当关键 DB 变量未提供时，尝试从 env 文件补齐。
+ENV_FILE="${WXAPP_TEST_ENV_FILE:-}"
+if [[ -z "${ENV_FILE}" ]]; then
+  if [[ -f "${DEFAULT_ENV_FILE}" ]]; then
+    ENV_FILE="${DEFAULT_ENV_FILE}"
+  elif [[ -f "${LEGACY_ENV_FILE}" ]]; then
+    ENV_FILE="${LEGACY_ENV_FILE}"
+  else
+    ENV_FILE=""
+  fi
+fi
+
+if [[ -z "${DB_HOST:-}" ]] && [[ -n "${ENV_FILE}" ]] && [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
   source "${ENV_FILE}"
 fi

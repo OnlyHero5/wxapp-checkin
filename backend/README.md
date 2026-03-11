@@ -192,13 +192,13 @@ curl http://127.0.0.1:8080/actuator/health
 
 ### 3.1 配置测试环境变量文件
 
-默认读取：`~/.wxapp-checkin-test-env.sh`（可用 `WXAPP_TEST_ENV_FILE` 覆盖路径）
+默认读取：`backend/.env.test.local.sh`（可用 `WXAPP_TEST_ENV_FILE` 覆盖路径；仍兼容旧 `~/.wxapp-checkin-test-env.sh` 但不再推荐）
 
 推荐先复制仓库内模板：
 
 ```bash
 cd /path/to/wxapp-checkin
-cp backend/scripts/test-env.example.sh ~/.wxapp-checkin-test-env.sh
+cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
 ```
 
 最小检查项：

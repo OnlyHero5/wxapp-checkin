@@ -2,7 +2,7 @@
 
 # 本文件是 `backend/scripts/start-test-env.sh` 的最小示例。
 # 使用方式：
-# 1. cp backend/scripts/test-env.example.sh ~/.wxapp-checkin-test-env.sh
+# 1. cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
 # 2. 按本机 MySQL / Redis 实际情况修改下面变量
 # 3. 再执行 `./scripts/start-test-env.sh`
 

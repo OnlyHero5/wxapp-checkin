@@ -3,14 +3,34 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-ENV_FILE="${WXAPP_TEST_ENV_FILE:-$HOME/.wxapp-checkin-test-env.sh}"
+DEFAULT_ENV_FILE="${PROJECT_ROOT}/.env.test.local.sh"
+LEGACY_ENV_FILE="${HOME}/.wxapp-checkin-test-env.sh"
+
+# 说明：
+# - 历史默认把测试环境变量写到 `~/.wxapp-checkin-test-env.sh`，不利于复现且会把配置落到工作区外；
+# - 现在默认收敛到仓库内的 `backend/.env.test.local.sh`；
+# - 仍保留 `WXAPP_TEST_ENV_FILE` 显式覆盖与 legacy fallback（仅兼容）。
+ENV_FILE="${WXAPP_TEST_ENV_FILE:-}"
+if [[ -z "${ENV_FILE}" ]]; then
+  if [[ -f "${DEFAULT_ENV_FILE}" ]]; then
+    ENV_FILE="${DEFAULT_ENV_FILE}"
+  elif [[ -f "${LEGACY_ENV_FILE}" ]]; then
+    ENV_FILE="${LEGACY_ENV_FILE}"
+    echo "[start-test-env] Detected legacy env file: ${LEGACY_ENV_FILE}" >&2
+    echo "[start-test-env] Recommended: cp scripts/test-env.example.sh ${DEFAULT_ENV_FILE}" >&2
+  else
+    ENV_FILE="${DEFAULT_ENV_FILE}"
+  fi
+fi
 
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
   source "${ENV_FILE}"
 else
   echo "[start-test-env] Missing env file: ${ENV_FILE}" >&2
-  echo "[start-test-env] Please create it first (example: ~/.wxapp-checkin-test-env.sh)." >&2
+  echo "[start-test-env] Please create it first:" >&2
+  echo "[start-test-env]   cd ${PROJECT_ROOT}" >&2
+  echo "[start-test-env]   cp scripts/test-env.example.sh .env.test.local.sh" >&2
   exit 1
 fi
 
