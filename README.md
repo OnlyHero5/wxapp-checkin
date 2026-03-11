@@ -71,15 +71,59 @@
 - 详细变更：`docs/changes.md`
 - 根目录变更摘要：`changes.md`
 
-## 本地启动
+## 一键启动（推荐）
+
+先一键生成本地配置文件（幂等，不会覆盖已有文件）：
+
+```bash
+cd wxapp-checkin
+./scripts/bootstrap.sh
+```
+
+然后选择一种启动方式：
+
+```bash
+# 本机 MySQL/Redis + 后端 9989 + web dev
+./scripts/dev.sh local
+
+# 或：Docker Compose (MySQL + Redis + Backend 8080) + web dev（Vite docker mode）
+./scripts/dev.sh docker
+```
+
+停止：
+
+```bash
+./scripts/stop.sh
+```
+
+配置文件位置（都在仓库内，且默认不会污染 git 状态）：
+
+- local：
+  - 后端：`backend/.env.test.local.sh`
+  - 前端：`web/.env.local`
+- docker：
+  - 后端：`backend/.env`
+  - 前端：`web/.env.docker.local`
+
+说明：
+
+- `web/.env.example` 给出了默认开发配置（local 默认代理到 `http://127.0.0.1:9989`）。
+- docker 模式通过 `vite --mode docker` 读取 `web/.env.docker.local` 覆盖 `web/.env.local`，默认代理到 `http://127.0.0.1:8080`。
+- 若要和 `suda-gs-ams` 共域部署，建议至少设置：
+  - `VITE_APP_BASE_PATH=/checkin/`
+  - `VITE_API_BASE_PATH=/checkin-api/web`
+
+## 手动启动（排障用）
 
 推荐顺序：
 
 0. 先准备后端测试环境变量文件：
 
 ```bash
-cp backend/scripts/test-env.example.sh ~/.wxapp-checkin-test-env.sh
+cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
 ```
+
+> 兼容说明：`backend/scripts/start-test-env.sh` 仍兼容旧 `~/.wxapp-checkin-test-env.sh`，但不再推荐写到 `~`。
 
 1. 启动后端测试环境（默认监听 `9989`）：
 
@@ -95,15 +139,6 @@ cd web
 npm install
 npm run dev
 ```
-
-说明：
-
-- `web/.env.example` 给出了默认开发配置；如需覆盖，复制为 `web/.env.local` 后按环境修改。
-- 当前前端开发服务器默认把 `VITE_API_BASE_PATH` 对应的路径代理到 `VITE_API_PROXY_TARGET`，默认值是 `http://127.0.0.1:9989`。
-- 如果你不是用 `start-test-env.sh`，而是直接运行 `backend/scripts/start-dev.sh` 的默认 `8080` 端口，请同步把 `VITE_API_PROXY_TARGET` 改为 `http://127.0.0.1:8080`。
-- 若要和 `suda-gs-ams` 共域部署，建议至少设置：
-  - `VITE_APP_BASE_PATH=/checkin/`
-  - `VITE_API_BASE_PATH=/checkin-api/web`
 
 部署路由建议：
 

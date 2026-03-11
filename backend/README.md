@@ -190,6 +190,13 @@ curl http://127.0.0.1:8080/actuator/health
 
 ## 3) 本地联调/验收（一键脚本）
 
+> 提示：仓库根目录已提供“一键启动前后端”的统一入口：
+>
+> - `cd .. && ./scripts/bootstrap.sh`
+> - `./scripts/dev.sh local` 或 `./scripts/dev.sh docker`
+>
+> 本节仍保留 `backend/scripts/*.sh` 的说明，便于排障与理解测试环境行为。
+
 ### 3.1 配置测试环境变量文件
 
 默认读取：`backend/.env.test.local.sh`（可用 `WXAPP_TEST_ENV_FILE` 覆盖路径；仍兼容旧 `~/.wxapp-checkin-test-env.sh` 但不再推荐）
