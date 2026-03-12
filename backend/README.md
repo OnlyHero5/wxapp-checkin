@@ -36,7 +36,22 @@ redis-cli --version
 
 ### 1.2 初始化扩展库表结构（只需一次）
 
-生产 profile 默认关闭 Flyway（见 `application-prod.yml`），因此需要手动初始化扩展库：
+生产 profile 已启用 Flyway 自动迁移（见 `application-prod.yml`），默认使用 **无演示数据** 的迁移目录：
+
+- `classpath:db/migration_prod`
+
+因此大多数情况下 **不需要** 手工初始化扩展库表结构：只要后端能连上 `wxcheckin_ext`，启动时会自动建表/升级。
+
+特殊情况说明：
+
+- 如果 `wxcheckin_ext` 库不存在：
+  - 推荐：给 DB 账号授予 `CREATE DATABASE` 权限，并保持 `DB_CREATE_DATABASE_IF_NOT_EXIST=true`（默认 true），后端会尝试自动建库；
+  - 或由 DBA 先创建空库（后端启动时会自动建表）。
+- 如果库已存在但没有 `flyway_schema_history`（历史手工建表/拷贝库）：
+  - 后端会基于表/列/索引推断 baseline 版本后再迁移；
+  - 极端情况下可设置 `WXAPP_FLYWAY_BASELINE_OVERRIDE` 强制 baseline（例如 `11`）。
+
+仍保留手工 bootstrap 脚本作为兜底（不推荐，除非你的变更流程禁止线上自动迁移）：
 
 ```bash
 cd /path/to/wxapp-checkin/backend
@@ -66,6 +81,9 @@ DB_NAME=wxcheckin_ext
 DB_USER=wxcheckin_app
 DB_PASSWORD=请填真实数据库密码
 
+# 自动建库开关（DB_NAME 不存在时尝试创建；需要 DB_USER 具备 CREATE DATABASE 权限）
+DB_CREATE_DATABASE_IF_NOT_EXIST=true
+
 # 遗留库（suda_union）
 LEGACY_DB_URL=jdbc:mysql://127.0.0.1:3306/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
 LEGACY_DB_USER=wxcheckin_app
@@ -90,7 +108,20 @@ SESSION_TTL_SECONDS=7200
 # - 默认密码固定为 123
 # - 首次登录必须修改密码
 # - 不再需要配置 WEBAUTHN_*（Passkey/WebAuthn 已从主链路移除）
+
+# Flyway baseline 兜底（极端情况下使用）
+# WXAPP_FLYWAY_BASELINE_OVERRIDE=11
 ```
+
+仓库内也提供了同等语义的模板文件：`backend/.env.prod.example`（不含真实值，可复制为 `backend/.env.prod`），并提供了一个“后端一键启动（prod）”脚本用于单机演示/排障：
+
+```bash
+cd /path/to/wxapp-checkin
+cp backend/.env.prod.example backend/.env.prod
+./scripts/prod-backend.sh
+```
+
+> 生产正式部署仍推荐 systemd（环境变量放 `/etc/wxcheckin/backend.prod.env`），避免把敏感配置留在代码目录。
 
 生成强密钥示例：
 
