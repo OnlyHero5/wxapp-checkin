@@ -84,6 +84,7 @@ public class OutboxRelayService {
   private void relayOne(WxSyncOutboxEntity event) {
     try {
       Map<String, Object> payload = jsonCodec.readMap(event.getPayloadJson());
+      String recordId = toString(payload.get("record_id"));
       Long userId = toLong(payload.get("user_id"));
       String activityId = toString(payload.get("activity_id"));
       String actionType = toString(payload.get("action_type"));
@@ -106,18 +107,48 @@ public class OutboxRelayService {
         return;
       }
 
+      Integer legacyActivityId = activity.getLegacyActivityId();
+
+      int updated;
       if ("checkin".equalsIgnoreCase(actionType)) {
-        jdbcTemplate.update(
+        updated = jdbcTemplate.update(
             "UPDATE suda_activity_apply SET check_in = 1, check_out = 0 WHERE activity_id = ? AND username = ?",
-            activity.getLegacyActivityId(),
+            legacyActivityId,
+            username
+        );
+      } else if ("checkout".equalsIgnoreCase(actionType)) {
+        updated = jdbcTemplate.update(
+            "UPDATE suda_activity_apply SET check_in = 1, check_out = 1 WHERE activity_id = ? AND username = ?",
+            legacyActivityId,
             username
         );
       } else {
-        jdbcTemplate.update(
-            "UPDATE suda_activity_apply SET check_in = 1, check_out = 1 WHERE activity_id = ? AND username = ?",
-            activity.getLegacyActivityId(),
-            username
-        );
+        // action_type 非预期值属于不可恢复错误：不应回写 legacy。
+        markTerminal(event, "dead");
+        return;
+      }
+
+      if (updated == 0) {
+        // MySQL/ConnectorJ 的“受影响行数”语义可能返回“实际变更行数”而非“匹配行数”，
+        // 因此 UPDATE 0 行不一定代表记录不存在（也可能是值本来就已是目标值）。
+        //
+        // 为避免“legacy 缺报名行时仍误标 processed”的静默不一致：
+        // - 若确认 legacy 存在该报名行：仍视为已同步；
+        // - 若确认不存在：事件标记为 dead，要求人工修复数据或排查口径问题。
+        if (!legacyApplyRowExists(legacyActivityId, username)) {
+          log.warn(
+              "Outbox relay dead because legacy apply row missing: id={}, record_id={}, user_id={}, activity_id={}, legacy_activity_id={}, username={}, action_type={}",
+              event.getId(),
+              recordId,
+              userId,
+              activityId,
+              legacyActivityId,
+              username,
+              actionType
+          );
+          markTerminal(event, "dead");
+          return;
+        }
       }
       markTerminal(event, "processed");
     } catch (DataAccessException ex) {
@@ -127,6 +158,19 @@ public class OutboxRelayService {
       log.warn("Outbox relay failed for id={}", event.getId(), ex);
       markTerminal(event, "dead");
     }
+  }
+
+  private boolean legacyApplyRowExists(Integer legacyActivityId, String username) {
+    if (legacyActivityId == null || username == null || username.isBlank()) {
+      return false;
+    }
+    List<Integer> result = jdbcTemplate.query(
+        "SELECT 1 FROM suda_activity_apply WHERE activity_id = ? AND username = ? LIMIT 1",
+        (rs, rowNum) -> rs.getInt(1),
+        legacyActivityId,
+        username
+    );
+    return !result.isEmpty();
   }
 
   private String resolveLegacyUsername(Long legacyUserId) {
