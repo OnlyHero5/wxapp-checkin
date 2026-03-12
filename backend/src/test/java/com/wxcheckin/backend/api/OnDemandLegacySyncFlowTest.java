@@ -1,6 +1,7 @@
 package com.wxcheckin.backend.api;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -155,6 +156,24 @@ class OnDemandLegacySyncFlowTest {
         .andExpect(jsonPath("$.activities[0].activity_id", is("legacy_act_101")));
   }
 
+  @Test
+  void shouldNotExposeActivitiesWhenUserIsOnlyInCandidateState() throws Exception {
+    // legacy 报名资格口径对齐 suda_union：
+    // - state=0/2 才视为“已报名可签到”
+    // - state=1（候补中）不应出现在 normal 用户活动列表
+    jdbcTemplate.update(
+        "UPDATE suda_activity_apply SET state = 1 WHERE activity_id = 101 AND username = '2025000011'"
+    );
+
+    String sessionToken = loginAndChangePassword("2025000011", "new-pass-normal-candidate");
+
+    mockMvc.perform(get("/api/web/activities")
+            .header("Authorization", "Bearer " + sessionToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.activities", hasSize(0)));
+  }
+
   private String loginAndChangePassword(String studentId, String newPassword) throws Exception {
     String sessionToken = login(studentId, "123");
     changePassword(sessionToken, "123", newPassword);
@@ -196,4 +215,3 @@ class OnDemandLegacySyncFlowTest {
         .andExpect(jsonPath("$.must_change_password", is(false)));
   }
 }
-

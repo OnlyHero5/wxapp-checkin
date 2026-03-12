@@ -336,7 +336,7 @@ public class LegacySyncService {
           .orElseGet(WxUserActivityStatusEntity::new);
       status.setUser(user);
       status.setActivityId(activity.getActivityId());
-      status.setRegistered(row.applyState != 3);
+      status.setRegistered(isRegisteredApplyState(row.applyState));
 
       if (row.checkIn) {
         // Legacy convention: check_out=1 means already checked out, 0 means not yet checked out.
@@ -359,9 +359,17 @@ public class LegacySyncService {
       return number.intValue() != 0;
     }
     if (raw instanceof byte[] bytes && bytes.length > 0) {
-      return bytes[0] != 0;
-    }
-    return "1".equals(String.valueOf(raw));
+    return bytes[0] != 0;
+  }
+  return "1".equals(String.valueOf(raw));
+  }
+
+  private boolean isRegisteredApplyState(int applyState) {
+    // 报名资格必须严格对齐 legacy（suda_union）口径：
+    // - 0：报名成功
+    // - 2：候补成功
+    // 其它状态（候补中/候补失败/补报名待审核/拒绝等）均不应视为“已报名可签到”。
+    return applyState == 0 || applyState == 2;
   }
 
 	  private static class LegacyActivityRow {
