@@ -113,6 +113,24 @@ cd wxapp-checkin
   - `VITE_APP_BASE_PATH=/checkin/`
   - `VITE_API_BASE_PATH=/checkin-api/web`
 
+## 生产启动（后端）
+
+生产环境建议使用 systemd 部署，配置与一键启动步骤见：`backend/README.md`。
+
+仓库也提供了一个“生产后端一键启动（prod）”脚本，适合单机演示/排障（不会执行任何测试数据重置）：
+
+```bash
+cd wxapp-checkin
+cp backend/.env.prod.example backend/.env.prod
+./scripts/prod-backend.sh
+```
+
+说明：
+
+- `prod` profile 下后端会对 `wxcheckin_ext` 执行 Flyway 自动迁移（不包含演示 seed 数据）。
+- `suda_union`（legacy）必须预先存在；后端不会对 legacy 做 schema 迁移。
+- 若扩展库已存在但缺少 `flyway_schema_history`（历史手工建表/拷贝库），后端会尝试推断 baseline 版本；极端情况下可用 `WXAPP_FLYWAY_BASELINE_OVERRIDE` 兜底（详见 `backend/README.md`）。
+
 ## 手动启动（排障用）
 
 推荐顺序：

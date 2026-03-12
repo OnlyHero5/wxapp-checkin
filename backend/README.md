@@ -251,8 +251,11 @@ cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
 ```bash
 cd /path/to/wxapp-checkin/backend
 chmod +x scripts/*.sh
+export WXAPP_CHECKIN_TEST_MODE=1
 ./scripts/start-test-env.sh
 ```
+
+> 注意：该脚本会重置 legacy（`suda_union`）测试数据（drop + recreate），因此默认增加安全护栏，必须显式设置 `WXAPP_CHECKIN_TEST_MODE=1` 才允许运行（生产环境禁止）。
 
 该脚本默认：
 - `SPRING_PROFILES_ACTIVE=dev`
