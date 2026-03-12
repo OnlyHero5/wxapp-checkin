@@ -1,7 +1,7 @@
 package com.wxcheckin.backend.domain.model;
 
 /**
- * Activity lifecycle status used by miniapp UI.
+ * Activity lifecycle status exposed to Web APIs/UI.
  */
 public enum ActivityProgressStatus {
   ONGOING("ongoing"),

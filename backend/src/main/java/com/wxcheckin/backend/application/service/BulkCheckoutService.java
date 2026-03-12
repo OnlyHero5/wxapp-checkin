@@ -11,10 +11,12 @@ import com.wxcheckin.backend.infrastructure.persistence.entity.WxActivityProject
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxCheckinEventEntity;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxSyncOutboxEntity;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserActivityStatusEntity;
+import com.wxcheckin.backend.infrastructure.persistence.entity.WebAdminAuditLogEntity;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxCheckinEventRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSyncOutboxRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebAdminAuditLogRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
@@ -31,6 +33,7 @@ public class BulkCheckoutService {
   private final WxUserActivityStatusRepository statusRepository;
   private final WxCheckinEventRepository checkinEventRepository;
   private final WxSyncOutboxRepository syncOutboxRepository;
+  private final WebAdminAuditLogRepository adminAuditLogRepository;
   private final TokenGenerator tokenGenerator;
   private final JsonCodec jsonCodec;
   private final Clock clock;
@@ -41,6 +44,7 @@ public class BulkCheckoutService {
       WxUserActivityStatusRepository statusRepository,
       WxCheckinEventRepository checkinEventRepository,
       WxSyncOutboxRepository syncOutboxRepository,
+      WebAdminAuditLogRepository adminAuditLogRepository,
       TokenGenerator tokenGenerator,
       JsonCodec jsonCodec,
       Clock clock
@@ -50,6 +54,7 @@ public class BulkCheckoutService {
     this.statusRepository = statusRepository;
     this.checkinEventRepository = checkinEventRepository;
     this.syncOutboxRepository = syncOutboxRepository;
+    this.adminAuditLogRepository = adminAuditLogRepository;
     this.tokenGenerator = tokenGenerator;
     this.jsonCodec = jsonCodec;
     this.clock = clock;
@@ -131,6 +136,23 @@ public class BulkCheckoutService {
       // 这里改走数据库原子增减，避免继续沿用读后写统计导致计数丢失。
       activityRepository.adjustCounts(normalizedActivityId, -affectedCount, affectedCount);
     }
+
+    // 管理员高风险动作必须保留“操作级”审计记录：即便本次 affectedCount=0，
+    // 也需要能追溯“谁在什么时间对哪个活动发起了批量签退”。
+    WebAdminAuditLogEntity auditLog = new WebAdminAuditLogEntity();
+    auditLog.setAuditId("audit_" + tokenGenerator.newNonce());
+    auditLog.setOperatorUser(principal.user());
+    auditLog.setActionType("bulk_checkout");
+    auditLog.setTargetType("activity");
+    auditLog.setTargetId(normalizedActivityId);
+    Map<String, Object> auditPayload = new HashMap<>();
+    auditPayload.put("activity_id", normalizedActivityId);
+    auditPayload.put("reason", normalize(reason));
+    auditPayload.put("affected_count", affectedCount);
+    auditPayload.put("batch_id", batchId);
+    auditPayload.put("server_time_ms", now);
+    auditLog.setPayloadJson(jsonCodec.writeMap(auditPayload));
+    adminAuditLogRepository.save(auditLog);
 
     return new WebBulkCheckoutResponse(
         "success",

@@ -1,7 +1,7 @@
 package com.wxcheckin.backend.domain.model;
 
 /**
- * Check-in action type from QR payload and API contracts.
+ * 签到动作类型（Web 动态码与接口契约统一使用）。
  */
 public enum ActionType {
   CHECKIN("checkin"),

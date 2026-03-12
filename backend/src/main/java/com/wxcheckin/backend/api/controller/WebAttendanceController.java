@@ -1,7 +1,5 @@
 package com.wxcheckin.backend.api.controller;
 
-import com.wxcheckin.backend.api.dto.ConsumeCheckinRequest;
-import com.wxcheckin.backend.api.dto.ConsumeCheckinResponse;
 import com.wxcheckin.backend.api.dto.WebCodeConsumeRequest;
 import com.wxcheckin.backend.api.dto.WebCodeConsumeResponse;
 import com.wxcheckin.backend.api.dto.WebCodeSessionResponse;
@@ -53,28 +51,12 @@ public class WebAttendanceController {
       HttpServletRequest request
   ) {
     String token = sessionTokenExtractor.extract(requestBody.sessionToken(), request);
-    ConsumeCheckinResponse response = checkinConsumeService.consume(
-        new ConsumeCheckinRequest(
-            token,
-            null,
-            null,
-            null,
-            null,
-            activityId,
-            requestBody.actionType(),
-            null,
-            null,
-            requestBody.code()
-        )
-    );
-    return new WebCodeConsumeResponse(
-        response.status(),
-        response.message(),
-        response.actionType(),
-        response.activityId(),
-        response.activityTitle(),
-        response.checkinRecordId(),
-        response.serverTime()
+    return checkinConsumeService.consumeWebCode(
+        token,
+        activityId,
+        requestBody.actionType(),
+        requestBody.code(),
+        request.getRemoteAddr()
     );
   }
 }

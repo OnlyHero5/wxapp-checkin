@@ -185,8 +185,6 @@ public class ActivityQueryService {
         myRegistered,
         myCheckedIn,
         myCheckedOut,
-        activity.getRotateSeconds(),
-        activity.getGraceSeconds(),
         canCheckin,
         canCheckout,
         serverTimeMs

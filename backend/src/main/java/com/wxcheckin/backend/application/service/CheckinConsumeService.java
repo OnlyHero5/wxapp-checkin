@@ -1,13 +1,9 @@
 package com.wxcheckin.backend.application.service;
 
-import com.wxcheckin.backend.api.dto.ConsumeCheckinRequest;
-import com.wxcheckin.backend.api.dto.ConsumeCheckinResponse;
+import com.wxcheckin.backend.api.dto.WebCodeConsumeResponse;
 import com.wxcheckin.backend.api.error.BusinessException;
-import com.wxcheckin.backend.application.model.ParsedQrPayload;
 import com.wxcheckin.backend.application.model.SessionPrincipal;
 import com.wxcheckin.backend.application.support.JsonCodec;
-import com.wxcheckin.backend.application.support.QrNonceSigner;
-import com.wxcheckin.backend.application.support.QrPayloadCodec;
 import com.wxcheckin.backend.application.support.TokenGenerator;
 import com.wxcheckin.backend.config.AppProperties;
 import com.wxcheckin.backend.domain.model.ActionType;
@@ -21,7 +17,6 @@ import com.wxcheckin.backend.infrastructure.persistence.entity.WxSyncOutboxEntit
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserActivityStatusEntity;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxCheckinEventRepository;
-import com.wxcheckin.backend.infrastructure.persistence.repository.WxQrIssueLogRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxReplayGuardRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSyncOutboxRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
@@ -34,66 +29,74 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Implements A-06 consume logic.
+ * Web 动态码的签到/签退消费服务。
+ *
+ * <p>注意：当前仓库的正式产品形态是“手机浏览器 Web + 动态 6 位码”，不再接收二维码扫码 payload。</p>
  */
 @Service
 public class CheckinConsumeService {
 
   private final SessionService sessionService;
-  private final QrPayloadCodec qrPayloadCodec;
   private final WxActivityProjectionRepository activityRepository;
   private final WxUserActivityStatusRepository statusRepository;
   private final WxReplayGuardRepository replayGuardRepository;
   private final WxCheckinEventRepository checkinEventRepository;
-  private final WxQrIssueLogRepository qrIssueLogRepository;
   private final WxSyncOutboxRepository syncOutboxRepository;
   private final TokenGenerator tokenGenerator;
   private final JsonCodec jsonCodec;
-  private final QrNonceSigner qrNonceSigner;
   private final AppProperties appProperties;
   private final Clock clock;
   private final DynamicCodeService dynamicCodeService;
+  private final InvalidCodeAttemptLimiter invalidCodeAttemptLimiter;
 
   public CheckinConsumeService(
       SessionService sessionService,
-      QrPayloadCodec qrPayloadCodec,
       WxActivityProjectionRepository activityRepository,
       WxUserActivityStatusRepository statusRepository,
       WxReplayGuardRepository replayGuardRepository,
       WxCheckinEventRepository checkinEventRepository,
-      WxQrIssueLogRepository qrIssueLogRepository,
       WxSyncOutboxRepository syncOutboxRepository,
       TokenGenerator tokenGenerator,
       JsonCodec jsonCodec,
-      QrNonceSigner qrNonceSigner,
       AppProperties appProperties,
       Clock clock,
-      DynamicCodeService dynamicCodeService
+      DynamicCodeService dynamicCodeService,
+      InvalidCodeAttemptLimiter invalidCodeAttemptLimiter
   ) {
     this.sessionService = sessionService;
-    this.qrPayloadCodec = qrPayloadCodec;
     this.activityRepository = activityRepository;
     this.statusRepository = statusRepository;
     this.replayGuardRepository = replayGuardRepository;
     this.checkinEventRepository = checkinEventRepository;
-    this.qrIssueLogRepository = qrIssueLogRepository;
     this.syncOutboxRepository = syncOutboxRepository;
     this.tokenGenerator = tokenGenerator;
     this.jsonCodec = jsonCodec;
-    this.qrNonceSigner = qrNonceSigner;
     this.appProperties = appProperties;
     this.clock = clock;
     this.dynamicCodeService = dynamicCodeService;
+    this.invalidCodeAttemptLimiter = invalidCodeAttemptLimiter;
   }
 
   @Transactional
-  public ConsumeCheckinResponse consume(ConsumeCheckinRequest request) {
-    SessionPrincipal principal = sessionService.requireWebPrincipal(request.sessionToken());
+  public WebCodeConsumeResponse consumeWebCode(
+      String sessionToken,
+      String activityId,
+      String actionTypeText,
+      String code,
+      String clientIp
+  ) {
+    SessionPrincipal principal = sessionService.requireWebPrincipal(sessionToken);
     if (principal.role() != RoleType.NORMAL) {
-      throw new BusinessException("forbidden", "仅普通用户可扫码签到/签退");
+      throw new BusinessException("forbidden", "仅普通用户可签到/签退");
     }
 
-    ResolvedConsumePayload payload = resolveConsumePayload(request);
+    ResolvedConsumePayload payload = resolveConsumePayload(
+        activityId,
+        actionTypeText,
+        code,
+        principal.user() == null ? null : principal.user().getId(),
+        clientIp
+    );
 
     WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(payload.activityId())
         .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
@@ -159,14 +162,13 @@ public class CheckinConsumeService {
     outbox.setAvailableAt(Instant.ofEpochMilli(now));
     syncOutboxRepository.save(outbox);
 
-    return new ConsumeCheckinResponse(
+    return new WebCodeConsumeResponse(
         "success",
         "提交成功",
         payload.actionType().getCode(),
         payload.activityId(),
         activity.getActivityTitle(),
         recordId,
-        payload.inGraceWindow(),
         now
     );
   }
@@ -188,7 +190,7 @@ public class CheckinConsumeService {
     try {
       replayGuardRepository.save(guard);
     } catch (DataIntegrityViolationException ex) {
-      throw new BusinessException("duplicate", "当前时段已提交，请勿重复扫码");
+      throw new BusinessException("duplicate", "当前时段已提交，请勿重复操作");
     }
   }
 
@@ -207,120 +209,58 @@ public class CheckinConsumeService {
     };
   }
 
-  private void validateRedundantFields(ConsumeCheckinRequest request, ParsedQrPayload parsed) {
-    if (request.activityId() != null && !request.activityId().isBlank()
-        && !request.activityId().trim().equals(parsed.activityId())) {
-      throw new BusinessException("invalid_qr", "二维码数据不一致，请重新扫码");
+  private ResolvedConsumePayload resolveConsumePayload(
+      String activityId,
+      String actionTypeText,
+      String code,
+      Long userId,
+      String clientIp
+  ) {
+    String normalizedCode = normalize(code);
+    if (normalizedCode.isEmpty()) {
+      throw new BusinessException("invalid_param", "code 参数缺失");
     }
-    if (request.actionType() != null && !request.actionType().isBlank()
-        && !request.actionType().trim().equals(parsed.actionType().getCode())) {
-      throw new BusinessException("invalid_qr", "二维码数据不一致，请重新扫码");
+    ActionType actionType = ActionType.fromCode(actionTypeText);
+    if (actionType == null) {
+      throw new BusinessException("invalid_param", "action_type 仅支持 checkin/checkout");
     }
-    if (request.slot() != null && request.slot() != parsed.slot()) {
-      throw new BusinessException("invalid_qr", "二维码数据不一致，请重新扫码");
+    String normalizedActivityId = normalize(activityId);
+    if (normalizedActivityId.isEmpty()) {
+      throw new BusinessException("invalid_param", "activity_id 参数缺失");
     }
-    if (request.nonce() != null && !request.nonce().isBlank()
-        && !request.nonce().trim().equals(parsed.nonce())) {
-      throw new BusinessException("invalid_qr", "二维码数据不一致，请重新扫码");
-    }
-  }
 
-  private String extractPayload(ConsumeCheckinRequest request) {
-    String direct = normalize(request.qrPayload());
-    if (!direct.isEmpty()) {
-      return direct;
-    }
-    String raw = normalize(request.rawResult());
-    if (!raw.isEmpty()) {
-      return raw;
-    }
-    String path = normalize(request.path());
-    if (!path.isEmpty()) {
-      return path;
-    }
-    throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
-  }
-
-  private ResolvedConsumePayload resolveConsumePayload(ConsumeCheckinRequest request) {
-    String code = normalize(request.code());
-    if (!code.isEmpty()) {
-      ActionType actionType = ActionType.fromCode(request.actionType());
-      if (actionType == null) {
-        throw new BusinessException("invalid_param", "action_type 仅支持 checkin/checkout");
-      }
-      String activityId = normalize(request.activityId());
-      if (activityId.isEmpty()) {
-        throw new BusinessException("invalid_param", "activity_id 参数缺失");
-      }
-      DynamicCodeService.ValidatedCode validatedCode = dynamicCodeService.validateCode(activityId, actionType, code);
-      return new ResolvedConsumePayload(
-          activityId,
+    DynamicCodeService.ValidatedCode validatedCode;
+    try {
+      validatedCode = dynamicCodeService.validateCode(
+          normalizedActivityId,
           actionType,
-          validatedCode.slot(),
-          code,
-          validatedCode.rawPayload(),
-          false
+          normalizedCode
       );
-    }
-
-    ParsedQrPayload parsed = qrPayloadCodec.parse(extractPayload(request));
-    validateRedundantFields(request, parsed);
-
-    int rotateSeconds = parsedRotateSeconds(parsed.activityId());
-    int graceSeconds = parsedGraceSeconds(parsed.activityId());
-    long now = Instant.now(clock).toEpochMilli();
-    long displayStartAt = parsed.slot() * rotateSeconds * 1000L;
-    long displayExpireAt = displayStartAt + rotateSeconds * 1000L;
-    long acceptExpireAt = displayExpireAt + graceSeconds * 1000L;
-    if (now < displayStartAt) {
-      throw new BusinessException("invalid_qr", "二维码时间异常，请重新扫码");
-    }
-    if (now > acceptExpireAt) {
-      throw new BusinessException("expired", "二维码已过期，请重新获取");
-    }
-
-    if (qrNonceSigner.isSigned(parsed.nonce())) {
-      if (!qrNonceSigner.verify(parsed.activityId(), parsed.actionType(), parsed.slot(), parsed.nonce())) {
-        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
+    } catch (BusinessException ex) {
+      // 只有“验码失败”才计入限流；其它业务错误（未报名/状态不允许等）不在这里做次数累加。
+      if (isCodeValidationFailure(ex)) {
+        invalidCodeAttemptLimiter.recordInvalidAttemptOrThrow(userId, normalizedActivityId, clientIp);
       }
-    } else {
-      if (!appProperties.getQr().isAllowLegacyUnsigned()) {
-        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
-      }
-      boolean issueExists = qrIssueLogRepository
-          .existsByActivityIdAndActionTypeAndSlotAndNonce(
-              parsed.activityId(),
-              parsed.actionType().getCode(),
-              parsed.slot(),
-              parsed.nonce()
-          );
-      if (!issueExists) {
-        throw new BusinessException("invalid_qr", "二维码无法识别，请重新扫码");
-      }
+      throw ex;
     }
 
     return new ResolvedConsumePayload(
-        parsed.activityId(),
-        parsed.actionType(),
-        parsed.slot(),
-        parsed.nonce(),
-        parsed.rawPayload(),
-        now > displayExpireAt
+        normalizedActivityId,
+        actionType,
+        validatedCode.slot(),
+        normalizedCode,
+        validatedCode.rawPayload(),
+        false
     );
   }
 
-  private int parsedRotateSeconds(String activityId) {
-    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(activityId)
-        .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
-    return (activity.getRotateSeconds() == null || activity.getRotateSeconds() <= 0)
-        ? appProperties.getQr().getDefaultRotateSeconds() : activity.getRotateSeconds();
-  }
-
-  private int parsedGraceSeconds(String activityId) {
-    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(activityId)
-        .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
-    return (activity.getGraceSeconds() == null || activity.getGraceSeconds() <= 0)
-        ? appProperties.getQr().getDefaultGraceSeconds() : activity.getGraceSeconds();
+  private boolean isCodeValidationFailure(BusinessException ex) {
+    if (ex == null) {
+      return false;
+    }
+    String status = normalize(ex.getStatus()).toLowerCase();
+    String code = normalize(ex.getErrorCode()).toLowerCase();
+    return "invalid_code".equals(status) || "expired".equals(status) || "invalid_code".equals(code) || "expired".equals(code);
   }
 
   private String normalize(String value) {

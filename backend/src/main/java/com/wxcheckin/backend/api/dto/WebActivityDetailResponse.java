@@ -18,8 +18,6 @@ public record WebActivityDetailResponse(
     Boolean myRegistered,
     Boolean myCheckedIn,
     Boolean myCheckedOut,
-    Integer rotateSeconds,
-    Integer graceSeconds,
     Boolean canCheckin,
     Boolean canCheckout,
     Long serverTimeMs

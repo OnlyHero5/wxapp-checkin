@@ -13,10 +13,9 @@ public class AppProperties {
 
   private final SessionProperties session = new SessionProperties();
   private final QrProperties qr = new QrProperties();
-  private final WechatProperties wechat = new WechatProperties();
   private final LegacyProperties legacy = new LegacyProperties();
   private final SyncProperties sync = new SyncProperties();
-  private final SecurityProperties security = new SecurityProperties();
+  private final RiskProperties risk = new RiskProperties();
 
   public SessionProperties getSession() {
     return session;
@@ -24,10 +23,6 @@ public class AppProperties {
 
   public QrProperties getQr() {
     return qr;
-  }
-
-  public WechatProperties getWechat() {
-    return wechat;
   }
 
   public LegacyProperties getLegacy() {
@@ -38,8 +33,8 @@ public class AppProperties {
     return sync;
   }
 
-  public SecurityProperties getSecurity() {
-    return security;
+  public RiskProperties getRisk() {
+    return risk;
   }
 
   public static class SessionProperties {
@@ -55,30 +50,9 @@ public class AppProperties {
   }
 
   public static class QrProperties {
-    private int defaultRotateSeconds = 10;
-    private int defaultGraceSeconds = 20;
     private long replayKeyTtlSeconds = 90;
     private String signingKey = "replace-with-a-strong-server-side-secret";
-    private boolean issueLogEnabled = true;
-    private boolean allowLegacyUnsigned = true;
-    private long issueLogRetentionSeconds = 86400;
     private long replayGuardRetentionSeconds = 0;
-
-    public int getDefaultRotateSeconds() {
-      return defaultRotateSeconds;
-    }
-
-    public void setDefaultRotateSeconds(int defaultRotateSeconds) {
-      this.defaultRotateSeconds = defaultRotateSeconds;
-    }
-
-    public int getDefaultGraceSeconds() {
-      return defaultGraceSeconds;
-    }
-
-    public void setDefaultGraceSeconds(int defaultGraceSeconds) {
-      this.defaultGraceSeconds = defaultGraceSeconds;
-    }
 
     public long getReplayKeyTtlSeconds() {
       return replayKeyTtlSeconds;
@@ -96,75 +70,12 @@ public class AppProperties {
       this.signingKey = signingKey;
     }
 
-    public boolean isIssueLogEnabled() {
-      return issueLogEnabled;
-    }
-
-    public void setIssueLogEnabled(boolean issueLogEnabled) {
-      this.issueLogEnabled = issueLogEnabled;
-    }
-
-    public boolean isAllowLegacyUnsigned() {
-      return allowLegacyUnsigned;
-    }
-
-    public void setAllowLegacyUnsigned(boolean allowLegacyUnsigned) {
-      this.allowLegacyUnsigned = allowLegacyUnsigned;
-    }
-
-    public long getIssueLogRetentionSeconds() {
-      return issueLogRetentionSeconds;
-    }
-
-    public void setIssueLogRetentionSeconds(long issueLogRetentionSeconds) {
-      this.issueLogRetentionSeconds = issueLogRetentionSeconds;
-    }
-
     public long getReplayGuardRetentionSeconds() {
       return replayGuardRetentionSeconds;
     }
 
     public void setReplayGuardRetentionSeconds(long replayGuardRetentionSeconds) {
       this.replayGuardRetentionSeconds = replayGuardRetentionSeconds;
-    }
-  }
-
-  public static class WechatProperties {
-    private boolean enabled = false;
-    private String appid = "";
-    private String secret = "";
-    private String jscode2sessionUrl = "https://api.weixin.qq.com/sns/jscode2session";
-
-    public boolean isEnabled() {
-      return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-      this.enabled = enabled;
-    }
-
-    public String getAppid() {
-      return appid;
-    }
-
-    public void setAppid(String appid) {
-      this.appid = appid;
-    }
-
-    public String getSecret() {
-      return secret;
-    }
-
-    public void setSecret(String secret) {
-      this.secret = secret;
-    }
-
-    public String getJscode2sessionUrl() {
-      return jscode2sessionUrl;
-    }
-
-    public void setJscode2sessionUrl(String jscode2sessionUrl) {
-      this.jscode2sessionUrl = jscode2sessionUrl;
     }
   }
 
@@ -270,41 +181,41 @@ public class AppProperties {
     }
   }
 
-  public static class SecurityProperties {
-    private final RegisterPayloadProperties registerPayload = new RegisterPayloadProperties();
+  public static class RiskProperties {
+    private final InvalidCodeProperties invalidCode = new InvalidCodeProperties();
 
-    public RegisterPayloadProperties getRegisterPayload() {
-      return registerPayload;
+    public InvalidCodeProperties getInvalidCode() {
+      return invalidCode;
     }
   }
 
-  public static class RegisterPayloadProperties {
-    private boolean enabled = true;
-    private long maxSkewSeconds = 300;
-    private long nonceTtlSeconds = 600;
+  public static class InvalidCodeProperties {
+    private int maxAttemptsPerUser = 12;
+    private int maxAttemptsPerIp = 30;
+    private int windowSeconds = 60;
 
-    public boolean isEnabled() {
-      return enabled;
+    public int getMaxAttemptsPerUser() {
+      return maxAttemptsPerUser;
     }
 
-    public void setEnabled(boolean enabled) {
-      this.enabled = enabled;
+    public void setMaxAttemptsPerUser(int maxAttemptsPerUser) {
+      this.maxAttemptsPerUser = maxAttemptsPerUser;
     }
 
-    public long getMaxSkewSeconds() {
-      return maxSkewSeconds;
+    public int getMaxAttemptsPerIp() {
+      return maxAttemptsPerIp;
     }
 
-    public void setMaxSkewSeconds(long maxSkewSeconds) {
-      this.maxSkewSeconds = maxSkewSeconds;
+    public void setMaxAttemptsPerIp(int maxAttemptsPerIp) {
+      this.maxAttemptsPerIp = maxAttemptsPerIp;
     }
 
-    public long getNonceTtlSeconds() {
-      return nonceTtlSeconds;
+    public int getWindowSeconds() {
+      return windowSeconds;
     }
 
-    public void setNonceTtlSeconds(long nonceTtlSeconds) {
-      this.nonceTtlSeconds = nonceTtlSeconds;
+    public void setWindowSeconds(int windowSeconds) {
+      this.windowSeconds = windowSeconds;
     }
   }
 }

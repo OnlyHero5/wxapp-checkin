@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * Backend entrypoint for the WeChat check-in platform.
+ * Backend entrypoint for the mobile Web check-in platform.
  *
  * <p>The service is intentionally implemented as a modular monolith so that
  * business rules stay transactional while still being open for extension via

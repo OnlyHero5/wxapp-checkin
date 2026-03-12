@@ -6,7 +6,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Production safety checks for QR signing configuration.
+ * Production safety checks for dynamic-code signing configuration.
  */
 @Component
 public class ProductionQrSigningKeySafetyGuard {
@@ -33,7 +33,7 @@ public class ProductionQrSigningKeySafetyGuard {
       return;
     }
     if (isBlank(signingKey)) {
-      throw new IllegalStateException("生产环境必须配置 QR_SIGNING_KEY（app.qr.signing-key），用于二维码验签。");
+      throw new IllegalStateException("生产环境必须配置 QR_SIGNING_KEY（app.qr.signing-key），用于动态码生成与验码。");
     }
     if (DEFAULT_PLACEHOLDER.equals(signingKey.trim())) {
       throw new IllegalStateException("生产环境禁止使用默认 QR_SIGNING_KEY 占位符；请设置强随机密钥。");
@@ -44,4 +44,3 @@ public class ProductionQrSigningKeySafetyGuard {
     return value == null || value.trim().isEmpty();
   }
 }
-

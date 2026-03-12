@@ -57,21 +57,11 @@ app:
   session:
     ttl-seconds: ${SESSION_TTL_SECONDS:7200}
   qr:
-    default-rotate-seconds: ${QR_DEFAULT_ROTATE_SECONDS:10}
-    default-grace-seconds: ${QR_DEFAULT_GRACE_SECONDS:20}
     replay-key-ttl-seconds: ${QR_REPLAY_TTL_SECONDS:90}
     signing-key: ${QR_SIGNING_KEY:replace-with-a-strong-server-side-secret}
-    issue-log-enabled: ${QR_ISSUE_LOG_ENABLED:true}
-    allow-legacy-unsigned: ${QR_ALLOW_LEGACY_UNSIGNED:true}
-    issue-log-retention-seconds: ${QR_ISSUE_LOG_RETENTION_SECONDS:86400}
     replay-guard-retention-seconds: ${QR_REPLAY_GUARD_RETENTION_SECONDS:0}
     cleanup-enabled: ${QR_CLEANUP_ENABLED:true}
     cleanup-interval-ms: ${QR_CLEANUP_INTERVAL_MS:300000}
-  wechat:
-    enabled: ${WECHAT_API_ENABLED:false}
-    appid: ${WECHAT_APPID:}
-    secret: ${WECHAT_SECRET:}
-    jscode2session-url: https://api.weixin.qq.com/sns/jscode2session
   legacy:
     datasource:
       url: ${LEGACY_DB_URL:}
@@ -85,8 +75,8 @@ app:
     outbox:
       enabled: ${OUTBOX_RELAY_ENABLED:false}
       relay-interval-ms: ${OUTBOX_RELAY_INTERVAL_MS:10000}
-  security:
-    register-payload:
-      enabled: ${REGISTER_PAYLOAD_VERIFY_ENABLED:true}
-      max-skew-seconds: ${REGISTER_PAYLOAD_MAX_SKEW_SECONDS:300}
-      nonce-ttl-seconds: ${REGISTER_PAYLOAD_NONCE_TTL_SECONDS:600}
+  risk:
+    invalid-code:
+      max-attempts-per-user: ${RISK_INVALID_CODE_MAX_ATTEMPTS_PER_USER:12}
+      max-attempts-per-ip: ${RISK_INVALID_CODE_MAX_ATTEMPTS_PER_IP:30}
+      window-seconds: ${RISK_INVALID_CODE_WINDOW_SECONDS:60}

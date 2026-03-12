@@ -14,12 +14,12 @@ import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserActivitySta
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxAdminRosterRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxCheckinEventRepository;
-import com.wxcheckin.backend.infrastructure.persistence.repository.WxQrIssueLogRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxReplayGuardRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSyncOutboxRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebAdminAuditLogRepository;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,10 +65,10 @@ class ApiFlowIntegrationTest {
   private WxReplayGuardRepository replayGuardRepository;
 
   @Autowired
-  private WxQrIssueLogRepository qrIssueLogRepository;
+  private WxSyncOutboxRepository outboxRepository;
 
   @Autowired
-  private WxSyncOutboxRepository outboxRepository;
+  private WebAdminAuditLogRepository adminAuditLogRepository;
 
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -77,8 +77,8 @@ class ApiFlowIntegrationTest {
   void prepareData() {
     checkinEventRepository.deleteAll();
     replayGuardRepository.deleteAll();
-    qrIssueLogRepository.deleteAll();
     outboxRepository.deleteAll();
+    adminAuditLogRepository.deleteAll();
     statusRepository.deleteAll();
     sessionRepository.deleteAll();
     adminRosterRepository.deleteAll();
@@ -361,6 +361,8 @@ class ApiFlowIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andExpect(jsonPath("$.affected_count", is(1)));
+
+    org.junit.jupiter.api.Assertions.assertEquals(1L, adminAuditLogRepository.count());
 
     WxSessionEntity session = sessionRepository.findBySessionToken(normalSession).orElseThrow();
     WxUserActivityStatusEntity status = statusRepository

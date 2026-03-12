@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 /**
- * Denormalized activity view consumed directly by miniapp APIs.
+ * Denormalized activity view consumed directly by Web APIs.
  *
  * <p>This table can be synchronized from legacy activity tables without
  * coupling runtime APIs to old schema details.</p>

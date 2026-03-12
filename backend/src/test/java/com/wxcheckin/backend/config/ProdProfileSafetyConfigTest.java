@@ -29,9 +29,10 @@ class ProdProfileSafetyConfigTest {
   private Environment environment;
 
   @Test
-  void shouldDisableSchemaMutationInProdProfile() {
+  void shouldAlignProdProfileSafetyDefaults() {
     assertEquals("none", environment.getProperty("spring.jpa.hibernate.ddl-auto"));
-    assertEquals("false", environment.getProperty("spring.flyway.enabled"));
+    // prod profile 允许 Flyway 自动迁移扩展库；但必须禁用 Hibernate ddl-auto，避免启动时误改 schema。
+    assertEquals("true", environment.getProperty("spring.flyway.enabled"));
     assertEquals("true", environment.getProperty("app.sync.legacy.enabled"));
     assertEquals("true", environment.getProperty("app.sync.outbox.enabled"));
   }

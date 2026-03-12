@@ -91,12 +91,12 @@ public class ActivityTimeWindowService {
   public void ensureWithinIssueWindow(WxActivityProjectionEntity activity) {
     IssueWindowEvaluation evaluation = evaluateAndFix(activity);
     if ("activity_time_invalid".equals(evaluation.errorCode())) {
-      throw new BusinessException("failed", "活动时间信息异常，无法生成二维码", "activity_time_invalid");
+      throw new BusinessException("failed", "活动时间信息异常，无法生成动态码", "activity_time_invalid");
     }
     if (!evaluation.withinWindow()) {
       throw new BusinessException(
           "forbidden",
-          "仅可在活动开始前30分钟到结束后30分钟内生成二维码",
+          "仅可在活动开始前30分钟到结束后30分钟内生成动态码",
           "outside_activity_time_window"
       );
     }
@@ -131,4 +131,3 @@ public class ActivityTimeWindowService {
     }
   }
 }
-
