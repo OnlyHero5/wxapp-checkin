@@ -78,5 +78,4 @@ app:
   risk:
     invalid-code:
       max-attempts-per-user: ${RISK_INVALID_CODE_MAX_ATTEMPTS_PER_USER:12}
-      max-attempts-per-ip: ${RISK_INVALID_CODE_MAX_ATTEMPTS_PER_IP:30}
       window-seconds: ${RISK_INVALID_CODE_WINDOW_SECONDS:60}

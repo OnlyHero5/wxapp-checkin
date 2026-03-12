@@ -537,12 +537,11 @@ backend/src/main/java/com/wxcheckin/backend/
 ### 8.3 动态码风控
 
 - 当前实现已对“验码失败”做限流（`invalid_code` / `expired`）。
-- 限流维度（任一超限都会拦截）：
+- 限流维度：
   - `user_id + activity_id`
-  - `IP + activity_id`
+- 说明：已取消 IP 维度限流（网关/反向代理后的 IP 不稳定，容易误伤同一出口下的正常用户）。
 - 默认阈值与窗口（可通过环境变量覆盖）：
   - `RISK_INVALID_CODE_MAX_ATTEMPTS_PER_USER`（默认 12）
-  - `RISK_INVALID_CODE_MAX_ATTEMPTS_PER_IP`（默认 30）
   - `RISK_INVALID_CODE_WINDOW_SECONDS`（默认 60）
 - 达到阈值后返回：`status=forbidden` + `error_code=rate_limited`。
 

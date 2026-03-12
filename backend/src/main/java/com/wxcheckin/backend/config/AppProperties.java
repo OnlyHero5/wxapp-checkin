@@ -191,7 +191,6 @@ public class AppProperties {
 
   public static class InvalidCodeProperties {
     private int maxAttemptsPerUser = 12;
-    private int maxAttemptsPerIp = 30;
     private int windowSeconds = 60;
 
     public int getMaxAttemptsPerUser() {
@@ -200,14 +199,6 @@ public class AppProperties {
 
     public void setMaxAttemptsPerUser(int maxAttemptsPerUser) {
       this.maxAttemptsPerUser = maxAttemptsPerUser;
-    }
-
-    public int getMaxAttemptsPerIp() {
-      return maxAttemptsPerIp;
-    }
-
-    public void setMaxAttemptsPerIp(int maxAttemptsPerIp) {
-      this.maxAttemptsPerIp = maxAttemptsPerIp;
     }
 
     public int getWindowSeconds() {

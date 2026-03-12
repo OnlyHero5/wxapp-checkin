@@ -55,8 +55,7 @@ public class WebAttendanceController {
         token,
         activityId,
         requestBody.actionType(),
-        requestBody.code(),
-        request.getRemoteAddr()
+        requestBody.code()
     );
   }
 }

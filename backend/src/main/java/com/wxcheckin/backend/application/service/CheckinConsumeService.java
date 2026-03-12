@@ -82,8 +82,7 @@ public class CheckinConsumeService {
       String sessionToken,
       String activityId,
       String actionTypeText,
-      String code,
-      String clientIp
+      String code
   ) {
     SessionPrincipal principal = sessionService.requireWebPrincipal(sessionToken);
     if (principal.role() != RoleType.NORMAL) {
@@ -94,8 +93,7 @@ public class CheckinConsumeService {
         activityId,
         actionTypeText,
         code,
-        principal.user() == null ? null : principal.user().getId(),
-        clientIp
+        principal.user() == null ? null : principal.user().getId()
     );
 
     WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(payload.activityId())
@@ -213,8 +211,7 @@ public class CheckinConsumeService {
       String activityId,
       String actionTypeText,
       String code,
-      Long userId,
-      String clientIp
+      Long userId
   ) {
     String normalizedCode = normalize(code);
     if (normalizedCode.isEmpty()) {
@@ -239,7 +236,7 @@ public class CheckinConsumeService {
     } catch (BusinessException ex) {
       // 只有“验码失败”才计入限流；其它业务错误（未报名/状态不允许等）不在这里做次数累加。
       if (isCodeValidationFailure(ex)) {
-        invalidCodeAttemptLimiter.recordInvalidAttemptOrThrow(userId, normalizedActivityId, clientIp);
+        invalidCodeAttemptLimiter.recordInvalidAttemptOrThrow(userId, normalizedActivityId);
       }
       throw ex;
     }

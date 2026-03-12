@@ -38,11 +38,12 @@ public class InvalidCodeAttemptLimiter {
   /**
    * 记录一次“验码失败”并在超过阈值时抛出限流异常。
    *
-   * <p>当前同时按两种维度计数（任一超限都拦截）：
-   * - user_id + activity_id
-   * - ip + activity_id
+   * <p>当前只按 {@code user_id + activity_id} 计数。
+   *
+   * <p>说明：出于“部署在网关/反向代理之后 remoteAddr 不可靠、容易误伤”的考虑，
+   * 已取消 IP 维度限流（见 docs/WEB_DETAIL_DESIGN.md 8.3）。
    */
-  public void recordInvalidAttemptOrThrow(Long userId, String activityId, String clientIp) {
+  public void recordInvalidAttemptOrThrow(Long userId, String activityId) {
     String normalizedActivityId = normalize(activityId);
     if (normalizedActivityId.isEmpty()) {
       return;
@@ -54,19 +55,10 @@ public class InvalidCodeAttemptLimiter {
     long windowMs = windowSeconds * 1000L;
 
     int maxPerUser = config.getMaxAttemptsPerUser();
-    int maxPerIp = config.getMaxAttemptsPerIp();
 
     if (maxPerUser > 0 && userId != null) {
       int count = incrementAndGet("u:" + userId + ":" + normalizedActivityId, nowMs, windowMs);
       if (count > maxPerUser) {
-        throw rateLimited(windowSeconds);
-      }
-    }
-
-    String normalizedIp = normalize(clientIp);
-    if (maxPerIp > 0 && !normalizedIp.isEmpty()) {
-      int count = incrementAndGet("ip:" + normalizedIp + ":" + normalizedActivityId, nowMs, windowMs);
-      if (count > maxPerIp) {
         throw rateLimited(windowSeconds);
       }
     }
