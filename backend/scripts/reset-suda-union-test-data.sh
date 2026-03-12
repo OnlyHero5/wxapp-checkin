@@ -31,6 +31,33 @@ DB_PASSWORD="${DB_PASSWORD:-}"
 LEGACY_SCHEMA="${LEGACY_SCHEMA:-suda_union}"
 EXT_SCHEMA="${DB_NAME:-wxcheckin_ext}"
 
+is_local_db_host() {
+  case "${DB_HOST}" in
+    127.0.0.1|localhost|::1) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+ensure_destructive_test_mode() {
+  # 说明：该脚本会 drop + recreate legacy 表，仅允许在“明确的测试环境”执行。
+  if [[ "${SPRING_PROFILES_ACTIVE:-}" == "prod" ]]; then
+    echo "[seed] Refuse to run in prod profile." >&2
+    exit 1
+  fi
+  if [[ "${WXAPP_CHECKIN_TEST_MODE:-}" != "1" ]]; then
+    echo "[seed] Refuse to reset legacy data without WXAPP_CHECKIN_TEST_MODE=1." >&2
+    echo "[seed] Recommended: cd wxapp-checkin && ./scripts/dev.sh local" >&2
+    exit 1
+  fi
+  if ! is_local_db_host && [[ "${WXAPP_CHECKIN_TEST_MODE_ALLOW_REMOTE_DB:-}" != "1" ]]; then
+    echo "[seed] DB_HOST=${DB_HOST} is not local." >&2
+    echo "[seed] If you really want to reset a remote TEST database, set WXAPP_CHECKIN_TEST_MODE_ALLOW_REMOTE_DB=1." >&2
+    exit 1
+  fi
+}
+
+ensure_destructive_test_mode
+
 MYSQL_ARGS=(-h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}")
 if [[ -n "${DB_PASSWORD}" ]]; then
   MYSQL_ARGS+=(-p"${DB_PASSWORD}")

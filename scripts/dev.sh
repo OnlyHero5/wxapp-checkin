@@ -91,7 +91,7 @@ start_backend_local() {
   local pid_file="${rt_dir}/backend-local.pid"
 
   log "Starting backend (local)..."
-  (cd "${REPO_ROOT}/backend" && ./scripts/start-test-env.sh) >"${log_file}" 2>&1 &
+  (cd "${REPO_ROOT}/backend" && WXAPP_CHECKIN_TEST_MODE=1 ./scripts/start-test-env.sh) >"${log_file}" 2>&1 &
   local pid="$!"
   echo "${pid}" >"${pid_file}"
   log "Backend PID: ${pid} (log: ${log_file})"
@@ -158,4 +158,3 @@ main() {
 }
 
 main "$@"
-

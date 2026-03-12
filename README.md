@@ -129,6 +129,7 @@ cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
 
 ```bash
 cd backend
+export WXAPP_CHECKIN_TEST_MODE=1
 ./scripts/start-test-env.sh
 ```
 

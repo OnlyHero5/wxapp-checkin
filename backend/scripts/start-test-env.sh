@@ -118,6 +118,35 @@ echo "[start-test-env] Port: ${SERVER_PORT}"
 echo "[start-test-env] Legacy sync: ${LEGACY_SYNC_ENABLED} (${LEGACY_SYNC_INTERVAL_MS} ms)"
 echo "[start-test-env] Outbox relay: ${OUTBOX_RELAY_ENABLED} (${OUTBOX_RELAY_INTERVAL_MS} ms)"
 
+is_local_db_host() {
+  case "${DB_HOST}" in
+    127.0.0.1|localhost|::1) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+ensure_destructive_test_mode() {
+  # 说明：
+  # - 该脚本会调用 reset-suda-union-test-data.sh（drop + recreate legacy 测试表）；
+  # - 为避免生产误用，必须显式声明“我在测试环境，允许破坏性重置”。
+  if [[ "${SPRING_PROFILES_ACTIVE}" == "prod" ]]; then
+    echo "[start-test-env] Refuse to run in prod profile." >&2
+    exit 1
+  fi
+  if [[ "${WXAPP_CHECKIN_TEST_MODE:-}" != "1" ]]; then
+    echo "[start-test-env] Refuse to run destructive test reset without WXAPP_CHECKIN_TEST_MODE=1." >&2
+    echo "[start-test-env] Recommended: cd wxapp-checkin && ./scripts/dev.sh local" >&2
+    exit 1
+  fi
+  if ! is_local_db_host && [[ "${WXAPP_CHECKIN_TEST_MODE_ALLOW_REMOTE_DB:-}" != "1" ]]; then
+    echo "[start-test-env] DB_HOST=${DB_HOST} is not local." >&2
+    echo "[start-test-env] If you really want to reset a remote TEST database, set WXAPP_CHECKIN_TEST_MODE_ALLOW_REMOTE_DB=1." >&2
+    exit 1
+  fi
+}
+
+ensure_destructive_test_mode
+
 stop_existing_backend_on_port "${SERVER_PORT}"
 
 "${SCRIPT_DIR}/reset-suda-union-test-data.sh"

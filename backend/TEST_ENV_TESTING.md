@@ -8,6 +8,7 @@
 
 ### `scripts/start-test-env.sh`
 - 一键加载测试环境变量（默认 `backend/.env.test.local.sh`；仍兼容旧 `~/.wxapp-checkin-test-env.sh` 但不再推荐）。
+- 安全护栏：该脚本会执行 legacy 测试数据重置（drop + recreate），因此必须显式设置 `WXAPP_CHECKIN_TEST_MODE=1` 才允许运行（生产环境禁止）。
 - 自动设置测试运行参数：
   - `SPRING_PROFILES_ACTIVE=dev`
   - `SERVER_PORT=9989`
@@ -46,6 +47,7 @@
 ```bash
 cd /path/to/wxapp-checkin/backend
 chmod +x scripts/start-test-env.sh scripts/reset-suda-union-test-data.sh
+export WXAPP_CHECKIN_TEST_MODE=1
 ./scripts/start-test-env.sh
 ```
 
