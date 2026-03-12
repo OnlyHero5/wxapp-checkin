@@ -4,7 +4,7 @@
 
 这份文档面向第一次接手项目的人，重点回答：
 1. **生产环境如何一键启动**
-2. **数据库/Redis/WebAuth 配置写到哪里**（例如数据库账号密码写哪个文件）
+2. **数据库/Redis/认证与动态码配置写到哪里**（例如数据库账号密码写哪个文件）
 3. 本地联调脚本怎么跑
 
 ## 0) 目录速览
@@ -13,7 +13,7 @@
 - `scripts/reset-suda-union-test-data.sh`：只重置 `suda_union` 测试数据
 - `scripts/bootstrap-prod-schema.sql`：生产扩展库建表脚本（不含演示数据）
 - `src/main/resources/application.yml`：基础配置（全部由环境变量覆盖）
-- `src/main/resources/application-prod.yml`：生产 profile 覆盖（默认关闭 Flyway）
+- `src/main/resources/application-prod.yml`：生产 profile 覆盖（启用 Flyway，使用 `db/migration_prod`）
 - `DB_DATABASE_DEEP_DIVE.md`：后端数据库深度说明（双库架构、表结构、同步链路、排障 SQL）
 
 ## 1) 生产环境一键启动（推荐：systemd）
@@ -95,10 +95,9 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 
 # 安全参数（生产必须替换）
-QR_SIGNING_KEY=请填32位以上随机强密钥
-QR_ISSUE_LOG_ENABLED=false
-QR_ALLOW_LEGACY_UNSIGNED=false
-QR_ISSUE_LOG_RETENTION_SECONDS=86400
+# - 仍沿用历史环境变量名 `QR_SIGNING_KEY`，但用途已切换为“动态 6 位码生成与验码”。
+QR_SIGNING_KEY=请填32字节以上强随机密钥
+QR_REPLAY_TTL_SECONDS=90
 QR_REPLAY_GUARD_RETENTION_SECONDS=0
 QR_CLEANUP_ENABLED=true
 QR_CLEANUP_INTERVAL_MS=300000
@@ -301,18 +300,18 @@ curl http://127.0.0.1:9989/actuator/health
 | 扩展库 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` | MySQL（`wxcheckin_ext`） |
 | 遗留库 | `LEGACY_DB_URL` `LEGACY_DB_USER` `LEGACY_DB_PASSWORD` | MySQL（`suda_union`） |
 | Redis | `REDIS_HOST` `REDIS_PORT` `REDIS_PASSWORD` | Redis 连接 |
-| 动态码 | `QR_SIGNING_KEY` | 动态码签名密钥（生产必须替换；**prod profile 会强制校验不可为空/不可用默认占位符**） |
-| 动态码 | `QR_DEFAULT_ROTATE_SECONDS` `QR_DEFAULT_GRACE_SECONDS` | 默认换码/宽限秒数（当前 Web 管理页仍复用这组配置键） |
-| 动态码 | `QR_REPLAY_TTL_SECONDS` | 防重放键额外 TTL（秒） |
-| 动态码 | `QR_ISSUE_LOG_ENABLED` | 是否写 `wx_qr_issue_log`（当前仅保留内部兼容清理，不作为正式接口输出） |
-| 动态码 | `QR_ALLOW_LEGACY_UNSIGNED` | 是否允许旧版未签名 nonce |
-| 动态码 | `QR_ISSUE_LOG_RETENTION_SECONDS` | issue log 数据保留秒数（定期清理用） |
+| 动态码 | `QR_SIGNING_KEY` | 动态码密钥（生产必须替换；**prod profile 会强制校验不可为空/不可用默认占位符**） |
+| 动态码 | `QR_REPLAY_TTL_SECONDS` | 防重放键 TTL（秒），用于限制同一时段重复提交 |
 | 动态码 | `QR_REPLAY_GUARD_RETENTION_SECONDS` | replay guard 额外保留秒数 |
 | 动态码 | `QR_CLEANUP_ENABLED` `QR_CLEANUP_INTERVAL_MS` | 是否开启动态码相关表的定期清理任务/清理间隔（毫秒） |
 | 会话 | `SESSION_TTL_SECONDS` | session 过期秒数 |
 | 同步 | `LEGACY_SYNC_ENABLED` `LEGACY_SYNC_INTERVAL_MS` | legacy pull 同步开关与间隔 |
 | 同步 | `OUTBOX_RELAY_ENABLED` `OUTBOX_RELAY_INTERVAL_MS` | outbox relay 开关与间隔 |
 | 注册 | `REGISTER_PAYLOAD_VERIFY_ENABLED` | 历史占位配置，当前 Web-only 主链路不再使用 |
+
+补充说明：
+
+- 动态码的 time slice 固定为 **10 秒**（与 `docs/REQUIREMENTS.md`、`docs/API_SPEC.md` 一致），不再通过环境变量调整。
 
 ## 4.1 与 `suda-gs-ams` / `suda_union` 共域时的路由建议
 
@@ -325,29 +324,21 @@ curl http://127.0.0.1:9989/actuator/health
   - 或者前端改用独立外部前缀（例如 `VITE_API_BASE_PATH=/checkin-api/web`），再把它转发/重写到本服务的 `/api/web/**`
 - 前端静态资源建议同时挂在独立子路径（例如 `/checkin/`），避免与另一个 SPA 共享 `/` 和 `/login`。
 
-历史实现将每次发码都落库到 `wx_qr_issue_log`，且 consume 依赖它校验“二维码确实由 staff 发出”。在真实生产下：
-- staff 页面每 `rotate_seconds` 自动刷新二维码
-- 每次刷新都会写一行 issue log
-- 导致 `wx_qr_issue_log` 持续增长
+补充说明（当前 Web-only 正式链路）：
 
-现在有两道保险：
-1. `QR_ISSUE_LOG_ENABLED=false`：彻底停止写 `wx_qr_issue_log`（推荐生产默认）。
-2. `QrMaintenanceJob` 定期按 retention 清理 `wx_qr_issue_log` 与 `wx_replay_guard`（避免表无限增长）。
+- 已不再写入 `wx_qr_issue_log`，也不再接收/解析 `qr_payload`（二维码扫码链路已删除）。
+- `wx_replay_guard` 仍用于动态码防重放（同一用户 + 活动 + 动作 + slot 防重复提交），建议保留定期清理任务。
 
 ### 5.3 生产推荐配置（强烈建议）
 
 ```bash
-# 必须：设置强随机密钥
+# 必须：设置强随机密钥（多实例必须一致）
 QR_SIGNING_KEY=<32字节以上强随机密钥>
 
-# 推荐：停写 issue log，避免持续增长
-QR_ISSUE_LOG_ENABLED=false
-
-# 推荐：灰度期可先 true；确认全部客户端都已使用 signed nonce 后设为 false
-QR_ALLOW_LEGACY_UNSIGNED=false
+# 推荐：防重放 TTL（秒）
+QR_REPLAY_TTL_SECONDS=90
 
 # 保留与清理（按实际审计需求调整）
-QR_ISSUE_LOG_RETENTION_SECONDS=86400
 QR_REPLAY_GUARD_RETENTION_SECONDS=0
 QR_CLEANUP_ENABLED=true
 QR_CLEANUP_INTERVAL_MS=300000
@@ -355,21 +346,16 @@ QR_CLEANUP_INTERVAL_MS=300000
 
 ### 5.4 数据库升级（索引与清理性能）
 
-已新增 Flyway 迁移：`src/main/resources/db/migration/V5__add_qr_retention_indexes.sql`，用于：
-- `wx_qr_issue_log(activity_id, action_type, slot, nonce)`：提升校验/回查性能
-- `wx_qr_issue_log(accept_expire_at)`：提升清理性能
+生产 profile 默认启用 Flyway 自动迁移（`application-prod.yml`），通常无需手工执行 SQL。
 
-注意：生产 profile 默认关闭 Flyway（`application-prod.yml`），因此生产升级请执行一次：
-
-```bash
-mysql -h <DB_HOST> -P <DB_PORT> -u <DB_ADMIN_USER> -p wxcheckin_ext < src/main/resources/db/migration/V5__add_qr_retention_indexes.sql
-```
+仓库仍保留了历史迁移 `V5__add_qr_retention_indexes.sql`（为 legacy `wx_qr_issue_log` 补索引），
+主要用于排障/回溯历史数据；当前 Web-only 动态码主链路不依赖该表。
 
 ### 5.5 运维注意事项
 
-- **多实例部署**：所有实例必须使用同一个 `QR_SIGNING_KEY`，否则会出现 A-05 发码能用、A-06 验签失败（`invalid_qr`）。
-- **密钥轮换**：轮换 `QR_SIGNING_KEY` 会导致旧二维码立即失效。建议在低峰期轮换，并确保 staff 页面刷新出新二维码后再恢复扫码通道。
+- **多实例部署**：所有实例必须使用同一个 `QR_SIGNING_KEY`，否则管理员看到的动态码可能无法在另一实例上通过校验（`invalid_code`）。
+- **密钥轮换**：轮换 `QR_SIGNING_KEY` 会导致动态码立即变化。建议在低峰期轮换，并确保管理员页刷新出新码后再继续对外放行。
 
 ## 6) 前端如何连接
 
-手机 Web 前端默认通过同源 `/api/web/**` 访问后端；若本地分开启动，请在 `web/` 的开发配置中指向当前后端地址，并保持 `X-Browser-Binding-Key` 与 `Authorization` 头由前端请求层自动注入。
+手机 Web 前端默认通过同源 `/api/web/**` 访问后端；若本地分开启动，请在 `web/` 的开发配置中指向当前后端地址。会话凭据统一由前端请求层注入：`Authorization: Bearer <session_token>`。

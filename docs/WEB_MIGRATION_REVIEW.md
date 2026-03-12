@@ -35,10 +35,7 @@
 
 前端必须重建：
 
-- `frontend/` 普遍使用 `App()` / `Page()` / `Component()`，不是 Web 框架组件模型。
-- 登录链路绑定 `wx.login()`，见 `frontend/utils/auth.js`。
-- 请求、提示、导航、存储都绑定 `wx.*`，见 `frontend/utils/request-core.js`、`frontend/utils/ui.js`、`frontend/utils/storage.js`。
-- 普通用户主动作仍是 `wx.scanCode()` 扫码，见 `frontend/pages/scan-action/scan-action.js`。
+- 历史小程序前端（已删除）强耦合 `App()/Page()/Component()` 与 `wx.*` API（登录、扫码、导航、存储），无法作为手机 Web 的工程基座复用，因此必须新建 `web/`。
 
 后端可复用主干：
 
@@ -47,12 +44,12 @@
 - 状态变更、事件审计、replay guard、outbox 回写已集中在 `backend/.../CheckinConsumeService.java`。
 - `LegacySyncService` 与 `OutboxRelayService` 已覆盖 `suda_union` 读写同步边界。
 
-需要按设计补改的代码风险：
+需要按设计补改的代码风险（已在主干收口完成）：
 
-- 当前鉴权仍以微信身份为核心，见 `backend/.../AuthService.java` 与 `backend/.../WeChatIdentityResolver.java`。
-- 当前管理员发码仍是二维码 payload，见 `backend/.../QrSessionService.java`。
-- 当前用户提交仍以 `qr_payload` 消费，见 `backend/.../CheckinConsumeService.java` 与 `backend/.../CheckinController.java`。
-- 当前活动计数仍是读后写更新，共享 6 位码会放大并发冲突，需按实施计划改为原子更新。
+- ✅ 鉴权已切换为“账号密码 + session_token + 首次强制改密”，微信登录相关实现已删除：`backend/src/main/java/com/wxcheckin/backend/application/service/WebPasswordAuthService.java`
+- ✅ 管理员发码已切换为动态 6 位码：`backend/src/main/java/com/wxcheckin/backend/application/service/DynamicCodeService.java`
+- ✅ 普通用户提交已切换为 `code`（不再接收 `qr_payload`）：`backend/src/main/java/com/wxcheckin/backend/application/service/CheckinConsumeService.java`
+- ✅ 活动计数更新已改为原子路径：`backend/src/main/java/com/wxcheckin/backend/infrastructure/persistence/repository/WxActivityProjectionRepository.java`
 
 ## 3. 文档现状判断
 

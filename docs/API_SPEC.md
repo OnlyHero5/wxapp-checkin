@@ -321,6 +321,7 @@
 - `invalid_code`
 - `expired`
 - `duplicate`
+- `rate_limited`
 - `forbidden`
 - `session_expired`
 
@@ -379,6 +380,7 @@
 | `invalid_activity` | 活动不存在或不可见 | 活动 / 动态码 |
 | `invalid_code` | 动态码错误 | `code-consume` |
 | `expired` | 动态码过期 | `code-consume` |
+| `rate_limited` | 动态码错误尝试过多被限流 | `code-consume` |
 | `duplicate` | 同一时段重复提交 | `code-consume` |
 | `outside_activity_time_window` | 不在发码允许时间窗 | `code-session` |
 | `activity_time_invalid` | 活动时间信息异常 | `code-session` |

@@ -288,12 +288,10 @@ backend/src/main/java/com/wxcheckin/backend/
 | `WebAttendanceController` | `/api/web/activities/{id}/code-session`、`/code-consume` | 发码与验码 |
 | `WebStaffController` | `/api/web/staff/**` | 批量签退 |
 
-当前历史控制器保留到最终删旧阶段：
+说明：
 
-- `AuthController`
-- `ActivityController`
-- `CheckinController`
-- `CompatibilityController`
+- 历史 controller（微信登录/二维码/兼容性）已从当前仓库主干删除；当前只保留 `/api/web/**` 作为正式入口。
+- 如需对照迁移背景，请参考 `docs/WEB_MIGRATION_REVIEW.md` 与 git 历史。
 
 ## 4.2 服务设计
 
@@ -318,6 +316,7 @@ backend/src/main/java/com/wxcheckin/backend/
 职责：
 
 - 基于 `activity_id + action_type + slot + secret` 生成稳定 6 位码。
+- staff 发码入口复用 `ActivityTimeWindowService` 做时间窗校验，时间片固定为 10 秒。
 - 提供：
   - `slot`
   - `expires_at`
@@ -326,22 +325,10 @@ backend/src/main/java/com/wxcheckin/backend/
 
 ### 4.2.4 `CheckinConsumeService`
 
-现状：
+现状（已收口到 Web-only 目标态）：
 
-- 当前实现以 `qr_payload` 为核心。
-
-目标：
-
-- 改为消费 `activity_id + action_type + code`。
-- 保留：
-  - 状态锁
-  - 事件审计
-  - replay guard
-  - outbox 写入
-- 调整：
-  - 动态码校验来源
-  - replay guard 唯一键
-  - 活动统计原子更新
+- 已改为消费 `activity_id + action_type + code`，不再接收 `qr_payload`。
+- 保留：状态锁、事件审计、replay guard、outbox 写入、活动统计原子更新。
 
 ### 4.2.5 `BulkCheckoutService`
 
@@ -358,7 +345,7 @@ backend/src/main/java/com/wxcheckin/backend/
 | `ActivityQueryService` | 增加 Web 活动列表与详情输出字段 |
 | `SessionService` | 兼容 Web 登录后的会话签发与注销/失效策略 |
 | `LegacyUserLookupService` | 增加实名校验、角色判定辅助查询 |
-| `QrSessionService` | 最终迁移为动态码服务的历史兼容层，后续删除 |
+| `DynamicCodeService` | 收口 staff 发码与验码逻辑，时间窗与 10 秒时间片口径统一 |
 | `OutboxRelayService` | 兼容批量签退与新事件类型 |
 | `RecordQueryService` | 兼容批量动作查询或统计展示 |
 
@@ -375,6 +362,7 @@ backend/src/main/java/com/wxcheckin/backend/
 | `wx_replay_guard` | 保留防重放，但唯一键语义改变 |
 | `wx_sync_outbox` | 继续承担最终一致性回写 |
 | `wx_admin_roster` | 保留管理员名单判定 |
+| `web_admin_audit_log` | 记录管理员高风险操作审计（批量签退等） |
 
 ## 5.2 语义调整表
 
@@ -518,7 +506,7 @@ backend/src/main/java/com/wxcheckin/backend/
 
 - 唯一键：`user_id + activity_id + action_type + slot`
 - 当前时间片重复提交返回 `duplicate`
-- 允许校验当前 slot 与上一个 slot 以吸收边界延迟，但对外口径仍保持“10 秒内有效”
+- 不保留“上一 slot 宽限”：命中上一 slot 统一返回 `expired`（对外口径严格 10 秒）
 
 ## 7.4 统计一致性规则
 
@@ -548,30 +536,35 @@ backend/src/main/java/com/wxcheckin/backend/
 
 ### 8.3 动态码风控
 
-- 对错误码尝试增加限流。
-- 推荐限流维度：
+- 当前实现已对“验码失败”做限流（`invalid_code` / `expired`）。
+- 限流维度（任一超限都会拦截）：
   - `user_id + activity_id`
-  - `session_token + activity_id`
   - `IP + activity_id`
-- 达到阈值后返回明确业务错误，而非裸异常。
+- 默认阈值与窗口（可通过环境变量覆盖）：
+  - `RISK_INVALID_CODE_MAX_ATTEMPTS_PER_USER`（默认 12）
+  - `RISK_INVALID_CODE_MAX_ATTEMPTS_PER_IP`（默认 30）
+  - `RISK_INVALID_CODE_WINDOW_SECONDS`（默认 60）
+- 达到阈值后返回：`status=forbidden` + `error_code=rate_limited`。
 
 ### 8.4 管理员高风险操作审计
 
-以下动作必须审计：
+以下动作必须审计（操作级审计，而非用户动作流水）：
 
-- 一键全部签退
+- 一键全部签退（写入 `web_admin_audit_log`，由 `BulkCheckoutService` 统一落库）
 
 ## 9. 配置设计
 
-建议在 `AppProperties` 新增或整理 Web 配置分组：
+当前已落地的关键配置项（`application.yml` -> 环境变量覆盖）：
 
-- `web.auth.password-min-length`
-- `web.auth.password-max-length`
-- `web.session.ttl-seconds`
-- `web.code.slot-ms`
-- `web.code.secret`
-- `web.risk.max-invalid-code-attempts`
-- `web.risk.invalid-code-window-seconds`
+- `app.session.ttl-seconds`（`SESSION_TTL_SECONDS`）
+- `app.qr.signing-key`（`QR_SIGNING_KEY`，用于动态码生成/验码）
+- `app.qr.replay-key-ttl-seconds`（`QR_REPLAY_TTL_SECONDS`）
+- `app.risk.invalid-code.*`（见 8.3）
+
+说明：
+
+- 密码最小/最大长度当前以 `WebPasswordAuthService` 常量为准；若后续需要按环境调整，可再抽到配置。
+- 动态码 slot 固定 10 秒（当前实现常量），不提供灰度配置入口，避免口径漂移。
 
 本地开发还需要锁定：
 

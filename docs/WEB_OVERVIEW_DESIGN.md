@@ -174,17 +174,18 @@
   - `wx_sync_outbox`
   - `wx_admin_roster`
 
-### 9.2 必须重构的部分
+### 9.2 必须重构的部分（已完成）
 
-- 微信登录链路：
-  - `AuthController`
-  - `AuthService`
-  - `WeChatIdentityResolver`
-- 二维码签发/消费链路：
-  - `ActivityController` 中的 `qr-session`
-  - `CheckinController`
-  - `QrSessionService`
-  - `CheckinConsumeService` 中与 `qr_payload` 强耦合的部分
+- 微信登录链路（已删除并替换为账号密码 + `session_token`）：
+  - （已删除）`AuthController`
+  - （已删除）`AuthService`
+  - （已删除）`WeChatIdentityResolver`
+- 二维码签发/消费链路（已删除并替换为动态 6 位码）：
+  - （已删除）`ActivityController` 中的 `qr-session`
+  - （已删除）`CheckinController`
+  - （已删除）`QrSessionService`
+  - （已重构）`CheckinConsumeService`：不再接收/解析 `qr_payload`，仅消费 `code`
+  - 当前发码/验码入口：`WebAttendanceController` + `DynamicCodeService`
 - 小程序前端：
   - （已删除）历史 `frontend/pages/**`
   - （已删除）历史 `frontend/utils/**`

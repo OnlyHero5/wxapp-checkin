@@ -51,7 +51,7 @@
 - **现象**：活动详情返回 `can_checkin=true`，但 staff 获取动态码会因为时间窗返回 `outside_activity_time_window`；出现“前端提示可签到/去签到，但管理员无法发码”的契约冲突。
 - **根因**：详情页的动作可执行性推导没有复用 staff 发码使用的时间窗判断与 legacy 时间兜底逻辑，导致两套规则漂移。
 - **修复方案**：抽取统一时间窗判断 `ActivityTimeWindowService`，并在以下入口复用：
-  - staff 发码：`backend/src/main/java/com/wxcheckin/backend/application/service/QrSessionService.java`
+  - staff 发码：`backend/src/main/java/com/wxcheckin/backend/application/service/DynamicCodeService.java`
   - 详情动作：`backend/src/main/java/com/wxcheckin/backend/application/service/ActivityQueryService.java`
   - 时间窗服务：`backend/src/main/java/com/wxcheckin/backend/application/service/ActivityTimeWindowService.java`
 - **验收口径**：

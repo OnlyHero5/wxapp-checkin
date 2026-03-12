@@ -27,14 +27,14 @@
 
 | 组件 | 库/实例 | 作用 |
 |---|---|---|
-| MySQL 主库 | `wxcheckin_ext` | 小程序扩展域：用户绑定、会话、活动投影、签到事件、防重、outbox |
+| MySQL 主库 | `wxcheckin_ext` | Web-only 扩展域：用户身份、会话、活动投影、签到事件、防重、outbox |
 | MySQL 遗留库 | `suda_union` | 管理系统遗留域：活动、报名、用户；供 pull 同步与 outbox 回写 |
 | Redis | `REDIS_HOST:REDIS_PORT` | 运行期缓存/基础依赖（非本文重点） |
 
 ## 3.2 数据流方向
 
 1. `legacy pull`（定时任务）：`suda_union` -> `wxcheckin_ext`
-2. 小程序业务写入：`wxcheckin_ext`（事务内写状态、事件、outbox）
+2. Web 业务写入：`wxcheckin_ext`（事务内写状态、事件、outbox）
 3. `outbox relay`（定时任务）：`wxcheckin_ext.wx_sync_outbox` -> `suda_union.suda_activity_apply`
 
 这是典型“读模型拉取 + 事务 outbox 回写”的最终一致性方案。
@@ -84,7 +84,8 @@
   - Flyway 默认开启
 - `prod`
   - `spring.jpa.hibernate.ddl-auto=none`
-  - `spring.flyway.enabled=false`（生产通常用 `scripts/bootstrap-prod-schema.sql` 预建表）
+  - Flyway 默认开启，使用 `classpath:db/migration_prod`（无演示数据）
+  - 若你的生产变更流程禁止线上自动迁移，可禁用 Flyway 并改用 `scripts/bootstrap-prod-schema.sql` 兜底建表/升级
   - 默认启用双向同步（legacy pull + outbox relay）
 
 ## 4.4 生产安全保护（硬校验）
@@ -124,7 +125,7 @@
 | V4 | `V4__add_end_time_to_activity_projection.sql` | `wx_activity_projection` 增加 `end_time` 并回填 |
 | V5 | `V5__add_qr_retention_indexes.sql` | 增加 `wx_qr_issue_log` 清理索引与 retention 支撑 |
 | V6 | `V6__add_web_unbind_review.sql` | 历史遗留：解绑审核表（当前正式基线已不再依赖） |
-| V7 | `V7__add_web_identity_tables.sql` | 历史遗留：浏览器绑定/Passkey/管理员审计表（当前正式基线已不再依赖） |
+| V7 | `V7__add_web_identity_tables.sql` | 浏览器绑定/Passkey 为历史遗留；`web_admin_audit_log` 仍用于管理员批量签退审计 |
 | V8 | `V8__add_passkey_verification_fields.sql` | 历史遗留：Passkey 验签字段（已停用） |
 | V9 | `V9__add_web_password_auth.sql` | 新增账号密码字段（`password_hash`/`must_change_password` 等） |
 | V10 | `V10__add_legacy_user_id_index.sql` | 为 `wx_user_auth_ext(legacy_user_id)` 增加索引 |
@@ -217,14 +218,14 @@
 | `progress_status` | `ongoing` / `completed` |
 | `support_checkin/support_checkout` | 功能开关 |
 | `checkin_count/checkout_count` | 投影统计 |
-| `rotate_seconds/grace_seconds` | 动态码滚动/宽限参数（历史字段名沿用） |
+| `rotate_seconds/grace_seconds` | 历史字段：旧二维码时期用于滚动/宽限；当前 Web 动态码 time slice 固定 10 秒，不再使用宽限（`grace_seconds` 保留但不再参与主链路） |
 | `active` | 逻辑可见性 |
 
 索引：`start_time`、`progress_status`、`legacy_activity_id`
 
 读写来源：
 
-- 写：`LegacySyncService`（主同步来源），`CheckinConsumeService`/`BulkCheckoutService`（统计更新），`QrSessionService`（时间回填）
+- 写：`LegacySyncService`（主同步来源），`CheckinConsumeService`/`BulkCheckoutService`（统计更新），`ActivityTimeWindowService`（时间异常时回查 legacy 并回填投影表）
 - 读：`ActivityQueryService`、`CompatibilityController.currentActivity`、`RecordQueryService`
 
 ## 6.5 `wx_user_activity_status`
@@ -262,7 +263,7 @@
 - `action_type`: `checkin` / `checkout`
 - `slot`, `nonce`: 与动态码时间片/随机因子绑定（批量签退会写入 `bulk:<batch_id>`）
 - `in_grace_window`: 是否在宽限期内提交（Web 动态码默认不使用宽限，字段保留用于兼容）
-- `submitted_at`, `server_time`, `qr_payload`: 审计追溯（Web 动态码会写入 `web-code:<code>` 等标识；旧扫码链路仍可能写入真实 `qr_payload`）
+- `submitted_at`, `server_time`, `qr_payload`: 审计追溯（Web 动态码会写入 `web-code:<code>` 等标识；历史二维码链路的数据可能已写入真实 `qr_payload`）
 
 读写来源：
 
@@ -273,13 +274,8 @@
 
 作用：
 
-- 发码审计：记录 staff 发出的二维码票据（可用于排障追溯）。
-- legacy 兼容：当 `nonce` 不是 signed nonce 且 `app.qr.allow-legacy-unsigned=true` 时，A-06 会用本表做“存在性校验”。
-- **signed nonce 模式**：当 `nonce` 为 signed nonce 时，A-06 以 `QR_SIGNING_KEY` 验签为准，**不再依赖本表**。
-
-写入开关：
-
-- `app.qr.issue-log-enabled`（环境变量 `QR_ISSUE_LOG_ENABLED`）可关闭写入，避免表在生产环境持续增长。
+- 历史遗留表：旧二维码时期用于“发码审计/兼容校验”的票据记录。
+- 当前 Web-only 动态码主链路 **不再写入/读取** 该表；保留表结构与历史数据仅用于排障回溯。
 
 索引：
 
@@ -290,8 +286,7 @@
 
 读写来源：
 
-- 写：`QrSessionService.issue`（受 `issue-log-enabled` 控制）
-- 读：`CheckinConsumeService`（仅 legacy unsigned nonce 兼容模式使用）
+- 当前主链路无写入/读取。
 
 ## 6.8 `wx_replay_guard`
 
@@ -332,9 +327,9 @@
 - 写：`CheckinConsumeService`（入队）、`OutboxRelayService`（更新状态）
 - 读：`OutboxRelayService.findTop100ByStatusAndAvailableAtLessThanEqualOrderByIdAsc`
 
-## 6.10 二维码表保留与清理（`QrMaintenanceJob`）
+## 6.10 动态码防重放表保留与清理（`QrMaintenanceJob`）
 
-目标：避免 `wx_qr_issue_log` / `wx_replay_guard` 在生产环境无限增长。
+目标：避免 `wx_replay_guard` 在生产环境无限增长。
 
 清理任务：
 
@@ -344,8 +339,6 @@
 
 清理规则（可配置）：
 
-- `wx_qr_issue_log`：删除 `accept_expire_at < (now - issue_log_retention)` 的记录
-  - `app.qr.issue-log-retention-seconds`（默认 86400 秒）
 - `wx_replay_guard`：删除 `expires_at < (now - replay_guard_retention)` 的记录
   - `app.qr.replay-guard-retention-seconds`（默认 0 秒，表示到期即可删除）
 
@@ -438,12 +431,11 @@
 1. 校验 staff 权限
 2. 读取 `wx_activity_projection` 活动信息
 3. 校验活动时间窗（必要时回查 `suda_activity` 并回填 start/end）
-4. 使用服务端时间计算 `slot`（默认 10 秒时间片，支持从 `wx_activity_projection.rotate_seconds` 覆盖）
+4. 使用服务端时间计算 `slot`（**固定 10 秒时间片**）
 5. `DynamicCodeService` 基于 `QR_SIGNING_KEY` 对 `(activity_id, action_type, slot)` 计算稳定摘要，输出 6 位数字码
-6. 按配置决定是否写 `wx_qr_issue_log`（审计/兼容用）
 
 读表：`wx_activity_projection`, `suda_activity`（必要时）
-写表：`wx_activity_projection`（可能更新时段）、`wx_qr_issue_log`（可选）
+写表：`wx_activity_projection`（可能更新时段）
 
 ## 8.5 普通用户提交动态码 `/api/web/activities/{activityId}/code-consume`
 
@@ -463,7 +455,7 @@
 
 补充说明：
 
-- `CheckinConsumeService` 仍保留旧扫码链路（`qr_payload`）解析与验签逻辑，用于迁移期兼容；Web-only 正式链路只走动态码提交。
+- 旧二维码扫码链路（`qr_payload`）已从正式主干删除；Web-only 正式链路只走动态码提交。
 
 ## 8.6 staff 批量签退 `/api/web/staff/activities/{activityId}/bulk-checkout`
 
@@ -517,10 +509,10 @@
 
 这是“本地事务 + 异步回写”的最终一致性模型：
 
-1. 用户扫码成功后，`wxcheckin_ext` 内部立即一致
+1. 用户提交动态码成功后，`wxcheckin_ext` 内部立即一致
 2. legacy 写回依赖 outbox 调度周期
 3. 因此短时间内可能出现：
-   - 小程序侧状态已更新
+   - Web 侧状态已更新
    - 管理后台（读 legacy）稍后才看到变更
 
 可通过降低 `OUTBOX_RELAY_INTERVAL_MS` 缩短窗口。
