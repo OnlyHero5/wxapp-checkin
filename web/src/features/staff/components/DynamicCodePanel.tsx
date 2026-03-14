@@ -28,6 +28,24 @@ function resolveRemainingMs(codeSession: CodeSessionResponse | null) {
 }
 
 /**
+ * 管理端统计口径：
+ * - 后端 `checkin_count` 是“已签到未签退”（仍在场）人数；
+ * - 后端 `checkout_count` 是“已签退”人数；
+ * - 因此累计签到人数 = checkin_count + checkout_count。
+ *
+ * 这样展示可以避免“签退后签到人数变成 0”的误解，同时保留一键签退需要的“未签退人数”。
+ */
+function resolveAttendanceCounts(codeSession: CodeSessionResponse | null) {
+  const checkinCount = codeSession?.checkin_count ?? 0;
+  const checkoutCount = codeSession?.checkout_count ?? 0;
+  return {
+    checkinCount,
+    checkoutCount,
+    totalCheckedIn: checkinCount + checkoutCount
+  };
+}
+
+/**
  * 动态码面板只负责“当前码长什么样、切哪个动作、剩多久”，
  * 不在这一层直接耦合批量签退或页面级错误处理。
  */
@@ -41,6 +59,7 @@ export function DynamicCodePanel({
   const [remainingMs, setRemainingMs] = useState(() => resolveRemainingMs(codeSession));
   const lastAutoRefreshKeyRef = useRef("");
   const onRefreshRef = useRef(onRefresh);
+  const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
 
   useEffect(() => {
     onRefreshRef.current = onRefresh;
@@ -96,8 +115,9 @@ export function DynamicCodePanel({
         </p>
       </div>
       <CellGroup theme="card" title="实时统计">
-        <Cell note={`${codeSession?.checkin_count ?? 0}`} title="已签到" />
-        <Cell note={`${codeSession?.checkout_count ?? 0}`} title="已签退" />
+        <Cell note={`${totalCheckedIn}`} title="签到人数" />
+        <Cell note={`${checkoutCount}`} title="签退人数" />
+        <Cell note={`${checkinCount}`} title="未签退人数" />
       </CellGroup>
       <AppButton onClick={onRefresh} tone="secondary">
         立即刷新

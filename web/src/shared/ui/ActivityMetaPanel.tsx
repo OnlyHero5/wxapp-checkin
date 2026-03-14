@@ -42,6 +42,16 @@ function renderRows({
    * - 后续补字段时，只需要改这一层，不需要同时扫 3 个页面
    */
   // 字段顺序固定下来以后，列表、详情和输入页就不会各自漂移。
+  /**
+   * 统计口径说明（非常重要，避免“签到人数为什么会变成 0”的误解）：
+   * - 后端 `checkin_count` 当前是“已签到未签退”（即仍在场）人数；
+   * - 后端 `checkout_count` 是“已签退”人数；
+   * - 因此“累计已签到”= `checkin_count + checkout_count`。
+   */
+  const checkinCount = counts?.checkin ?? 0;
+  const checkoutCount = counts?.checkout ?? 0;
+  const totalCheckedIn = checkinCount + checkoutCount;
+
   return (
     <>
       {description ? <p>{description}</p> : null}
@@ -49,7 +59,11 @@ function renderRows({
       {locationText ? <p>地点：{locationText}</p> : null}
       {progressText ? <p>当前状态：{progressText}</p> : null}
       {joinStatusText ? <p>我的状态：{joinStatusText}</p> : null}
-      {counts ? <p>统计：签到 {counts.checkin ?? 0} / 签退 {counts.checkout ?? 0}</p> : null}
+      {counts ? (
+        <p>
+          统计：签到 {totalCheckedIn} / 签退 {checkoutCount}（未签退 {checkinCount}）
+        </p>
+      ) : null}
     </>
   );
 }
