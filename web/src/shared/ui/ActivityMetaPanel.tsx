@@ -11,6 +11,7 @@ import { ElementType, ReactNode } from "react";
 type ActivityMetaPanelProps = {
   as?: ElementType;
   counts?: {
+    expected?: number;
     checkin?: number;
     checkout?: number;
   };
@@ -48,9 +49,12 @@ function renderRows({
    * - 后端 `checkout_count` 是“已签退”人数；
    * - 因此“累计已签到”= `checkin_count + checkout_count`。
    */
+  // `expected` 用于管理端展示“应到人数”，它与签到/签退是不同维度的统计。
+  const expectedCount = counts?.expected;
   const checkinCount = counts?.checkin ?? 0;
   const checkoutCount = counts?.checkout ?? 0;
   const totalCheckedIn = checkinCount + checkoutCount;
+  const showExpectedCount = expectedCount != null;
 
   return (
     <>
@@ -61,7 +65,9 @@ function renderRows({
       {joinStatusText ? <p>我的状态：{joinStatusText}</p> : null}
       {counts ? (
         <p>
-          统计：签到 {totalCheckedIn} / 签退 {checkoutCount}（未签退 {checkinCount}）
+          统计：
+          {showExpectedCount ? `应到 ${expectedCount} / ` : ""}
+          签到 {totalCheckedIn} / 签退 {checkoutCount}（未签退 {checkinCount}）
         </p>
       ) : null}
     </>

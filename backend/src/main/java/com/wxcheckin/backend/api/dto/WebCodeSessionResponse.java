@@ -10,6 +10,7 @@ public record WebCodeSessionResponse(
     Long expiresAt,
     Long expiresInMs,
     Long serverTimeMs,
+    Integer registeredCount,
     Integer checkinCount,
     Integer checkoutCount
 ) {

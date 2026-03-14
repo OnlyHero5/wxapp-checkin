@@ -95,6 +95,7 @@ public class DynamicCodeService {
         expiresAt,
         expiresInMs,
         serverTimeMs,
+        safeCount(activity.getRegisteredCount()),
         safeCount(activity.getCheckinCount()),
         safeCount(activity.getCheckoutCount())
     );

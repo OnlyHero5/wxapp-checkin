@@ -117,6 +117,7 @@ class LegacySyncServiceActivityCountTest {
     legacySyncService.syncFromLegacy();
 
     WxActivityProjectionEntity projection = activityRepository.findById("legacy_act_101").orElseThrow();
+    assertEquals(3, projection.getRegisteredCount());
     assertEquals(1, projection.getCheckinCount());
     assertEquals(1, projection.getCheckoutCount());
   }

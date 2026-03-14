@@ -8,6 +8,7 @@ import type { ActivityActionType } from "../activities/api";
 export type CodeSessionResponse = {
   action_type: ActivityActionType;
   activity_id: string;
+  registered_count?: number;
   checkin_count?: number;
   checkout_count?: number;
   code: string;

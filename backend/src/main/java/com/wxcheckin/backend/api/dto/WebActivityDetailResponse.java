@@ -13,6 +13,7 @@ public record WebActivityDetailResponse(
     Boolean supportCheckout,
     Boolean supportCheckin,
     Boolean hasDetail,
+    Integer registeredCount,
     Integer checkinCount,
     Integer checkoutCount,
     Boolean myRegistered,

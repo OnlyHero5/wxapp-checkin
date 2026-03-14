@@ -155,6 +155,8 @@ public class LegacySyncService {
 	          a.activity_etime,
 	          a.type,
 	          a.state,
+	          -- registered_count 表示“报名成功/候补成功”的人数（即应到人数，具备签到/签退资格）。
+	          COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS registered_count,
 	          -- 关键口径：checkin_count 表示“已签到未签退”，否则会被 pull 周期性覆盖出不可能状态。
 	          COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS checkin_count,
 	          COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS checkout_count
@@ -176,6 +178,7 @@ public class LegacySyncService {
 	        row.endTime = end == null ? row.startTime : end.toInstant();
 	        row.type = rs.getInt("type");
 	        row.state = rs.getInt("state");
+	        row.registeredCount = rs.getInt("registered_count");
 	        row.checkinCount = rs.getInt("checkin_count");
 	        row.checkoutCount = rs.getInt("checkout_count");
 	        return row;
@@ -198,6 +201,7 @@ public class LegacySyncService {
 	            : ActivityProgressStatus.ONGOING.getCode());
         entity.setSupportCheckout(true);
         entity.setHasDetail(true);
+        entity.setRegisteredCount(Math.max(0, row.registeredCount));
         entity.setCheckinCount(Math.max(0, row.checkinCount));
         entity.setCheckoutCount(Math.max(0, row.checkoutCount));
         entity.setActive(true);
@@ -224,6 +228,7 @@ public class LegacySyncService {
           a.activity_etime,
           a.type,
           a.state,
+          COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS registered_count,
           COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS checkin_count,
           COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS checkout_count
         FROM suda_activity a
@@ -246,6 +251,7 @@ public class LegacySyncService {
         row.endTime = end == null ? row.startTime : end.toInstant();
         row.type = rs.getInt("type");
         row.state = rs.getInt("state");
+        row.registeredCount = rs.getInt("registered_count");
         row.checkinCount = rs.getInt("checkin_count");
         row.checkoutCount = rs.getInt("checkout_count");
         return row;
@@ -278,6 +284,7 @@ public class LegacySyncService {
           : ActivityProgressStatus.ONGOING.getCode());
       entity.setSupportCheckout(true);
       entity.setHasDetail(true);
+      entity.setRegisteredCount(Math.max(0, row.registeredCount));
       entity.setCheckinCount(Math.max(0, row.checkinCount));
       entity.setCheckoutCount(Math.max(0, row.checkoutCount));
       entity.setActive(true);
@@ -381,6 +388,7 @@ public class LegacySyncService {
 	    Instant endTime;
 	    int type;
 	    int state;
+	    int registeredCount;
 	    int checkinCount;
 	    int checkoutCount;
 	  }

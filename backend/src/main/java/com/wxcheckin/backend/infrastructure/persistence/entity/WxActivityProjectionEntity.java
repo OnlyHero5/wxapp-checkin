@@ -61,6 +61,9 @@ public class WxActivityProjectionEntity {
   @Column(name = "checkout_count", nullable = false)
   private Integer checkoutCount = 0;
 
+  @Column(name = "registered_count", nullable = false)
+  private Integer registeredCount = 0;
+
   @Column(name = "rotate_seconds", nullable = false)
   private Integer rotateSeconds = 10;
 
@@ -198,6 +201,14 @@ public class WxActivityProjectionEntity {
 
   public void setCheckoutCount(Integer checkoutCount) {
     this.checkoutCount = checkoutCount;
+  }
+
+  public Integer getRegisteredCount() {
+    return registeredCount;
+  }
+
+  public void setRegisteredCount(Integer registeredCount) {
+    this.registeredCount = registeredCount;
   }
 
   public Integer getRotateSeconds() {

@@ -243,6 +243,7 @@ export function StaffManagePage() {
       {detail ? (
         <ActivityMetaPanel
           counts={{
+            expected: codeSession?.registered_count ?? detail.registered_count,
             checkin: codeSession?.checkin_count ?? detail.checkin_count,
             checkout: codeSession?.checkout_count ?? detail.checkout_count
           }}

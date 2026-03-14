@@ -15,6 +15,7 @@ export type ActivitySummary = {
   activity_id: string;
   activity_title: string;
   activity_type?: string;
+  registered_count?: number;
   checkin_count?: number;
   checkout_count?: number;
   description?: string;
