@@ -6,6 +6,7 @@ import { CheckinPage } from "../pages/checkin/CheckinPage";
 import { CheckoutPage } from "../pages/checkout/CheckoutPage";
 import { LoginPage } from "../pages/login/LoginPage";
 import { ActivityRosterPage } from "../pages/activity-roster/ActivityRosterPage";
+import { ProfilePage } from "../pages/profile/ProfilePage";
 import { StaffManagePage } from "../pages/staff-manage/StaffManagePage";
 import {
   getMustChangePassword,
@@ -184,6 +185,15 @@ export function AppRoutes() {
           <ProtectedRoute>
             {/* 普通用户签退动作页。 */}
             <CheckoutPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            {/* 个人中心第一版只展示本地已有资料和账户动作。 */}
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

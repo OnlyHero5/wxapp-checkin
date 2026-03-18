@@ -636,6 +636,62 @@ select {
 }
 
 /* =========================================================
+ * 个人中心
+ * ---------------------------------------------------------
+ * 第一版个人中心只承载“查看本地资料 + 账户动作”，
+ * 不在这里引入新的编辑表单或额外接口请求。
+ * ========================================================= */
+.profile-summary-card,
+.profile-actions-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface-secondary);
+}
+
+.profile-summary-list {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-summary-item {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.profile-summary-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.profile-summary-label,
+.profile-role-hint {
+  margin: 0;
+  color: var(--app-text-muted);
+}
+
+.profile-summary-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.profile-summary-value {
+  margin: 0;
+  color: var(--app-text-strong);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.profile-role-hint {
+  line-height: 1.6;
+}
+
+/* =========================================================
  * staff / review 页面扩展
  * ---------------------------------------------------------
  * 新增页面继续复用同一套浅色卡片语言，

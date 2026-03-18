@@ -15,6 +15,12 @@ type StoredSessionContext = {
   user_profile?: SessionUserProfile;
 };
 
+export type SessionProfileSnapshot = {
+  permissions: string[];
+  role: string;
+  user_profile: SessionUserProfile | null;
+};
+
 /**
  * 访问本地存储前先做安全封装。
  *
@@ -185,6 +191,15 @@ export function getSessionPermissions() {
 
 export function getSessionUserProfile() {
   return readSessionContext(getStorage())?.user_profile ?? null;
+}
+
+export function getSessionProfileSnapshot(): SessionProfileSnapshot {
+  const context = readSessionContext(getStorage());
+  return {
+    permissions: context?.permissions ?? [],
+    role: context?.role ?? "normal",
+    user_profile: context?.user_profile ?? null
+  };
 }
 
 export function getMustChangePassword() {
