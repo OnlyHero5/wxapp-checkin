@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ActivitiesPage } from "../pages/activities/ActivitiesPage";
 import { ActivityDetailPage } from "../pages/activity-detail/ActivityDetailPage";
 import { ChangePasswordPage } from "../pages/change-password/ChangePasswordPage";
@@ -54,6 +54,10 @@ function mustChangePassword() {
   return getMustChangePassword();
 }
 
+function isSelfServicePasswordChange(search: string) {
+  return new URLSearchParams(search).get("mode") === "self-service";
+}
+
 function AppBusinessShell({ children }: { children: JSX.Element }) {
   return (
     <div className="app-business-shell">
@@ -84,10 +88,14 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
  * - 已完成改密：回 /activities（避免用户误留在改密页）
  */
 function PasswordChangeRoute({ children }: { children: JSX.Element }) {
+  const location = useLocation();
   if (!hasSession()) {
     return <Navigate replace to="/login" />;
   }
-  if (!mustChangePassword()) {
+  // 改密页允许两种入口：
+  // 1. 首次登录后的强制改密
+  // 2. 个人中心发起的自助改密
+  if (!mustChangePassword() && !isSelfServicePasswordChange(location.search)) {
     return <Navigate replace to="/activities" />;
   }
   return children;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { changePassword } from "../../features/auth/api";
 import { ChangePasswordForm } from "../../features/auth/components/ChangePasswordForm";
 import { SessionExpiredError } from "../../shared/http/errors";
@@ -20,10 +20,16 @@ function resolveErrorMessage(error: unknown) {
   return "密码修改失败，请稍后重试。";
 }
 
+function isSelfServicePasswordChange(search: string) {
+  return new URLSearchParams(search).get("mode") === "self-service";
+}
+
 export function ChangePasswordPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [errorMessage, setErrorMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const selfServiceMode = isSelfServicePasswordChange(location.search);
 
   async function handleSubmit(input: { old_password: string; new_password: string }) {
     setPending(true);
@@ -33,7 +39,8 @@ export function ChangePasswordPage() {
       const result = await changePassword(input);
       // 后端改密成功后会解除强制改密标记，这里同步更新到本地存储，避免路由守卫继续拦截。
       setMustChangePassword(!!result.must_change_password);
-      navigate("/activities");
+      // 自助改密返回个人中心，强制改密继续回业务首页。
+      navigate(selfServiceMode ? "/profile" : "/activities");
     } catch (error) {
       // 会话失效时不继续停留在改密页，直接回登录入口。
       if (error instanceof SessionExpiredError) {
@@ -48,8 +55,8 @@ export function ChangePasswordPage() {
 
   return (
     <MobilePage
-      description="为了保障账号安全，请先修改密码后再进入业务页面。"
-      eyebrow="首次登录"
+      description={selfServiceMode ? "你可以在这里主动更新密码，修改成功后会返回个人中心。" : "为了保障账号安全，请先修改密码后再进入业务页面。"}
+      eyebrow={selfServiceMode ? "账户安全" : "首次登录"}
       title="修改密码"
     >
       <ChangePasswordForm errorMessage={errorMessage} onSubmit={handleSubmit} pending={pending} />

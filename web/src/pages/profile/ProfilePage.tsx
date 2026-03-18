@@ -44,8 +44,8 @@ export function ProfilePage() {
   const userProfile = sessionProfile.user_profile ?? {};
 
   function handleChangePassword() {
-    // 先复用现有改密页能力，后续再放开为完整的自助改密入口。
-    navigate("/change-password");
+    // 个人中心走的是“自助改密”分支，需要和首次登录强制改密区分来源。
+    navigate("/change-password?mode=self-service");
   }
 
   function handleLogout() {
