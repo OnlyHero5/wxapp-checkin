@@ -10,9 +10,11 @@ import com.wxcheckin.backend.infrastructure.persistence.entity.WxSyncOutboxEntit
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserActivityStatusEntity;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserAuthExtEntity;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSyncOutboxRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebAdminAuditLogRepository;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
@@ -62,13 +64,21 @@ class LegacySyncServiceOutboxOrderingTest {
   private WxUserActivityStatusRepository statusRepository;
 
   @Autowired
+  private WxSessionRepository sessionRepository;
+
+  @Autowired
   private WxSyncOutboxRepository outboxRepository;
+
+  @Autowired
+  private WebAdminAuditLogRepository adminAuditLogRepository;
 
   @BeforeEach
   void setUp() {
     // 清理扩展库数据：确保测试只围绕一个用户/一个活动/一个 outbox 事件，避免干扰。
     outboxRepository.deleteAll();
+    adminAuditLogRepository.deleteAll();
     statusRepository.deleteAll();
+    sessionRepository.deleteAll();
     userRepository.deleteAll();
     activityRepository.deleteAll();
 
@@ -226,4 +236,3 @@ class LegacySyncServiceOutboxOrderingTest {
     assertEquals(1, reloadedActivity.getCheckoutCount());
   }
 }
-

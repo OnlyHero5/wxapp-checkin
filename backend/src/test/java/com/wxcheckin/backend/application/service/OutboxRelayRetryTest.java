@@ -7,9 +7,11 @@ import com.wxcheckin.backend.infrastructure.persistence.entity.WxActivityProject
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxSyncOutboxEntity;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserAuthExtEntity;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSyncOutboxRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebAdminAuditLogRepository;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,14 +58,22 @@ class OutboxRelayRetryTest {
   private WxActivityProjectionRepository activityRepository;
 
   @Autowired
+  private WxSessionRepository sessionRepository;
+
+  @Autowired
+  private WebAdminAuditLogRepository adminAuditLogRepository;
+
+  @Autowired
   private JdbcTemplate jdbcTemplate;
 
   @BeforeEach
   void setUp() {
     outboxRepository.deleteAll();
+    adminAuditLogRepository.deleteAll();
     activityRepository.deleteAll();
     // 清理顺序要先删子表再删父表：wx_user_activity_status.user_id -> wx_user_auth_ext.id。
     statusRepository.deleteAll();
+    sessionRepository.deleteAll();
     userRepository.deleteAll();
 
     // legacy 表：只建 suda_user，故意不建 suda_activity_apply 来模拟一次可恢复失败。

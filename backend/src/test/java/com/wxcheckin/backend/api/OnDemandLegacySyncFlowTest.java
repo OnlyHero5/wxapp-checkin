@@ -13,6 +13,7 @@ import com.wxcheckin.backend.infrastructure.persistence.repository.WxAdminRoster
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WebAdminAuditLogRepository;
 import java.sql.Timestamp;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,9 +70,13 @@ class OnDemandLegacySyncFlowTest {
   @Autowired
   private WxAdminRosterRepository adminRosterRepository;
 
+  @Autowired
+  private WebAdminAuditLogRepository adminAuditLogRepository;
+
   @BeforeEach
   void prepare() {
     // 清理扩展库（H2）里的投影/会话/状态，确保“首次进入列表时本地无 status”成立。
+    adminAuditLogRepository.deleteAll();
     statusRepository.deleteAll();
     sessionRepository.deleteAll();
     adminRosterRepository.deleteAll();
