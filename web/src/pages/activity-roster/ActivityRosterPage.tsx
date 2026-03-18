@@ -1,16 +1,192 @@
-import { useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { buildActivityDetailPath } from "../../features/activities/api";
+import {
+  adjustAttendanceStates,
+  getActivityRoster,
+  type ActivityRosterResponse
+} from "../../features/staff/api";
+import {
+  AttendanceBatchActionBar,
+  type AttendanceActionKey
+} from "../../features/staff/components/AttendanceBatchActionBar";
+import { AttendanceRosterList } from "../../features/staff/components/AttendanceRosterList";
+import { subscribePageVisible } from "../../shared/device/page-lifecycle";
+import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/http/errors";
+import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
+import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 
+type AttendanceActionPayload = {
+  patch: {
+    checked_in: boolean;
+    checked_out: boolean;
+  };
+  reason: string;
+};
+
+function resolveErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return "参会名单加载失败，请稍后重试。";
+}
+
+function resolveActionPayload(action: AttendanceActionKey): AttendanceActionPayload {
+  // 这里把“按钮语义 -> patch + 默认 reason”钉死，
+  // 页面和列表组件都只传动作枚举，不再在多个组件里复制布尔组合。
+  switch (action) {
+    case "set_checked_in":
+      return {
+        patch: {
+          checked_in: true,
+          checked_out: false
+        },
+        reason: "设为已签到"
+      };
+    case "clear_checked_in":
+      return {
+        patch: {
+          checked_in: false,
+          checked_out: false
+        },
+        reason: "设为未签到"
+      };
+    case "set_checked_out":
+      return {
+        patch: {
+          checked_in: true,
+          checked_out: true
+        },
+        reason: "设为已签退"
+      };
+    case "clear_checked_out":
+      return {
+        patch: {
+          checked_in: true,
+          checked_out: false
+        },
+        reason: "设为未签退"
+      };
+  }
+}
+
 /**
- * 参会名单页先提供最小壳层，把 staff 的“进入名单”导航链路固定下来。
+ * 参会名单页承接 staff 的“看成员 + 修签到签退状态”链路。
  *
- * 后续真正的名单查询、批量修正和刷新逻辑都在这个页面继续扩展；
- * 当前阶段故意不提前引入业务状态，避免把“路由是否打通”和“名单接口是否可用”混成同一个调试面。
+ * <p>它故意不和动态码管理页混在一起：
+ * - 发码是“给普通用户一个入口”
+ * - 名单修正是“管理员直接改状态”
+ * 两者都是高频操作，但认知负担完全不同。</p>
  */
 export function ActivityRosterPage() {
   const { activityId = "" } = useParams();
+  const navigate = useNavigate();
+  const [roster, setRoster] = useState<ActivityRosterResponse | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adjusting, setAdjusting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [resultMessage, setResultMessage] = useState("");
+  const requestVersionRef = useRef(0);
+
+  async function loadRoster(resetBeforeLoad: boolean) {
+    const requestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = requestVersion;
+
+    if (!activityId) {
+      if (requestVersionRef.current === requestVersion) {
+        setLoading(false);
+        setRoster(null);
+        setErrorMessage("活动不存在");
+      }
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+    if (resetBeforeLoad) {
+      setRoster(null);
+    }
+
+    try {
+      const result = await getActivityRoster(activityId);
+      if (requestVersionRef.current !== requestVersion) {
+        return;
+      }
+      setRoster(result);
+      // 每次刷新后只保留仍然存在于列表里的勾选项，避免并发修正后保留脏选择。
+      setSelectedIds((current) => current.filter((userId) => result.items.some((item) => item.user_id === userId)));
+    } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        navigate("/login");
+        return;
+      }
+      if (error instanceof PasswordChangeRequiredError) {
+        navigate("/change-password");
+        return;
+      }
+      if (requestVersionRef.current === requestVersion) {
+        setErrorMessage(resolveErrorMessage(error));
+      }
+    } finally {
+      if (requestVersionRef.current === requestVersion) {
+        setLoading(false);
+      }
+    }
+  }
+
+  useEffect(() => {
+    void loadRoster(true);
+
+    return subscribePageVisible(() => {
+      void loadRoster(false);
+    });
+  }, [activityId, navigate]);
+
+  async function runAdjustment(userIds: number[], action: AttendanceActionKey, reasonPrefix: "单人" | "批量") {
+    if (!activityId || userIds.length === 0) {
+      return;
+    }
+
+    const payload = resolveActionPayload(action);
+    setAdjusting(true);
+    setErrorMessage("");
+    setResultMessage("");
+
+    try {
+      const response = await adjustAttendanceStates(activityId, {
+        patch: payload.patch,
+        reason: `${reasonPrefix}${payload.reason}`,
+        user_ids: userIds
+      });
+      setResultMessage(response.message ?? "名单修正完成");
+      setSelectedIds([]);
+      await loadRoster(false);
+    } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        navigate("/login");
+        return;
+      }
+      if (error instanceof PasswordChangeRequiredError) {
+        navigate("/change-password");
+        return;
+      }
+      setErrorMessage(resolveErrorMessage(error));
+    } finally {
+      setAdjusting(false);
+    }
+  }
+
+  function handleToggleSelection(userId: number, checked: boolean) {
+    setSelectedIds((current) => {
+      if (checked) {
+        return current.includes(userId) ? current : [...current, userId];
+      }
+      return current.filter((value) => value !== userId);
+    });
+  }
 
   return (
     <MobilePage
@@ -27,8 +203,37 @@ export function ActivityRosterPage() {
       eyebrow="工作人员"
       title="参会名单"
     >
-      {/* 这里先保留最小文案占位，后续接入真实名单数据时仍沿用同一页面壳层。 */}
-      <p>参会名单加载中...</p>
+      {errorMessage ? <InlineNotice message={errorMessage} /> : null}
+      {resultMessage ? <InlineNotice message={resultMessage} theme="success" /> : null}
+      {roster ? (
+        <>
+          <ActivityMetaPanel
+            counts={{
+              expected: roster.registered_count,
+              checkin: roster.checkin_count,
+              checkout: roster.checkout_count
+            }}
+            description={roster.description}
+            locationText={roster.location}
+            subtitle={roster.activity_type}
+            timeText={roster.start_time}
+            title={roster.activity_title}
+            titleAs="p"
+          />
+          <AttendanceBatchActionBar
+            disabled={adjusting}
+            onConfirm={(action) => runAdjustment(selectedIds, action, "批量")}
+            selectedCount={selectedIds.length}
+          />
+          <AttendanceRosterList
+            items={roster.items}
+            onSingleAction={(userId, action) => runAdjustment([userId], action, "单人")}
+            onToggleSelection={handleToggleSelection}
+            selectedIds={selectedIds}
+          />
+        </>
+      ) : null}
+      {!roster && loading ? <p>参会名单加载中...</p> : null}
     </MobilePage>
   );
 }

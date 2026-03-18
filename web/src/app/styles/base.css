@@ -672,6 +672,87 @@ select {
   border-top: 1px solid var(--app-border-subtle);
 }
 
+.roster-batch-bar {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.roster-batch-bar__summary {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 0.9375rem;
+}
+
+.roster-batch-bar__actions {
+  display: grid;
+  gap: 10px;
+}
+
+.roster-list {
+  display: grid;
+  gap: 12px;
+}
+
+.roster-item {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.roster-item__header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.roster-item__select {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--app-text-muted);
+  font-size: 0.875rem;
+}
+
+.roster-item__identity {
+  display: grid;
+  gap: 2px;
+}
+
+.roster-item__identity strong {
+  color: var(--app-text-strong);
+  font-size: 1rem;
+}
+
+.roster-item__identity span,
+.roster-item__status,
+.roster-item__time {
+  color: var(--app-text-muted);
+}
+
+.roster-item__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.9375rem;
+}
+
+.roster-item__time {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.roster-item__actions {
+  display: grid;
+  gap: 10px;
+}
+
 /* =========================================================
  * TDesign 组件观感对齐
  * ---------------------------------------------------------
