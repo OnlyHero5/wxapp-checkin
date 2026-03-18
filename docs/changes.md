@@ -1,5 +1,25 @@
 # Changes Log
 
+## 2026-03-18
+- Web 导航信息架构重构落地：
+  - 顶级业务导航统一收口为 `活动 / 我的`
+  - `/activities/**`、`/staff/activities/**` 统一归入 `活动` 域并做激活态映射
+  - 活动详情、签到/签退、staff 管理、名单页改回真实返回链路，不再把局部返回伪装成底部导航
+- 活动列表页二级分段回收到内容区内部：
+  - 普通用户显示 `进行中 / 历史活动`
+  - staff 显示 `进行中 / 已完成`
+  - 该分段仅承担页内锚点/跳转语义，不再占用全局导航区域
+- 个人中心页面上线：
+  - 新增 `我的` 页，展示本地会话中的 `name / student_id / department / club`
+  - staff 会显示角色提示，便于区分普通用户链路与管理链路
+  - 提供 `修改密码`、`退出登录` 两个账户动作
+- 自助改密入口打通：
+  - `/change-password` 继续保留强制改密优先规则
+  - 新增个人中心发起的自助改密模式，成功后返回 `我的` 页
+- 验证：
+  - `cd web && npx vitest --run`
+  - `cd web && npm run build`
+
 ## 2026-03-10
 - 审查并补强 URL/部署边界：
   - `web/` 新增 `VITE_APP_BASE_PATH`、`VITE_API_BASE_PATH`、`VITE_API_PROXY_TARGET`
