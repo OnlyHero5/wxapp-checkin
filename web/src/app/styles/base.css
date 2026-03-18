@@ -266,6 +266,38 @@ select {
   gap: 12px;
 }
 
+/* 活动页分段入口下沉到内容区后，视觉上更接近“页内筛选器 / 锚点条”。
+ * 这样用户会把它理解成列表辅助结构，而不是站点主导航。 */
+.activity-inline-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.activity-inline-nav__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-secondary);
+  color: var(--app-text-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.activity-inline-nav__item:hover {
+  text-decoration: none;
+  border-color: var(--app-border-strong);
+}
+
+.activity-inline-nav__item:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
 /* 每个活动分组自身也是一个独立区块。 */
 .activity-section {
   display: grid;

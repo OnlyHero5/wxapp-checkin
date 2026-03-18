@@ -100,7 +100,8 @@ describe("ActivitiesPage", () => {
     expect(screen.getAllByText("已签退").length).toBeGreaterThan(0);
     expect(screen.queryByText("不应展示的活动")).not.toBeInTheDocument();
     expect(screen.queryByText("累计签到")).not.toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "页面导航" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "活动分段" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "历史活动" })).toHaveAttribute("href", "#completed");
     expect(screen.getAllByRole("link", { name: "查看详情" })).toHaveLength(2);
   });

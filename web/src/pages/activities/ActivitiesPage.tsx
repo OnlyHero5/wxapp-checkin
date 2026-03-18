@@ -8,7 +8,6 @@ import { isStaffSession } from "../../shared/session/session-store";
 import { AppButton } from "../../shared/ui/AppButton";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
-import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 
 /**
  * 活动列表页是普通用户进入业务态后的首页。
@@ -158,9 +157,9 @@ export function ActivitiesPage() {
     }
     return section;
   });
-  // 这里暂时保留的是“活动页内部的二级分段”，不是全站顶级导航。
-  // 后续如果分段位置继续调整，只需要围绕活动页内容区演进，不要再抬升回业务壳层。
-  const bottomNavItems = isStaff
+  // 这里保留的只是活动页内容区内的二级分段。
+  // 它服务“快速跳到进行中 / 历史活动”，不再承担全局底部导航职责。
+  const sectionNavItems = isStaff
     ? [
         { href: "#ongoing", label: "进行中" },
         { href: "#completed", label: "已完成" }
@@ -171,12 +170,7 @@ export function ActivitiesPage() {
       ];
 
   return (
-    <MobilePage
-      bottomNav={<PageBottomNav items={bottomNavItems} />}
-      description={description}
-      eyebrow={eyebrow}
-      title="活动列表"
-    >
+    <MobilePage description={description} eyebrow={eyebrow} title="活动列表">
       {errorMessage ? (
         <section className="stack-form">
           <InlineNotice message={errorMessage} />
@@ -184,6 +178,15 @@ export function ActivitiesPage() {
             重新加载
           </AppButton>
         </section>
+      ) : null}
+      {!loading ? (
+        <nav aria-label="活动分段" className="activity-inline-nav">
+          {sectionNavItems.map((item) => (
+            <a className="activity-inline-nav__item" href={item.href} key={item.href}>
+              {item.label}
+            </a>
+          ))}
+        </nav>
       ) : null}
       {loading ? <p>活动列表加载中...</p> : null}
       {sections.map((section) => (
