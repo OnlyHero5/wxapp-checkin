@@ -47,10 +47,12 @@ export function ChangePasswordPage() {
   }
 
   return (
-    <MobilePage eyebrow="首次登录" title="修改密码">
-      <p>为了保障账号安全，请先修改密码后再进入业务页面。</p>
+    <MobilePage
+      description="为了保障账号安全，请先修改密码后再进入业务页面。"
+      eyebrow="首次登录"
+      title="修改密码"
+    >
       <ChangePasswordForm errorMessage={errorMessage} onSubmit={handleSubmit} pending={pending} />
     </MobilePage>
   );
 }
-

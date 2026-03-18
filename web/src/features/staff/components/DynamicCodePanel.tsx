@@ -108,11 +108,13 @@ export function DynamicCodePanel({
         <TabPanel label="签退码" value="checkout" />
       </Tabs>
       <div className="staff-code-panel">
-        {/* 大号六码是管理页的视觉焦点，因此刻意和普通文本分层。 */}
-        <p className="staff-code-panel__value">{codeSession?.code ?? "------"}</p>
-        <p className="staff-code-panel__meta">
-          {loading ? "动态码加载中..." : `剩余时间：${formatRemainingSeconds(remainingMs)}`}
-        </p>
+        <div className="staff-code-panel__glass">
+          {/* 大号六码是管理页的视觉焦点，因此刻意和普通文本分层。 */}
+          <p className="staff-code-panel__value">{codeSession?.code ?? "------"}</p>
+          <p className="staff-code-panel__meta">
+            {loading ? "动态码加载中..." : `剩余时间：${formatRemainingSeconds(remainingMs)}`}
+          </p>
+        </div>
       </div>
       <CellGroup theme="card" title="实时统计">
         <Cell note={`${totalCheckedIn}`} title="签到人数" />

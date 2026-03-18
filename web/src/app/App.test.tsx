@@ -68,7 +68,10 @@ describe("AppRoutes", () => {
   it("renders the login shell at /login", () => {
     renderPath("/login");
 
-    expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { name: "登录" });
+
+    expect(heading).toBeInTheDocument();
+    expect(heading.closest(".mobile-page__hero")).not.toBeNull();
   });
 
   it("renders the change password shell at /change-password when required", () => {
