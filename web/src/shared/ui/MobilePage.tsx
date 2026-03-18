@@ -36,7 +36,7 @@ export function MobilePage({ bottomNav, children, description, eyebrow, headerAc
         <section className="mobile-page__section">
           <div className="mobile-page__content">{children}</div>
         </section>
-        {/* 底部导航独立于正文区块，保证滚到底部时仍有稳定返回入口。 */}
+        {/* 这里保留的 bottomNav 只服务页内返回或局部链路，不再承接业务态顶级导航。 */}
         {bottomNav ? <div className="mobile-page__bottom-nav">{bottomNav}</div> : null}
       </div>
     </main>

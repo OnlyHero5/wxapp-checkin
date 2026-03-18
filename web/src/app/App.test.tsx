@@ -96,6 +96,20 @@ describe("AppRoutes", () => {
     renderPath("/activities");
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "业务导航" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "活动" })).toHaveAttribute("href", "/activities");
+    expect(screen.getByRole("link", { name: "活动" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "我的" })).toHaveAttribute("href", "/profile");
+  });
+
+  it("keeps the activities business nav active on activity action routes", async () => {
+    setSession("sess_123");
+    renderPath("/activities/test-1/checkin");
+
+    expect(await screen.findByRole("heading", { name: "活动签到" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "业务导航" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "活动" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "我的" })).not.toHaveAttribute("aria-current");
   });
 
   it("redirects /activities to change-password when must_change_password is true", async () => {
@@ -126,6 +140,12 @@ describe("AppRoutes", () => {
     renderPath("/login");
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
+  });
+
+  it("does not show the business nav on /login", () => {
+    renderPath("/login");
+
+    expect(screen.queryByRole("navigation", { name: "业务导航" })).not.toBeInTheDocument();
   });
 
   it("redirects /login to change-password when must_change_password is true", async () => {

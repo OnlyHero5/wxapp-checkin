@@ -13,6 +13,7 @@
 :root {
   color-scheme: light;
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --app-business-nav-offset: 104px;
 
   /* =========================================================
    * App 视觉 Token（轻量版）
@@ -126,8 +127,15 @@ select {
 /* 底部导航单独占一个层，避免与正文卡片滚动时互相挤压。 */
 .mobile-page__bottom-nav {
   position: sticky;
-  bottom: 0;
+  bottom: calc(var(--app-business-nav-offset) + env(safe-area-inset-bottom));
   z-index: 3;
+}
+
+/* 业务态壳层负责给统一顶级导航留出固定空间，
+ * 否则底部浮层会压住页面正文和局部返回入口。 */
+.app-business-shell {
+  width: 100%;
+  padding-bottom: calc(var(--app-business-nav-offset) + env(safe-area-inset-bottom));
 }
 
 .mobile-page__hero,
@@ -594,6 +602,16 @@ select {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: var(--app-shadow-soft);
+}
+
+/* 顶级业务导航固定在视口底部居中，所有业务页共享同一套入口。 */
+.app-business-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 20;
+  width: min(calc(100% - 28px), 480px);
+  transform: translateX(-50%);
 }
 
 .page-bottom-nav__item {

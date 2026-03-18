@@ -12,6 +12,7 @@ import {
   getSession,
   isStaffSession
 } from "../shared/session/session-store";
+import { AppBusinessNav } from "../shared/ui/AppBusinessNav";
 import { MobilePage } from "../shared/ui/MobilePage";
 
 /**
@@ -52,6 +53,15 @@ function mustChangePassword() {
   return getMustChangePassword();
 }
 
+function AppBusinessShell({ children }: { children: JSX.Element }) {
+  return (
+    <div className="app-business-shell">
+      {children}
+      <AppBusinessNav />
+    </div>
+  );
+}
+
 /**
  * 受保护路由：
  * 没有本地会话时直接跳到登录页。
@@ -64,7 +74,7 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
     return <Navigate replace to="/change-password" />;
   }
 
-  return children;
+  return <AppBusinessShell>{children}</AppBusinessShell>;
 }
 
 /**
@@ -92,7 +102,7 @@ function StaffRoute({ children }: { children: JSX.Element }) {
   if (!isStaffSession()) {
     return <Navigate replace to="/activities" />;
   }
-  return children;
+  return <AppBusinessShell>{children}</AppBusinessShell>;
 }
 
 /**
