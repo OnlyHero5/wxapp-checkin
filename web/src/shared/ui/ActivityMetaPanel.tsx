@@ -27,14 +27,22 @@ type ActivityMetaPanelProps = {
   titleAs?: "h3" | "p";
 };
 
-function renderRows({
+type ActivityDetailRow = {
+  label: string;
+  value: string;
+};
+
+function resolveRows({
   counts,
   description,
   joinStatusText,
   locationText,
   progressText,
   timeText
-}: Omit<ActivityMetaPanelProps, "as" | "footer" | "statusSlot" | "subtitle" | "title">) {
+}: Omit<ActivityMetaPanelProps, "as" | "footer" | "statusSlot" | "subtitle" | "title">): {
+  description?: string;
+  rows: ActivityDetailRow[];
+} {
   /**
    * 这些字段统一在这里按固定顺序输出，而不是在页面里自由穿插。
    *
@@ -50,27 +58,78 @@ function renderRows({
    * - 因此“累计已签到”= `checkin_count + checkout_count`。
    */
   // `expected` 用于管理端展示“应到人数”，它与签到/签退是不同维度的统计。
-  const expectedCount = counts?.expected;
-  const checkinCount = counts?.checkin ?? 0;
-  const checkoutCount = counts?.checkout ?? 0;
+  const rows: ActivityDetailRow[] = [];
+
+  if (timeText) {
+    rows.push({
+      label: "时间",
+      value: timeText
+    });
+  }
+  if (locationText) {
+    rows.push({
+      label: "地点",
+      value: locationText
+    });
+  }
+  if (progressText) {
+    rows.push({
+      label: "当前状态",
+      value: progressText
+    });
+  }
+  if (joinStatusText) {
+    rows.push({
+      label: "我的状态",
+      value: joinStatusText
+    });
+  }
+
+  return {
+    description,
+    rows
+  };
+}
+
+function renderMetrics(counts?: ActivityMetaPanelProps["counts"]) {
+  if (!counts) {
+    return null;
+  }
+
+  const expectedCount = counts.expected;
+  const checkinCount = counts.checkin ?? 0;
+  const checkoutCount = counts.checkout ?? 0;
   const totalCheckedIn = checkinCount + checkoutCount;
-  const showExpectedCount = expectedCount != null;
+  const metrics = [
+    expectedCount != null
+      ? {
+          label: "应到",
+          value: `${expectedCount}`
+        }
+      : null,
+    {
+      label: "累计签到",
+      value: `${totalCheckedIn}`
+    },
+    {
+      label: "已签退",
+      value: `${checkoutCount}`
+    },
+    {
+      label: "未签退",
+      value: `${checkinCount}`
+    }
+  ].filter(Boolean) as Array<{ label: string; value: string }>;
 
   return (
-    <>
-      {description ? <p>{description}</p> : null}
-      {timeText ? <p>时间：{timeText}</p> : null}
-      {locationText ? <p>地点：{locationText}</p> : null}
-      {progressText ? <p>当前状态：{progressText}</p> : null}
-      {joinStatusText ? <p>我的状态：{joinStatusText}</p> : null}
-      {counts ? (
-        <p>
-          统计：
-          {showExpectedCount ? `应到 ${expectedCount} / ` : ""}
-          签到 {totalCheckedIn} / 签退 {checkoutCount}（未签退 {checkinCount}）
-        </p>
-      ) : null}
-    </>
+    <div className="activity-meta-panel__metrics">
+      {metrics.map((metric) => (
+        <div className="activity-meta-panel__metric" key={metric.label}>
+          <span className="activity-meta-panel__metric-label">{metric.label}</span>
+          <strong className="activity-meta-panel__metric-value">{metric.value}</strong>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -95,29 +154,45 @@ export function ActivityMetaPanel({
    * 避免出现“双主标题”的可访问性噪音。
    */
   const TitleTag = titleAs;
+  const { description: descriptionText, rows } = resolveRows({
+    counts,
+    description,
+    joinStatusText,
+    locationText,
+    progressText,
+    timeText
+  });
 
   return (
     <Container className="activity-meta-panel">
-      <div className="activity-meta-panel__header">
-        <div className="activity-meta-panel__title-block">
-          <TitleTag className="activity-meta-panel__title">{title}</TitleTag>
-          {subtitle ? <p className="activity-meta-panel__subtitle">{subtitle}</p> : null}
+      <div className="activity-meta-panel__surface">
+        <div className="activity-meta-panel__header">
+          <div className="activity-meta-panel__title-block activity-meta-panel__title-stack">
+            <TitleTag className="activity-meta-panel__title">{title}</TitleTag>
+            {subtitle ? <p className="activity-meta-panel__subtitle">{subtitle}</p> : null}
+          </div>
+          {/* 状态位独立成 slot，是为了兼容列表卡片、详情页和未来管理员态的不同标签策略。 */}
+          {statusSlot ? <div className="activity-meta-panel__status">{statusSlot}</div> : null}
         </div>
-        {/* 状态位独立成 slot，是为了兼容列表卡片、详情页和未来管理员态的不同标签策略。 */}
-        {statusSlot ? <div className="activity-meta-panel__status">{statusSlot}</div> : null}
+        {descriptionText ? <p className="activity-meta-panel__description">{descriptionText}</p> : null}
+        {rows.length > 0 ? (
+          <div className="activity-meta-panel__detail-list">
+            {rows.map((row) => (
+              <p className="activity-meta-panel__detail-item" key={row.label}>
+                <span className="activity-meta-panel__detail-label">{row.label}：</span>
+                <span className="activity-meta-panel__detail-value">{row.value}</span>
+              </p>
+            ))}
+          </div>
+        ) : null}
+        {renderMetrics(counts)}
+        {/* footer 常用于“查看详情”这类补充动作，避免动作和元信息混在同一组文本里。 */}
+        {footer ? (
+          <div className="activity-meta-panel__footer">
+            <div className="activity-meta-panel__footer-actions">{footer}</div>
+          </div>
+        ) : null}
       </div>
-      <div className="activity-meta-panel__rows">
-        {renderRows({
-          counts,
-          description,
-          joinStatusText,
-          locationText,
-          progressText,
-          timeText
-        })}
-      </div>
-      {/* footer 常用于“查看详情”这类补充动作，避免动作和元信息混在同一组文本里。 */}
-      {footer ? <div className="activity-meta-panel__footer">{footer}</div> : null}
     </Container>
   );
 }

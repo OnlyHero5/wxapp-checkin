@@ -150,8 +150,7 @@ export function ActivitiesPage() {
   });
 
   return (
-    <MobilePage eyebrow={eyebrow} title="活动列表">
-      <p>{description}</p>
+    <MobilePage description={description} eyebrow={eyebrow} title="活动列表">
       {errorMessage ? (
         <section className="stack-form">
           <InlineNotice message={errorMessage} />

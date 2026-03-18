@@ -68,10 +68,8 @@ describe("AppRoutes", () => {
   it("renders the login shell at /login", () => {
     renderPath("/login");
 
-    const heading = screen.getByRole("heading", { name: "登录" });
-
-    expect(heading).toBeInTheDocument();
-    expect(heading.closest(".mobile-page__hero")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
+    expect(screen.getByText("账号为学号，初始密码统一为 123。首次登录成功后需要先修改密码。")).toBeInTheDocument();
   });
 
   it("renders the change password shell at /change-password when required", () => {

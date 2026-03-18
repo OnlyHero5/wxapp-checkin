@@ -48,7 +48,7 @@ export function AppButton({
   return (
     <Button
       block
-      className="app-button"
+      className={`app-button app-button--${tone}`}
       disabled={disabled}
       loading={loading}
       // Button 统一使用矩形，是为了和页面卡片、输入框的直角系语言对齐。

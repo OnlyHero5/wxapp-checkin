@@ -39,21 +39,26 @@ export function CodeInput({
 
   return (
     <section className="stack-form">
-      <label className="field" htmlFor={`${label}-input`}>
-        <span>{label}</span>
-        <input
-          className="code-input"
-          // 这三个属性共同服务于手机端数字键盘体验。
-          enterKeyHint="done"
-          id={`${label}-input`}
-          inputMode="numeric"
-          maxLength={6}
-          onChange={(event) => onChange(normalizeCode(event.target.value))}
-          pattern="[0-9]*"
-          placeholder="请输入 6 位数字"
-          value={normalizedValue}
-        />
-      </label>
+      <div className="code-input-shell">
+        <label className="field" htmlFor={`${label}-input`}>
+          <span>{label}</span>
+          <div className="code-input-shell__surface">
+            <input
+              className="code-input"
+              // 这三个属性共同服务于手机端数字键盘体验。
+              enterKeyHint="done"
+              id={`${label}-input`}
+              inputMode="numeric"
+              maxLength={6}
+              onChange={(event) => onChange(normalizeCode(event.target.value))}
+              pattern="[0-9]*"
+              placeholder="请输入 6 位数字"
+              value={normalizedValue}
+            />
+          </div>
+        </label>
+        <p className="code-input-shell__hint">请在当前活动下输入 6 位动态验证码</p>
+      </div>
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
       <AppButton disabled={!canSubmit} loading={pending} onClick={() => void onSubmit()}>
         {submitText}

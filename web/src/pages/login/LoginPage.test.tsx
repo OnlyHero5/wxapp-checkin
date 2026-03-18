@@ -45,11 +45,8 @@ describe("LoginPage", () => {
 
     renderLoginPage();
 
-    const heading = screen.getByRole("heading", { name: "登录" });
-    const description = screen.getByText("账号为学号，初始密码统一为 123。首次登录成功后需要先修改密码。");
-
-    expect(heading.closest(".mobile-page__hero")).not.toBeNull();
-    expect(description.closest(".mobile-page__description")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
+    expect(screen.getByText("账号为学号，初始密码统一为 123。首次登录成功后需要先修改密码。")).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("学号"), " 2025000011 ");
     await user.type(screen.getByLabelText("密码"), " 123 ");
@@ -90,8 +87,6 @@ describe("LoginPage", () => {
     authApiMocks.login.mockRejectedValue(new Error("密码错误"));
 
     renderLoginPage();
-
-    expect(screen.getByRole("button", { name: "登录" }).closest(".mobile-page__section")).not.toBeNull();
 
     await user.type(screen.getByLabelText("学号"), "2025000011");
     await user.type(screen.getByLabelText("密码"), "wrong");

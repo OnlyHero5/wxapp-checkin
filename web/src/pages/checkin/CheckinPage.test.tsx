@@ -95,6 +95,7 @@ describe("CheckinPage", () => {
     const input = await screen.findByLabelText("签到验证码");
     const submitButton = screen.getByRole("button", { name: "提交签到码" });
 
+    expect(screen.getByText("请在当前活动下输入 6 位动态验证码")).toBeInTheDocument();
     expect(submitButton).toBeDisabled();
 
     await user.type(input, "12ab34 56");

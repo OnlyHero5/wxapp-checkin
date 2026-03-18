@@ -113,7 +113,11 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
   const isStaff = isStaffSession();
 
   return (
-    <MobilePage eyebrow="活动详情" title={detail.activity_title}>
+    <MobilePage
+      description={isStaff ? "查看活动状态，并进入管理页展示动态码和批量操作。" : "先确认活动状态，再继续签到或签退。"}
+      eyebrow="活动详情"
+      title={detail.activity_title}
+    >
       <ActivityMetaPanel
         counts={{
           checkin: detail.checkin_count,
@@ -129,7 +133,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         title={detail.activity_title}
         titleAs="p"
       />
-      <section className="stack-form">
+      <section className="stack-form detail-actions">
         {isStaff ? (
           <AppButton onClick={() => navigate(buildActivityManagePath(detail.activity_id))}>进入管理</AppButton>
         ) : null}

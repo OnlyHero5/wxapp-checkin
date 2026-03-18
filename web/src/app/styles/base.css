@@ -268,6 +268,16 @@ select {
 /* 信息面板是当前阶段最稳定的重复结构，列表/详情/输入页都在复用。 */
 .activity-meta-panel,
 .detail-panel {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  border-radius: 22px;
+  background: transparent;
+}
+
+.activity-meta-panel__surface,
+.detail-panel {
+  position: relative;
   display: grid;
   gap: 12px;
   padding: 18px;
@@ -275,6 +285,15 @@ select {
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 252, 0.98));
   box-shadow: var(--app-shadow-soft);
+}
+
+.activity-meta-panel__surface::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08));
+  pointer-events: none;
 }
 
 /* 标题块和状态位左右分栏，优先保证标题区能自然换行。 */
@@ -289,6 +308,15 @@ select {
 .activity-meta-panel__title-block {
   display: grid;
   gap: 4px;
+}
+
+.activity-meta-panel__title-stack,
+.activity-meta-panel__description,
+.activity-meta-panel__detail-list,
+.activity-meta-panel__metrics,
+.activity-meta-panel__footer-actions {
+  position: relative;
+  z-index: 1;
 }
 
 .activity-meta-panel__title {
@@ -308,15 +336,41 @@ select {
   justify-content: flex-end;
 }
 
-.activity-meta-panel__rows {
+.activity-meta-panel__description {
+  margin: 0;
+  color: var(--app-text);
+  line-height: 1.65;
+}
+
+.activity-meta-panel__detail-list {
   display: grid;
   gap: 8px;
 }
 
-.activity-meta-panel__rows p,
+.activity-meta-panel__detail-item,
 .detail-panel p,
 .empty-hint {
   margin: 0;
+}
+
+.activity-meta-panel__detail-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(152, 168, 194, 0.2);
+}
+
+.activity-meta-panel__detail-label {
+  flex-shrink: 0;
+  color: var(--app-text-muted);
+}
+
+.activity-meta-panel__detail-value {
+  text-align: right;
   color: var(--app-text);
   line-height: 1.6;
 }
@@ -333,6 +387,39 @@ select {
   gap: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--app-border-subtle);
+}
+
+.activity-meta-panel__footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.activity-meta-panel__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.activity-meta-panel__metric {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(152, 168, 194, 0.18);
+  background: rgba(245, 248, 252, 0.82);
+}
+
+.activity-meta-panel__metric-label {
+  color: var(--app-text-muted);
+  font-size: 0.82rem;
+}
+
+.activity-meta-panel__metric-value {
+  color: var(--app-text-strong);
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Tag 已由组件库提供样式，这里只补布局，不再自己画胶囊。 */
@@ -395,6 +482,29 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+.code-input-shell {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid var(--app-border);
+  background: rgba(246, 248, 252, 0.88);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.code-input-shell__surface {
+  padding: 8px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(152, 168, 194, 0.16);
+}
+
+.code-input-shell__hint {
+  margin: 0;
+  color: var(--app-text-muted);
+  line-height: 1.5;
+}
+
 /* 对动态码输入框的维护建议：
  * - 字距是为了让用户更像在看“六码”，不是普通文本；
  * - 如果以后改成 6 个独立格子，这个类可以保留给“隐藏真实输入框”；
@@ -413,6 +523,20 @@ select {
    * - 不再给页面额外加局部宽度补丁
    */
   width: 100%;
+  min-height: 52px;
+  border-radius: 18px;
+  font-weight: 700;
+  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+
+.app-button--primary {
+  box-shadow: 0 10px 20px rgba(22, 119, 255, 0.18);
+}
+
+.app-button--secondary {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: var(--app-border-strong);
+  box-shadow: var(--app-shadow-soft);
 }
 
 .inline-notice {
@@ -432,6 +556,10 @@ select {
   color: var(--app-link);
   text-decoration: none;
   font-weight: 600;
+}
+
+.detail-actions {
+  gap: 10px;
 }
 
 .text-link:hover {

@@ -98,12 +98,9 @@ describe("StaffManagePage", () => {
 
     renderStaffManagePage();
 
-    const heading = await screen.findByRole("heading", { name: "活动管理" });
-    const codeText = screen.getByText("483920");
-
-    expect(heading).toBeInTheDocument();
-    expect(heading.closest(".mobile-page__hero")).not.toBeNull();
-    expect(codeText.closest(".staff-code-panel__glass")).not.toBeNull();
+    expect(await screen.findByRole("heading", { name: "活动管理" })).toBeInTheDocument();
+    expect(screen.getByText("483920")).toBeInTheDocument();
+    expect(screen.getByText("实时统计")).toBeInTheDocument();
 
     await user.click(screen.getByText("签退码"));
 

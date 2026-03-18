@@ -81,7 +81,7 @@ describe("ActivityDetailPage", () => {
 
     expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
     expect(screen.getByText("负责现场秩序维护")).toBeInTheDocument();
-    expect(screen.getByText(/我的状态：已报名/)).toBeInTheDocument();
+    expect(screen.getByText("已报名")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "去签到" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "去签退" })).not.toBeInTheDocument();
   });
