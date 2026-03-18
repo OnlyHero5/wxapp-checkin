@@ -12,4 +12,6 @@ public interface WxCheckinEventRepository extends JpaRepository<WxCheckinEventEn
   );
 
   List<WxCheckinEventEntity> findTop100ByUserIdOrderBySubmittedAtDesc(Long userId);
+
+  List<WxCheckinEventEntity> findByActivityIdAndUserIdInOrderBySubmittedAtDesc(String activityId, List<Long> userIds);
 }

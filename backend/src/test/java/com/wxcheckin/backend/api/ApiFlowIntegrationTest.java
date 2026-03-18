@@ -1,6 +1,7 @@
 package com.wxcheckin.backend.api;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -435,6 +436,93 @@ class ApiFlowIntegrationTest {
         .andExpect(jsonPath("$.my_checkout_time", is(formatDisplayTime(checkoutServerTime))));
   }
 
+  @Test
+  void shouldReturnRegisteredParticipantsForStaffRoster() throws Exception {
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-roster");
+    String normalSession = loginAndChangePassword("2025000011", "new-pass-normal-roster");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    createUserWithActivityStatus("2025000012", "未报名成员", "act_hackathon_20260215", false, "none");
+
+    mockMvc.perform(get("/api/web/staff/activities/{activityId}/roster", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + staffSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.activity_id", is("act_hackathon_20260215")))
+        .andExpect(jsonPath("$.items", hasSize(1)))
+        .andExpect(jsonPath("$.items[0].student_id", is("2025000011")))
+        .andExpect(jsonPath("$.items[0].name", is("测试用户")))
+        .andExpect(jsonPath("$.items[0].checked_in", is(false)))
+        .andExpect(jsonPath("$.items[0].checked_out", is(false)));
+  }
+
+  @Test
+  void shouldRejectRosterQueryForNormalSession() throws Exception {
+    String normalSession = loginAndChangePassword("2025000011", "new-pass-normal-roster-forbidden");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    mockMvc.perform(get("/api/web/staff/activities/{activityId}/roster", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + normalSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")));
+  }
+
+  @Test
+  void shouldAdjustAttendanceStatesForStaffRoster() throws Exception {
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-adjust");
+    String normalSession = loginAndChangePassword("2025000011", "new-pass-normal-adjust");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    Long userId = sessionRepository.findBySessionToken(normalSession).orElseThrow().getUser().getId();
+
+    mockMvc.perform(post("/api/web/staff/activities/{activityId}/attendance-adjustments", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + staffSession)
+            .content("""
+                {
+                  "user_ids":[%s],
+                  "patch":{
+                    "checked_in":true,
+                    "checked_out":false
+                  },
+                  "reason":"管理员补签到"
+                }
+                """.formatted(userId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.affected_count", is(1)));
+
+    WxUserActivityStatusEntity status = statusRepository.findByUserIdAndActivityId(userId, "act_hackathon_20260215").orElseThrow();
+    org.junit.jupiter.api.Assertions.assertEquals("checked_in", status.getStatus());
+    org.junit.jupiter.api.Assertions.assertEquals(1L, checkinEventRepository.count());
+    org.junit.jupiter.api.Assertions.assertEquals(1L, outboxRepository.count());
+    org.junit.jupiter.api.Assertions.assertEquals(1L, adminAuditLogRepository.count());
+    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue("act_hackathon_20260215").orElseThrow();
+    org.junit.jupiter.api.Assertions.assertEquals(1, activity.getCheckinCount());
+    org.junit.jupiter.api.Assertions.assertEquals(0, activity.getCheckoutCount());
+  }
+
+  @Test
+  void shouldRejectAttendanceAdjustmentWhenUserIdsEmpty() throws Exception {
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-adjust-invalid");
+
+    mockMvc.perform(post("/api/web/staff/activities/{activityId}/attendance-adjustments", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + staffSession)
+            .content("""
+                {
+                  "user_ids":[],
+                  "patch":{
+                    "checked_in":false,
+                    "checked_out":false
+                  },
+                  "reason":"空列表"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("invalid_param")));
+  }
+
   private String login(String studentId, String password) throws Exception {
     MvcResult result = mockMvc.perform(post("/api/web/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
@@ -491,6 +579,41 @@ class ApiFlowIntegrationTest {
     WxUserActivityStatusEntity status = statusRepository
         .findByUserIdAndActivityId(session.getUser().getId(), activityId)
         .orElseThrow();
+    status.setStatus(state);
+    statusRepository.save(status);
+  }
+
+  private void createUserWithActivityStatus(
+      String studentId,
+      String name,
+      String activityId,
+      boolean registered,
+      String state
+  ) {
+    jdbcTemplate.update(
+        "INSERT INTO suda_user (id, username, name, role) VALUES (?, ?, ?, ?)",
+        12L,
+        studentId,
+        name,
+        9
+    );
+
+    var user = new com.wxcheckin.backend.infrastructure.persistence.entity.WxUserAuthExtEntity();
+    user.setLegacyUserId(12L);
+    user.setWxIdentity("manual_" + studentId);
+    user.setStudentId(studentId);
+    user.setName(name);
+    user.setPasswordHash("manual-hash");
+    user.setMustChangePassword(false);
+    user.setRoleCode("normal");
+    user.setPermissionsJson("[]");
+    user.setRegistered(registered);
+    userRepository.save(user);
+
+    WxUserActivityStatusEntity status = new WxUserActivityStatusEntity();
+    status.setUser(user);
+    status.setActivityId(activityId);
+    status.setRegistered(registered);
     status.setStatus(state);
     statusRepository.save(status);
   }

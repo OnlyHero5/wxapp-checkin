@@ -156,9 +156,6 @@ public class ActivityQueryService {
     boolean myCheckedOut = state == UserActivityState.CHECKED_OUT;
     // 详情页补个人签到/签退时间，是为了让普通用户在历史活动里直接确认“我什么时候签过到/签过退”，
     // 不需要再切去其它记录页排查。
-    String myCheckinTime = resolveLatestActionTime(principal.user().getId(), normalizedActivityId, "checkin");
-    String myCheckoutTime = resolveLatestActionTime(principal.user().getId(), normalizedActivityId, "checkout");
-
     // 关键：详情页的 `can_checkin/can_checkout` 必须纳入时间窗判断，
     // 否则会出现“显示可签到，但 staff 发码被 outside_activity_time_window 拒绝”的契约不一致。
     boolean withinWindow = activityTimeWindowService.isWithinIssueWindow(activity);
@@ -174,6 +171,16 @@ public class ActivityQueryService {
         && Boolean.TRUE.equals(activity.getSupportCheckout())
         && myCheckedIn
         && !myCheckedOut;
+
+    // 详情页时间展示必须服从“当前状态”：
+    // - 已撤销签到时，不应继续显示历史签到时间；
+    // - 已撤销签退时，不应继续显示历史签退时间。
+    String myCheckinTime = (myCheckedIn || myCheckedOut)
+        ? resolveLatestActionTime(principal.user().getId(), normalizedActivityId, "checkin")
+        : "";
+    String myCheckoutTime = myCheckedOut
+        ? resolveLatestActionTime(principal.user().getId(), normalizedActivityId, "checkout")
+        : "";
 
     long serverTimeMs = Instant.now(clock).toEpochMilli();
     return new WebActivityDetailResponse(

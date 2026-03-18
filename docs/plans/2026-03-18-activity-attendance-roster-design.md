@@ -286,7 +286,7 @@
 手工修正时，必须基于“旧状态 -> 新状态”的转换，计算统计差量并原子更新：
 
 - `none -> checked_in`：`checkin_count +1`
-- `none -> checked_out`：`checkin_count +1`、`checkout_count +1`
+- `none -> checked_out`：`checkout_count +1`
 - `checked_in -> none`：`checkin_count -1`
 - `checked_in -> checked_out`：`checkin_count -1`、`checkout_count +1`
 - `checked_out -> checked_in`：`checkin_count +1`、`checkout_count -1`

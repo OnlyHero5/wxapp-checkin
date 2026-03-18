@@ -88,10 +88,15 @@ public class OutboxRelayService {
       Long userId = toLong(payload.get("user_id"));
       String activityId = toString(payload.get("activity_id"));
       String actionType = toString(payload.get("action_type"));
+      Integer snapshotCheckIn = toInteger(payload.get("check_in"));
+      Integer snapshotCheckOut = toInteger(payload.get("check_out"));
       if (userId == null || activityId.isBlank() || actionType.isBlank()) {
-        // payload 缺关键字段属于不可恢复错误，直接标记为终态。
-        markTerminal(event, "dead");
-        return;
+        // 管理员名单修正走 snapshot payload，不一定携带 action_type。
+        // 因此这里只要求：普通事件需要 action_type，snapshot 事件需要 check_in/check_out。
+        if (userId == null || activityId.isBlank() || snapshotCheckIn == null || snapshotCheckOut == null) {
+          markTerminal(event, "dead");
+          return;
+        }
       }
 
       var user = userRepository.findById(userId).orElse(null);
@@ -110,7 +115,19 @@ public class OutboxRelayService {
       Integer legacyActivityId = activity.getLegacyActivityId();
 
       int updated;
-      if ("checkin".equalsIgnoreCase(actionType)) {
+      if (snapshotCheckIn != null || snapshotCheckOut != null) {
+        if (snapshotCheckIn == null || snapshotCheckOut == null) {
+          markTerminal(event, "dead");
+          return;
+        }
+        updated = jdbcTemplate.update(
+            "UPDATE suda_activity_apply SET check_in = ?, check_out = ? WHERE activity_id = ? AND username = ?",
+            snapshotCheckIn,
+            snapshotCheckOut,
+            legacyActivityId,
+            username
+        );
+      } else if ("checkin".equalsIgnoreCase(actionType)) {
         updated = jdbcTemplate.update(
             "UPDATE suda_activity_apply SET check_in = 1, check_out = 0 WHERE activity_id = ? AND username = ?",
             legacyActivityId,
@@ -227,6 +244,20 @@ public class OutboxRelayService {
     }
     try {
       return Long.parseLong(String.valueOf(value));
+    } catch (NumberFormatException ex) {
+      return null;
+    }
+  }
+
+  private Integer toInteger(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof Number number) {
+      return number.intValue();
+    }
+    try {
+      return Integer.parseInt(String.valueOf(value));
     } catch (NumberFormatException ex) {
       return null;
     }
