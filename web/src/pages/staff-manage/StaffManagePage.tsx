@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getActivityDetail, type ActivityActionType, type ActivityDetail } from "../../features/activities/api";
+import {
+  buildActivityDetailPath,
+  getActivityDetail,
+  type ActivityActionType,
+  type ActivityDetail
+} from "../../features/activities/api";
 import { DynamicCodePanel } from "../../features/staff/components/DynamicCodePanel";
 import { BulkCheckoutButton } from "../../features/staff/components/BulkCheckoutButton";
 import { bulkCheckout, getCodeSession, type CodeSessionResponse } from "../../features/staff/api";
@@ -9,6 +14,7 @@ import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/h
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
+import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 
 type WakeLockSentinelLike = {
   release?: () => Promise<void> | void;
@@ -236,7 +242,18 @@ export function StaffManagePage() {
   }
 
   return (
-    <MobilePage eyebrow="工作人员" title="活动管理">
+    <MobilePage
+      bottomNav={(
+        <PageBottomNav
+          items={[
+            { label: "活动列表", to: "/activities" },
+            { label: "活动详情", to: buildActivityDetailPath(activityId) }
+          ]}
+        />
+      )}
+      eyebrow="工作人员"
+      title="活动管理"
+    >
       {wakeLockMessage ? <InlineNotice message={wakeLockMessage} theme="warning" /> : null}
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
       {resultMessage ? <InlineNotice message={resultMessage} theme="success" /> : null}

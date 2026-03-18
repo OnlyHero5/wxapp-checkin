@@ -9,6 +9,7 @@ import { ReactNode } from "react";
  * 3. 页面不用各自重复写壳层结构
  */
 type MobilePageProps = {
+  bottomNav?: ReactNode;
   children: ReactNode;
   description?: string;
   eyebrow?: string;
@@ -16,7 +17,7 @@ type MobilePageProps = {
   title: string;
 };
 
-export function MobilePage({ children, description, eyebrow, headerActions, title }: MobilePageProps) {
+export function MobilePage({ bottomNav, children, description, eyebrow, headerActions, title }: MobilePageProps) {
   return (
     <main className="mobile-page">
       <div className="mobile-page__shell">
@@ -35,6 +36,8 @@ export function MobilePage({ children, description, eyebrow, headerActions, titl
         <section className="mobile-page__section">
           <div className="mobile-page__content">{children}</div>
         </section>
+        {/* 底部导航独立于正文区块，保证滚到底部时仍有稳定返回入口。 */}
+        {bottomNav ? <div className="mobile-page__bottom-nav">{bottomNav}</div> : null}
       </div>
     </main>
   );

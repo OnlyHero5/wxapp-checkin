@@ -5,5 +5,11 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WxCheckinEventRepository extends JpaRepository<WxCheckinEventEntity, String> {
+  WxCheckinEventEntity findTopByUserIdAndActivityIdAndActionTypeOrderBySubmittedAtDesc(
+      Long userId,
+      String activityId,
+      String actionType
+  );
+
   List<WxCheckinEventEntity> findTop100ByUserIdOrderBySubmittedAtDesc(Long userId);
 }

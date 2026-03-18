@@ -10,11 +10,13 @@ import { ElementType, ReactNode } from "react";
  */
 type ActivityMetaPanelProps = {
   as?: ElementType;
+  checkinTimeText?: string;
   counts?: {
     expected?: number;
     checkin?: number;
     checkout?: number;
   };
+  checkoutTimeText?: string;
   description?: string;
   footer?: ReactNode;
   joinStatusText?: string;
@@ -33,7 +35,9 @@ type ActivityDetailRow = {
 };
 
 function resolveRows({
+  checkinTimeText,
   counts,
+  checkoutTimeText,
   description,
   joinStatusText,
   locationText,
@@ -82,6 +86,18 @@ function resolveRows({
     rows.push({
       label: "我的状态",
       value: joinStatusText
+    });
+  }
+  if (checkinTimeText) {
+    rows.push({
+      label: "签到时间",
+      value: checkinTimeText
+    });
+  }
+  if (checkoutTimeText) {
+    rows.push({
+      label: "签退时间",
+      value: checkoutTimeText
     });
   }
 
@@ -135,7 +151,9 @@ function renderMetrics(counts?: ActivityMetaPanelProps["counts"]) {
 
 export function ActivityMetaPanel({
   as: Container = "section",
+  checkinTimeText,
   counts,
+  checkoutTimeText,
   description,
   footer,
   joinStatusText,
@@ -155,7 +173,9 @@ export function ActivityMetaPanel({
    */
   const TitleTag = titleAs;
   const { description: descriptionText, rows } = resolveRows({
+    checkinTimeText,
     counts,
+    checkoutTimeText,
     description,
     joinStatusText,
     locationText,

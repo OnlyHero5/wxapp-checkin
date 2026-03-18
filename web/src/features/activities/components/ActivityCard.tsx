@@ -24,10 +24,12 @@ export function ActivityCard({ activity, showManageEntry = false }: ActivityCard
   return (
     <ActivityMetaPanel
       as="article"
-      counts={{
+      // 普通用户列表只关心“我现在能不能操作 / 我处于什么状态”，
+      // 管理口径的签到统计只在 staff 入口开启时展示。
+      counts={showManageEntry ? {
         checkin: activity.checkin_count,
         checkout: activity.checkout_count
-      }}
+      } : undefined}
       footer={(
         <>
           <Link className="text-link" to={buildActivityDetailPath(activity.activity_id)}>

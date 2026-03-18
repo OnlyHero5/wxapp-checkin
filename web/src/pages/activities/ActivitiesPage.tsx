@@ -8,6 +8,7 @@ import { isStaffSession } from "../../shared/session/session-store";
 import { AppButton } from "../../shared/ui/AppButton";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
+import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 
 /**
  * 活动列表页是普通用户进入业务态后的首页。
@@ -145,12 +146,35 @@ export function ActivitiesPage() {
     ? "查看活动并进入管理页展示动态码、处理批量签退。"
     : "查看你当前可见的活动，并进入详情页继续签到或签退。";
   // 页面只渲染分组结果，不再自己关心筛选和排序细节。
+  // 普通用户把“已完成”重命名成“历史活动”，让历史参加记录更容易被扫到。
   const sections = groupVisibleActivities(activities, {
     allowAll: isStaff
+  }).map((section) => {
+    if (!isStaff && section.key === "completed") {
+      return {
+        ...section,
+        title: "历史活动"
+      };
+    }
+    return section;
   });
+  const bottomNavItems = isStaff
+    ? [
+        { href: "#ongoing", label: "进行中" },
+        { href: "#completed", label: "已完成" }
+      ]
+    : [
+        { href: "#ongoing", label: "进行中" },
+        { href: "#completed", label: "历史活动" }
+      ];
 
   return (
-    <MobilePage description={description} eyebrow={eyebrow} title="活动列表">
+    <MobilePage
+      bottomNav={<PageBottomNav items={bottomNavItems} />}
+      description={description}
+      eyebrow={eyebrow}
+      title="活动列表"
+    >
       {errorMessage ? (
         <section className="stack-form">
           <InlineNotice message={errorMessage} />
@@ -161,7 +185,7 @@ export function ActivitiesPage() {
       ) : null}
       {loading ? <p>活动列表加载中...</p> : null}
       {sections.map((section) => (
-        <section className="activity-section" key={section.key}>
+        <section className="activity-section" id={section.key} key={section.key}>
           <header className="activity-section__header">
             {/* 标题来自统一 view-model，页面层不再自行判断该放什么文案。 */}
             <h2>{section.title}</h2>

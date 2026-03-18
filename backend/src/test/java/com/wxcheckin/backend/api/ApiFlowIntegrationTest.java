@@ -21,6 +21,8 @@ import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivit
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserAuthExtRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WebAdminAuditLogRepository;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,9 @@ import org.springframework.test.web.servlet.MvcResult;
 @SpringBootTest
 @AutoConfigureMockMvc
 class ApiFlowIntegrationTest {
+
+  private static final ZoneId SHANGHAI_ZONE = ZoneId.of("Asia/Shanghai");
+  private static final DateTimeFormatter DISPLAY_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
   @Autowired
   private MockMvc mockMvc;
@@ -371,6 +376,65 @@ class ApiFlowIntegrationTest {
     org.junit.jupiter.api.Assertions.assertEquals("checked_out", status.getStatus());
   }
 
+  @Test
+  void shouldExposePersonalCheckinAndCheckoutTimesInActivityDetail() throws Exception {
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-detail-times");
+    String normalSession = loginAndChangePassword("2025000011", "new-pass-normal-detail-times");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    MvcResult checkinCodeResult = mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + staffSession)
+            .param("action_type", "checkin"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andReturn();
+    String checkinCode = objectMapper.readTree(checkinCodeResult.getResponse().getContentAsString()).get("code").asText();
+
+    MvcResult checkinConsumeResult = mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + normalSession)
+            .content("""
+                {
+                  "action_type":"checkin",
+                  "code":"%s"
+                }
+                """.formatted(checkinCode)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andReturn();
+    long checkinServerTime = objectMapper.readTree(checkinConsumeResult.getResponse().getContentAsString()).get("server_time_ms").asLong();
+
+    MvcResult checkoutCodeResult = mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + staffSession)
+            .param("action_type", "checkout"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andReturn();
+    String checkoutCode = objectMapper.readTree(checkoutCodeResult.getResponse().getContentAsString()).get("code").asText();
+
+    MvcResult checkoutConsumeResult = mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + normalSession)
+            .content("""
+                {
+                  "action_type":"checkout",
+                  "code":"%s"
+                }
+                """.formatted(checkoutCode)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andReturn();
+    long checkoutServerTime = objectMapper.readTree(checkoutConsumeResult.getResponse().getContentAsString()).get("server_time_ms").asLong();
+
+    mockMvc.perform(get("/api/web/activities/{activityId}", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + normalSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.my_checked_out", is(true)))
+        .andExpect(jsonPath("$.my_checkin_time", is(formatDisplayTime(checkinServerTime))))
+        .andExpect(jsonPath("$.my_checkout_time", is(formatDisplayTime(checkoutServerTime))));
+  }
+
   private String login(String studentId, String password) throws Exception {
     MvcResult result = mockMvc.perform(post("/api/web/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
@@ -429,6 +493,10 @@ class ApiFlowIntegrationTest {
         .orElseThrow();
     status.setStatus(state);
     statusRepository.save(status);
+  }
+
+  private String formatDisplayTime(long serverTimeMs) {
+    return DISPLAY_TIME_FORMATTER.format(Instant.ofEpochMilli(serverTimeMs).atZone(SHANGHAI_ZONE));
   }
 
 }

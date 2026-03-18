@@ -15,6 +15,7 @@ import { ApiError, PasswordChangeRequiredError, SessionExpiredError } from "../.
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
+import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 
 /**
  * 这个文件把签到页和签退页的共性逻辑收敛到 `AttendanceActionPage`。
@@ -211,7 +212,18 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
   // 成功结果页与输入页拆成两个视觉状态，用户更容易确认“本次操作已经被服务端接受”。
   if (result) {
     return (
-      <MobilePage eyebrow="提交完成" title={resolveResultTitle(actionType)}>
+      <MobilePage
+        bottomNav={(
+          <PageBottomNav
+            items={[
+              { label: "活动列表", to: "/activities" },
+              { label: "活动详情", to: buildActivityDetailPath(activityId) }
+            ]}
+          />
+        )}
+        eyebrow="提交完成"
+        title={resolveResultTitle(actionType)}
+      >
         <section className="detail-panel">
           {/* 结果页只保留最关键信息：结果、活动名、服务端时间。 */}
           <p>{result.message ?? "提交成功"}</p>
@@ -226,7 +238,18 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
   }
 
   return (
-    <MobilePage eyebrow="动态验证码" title={resolveActionTitle(actionType)}>
+    <MobilePage
+      bottomNav={(
+        <PageBottomNav
+          items={[
+            { label: "活动列表", to: "/activities" },
+            { label: "活动详情", to: buildActivityDetailPath(activityId) }
+          ]}
+        />
+      )}
+      eyebrow="动态验证码"
+      title={resolveActionTitle(actionType)}
+    >
       {/* 页面级错误一般出现在详情拉取失败阶段。 */}
       {pageError ? <InlineNotice message={pageError} /> : null}
       {detail ? (

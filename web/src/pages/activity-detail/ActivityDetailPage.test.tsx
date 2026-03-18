@@ -73,6 +73,8 @@ describe("ActivityDetailPage", () => {
       my_registered: true,
       my_checked_in: false,
       my_checked_out: false,
+      my_checkin_time: "2026-03-10 09:05",
+      my_checkout_time: "2026-03-10 11:40",
       checkin_count: 18,
       checkout_count: 3
     });
@@ -82,6 +84,11 @@ describe("ActivityDetailPage", () => {
     expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
     expect(screen.getByText("负责现场秩序维护")).toBeInTheDocument();
     expect(screen.getByText("已报名")).toBeInTheDocument();
+    expect(screen.getByText("2026-03-10 09:05")).toBeInTheDocument();
+    expect(screen.getByText("2026-03-10 11:40")).toBeInTheDocument();
+    expect(screen.queryByText("累计签到")).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "页面导航" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "活动列表" })).toHaveAttribute("href", "/activities");
     expect(screen.getByRole("button", { name: "去签到" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "去签退" })).not.toBeInTheDocument();
   });

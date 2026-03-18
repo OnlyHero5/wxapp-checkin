@@ -93,12 +93,15 @@ describe("ActivitiesPage", () => {
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
     expect(screen.getByText("查看你当前可见的活动，并进入详情页继续签到或签退。")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "正在进行" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "已完成" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "历史活动" })).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
     expect(screen.getByText("创新论坛")).toBeInTheDocument();
     expect(screen.getByText("已报名")).toBeInTheDocument();
     expect(screen.getAllByText("已签退").length).toBeGreaterThan(0);
     expect(screen.queryByText("不应展示的活动")).not.toBeInTheDocument();
+    expect(screen.queryByText("累计签到")).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "页面导航" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "历史活动" })).toHaveAttribute("href", "#completed");
     expect(screen.getAllByRole("link", { name: "查看详情" })).toHaveLength(2);
   });
 

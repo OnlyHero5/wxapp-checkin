@@ -101,6 +101,8 @@ describe("StaffManagePage", () => {
     expect(await screen.findByRole("heading", { name: "活动管理" })).toBeInTheDocument();
     expect(screen.getByText("483920")).toBeInTheDocument();
     expect(screen.getByText("实时统计")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "页面导航" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "活动列表" })).toHaveAttribute("href", "/activities");
 
     await user.click(screen.getByText("签退码"));
 

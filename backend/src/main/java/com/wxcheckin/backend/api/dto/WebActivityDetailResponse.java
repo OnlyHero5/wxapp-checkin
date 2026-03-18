@@ -19,6 +19,8 @@ public record WebActivityDetailResponse(
     Boolean myRegistered,
     Boolean myCheckedIn,
     Boolean myCheckedOut,
+    String myCheckinTime,
+    String myCheckoutTime,
     Boolean canCheckin,
     Boolean canCheckout,
     Long serverTimeMs

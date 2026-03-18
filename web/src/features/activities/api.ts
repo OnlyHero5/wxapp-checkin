@@ -35,6 +35,8 @@ export type ActivitySummary = {
 export type ActivityDetail = ActivitySummary & {
   can_checkin?: boolean;
   can_checkout?: boolean;
+  my_checkin_time?: string;
+  my_checkout_time?: string;
   server_time_ms?: number;
 };
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   buildActivityActionPath,
+  buildActivityDetailPath,
   buildActivityManagePath,
   getActivityDetail,
   type ActivityDetail
@@ -18,6 +19,7 @@ import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppButton } from "../../shared/ui/AppButton";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
+import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 import { StatusTag } from "../../shared/ui/StatusTag";
 
 /**
@@ -97,7 +99,18 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
   // 详情未加载完成前，也要保证页面结构稳定，并给用户一个返回入口。
   if (!detail) {
     return (
-      <MobilePage eyebrow="活动详情" title="活动详情">
+      <MobilePage
+        bottomNav={(
+          <PageBottomNav
+            items={[
+              { label: "活动列表", to: "/activities" },
+              { active: true, label: "活动详情", to: buildActivityDetailPath(activityId) }
+            ]}
+          />
+        )}
+        eyebrow="活动详情"
+        title="活动详情"
+      >
         {errorMessage ? <InlineNotice message={errorMessage} /> : <p>活动详情加载中...</p>}
         <Link className="text-link" to="/activities">
           返回活动列表
@@ -114,15 +127,25 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
 
   return (
     <MobilePage
+      bottomNav={(
+        <PageBottomNav
+          items={[
+            { label: "活动列表", to: "/activities" },
+            { active: true, label: "活动详情", to: buildActivityDetailPath(detail.activity_id) }
+          ]}
+        />
+      )}
       description={isStaff ? "查看活动状态，并进入管理页展示动态码和批量操作。" : "先确认活动状态，再继续签到或签退。"}
       eyebrow="活动详情"
       title={detail.activity_title}
     >
       <ActivityMetaPanel
-        counts={{
+        checkinTimeText={!isStaff ? detail.my_checkin_time : undefined}
+        counts={isStaff ? {
           checkin: detail.checkin_count,
           checkout: detail.checkout_count
-        }}
+        } : undefined}
+        checkoutTimeText={!isStaff ? detail.my_checkout_time : undefined}
         description={detail.description}
         joinStatusText={resolveJoinStatus(detail)}
         locationText={detail.location}

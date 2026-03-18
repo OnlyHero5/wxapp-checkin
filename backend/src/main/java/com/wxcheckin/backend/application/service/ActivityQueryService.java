@@ -10,8 +10,10 @@ import com.wxcheckin.backend.domain.model.ActivityProgressStatus;
 import com.wxcheckin.backend.domain.model.RoleType;
 import com.wxcheckin.backend.domain.model.UserActivityState;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxActivityProjectionEntity;
+import com.wxcheckin.backend.infrastructure.persistence.entity.WxCheckinEventEntity;
 import com.wxcheckin.backend.infrastructure.persistence.entity.WxUserActivityStatusEntity;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
+import com.wxcheckin.backend.infrastructure.persistence.repository.WxCheckinEventRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -39,6 +41,7 @@ public class ActivityQueryService {
   private final SessionService sessionService;
   private final WxActivityProjectionRepository activityRepository;
   private final WxUserActivityStatusRepository statusRepository;
+  private final WxCheckinEventRepository checkinEventRepository;
   private final ObjectProvider<LegacySyncService> legacySyncServiceProvider;
   private final TimeFormatter timeFormatter;
   private final ActivityTimeWindowService activityTimeWindowService;
@@ -48,6 +51,7 @@ public class ActivityQueryService {
       SessionService sessionService,
       WxActivityProjectionRepository activityRepository,
       WxUserActivityStatusRepository statusRepository,
+      WxCheckinEventRepository checkinEventRepository,
       ObjectProvider<LegacySyncService> legacySyncServiceProvider,
       TimeFormatter timeFormatter,
       ActivityTimeWindowService activityTimeWindowService,
@@ -56,6 +60,7 @@ public class ActivityQueryService {
     this.sessionService = sessionService;
     this.activityRepository = activityRepository;
     this.statusRepository = statusRepository;
+    this.checkinEventRepository = checkinEventRepository;
     this.legacySyncServiceProvider = legacySyncServiceProvider;
     this.timeFormatter = timeFormatter;
     this.activityTimeWindowService = activityTimeWindowService;
@@ -149,6 +154,10 @@ public class ActivityQueryService {
     UserActivityState state = status == null ? UserActivityState.NONE : UserActivityState.fromCode(status.getStatus());
     boolean myCheckedIn = state == UserActivityState.CHECKED_IN;
     boolean myCheckedOut = state == UserActivityState.CHECKED_OUT;
+    // 详情页补个人签到/签退时间，是为了让普通用户在历史活动里直接确认“我什么时候签过到/签过退”，
+    // 不需要再切去其它记录页排查。
+    String myCheckinTime = resolveLatestActionTime(principal.user().getId(), normalizedActivityId, "checkin");
+    String myCheckoutTime = resolveLatestActionTime(principal.user().getId(), normalizedActivityId, "checkout");
 
     // 关键：详情页的 `can_checkin/can_checkout` 必须纳入时间窗判断，
     // 否则会出现“显示可签到，但 staff 发码被 outside_activity_time_window 拒绝”的契约不一致。
@@ -186,6 +195,8 @@ public class ActivityQueryService {
         myRegistered,
         myCheckedIn,
         myCheckedOut,
+        myCheckinTime,
+        myCheckoutTime,
         canCheckin,
         canCheckout,
         serverTimeMs
@@ -227,6 +238,12 @@ public class ActivityQueryService {
 
   private Integer safeCount(Integer value) {
     return value == null ? 0 : value;
+  }
+
+  private String resolveLatestActionTime(Long userId, String activityId, String actionType) {
+    WxCheckinEventEntity event = checkinEventRepository
+        .findTopByUserIdAndActivityIdAndActionTypeOrderBySubmittedAtDesc(userId, activityId, actionType);
+    return event == null ? "" : timeFormatter.toDisplay(event.getSubmittedAt());
   }
 
   private int normalizePage(Integer page) {
