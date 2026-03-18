@@ -4,6 +4,7 @@ import {
   buildActivityActionPath,
   buildActivityDetailPath,
   buildActivityManagePath,
+  buildActivityRosterPath,
   getActivityDetail,
   type ActivityDetail
 } from "../../features/activities/api";
@@ -158,7 +159,13 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
       />
       <section className="stack-form detail-actions">
         {isStaff ? (
-          <AppButton onClick={() => navigate(buildActivityManagePath(detail.activity_id))}>进入管理</AppButton>
+          <>
+            {/* staff 先分流到“发码管理”和“名单修正”两个入口，避免在单页里混放两类高频操作。 */}
+            <AppButton onClick={() => navigate(buildActivityManagePath(detail.activity_id))}>进入管理</AppButton>
+            <AppButton onClick={() => navigate(buildActivityRosterPath(detail.activity_id))} tone="secondary">
+              参会名单
+            </AppButton>
+          </>
         ) : null}
         {/* 签到和签退入口互相独立显示，避免用一个按钮切来切去造成误操作。 */}
         {!isStaff && canCheckin ? (

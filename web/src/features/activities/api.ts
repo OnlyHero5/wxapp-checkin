@@ -102,6 +102,11 @@ export function buildActivityManagePath(activityId: string) {
   return `/staff${buildActivityDetailPath(activityId)}/manage`;
 }
 
+export function buildActivityRosterPath(activityId: string) {
+  // 参会名单页和动态码管理页职责不同，因此继续走独立 staff 子路由，避免两类操作混成一个页面。
+  return `/staff${buildActivityDetailPath(activityId)}/roster`;
+}
+
 // 拉取当前用户可见活动列表。
 export function getActivities(input?: { page?: number; page_size?: number }) {
   const search = new URLSearchParams();

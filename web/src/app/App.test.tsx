@@ -18,6 +18,7 @@ const activitiesApiMocks = vi.hoisted(() => ({
 }));
 
 const staffApiMocks = vi.hoisted(() => ({
+  adjustAttendanceStates: vi.fn(),
   bulkCheckout: vi.fn(),
   getCodeSession: vi.fn().mockResolvedValue({
     action_type: "checkin",
@@ -28,6 +29,12 @@ const staffApiMocks = vi.hoisted(() => ({
     expires_at: 1760000007500,
     expires_in_ms: 4200,
     server_time_ms: 1760000003300,
+    status: "success"
+  }),
+  getActivityRoster: vi.fn().mockResolvedValue({
+    activity_id: "act_101",
+    activity_title: "校园志愿活动",
+    items: [],
     status: "success"
   }),
 }));
@@ -42,8 +49,10 @@ vi.mock("../features/activities/api", async (importOriginal) => {
 });
 
 vi.mock("../features/staff/api", () => ({
+  adjustAttendanceStates: staffApiMocks.adjustAttendanceStates,
   bulkCheckout: staffApiMocks.bulkCheckout,
-  getCodeSession: staffApiMocks.getCodeSession
+  getCodeSession: staffApiMocks.getCodeSession,
+  getActivityRoster: staffApiMocks.getActivityRoster
 }));
 
 function renderPath(path: string) {
@@ -145,5 +154,24 @@ describe("AppRoutes", () => {
     renderPath("/staff/activities/act_101/manage");
 
     expect(await screen.findByRole("heading", { name: "活动管理" })).toBeInTheDocument();
+  });
+
+  it("redirects non-staff sessions away from the staff roster route", async () => {
+    setSession("sess_123");
+    renderPath("/staff/activities/act_101/roster");
+
+    expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
+  });
+
+  it("allows staff sessions to access the staff roster route", async () => {
+    saveAuthSession({
+      permissions: ["activity:manage"],
+      role: "staff",
+      session_token: "sess_staff_roster_123"
+    });
+    // 名单页和管理页是两个职责不同的入口，这里单独锁定名单页路由守卫，防止后续只挂了按钮却没挂 staff 保护。
+    renderPath("/staff/activities/act_101/roster");
+
+    expect(await screen.findByRole("heading", { name: "参会名单" })).toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import { ChangePasswordPage } from "../pages/change-password/ChangePasswordPage"
 import { CheckinPage } from "../pages/checkin/CheckinPage";
 import { CheckoutPage } from "../pages/checkout/CheckoutPage";
 import { LoginPage } from "../pages/login/LoginPage";
+import { ActivityRosterPage } from "../pages/activity-roster/ActivityRosterPage";
 import { StaffManagePage } from "../pages/staff-manage/StaffManagePage";
 import {
   getMustChangePassword,
@@ -182,6 +183,15 @@ export function AppRoutes() {
           <StaffRoute>
             {/* 管理员动态码管理页与批量签退入口。 */}
             <StaffManagePage />
+          </StaffRoute>
+        }
+      />
+      <Route
+        path="/staff/activities/:activityId/roster"
+        element={
+          <StaffRoute>
+            {/* 名单页承接“看参会人 + 修签到签退状态”，与发码管理页明确分层。 */}
+            <ActivityRosterPage />
           </StaffRoute>
         }
       />
