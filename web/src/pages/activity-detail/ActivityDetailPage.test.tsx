@@ -89,8 +89,8 @@ describe("ActivityDetailPage", () => {
     expect(screen.getByText("2026-03-10 09:05")).toBeInTheDocument();
     expect(screen.getByText("2026-03-10 11:40")).toBeInTheDocument();
     expect(screen.queryByText("累计签到")).not.toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "页面导航" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "活动列表" })).toHaveAttribute("href", "/activities");
+    expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回活动列表" })).toHaveAttribute("href", "/activities");
     expect(screen.getByRole("button", { name: "去签到" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "去签退" })).not.toBeInTheDocument();
   });

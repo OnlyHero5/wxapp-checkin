@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   buildActivityActionPath,
-  buildActivityDetailPath,
   buildActivityManagePath,
   buildActivityRosterPath,
   getActivityDetail,
@@ -20,7 +19,6 @@ import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppButton } from "../../shared/ui/AppButton";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
-import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 import { StatusTag } from "../../shared/ui/StatusTag";
 
 /**
@@ -101,21 +99,15 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
   if (!detail) {
     return (
       <MobilePage
-        bottomNav={(
-          <PageBottomNav
-            items={[
-              { label: "活动列表", to: "/activities" },
-              { active: true, label: "活动详情", to: buildActivityDetailPath(activityId) }
-            ]}
-          />
+        headerActions={(
+          <Link className="text-link" to="/activities">
+            返回活动列表
+          </Link>
         )}
         eyebrow="活动详情"
         title="活动详情"
       >
         {errorMessage ? <InlineNotice message={errorMessage} /> : <p>活动详情加载中...</p>}
-        <Link className="text-link" to="/activities">
-          返回活动列表
-        </Link>
       </MobilePage>
     );
   }
@@ -128,15 +120,12 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
 
   return (
     <MobilePage
-      bottomNav={(
-        <PageBottomNav
-          items={[
-            { label: "活动列表", to: "/activities" },
-            { active: true, label: "活动详情", to: buildActivityDetailPath(detail.activity_id) }
-          ]}
-        />
-      )}
       description={isStaff ? "查看活动状态，并进入管理页展示动态码和批量操作。" : "先确认活动状态，再继续签到或签退。"}
+      headerActions={(
+        <Link className="text-link" to="/activities">
+          返回活动列表
+        </Link>
+      )}
       eyebrow="活动详情"
       title={detail.activity_title}
     >

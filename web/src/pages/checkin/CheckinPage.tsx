@@ -15,7 +15,6 @@ import { ApiError, PasswordChangeRequiredError, SessionExpiredError } from "../.
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
-import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 
 /**
  * 这个文件把签到页和签退页的共性逻辑收敛到 `AttendanceActionPage`。
@@ -213,14 +212,6 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
   if (result) {
     return (
       <MobilePage
-        bottomNav={(
-          <PageBottomNav
-            items={[
-              { label: "活动列表", to: "/activities" },
-              { label: "活动详情", to: buildActivityDetailPath(activityId) }
-            ]}
-          />
-        )}
         eyebrow="提交完成"
         title={resolveResultTitle(actionType)}
       >
@@ -239,14 +230,6 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
 
   return (
     <MobilePage
-      bottomNav={(
-        <PageBottomNav
-          items={[
-            { label: "活动列表", to: "/activities" },
-            { label: "活动详情", to: buildActivityDetailPath(activityId) }
-          ]}
-        />
-      )}
       eyebrow="动态验证码"
       title={resolveActionTitle(actionType)}
     >

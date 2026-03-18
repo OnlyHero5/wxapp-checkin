@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   buildActivityDetailPath,
   getActivityDetail,
@@ -14,7 +14,6 @@ import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/h
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
-import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 
 type WakeLockSentinelLike = {
   release?: () => Promise<void> | void;
@@ -243,15 +242,12 @@ export function StaffManagePage() {
 
   return (
     <MobilePage
-      bottomNav={(
-        <PageBottomNav
-          items={[
-            { label: "活动列表", to: "/activities" },
-            { label: "活动详情", to: buildActivityDetailPath(activityId) }
-          ]}
-        />
-      )}
       eyebrow="工作人员"
+      headerActions={(
+        <Link className="text-link" to={buildActivityDetailPath(activityId)}>
+          返回活动详情
+        </Link>
+      )}
       title="活动管理"
     >
       {wakeLockMessage ? <InlineNotice message={wakeLockMessage} theme="warning" /> : null}

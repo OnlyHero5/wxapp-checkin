@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { buildActivityDetailPath } from "../../features/activities/api";
 import {
   adjustAttendanceStates,
@@ -16,7 +16,6 @@ import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/h
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
-import { PageBottomNav } from "../../shared/ui/PageBottomNav";
 
 type AttendanceActionPayload = {
   patch: {
@@ -190,17 +189,13 @@ export function ActivityRosterPage() {
 
   return (
     <MobilePage
-      bottomNav={(
-        <PageBottomNav
-          items={[
-            { label: "活动列表", to: "/activities" },
-            { label: "活动详情", to: buildActivityDetailPath(activityId) },
-            { active: true, label: "参会名单", to: `/staff${buildActivityDetailPath(activityId)}/roster` }
-          ]}
-        />
-      )}
       description="查看当前活动的已报名成员，并在后续执行签到签退修正。"
       eyebrow="工作人员"
+      headerActions={(
+        <Link className="text-link" to={buildActivityDetailPath(activityId)}>
+          返回活动详情
+        </Link>
+      )}
       title="参会名单"
     >
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}

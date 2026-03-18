@@ -111,8 +111,10 @@ describe("CheckinPage", () => {
       });
     });
     expect(screen.getByRole("heading", { name: "签到结果" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByText("提交成功")).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_101");
   });
 
   it("shows a clear error message for expired codes", async () => {
@@ -147,6 +149,8 @@ describe("CheckinPage", () => {
     renderAttendancePage("/activities/act_101/checkout");
 
     expect(await screen.findByRole("heading", { name: "活动签退" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_101");
     await user.type(screen.getByLabelText("签退验证码"), "654321");
     await user.click(screen.getByRole("button", { name: "提交签退码" }));
 
@@ -192,6 +196,7 @@ describe("CheckinPage", () => {
 
     expect(await screen.findByRole("heading", { name: "签到结果" })).toBeInTheDocument();
     expect(screen.getByText("提交成功")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
 
     view.rerender(<AttendanceTestApp initialPath="/activities/act_101/checkin" nextPath="/activities/act_202/checkin" />);
 

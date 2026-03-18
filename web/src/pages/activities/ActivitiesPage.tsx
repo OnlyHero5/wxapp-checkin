@@ -158,6 +158,8 @@ export function ActivitiesPage() {
     }
     return section;
   });
+  // 这里暂时保留的是“活动页内部的二级分段”，不是全站顶级导航。
+  // 后续如果分段位置继续调整，只需要围绕活动页内容区演进，不要再抬升回业务壳层。
   const bottomNavItems = isStaff
     ? [
         { href: "#ongoing", label: "进行中" },
