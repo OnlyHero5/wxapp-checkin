@@ -80,7 +80,9 @@ public class DynamicCodeService {
     activityTimeWindowService.ensureWithinIssueWindow(activity);
 
     long serverTimeMs = Instant.now(clock).toEpochMilli();
-    long slotWindowMs = ROTATE_SECONDS * 1000L;
+    // 动态码轮换窗口必须跟活动投影配置保持一致；
+    // 否则 staff 页看到的剩余寿命、后端实际验码窗口会出现错位。
+    long slotWindowMs = resolveRotateWindowMs(activity);
     long slot = serverTimeMs / slotWindowMs;
     long expiresAt = (slot + 1) * slotWindowMs;
     long expiresInMs = Math.max(0L, expiresAt - serverTimeMs);
@@ -109,7 +111,9 @@ public class DynamicCodeService {
     WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(normalize(activityId))
         .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
     long now = Instant.now(clock).toEpochMilli();
-    long rotateWindowMs = ROTATE_SECONDS * 1000L;
+    // 验码必须复用同一活动的 rotate_seconds；
+    // 若这里继续用常量，前端刚拿到的码会在长窗口活动上被立即误判失效。
+    long rotateWindowMs = resolveRotateWindowMs(activity);
     long currentSlot = now / rotateWindowMs;
 
     // Web 正式链路只认当前 slot 的数字码；
@@ -140,6 +144,14 @@ public class DynamicCodeService {
 
   private int safeCount(Integer value) {
     return value == null ? 0 : value;
+  }
+
+  private long resolveRotateWindowMs(WxActivityProjectionEntity activity) {
+    Integer configuredRotateSeconds = activity.getRotateSeconds();
+    if (configuredRotateSeconds == null || configuredRotateSeconds <= 0) {
+      return ROTATE_SECONDS * 1000L;
+    }
+    return configuredRotateSeconds * 1000L;
   }
 
   private String normalize(String value) {
