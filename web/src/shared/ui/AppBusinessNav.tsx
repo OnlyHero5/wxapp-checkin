@@ -26,6 +26,16 @@ function resolveBusinessNavKey(pathname: string) {
 export function AppBusinessNav() {
   const { pathname } = useLocation();
   const activeKey = resolveBusinessNavKey(pathname);
+  // “活动”入口天然更接近业务操作主场，因此固定映射到 staff accent；
+  // “我的”入口偏账户与品牌语境，固定映射到 brand accent。
+  const activitiesClassName =
+    activeKey === "activities"
+      ? "page-bottom-nav__item page-bottom-nav__item--active page-bottom-nav__item--accent-staff"
+      : "page-bottom-nav__item page-bottom-nav__item--accent-staff";
+  const profileClassName =
+    activeKey === "profile"
+      ? "page-bottom-nav__item page-bottom-nav__item--active page-bottom-nav__item--accent-brand"
+      : "page-bottom-nav__item page-bottom-nav__item--accent-brand";
 
   return (
     <nav
@@ -35,14 +45,14 @@ export function AppBusinessNav() {
     >
       <Link
         aria-current={activeKey === "activities" ? "page" : undefined}
-        className={activeKey === "activities" ? "page-bottom-nav__item page-bottom-nav__item--active" : "page-bottom-nav__item"}
+        className={activitiesClassName}
         to="/activities"
       >
         活动
       </Link>
       <Link
         aria-current={activeKey === "profile" ? "page" : undefined}
-        className={activeKey === "profile" ? "page-bottom-nav__item page-bottom-nav__item--active" : "page-bottom-nav__item"}
+        className={profileClassName}
         to="/profile"
       >
         我的

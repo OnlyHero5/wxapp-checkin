@@ -20,6 +20,9 @@ export function ActivityCard({ activity, showManageEntry = false }: ActivityCard
   // 统一通过 view-model 归一化，避免卡片自己复制一份业务判断。
   const progressStatus = resolveProgressStatus(activity);
   const joinStatus = resolveJoinStatus(activity);
+  // 列表卡片只区分“普通用户浏览”与“工作人员管理入口”两种语境，
+  // 这样 tone 决策集中在这里，ActivitiesPage 不必散落重复判断。
+  const panelTone = showManageEntry ? "staff" : "brand";
 
   return (
     <ActivityMetaPanel
@@ -47,6 +50,7 @@ export function ActivityCard({ activity, showManageEntry = false }: ActivityCard
       statusSlot={<StatusTag status={progressStatus} />}
       subtitle={activity.activity_type}
       timeText={activity.start_time}
+      tone={panelTone}
       title={activity.activity_title}
     />
   );

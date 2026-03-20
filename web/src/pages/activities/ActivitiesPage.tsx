@@ -144,6 +144,9 @@ export function ActivitiesPage() {
   const description = isStaff
     ? "查看活动并进入管理页展示动态码、处理批量签退。"
     : "查看你当前可见的活动，并进入详情页继续签到或签退。";
+  // 列表页作为业务态首页，需要先在页面壳层层面区分 staff / user，
+  // 后续卡片、按钮和摘要块再沿着这个基线逐步细化。
+  const pageTone = isStaff ? "staff" : "brand";
   // 页面只渲染分组结果，不再自己关心筛选和排序细节。
   // 普通用户把“已完成”重命名成“历史活动”，让历史参加记录更容易被扫到。
   const sections = groupVisibleActivities(activities, {
@@ -170,7 +173,7 @@ export function ActivitiesPage() {
       ];
 
   return (
-    <MobilePage description={description} eyebrow={eyebrow} title="活动列表">
+    <MobilePage description={description} eyebrow={eyebrow} title="活动列表" tone={pageTone}>
       {errorMessage ? (
         <section className="stack-form">
           <InlineNotice message={errorMessage} />

@@ -1,4 +1,5 @@
 import { ElementType, ReactNode } from "react";
+import type { VisualTone } from "./visual-tone";
 
 /**
  * 活动信息块在列表、详情、输入页重复度最高，因此单独抽成公共面板。
@@ -25,6 +26,7 @@ type ActivityMetaPanelProps = {
   statusSlot?: ReactNode;
   subtitle?: string;
   timeText?: string;
+  tone?: VisualTone;
   title: string;
   titleAs?: "h3" | "p";
 };
@@ -162,6 +164,7 @@ export function ActivityMetaPanel({
   statusSlot,
   subtitle,
   timeText,
+  tone = "default",
   title,
   titleAs = "h3"
 }: ActivityMetaPanelProps) {
@@ -184,7 +187,7 @@ export function ActivityMetaPanel({
   });
 
   return (
-    <Container className="activity-meta-panel">
+    <Container className="activity-meta-panel" data-panel-tone={tone}>
       <div className="activity-meta-panel__surface">
         <div className="activity-meta-panel__header">
           <div className="activity-meta-panel__title-block activity-meta-panel__title-stack">

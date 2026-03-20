@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearSession, saveAuthSession, setSession } from "../../shared/session/session-store";
+import { AppBusinessNav } from "../../shared/ui/AppBusinessNav";
 import { ActivitiesPage } from "./ActivitiesPage";
 
 const activitiesApiMocks = vi.hoisted(() => ({
@@ -23,6 +24,14 @@ function renderActivitiesPage() {
         <Route path="/activities" element={<ActivitiesPage />} />
         <Route path="/activities/:activityId" element={<h1>详情页已打开</h1>} />
       </Routes>
+    </MemoryRouter>
+  );
+}
+
+function renderBusinessNav(pathname: string) {
+  render(
+    <MemoryRouter initialEntries={[pathname]}>
+      <AppBusinessNav />
     </MemoryRouter>
   );
 }
@@ -104,6 +113,7 @@ describe("ActivitiesPage", () => {
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "历史活动" })).toHaveAttribute("href", "#completed");
     expect(screen.getAllByRole("link", { name: "查看详情" })).toHaveLength(2);
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
   });
 
   it("shows all activities and management entries for staff sessions", async () => {
@@ -154,5 +164,18 @@ describe("ActivitiesPage", () => {
     expect(screen.getByText("管理态活动 A")).toBeInTheDocument();
     expect(screen.getByText("管理态活动 B")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "进入管理" })).toHaveLength(2);
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
+    expect(screen.getByText("管理态活动 A").closest("article")).toHaveAttribute("data-panel-tone", "staff");
+  });
+
+  it("marks the active business nav item with a stable accent class", () => {
+    renderBusinessNav("/activities");
+
+    expect(screen.getByRole("link", { name: "活动" })).toHaveClass(
+      "page-bottom-nav__item",
+      "page-bottom-nav__item--active",
+      "page-bottom-nav__item--accent-staff"
+    );
+    expect(screen.getByRole("link", { name: "我的" })).toHaveClass("page-bottom-nav__item--accent-brand");
   });
 });
