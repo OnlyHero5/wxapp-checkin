@@ -84,7 +84,9 @@ describe("ActivityDetailPage", () => {
     renderActivityDetailPage();
 
     expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
     expect(screen.getByText("负责现场秩序维护")).toBeInTheDocument();
+    expect(screen.getByText("负责现场秩序维护").closest("[data-panel-tone]")).toHaveAttribute("data-panel-tone", "brand");
     expect(screen.getByText("已报名")).toBeInTheDocument();
     expect(screen.getByText("2026-03-10 09:05")).toBeInTheDocument();
     expect(screen.getByText("2026-03-10 11:40")).toBeInTheDocument();
@@ -165,6 +167,8 @@ describe("ActivityDetailPage", () => {
     renderActivityDetailPage();
 
     expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
+    expect(screen.getByText("负责现场秩序维护").closest("[data-panel-tone]")).toHaveAttribute("data-panel-tone", "staff");
     expect(screen.getByRole("button", { name: "进入管理" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "去签到" })).not.toBeInTheDocument();
   });

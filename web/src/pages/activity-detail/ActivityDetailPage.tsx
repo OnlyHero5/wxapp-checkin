@@ -20,6 +20,7 @@ import { AppButton } from "../../shared/ui/AppButton";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 import { StatusTag } from "../../shared/ui/StatusTag";
+import type { VisualTone } from "../../shared/ui/visual-tone";
 
 /**
  * 详情页是普通用户动作决策的“闸门页”。
@@ -39,6 +40,13 @@ function resolveActionAccentTone(actionType: "checkin" | "checkout") {
   return actionType === "checkout" ? "checkout" : "checkin";
 }
 
+function resolveDetailTone(isStaff: boolean): Extract<VisualTone, "brand" | "staff"> {
+  // 详情页承担“列表 -> 动作页”的过渡职责：
+  // - 普通用户沿用品牌态，承接活动列表
+  // - 工作人员沿用 staff 态，承接管理链路
+  return isStaff ? "staff" : "brand";
+}
+
 export function ActivityDetailPage() {
   const { activityId = "" } = useParams();
 
@@ -52,6 +60,8 @@ type ActivityDetailPageContentProps = {
 
 function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProps) {
   const navigate = useNavigate();
+  const isStaff = isStaffSession();
+  const detailTone = resolveDetailTone(isStaff);
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   // 详情页可能因为快速切路由或重试出现响应乱序，因此只接收最新版本。
@@ -110,6 +120,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
           </Link>
         )}
         eyebrow="活动详情"
+        tone={detailTone}
         title="活动详情"
       >
         {errorMessage ? <InlineNotice message={errorMessage} /> : <p>活动详情加载中...</p>}
@@ -121,8 +132,6 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
   const progressStatus = resolveProgressStatus(detail);
   const canCheckin = resolveCanCheckin(detail);
   const canCheckout = resolveCanCheckout(detail);
-  const isStaff = isStaffSession();
-
   return (
     <MobilePage
       description={isStaff ? "查看活动状态，并进入管理页展示动态码和批量操作。" : "先确认活动状态，再继续签到或签退。"}
@@ -132,6 +141,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         </Link>
       )}
       eyebrow="活动详情"
+      tone={detailTone}
       title={detail.activity_title}
     >
       <ActivityMetaPanel
@@ -148,6 +158,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         statusSlot={<StatusTag status={progressStatus} />}
         subtitle={detail.activity_type}
         timeText={detail.start_time}
+        tone={detailTone}
         title={detail.activity_title}
         titleAs="p"
       />
