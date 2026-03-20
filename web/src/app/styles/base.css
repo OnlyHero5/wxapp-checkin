@@ -47,6 +47,16 @@
   --app-shadow-card: 0 12px 32px rgba(61, 77, 104, 0.12);
   --app-shadow-soft: 0 6px 18px rgba(61, 77, 104, 0.08);
   --app-backdrop-blur: blur(22px);
+  --app-tone-default-accent: #5f6c82;
+  --app-tone-default-soft: rgba(132, 147, 173, 0.14);
+  --app-tone-brand-accent: #1677ff;
+  --app-tone-brand-soft: rgba(22, 119, 255, 0.16);
+  --app-tone-checkin-accent: #0f9f8c;
+  --app-tone-checkin-soft: rgba(15, 159, 140, 0.16);
+  --app-tone-checkout-accent: #d97706;
+  --app-tone-checkout-soft: rgba(217, 119, 6, 0.16);
+  --app-tone-staff-accent: #5b5bd6;
+  --app-tone-staff-soft: rgba(91, 91, 214, 0.16);
 
   /* 组件库字体保持一致，避免 “TDesign 一套字、业务一套字”。 */
   --td-font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -155,6 +165,28 @@ select {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 18px 16px;
+}
+
+/* 页面 tone 目前只先作用到 hero 壳层，
+ * 这样能先建立全站业务态识别，而不把正文卡片一起染色。 */
+.mobile-page[data-page-tone="brand"] .mobile-page__hero {
+  border-color: rgba(22, 119, 255, 0.2);
+  background: linear-gradient(180deg, rgba(22, 119, 255, 0.14), rgba(255, 255, 255, 0.78));
+}
+
+.mobile-page[data-page-tone="checkin"] .mobile-page__hero {
+  border-color: rgba(15, 159, 140, 0.2);
+  background: linear-gradient(180deg, rgba(15, 159, 140, 0.14), rgba(255, 255, 255, 0.78));
+}
+
+.mobile-page[data-page-tone="checkout"] .mobile-page__hero {
+  border-color: rgba(217, 119, 6, 0.2);
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.14), rgba(255, 255, 255, 0.78));
+}
+
+.mobile-page[data-page-tone="staff"] .mobile-page__hero {
+  border-color: rgba(91, 91, 214, 0.2);
+  background: linear-gradient(180deg, rgba(91, 91, 214, 0.14), rgba(255, 255, 255, 0.78));
 }
 
 .mobile-page__hero::before,
@@ -580,10 +612,60 @@ select {
   box-shadow: 0 10px 20px rgba(22, 119, 255, 0.18);
 }
 
+.app-button--primary.app-button--accent-default {
+  box-shadow: 0 10px 20px rgba(95, 108, 130, 0.16);
+}
+
+.app-button--primary.app-button--accent-brand {
+  box-shadow: 0 10px 20px rgba(22, 119, 255, 0.2);
+}
+
+.app-button--primary.app-button--accent-checkin {
+  background: var(--app-tone-checkin-accent);
+  border-color: var(--app-tone-checkin-accent);
+  box-shadow: 0 10px 20px rgba(15, 159, 140, 0.22);
+}
+
+.app-button--primary.app-button--accent-checkout {
+  background: var(--app-tone-checkout-accent);
+  border-color: var(--app-tone-checkout-accent);
+  box-shadow: 0 10px 20px rgba(217, 119, 6, 0.22);
+}
+
+.app-button--primary.app-button--accent-staff {
+  background: var(--app-tone-staff-accent);
+  border-color: var(--app-tone-staff-accent);
+  box-shadow: 0 10px 20px rgba(91, 91, 214, 0.22);
+}
+
 .app-button--secondary {
   background: rgba(255, 255, 255, 0.72);
   border-color: var(--app-border-strong);
   box-shadow: var(--app-shadow-soft);
+}
+
+.app-button--secondary.app-button--accent-brand {
+  background: rgba(22, 119, 255, 0.08);
+  border-color: rgba(22, 119, 255, 0.24);
+  color: var(--app-tone-brand-accent);
+}
+
+.app-button--secondary.app-button--accent-checkin {
+  background: rgba(15, 159, 140, 0.08);
+  border-color: rgba(15, 159, 140, 0.24);
+  color: var(--app-tone-checkin-accent);
+}
+
+.app-button--secondary.app-button--accent-checkout {
+  background: rgba(217, 119, 6, 0.08);
+  border-color: rgba(217, 119, 6, 0.24);
+  color: var(--app-tone-checkout-accent);
+}
+
+.app-button--secondary.app-button--accent-staff {
+  background: rgba(91, 91, 214, 0.08);
+  border-color: rgba(91, 91, 214, 0.24);
+  color: var(--app-tone-staff-accent);
 }
 
 .inline-notice {

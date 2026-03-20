@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Button } from "tdesign-mobile-react";
+import type { VisualTone } from "./visual-tone";
 
 /**
  * 所有主次按钮统一走这一层，而不是让页面各自拼 TDesign 参数。
@@ -9,6 +10,7 @@ import { Button } from "tdesign-mobile-react";
  * 2. 后续如果要统一尺寸、圆角或 loading 口径，只改这一处
  */
 type AppButtonProps = {
+  accentTone?: VisualTone;
   children: ReactNode;
   disabled?: boolean;
   loading?: boolean;
@@ -18,6 +20,7 @@ type AppButtonProps = {
 };
 
 export function AppButton({
+  accentTone = "default",
   children,
   disabled = false,
   loading = false,
@@ -48,7 +51,7 @@ export function AppButton({
   return (
     <Button
       block
-      className={`app-button app-button--${tone}`}
+      className={`app-button app-button--${tone} app-button--accent-${accentTone}`}
       disabled={disabled}
       loading={loading}
       // Button 统一使用矩形，是为了和页面卡片、输入框的直角系语言对齐。

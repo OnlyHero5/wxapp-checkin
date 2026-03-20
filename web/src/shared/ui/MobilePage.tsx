@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import type { VisualTone } from "./visual-tone";
 
 /**
  * 所有手机页统一使用的容器。
@@ -14,12 +15,21 @@ type MobilePageProps = {
   description?: string;
   eyebrow?: string;
   headerActions?: ReactNode;
+  tone?: VisualTone;
   title: string;
 };
 
-export function MobilePage({ bottomNav, children, description, eyebrow, headerActions, title }: MobilePageProps) {
+export function MobilePage({
+  bottomNav,
+  children,
+  description,
+  eyebrow,
+  headerActions,
+  title,
+  tone = "default"
+}: MobilePageProps) {
   return (
-    <main className="mobile-page">
+    <main className="mobile-page" data-page-tone={tone}>
       <div className="mobile-page__shell">
         <section className="mobile-page__hero">
           <div className="mobile-page__hero-main">
