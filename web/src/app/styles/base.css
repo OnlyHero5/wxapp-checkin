@@ -546,6 +546,12 @@ select {
 }
 
 /* 登录与改密页都大量依赖表单，所以输入框样式尽量保持克制，不做花哨动画。 */
+/* brand 页面下只给表单加一层轻蓝品牌气质，不去改交互模型和结构。 */
+.mobile-page[data-page-tone="brand"] .field input,
+.mobile-page[data-page-tone="brand"] .field textarea {
+  border-color: rgba(22, 119, 255, 0.2);
+  background: linear-gradient(180deg, rgba(22, 119, 255, 0.05), rgba(255, 255, 255, 0.92));
+}
 
 /* 聚焦态给出柔和但清晰的视觉反馈。 */
 .field input:focus,
@@ -797,6 +803,13 @@ select {
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-lg);
   background: var(--app-surface-secondary);
+}
+
+/* 个人中心属于品牌态账户页面，卡片只做轻量品牌色提亮，不盖过资料文本本身。 */
+.mobile-page[data-page-tone="brand"] .profile-summary-card,
+.mobile-page[data-page-tone="brand"] .profile-actions-card {
+  border-color: rgba(22, 119, 255, 0.18);
+  background: linear-gradient(180deg, rgba(22, 119, 255, 0.06), rgba(255, 255, 255, 0.92));
 }
 
 .profile-summary-list {

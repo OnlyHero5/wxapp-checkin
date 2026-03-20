@@ -63,10 +63,9 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
         />
       </label>
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
-      <AppButton disabled={!canSubmit} loading={pending} type="submit">
+      <AppButton accentTone="brand" disabled={!canSubmit} loading={pending} type="submit">
         登录
       </AppButton>
     </form>
   );
 }
-

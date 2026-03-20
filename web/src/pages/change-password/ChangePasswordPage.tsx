@@ -57,6 +57,7 @@ export function ChangePasswordPage() {
     <MobilePage
       description={selfServiceMode ? "你可以在这里主动更新密码，修改成功后会返回个人中心。" : "为了保障账号安全，请先修改密码后再进入业务页面。"}
       eyebrow={selfServiceMode ? "账户安全" : "首次登录"}
+      tone="brand"
       title="修改密码"
     >
       <ChangePasswordForm errorMessage={errorMessage} onSubmit={handleSubmit} pending={pending} />

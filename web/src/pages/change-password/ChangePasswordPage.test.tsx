@@ -72,6 +72,9 @@ describe("ChangePasswordPage", () => {
 
     renderChangePasswordPage();
 
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
+    expect(screen.getByRole("button", { name: "修改密码" })).toHaveClass("app-button--accent-brand");
+
     await user.type(screen.getByLabelText("旧密码"), " 123 ");
     await user.type(screen.getByLabelText("新密码"), " new-pass ");
     await user.click(screen.getByRole("button", { name: "修改密码" }));

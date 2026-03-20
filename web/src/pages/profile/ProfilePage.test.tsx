@@ -45,6 +45,7 @@ describe("ProfilePage", () => {
     renderProfilePage();
 
     expect(screen.getByRole("heading", { name: "我的" })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
     expect(screen.getByText("姓名")).toBeInTheDocument();
     expect(screen.getByText("张三")).toBeInTheDocument();
     expect(screen.getByText("学号")).toBeInTheDocument();
@@ -54,8 +55,14 @@ describe("ProfilePage", () => {
     expect(screen.getByText("社团")).toBeInTheDocument();
     expect(screen.getByText("青年志愿者协会")).toBeInTheDocument();
     expect(screen.getByText(/工作人员/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "修改密码" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "退出登录" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "修改密码" })).toHaveClass(
+      "app-button--secondary",
+      "app-button--accent-brand"
+    );
+    expect(screen.getByRole("button", { name: "退出登录" })).toHaveClass(
+      "app-button--primary",
+      "app-button--accent-brand"
+    );
   });
 
   it("opens the self-service change password entry from profile", async () => {

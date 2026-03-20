@@ -61,10 +61,9 @@ export function ChangePasswordForm({ errorMessage, onSubmit, pending = false }: 
         />
       </label>
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
-      <AppButton disabled={!canSubmit} loading={pending} type="submit">
+      <AppButton accentTone="brand" disabled={!canSubmit} loading={pending} type="submit">
         修改密码
       </AppButton>
     </form>
   );
 }
-

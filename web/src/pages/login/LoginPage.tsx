@@ -50,6 +50,7 @@ export function LoginPage() {
     <MobilePage
       description="账号为学号，初始密码统一为 123。首次登录成功后需要先修改密码。"
       eyebrow="欢迎回来"
+      tone="brand"
       title="登录"
     >
       <AccountLoginForm errorMessage={errorMessage} onSubmit={handleSubmit} pending={pending} />

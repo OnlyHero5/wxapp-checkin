@@ -47,6 +47,8 @@ describe("LoginPage", () => {
 
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
     expect(screen.getByText("账号为学号，初始密码统一为 123。首次登录成功后需要先修改密码。")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
+    expect(screen.getByRole("button", { name: "登录" })).toHaveClass("app-button--accent-brand");
 
     await user.type(screen.getByLabelText("学号"), " 2025000011 ");
     await user.type(screen.getByLabelText("密码"), " 123 ");

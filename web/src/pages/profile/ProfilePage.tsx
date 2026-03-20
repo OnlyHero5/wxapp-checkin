@@ -58,6 +58,7 @@ export function ProfilePage() {
     <MobilePage
       description="查看当前登录信息，并处理密码维护或安全退出。"
       eyebrow="个人中心"
+      tone="brand"
       title="我的"
     >
       <section className="profile-summary-card">
@@ -73,10 +74,10 @@ export function ProfilePage() {
       </section>
       <section className="profile-actions-card">
         {/* 两个动作都保留大按钮，是为了在手机端降低误触和寻找成本。 */}
-        <AppButton onClick={handleChangePassword} tone="secondary">
+        <AppButton accentTone="brand" onClick={handleChangePassword} tone="secondary">
           修改密码
         </AppButton>
-        <AppButton onClick={handleLogout}>退出登录</AppButton>
+        <AppButton accentTone="brand" onClick={handleLogout}>退出登录</AppButton>
       </section>
     </MobilePage>
   );
