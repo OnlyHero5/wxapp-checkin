@@ -122,6 +122,11 @@ LEGACY_SYNC_INTERVAL_MS=2000
 OUTBOX_RELAY_ENABLED=true
 OUTBOX_RELAY_INTERVAL_MS=1000
 
+# 后台自动调度总开关（建议保留 true；测试/排障时可设为 false）
+# - 关闭后不会自动跑 pull/relay 定时任务
+# - 但业务代码仍可手动调用同步服务
+SYNC_SCHEDULER_ENABLED=true
+
 # Flyway baseline 兜底（极端情况下使用）
 # WXAPP_FLYWAY_BASELINE_OVERRIDE=11
 ```

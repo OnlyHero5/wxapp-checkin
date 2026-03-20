@@ -69,6 +69,7 @@ app:
       password: ${LEGACY_DB_PASSWORD:}
       driver-class-name: ${LEGACY_DB_DRIVER:com.mysql.cj.jdbc.Driver}
   sync:
+    scheduler-enabled: ${SYNC_SCHEDULER_ENABLED:true}
     legacy:
       enabled: ${LEGACY_SYNC_ENABLED:false}
       pull-interval-ms: ${LEGACY_SYNC_INTERVAL_MS:60000}

@@ -15,7 +15,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -31,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
  * can start without coupling startup health to legacy DB readiness.</p>
  */
 @Service
-@ConditionalOnProperty(name = "app.sync.scheduler-enabled", havingValue = "true", matchIfMissing = true)
 public class LegacySyncService {
   private static final Logger log = LoggerFactory.getLogger(LegacySyncService.class);
 
@@ -59,6 +57,15 @@ public class LegacySyncService {
   }
 
   @Scheduled(fixedDelayString = "${app.sync.legacy.pull-interval-ms:60000}")
+  @Transactional
+  public void scheduledSyncFromLegacy() {
+    // 调度开关只影响“后台自动触发”，不应该让业务代码失去手动同步能力。
+    if (!appProperties.getSync().isSchedulerEnabled()) {
+      return;
+    }
+    syncFromLegacy();
+  }
+
   @Transactional
   public void syncFromLegacy() {
     if (!appProperties.getSync().getLegacy().isEnabled()) {

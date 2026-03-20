@@ -13,7 +13,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
  * Relays pending outbox events to legacy tables.
  */
 @Service
-@ConditionalOnProperty(name = "app.sync.scheduler-enabled", havingValue = "true", matchIfMissing = true)
 public class OutboxRelayService {
   private static final Logger log = LoggerFactory.getLogger(OutboxRelayService.class);
 
@@ -60,6 +58,15 @@ public class OutboxRelayService {
   }
 
   @Scheduled(fixedDelayString = "${app.sync.outbox.relay-interval-ms:10000}")
+  @Transactional
+  public void scheduledRelayToLegacy() {
+    // 和 LegacySyncService 一样，这里只关闭后台自动轮询，不移除服务 bean。
+    if (!appProperties.getSync().isSchedulerEnabled()) {
+      return;
+    }
+    relayToLegacy();
+  }
+
   @Transactional
   public void relayToLegacy() {
     if (!appProperties.getSync().getOutbox().isEnabled()) {

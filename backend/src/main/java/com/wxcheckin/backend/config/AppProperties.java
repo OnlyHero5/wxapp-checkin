@@ -127,8 +127,24 @@ public class AppProperties {
   }
 
   public static class SyncProperties {
+    /**
+     * 是否允许后台定时任务自动运行。
+     *
+     * <p>注意这里控制的是“调度入口”，不是“服务能力”本身：
+     * 即使关闭后台调度，业务代码和测试仍然应该能够手动调用
+     * `LegacySyncService` / `OutboxRelayService` 来完成一次同步。</p>
+     */
+    private boolean schedulerEnabled = true;
     private final LegacySyncProperties legacy = new LegacySyncProperties();
     private final OutboxProperties outbox = new OutboxProperties();
+
+    public boolean isSchedulerEnabled() {
+      return schedulerEnabled;
+    }
+
+    public void setSchedulerEnabled(boolean schedulerEnabled) {
+      this.schedulerEnabled = schedulerEnabled;
+    }
 
     public LegacySyncProperties getLegacy() {
       return legacy;

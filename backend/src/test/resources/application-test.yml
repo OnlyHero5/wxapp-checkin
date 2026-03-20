@@ -25,6 +25,7 @@ app:
       username:
       password:
   sync:
+    scheduler-enabled: false
     legacy:
       enabled: false
     outbox:
