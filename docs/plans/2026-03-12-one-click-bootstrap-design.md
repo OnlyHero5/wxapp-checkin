@@ -1,5 +1,7 @@
 # wxapp-checkin 一键配置/一键启动（local + docker）设计
 
+> 历史说明（2026-03-20）：本文中的 `start-test-env.sh` 行为描述已经过时；当前仓库的 local 启动入口不再重置任何数据库，只保留安全启动能力。
+
 **目标**：把 `wxapp-checkin` 的本地联调与演示环境收敛成“开箱即用”的命令集，首次接手的人只需要一次 bootstrap，就能用一条命令启动（local 或 docker 两套均可）。
 
 > 说明：本文档只覆盖“一键配置/一键启动”与相关脚本/文档收口，不改变现有业务逻辑与产品基线（Web-only）。
@@ -170,4 +172,3 @@ cd wxapp-checkin
 ## 9. 回滚策略
 
 - 所有改动集中在 `wxapp-checkin` 仓库内，且以新增脚本/文档与少量默认路径调整为主；如需回滚，只需删除新增脚本并还原 `backend/scripts/start-test-env.sh` 的 env 文件默认路径即可。
-

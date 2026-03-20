@@ -5,6 +5,11 @@
 # 1. cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
 # 2. 按本机 MySQL / Redis 实际情况修改下面变量
 # 3. 再执行 `./scripts/start-test-env.sh`
+#
+# 说明：
+# - `start-test-env.sh` 现在只负责加载本地环境并启动后端；
+# - 它不会重置 `suda_union`，也不会清空扩展库业务数据；
+# - 为避免误连真实环境，默认只接受 loopback 主机（127.0.0.1 / localhost / ::1）。
 
 export SPRING_PROFILES_ACTIVE=dev
 export SERVER_PORT=9989

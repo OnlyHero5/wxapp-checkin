@@ -7,9 +7,9 @@ DEFAULT_ENV_FILE="${PROJECT_ROOT}/.env.test.local.sh"
 LEGACY_ENV_FILE="${HOME}/.wxapp-checkin-test-env.sh"
 
 # 说明：
-# - 历史默认把测试环境变量写到 `~/.wxapp-checkin-test-env.sh`，不利于复现且会把配置落到工作区外；
-# - 现在默认收敛到仓库内的 `backend/.env.test.local.sh`；
-# - 仍保留 `WXAPP_TEST_ENV_FILE` 显式覆盖与 legacy fallback（仅兼容）。
+# - 该脚本现在只负责加载“仓库内的本地联调环境变量”并启动后端；
+# - 已明确移除任何 legacy(suda_union) / 扩展库重置逻辑，避免仓库继续携带毁库能力；
+# - 为避免误连远程数据库，这个入口只允许 loopback 主机，超出范围请改用更显式的手工启动方式。
 ENV_FILE="${WXAPP_TEST_ENV_FILE:-}"
 if [[ -z "${ENV_FILE}" ]]; then
   if [[ -f "${DEFAULT_ENV_FILE}" ]]; then
@@ -40,16 +40,25 @@ export LEGACY_SYNC_ENABLED="${LEGACY_SYNC_ENABLED:-true}"
 export LEGACY_SYNC_INTERVAL_MS="${LEGACY_SYNC_INTERVAL_MS:-2000}"
 export OUTBOX_RELAY_ENABLED="${OUTBOX_RELAY_ENABLED:-true}"
 export OUTBOX_RELAY_INTERVAL_MS="${OUTBOX_RELAY_INTERVAL_MS:-2000}"
-DB_HOST="${DB_HOST:-127.0.0.1}"
-DB_PORT="${DB_PORT:-3306}"
-DB_USER="${DB_USER:-root}"
-DB_PASSWORD="${DB_PASSWORD:-}"
-EXT_SCHEMA="${DB_NAME:-wxcheckin_ext}"
 
-MYSQL_ARGS=(-h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}")
-if [[ -n "${DB_PASSWORD}" ]]; then
-  MYSQL_ARGS+=(-p"${DB_PASSWORD}")
-fi
+DB_HOST="${DB_HOST:-127.0.0.1}"
+LEGACY_DB_URL="${LEGACY_DB_URL:-}"
+
+is_local_host() {
+  case "${1:-}" in
+    ""|127.0.0.1|localhost|::1) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+extract_jdbc_host() {
+  local jdbc_url="${1:-}"
+  if [[ -z "${jdbc_url}" ]]; then
+    echo ""
+    return 0
+  fi
+  sed -n 's#^jdbc:mysql://\([^/:?]*\).*#\1#p' <<<"${jdbc_url}" | head -n 1
+}
 
 extract_pid_on_port() {
   local port="$1"
@@ -82,75 +91,36 @@ stop_existing_backend_on_port() {
   fi
 }
 
-table_exists() {
-  local table_name="$1"
-  local count
-  count="$(mysql "${MYSQL_ARGS[@]}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${EXT_SCHEMA}' AND table_name='${table_name}'" 2>/dev/null || echo 0)"
-  [[ "${count}" == "1" ]]
-}
-
-reset_wx_identity_bindings() {
-  if ! table_exists "wx_user_auth_ext"; then
-    echo "[start-test-env] Skip ext data reset: ${EXT_SCHEMA}.wx_user_auth_ext not found."
-    return 0
+ensure_safe_local_targets() {
+  # 说明：
+  # - local 启动入口只服务于“本机回环地址上的自管环境”；
+  # - 如果 DB/legacy 指向远程主机，虽然本脚本已不再重置数据，但仍可能把联调流量打到真实环境；
+  # - 因此这里直接拒绝，避免把“方便启动”误用成“远程环境运维入口”。
+  if [[ "${SPRING_PROFILES_ACTIVE}" == "prod" ]]; then
+    echo "[start-test-env] Refuse to run in prod profile." >&2
+    exit 1
+  fi
+  if ! is_local_host "${DB_HOST}"; then
+    echo "[start-test-env] DB_HOST=${DB_HOST} is not local. This entry only supports loopback databases." >&2
+    exit 1
   fi
 
-  echo "[start-test-env] Resetting Web identity/session data in ${EXT_SCHEMA}."
-  local reset_tables=(
-    wx_session
-    wx_user_activity_status
-    wx_checkin_event
-    wx_qr_issue_log
-    wx_replay_guard
-    wx_sync_outbox
-    wx_user_auth_ext
-  )
-
-  for table_name in "${reset_tables[@]}"; do
-    if table_exists "${table_name}"; then
-      mysql "${MYSQL_ARGS[@]}" -D "${EXT_SCHEMA}" -e "DELETE FROM \`${table_name}\`;"
-    fi
-  done
+  local legacy_host
+  legacy_host="$(extract_jdbc_host "${LEGACY_DB_URL}")"
+  if [[ -n "${legacy_host}" ]] && ! is_local_host "${legacy_host}"; then
+    echo "[start-test-env] LEGACY_DB_URL host=${legacy_host} is not local. This entry only supports loopback legacy DB." >&2
+    exit 1
+  fi
 }
 
 echo "[start-test-env] Profile: ${SPRING_PROFILES_ACTIVE}"
 echo "[start-test-env] Port: ${SERVER_PORT}"
 echo "[start-test-env] Legacy sync: ${LEGACY_SYNC_ENABLED} (${LEGACY_SYNC_INTERVAL_MS} ms)"
 echo "[start-test-env] Outbox relay: ${OUTBOX_RELAY_ENABLED} (${OUTBOX_RELAY_INTERVAL_MS} ms)"
+echo "[start-test-env] Safe mode: no database reset, no legacy reseed."
 
-is_local_db_host() {
-  case "${DB_HOST}" in
-    127.0.0.1|localhost|::1) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
-ensure_destructive_test_mode() {
-  # 说明：
-  # - 该脚本会调用 reset-suda-union-test-data.sh（drop + recreate legacy 测试表）；
-  # - 为避免生产误用，必须显式声明“我在测试环境，允许破坏性重置”。
-  if [[ "${SPRING_PROFILES_ACTIVE}" == "prod" ]]; then
-    echo "[start-test-env] Refuse to run in prod profile." >&2
-    exit 1
-  fi
-  if [[ "${WXAPP_CHECKIN_TEST_MODE:-}" != "1" ]]; then
-    echo "[start-test-env] Refuse to run destructive test reset without WXAPP_CHECKIN_TEST_MODE=1." >&2
-    echo "[start-test-env] Recommended: cd wxapp-checkin && ./scripts/dev.sh local" >&2
-    exit 1
-  fi
-  if ! is_local_db_host && [[ "${WXAPP_CHECKIN_TEST_MODE_ALLOW_REMOTE_DB:-}" != "1" ]]; then
-    echo "[start-test-env] DB_HOST=${DB_HOST} is not local." >&2
-    echo "[start-test-env] If you really want to reset a remote TEST database, set WXAPP_CHECKIN_TEST_MODE_ALLOW_REMOTE_DB=1." >&2
-    exit 1
-  fi
-}
-
-ensure_destructive_test_mode
-
+ensure_safe_local_targets
 stop_existing_backend_on_port "${SERVER_PORT}"
-
-"${SCRIPT_DIR}/reset-suda-union-test-data.sh"
-reset_wx_identity_bindings
 
 cd "${PROJECT_ROOT}"
 exec ./scripts/start-dev.sh

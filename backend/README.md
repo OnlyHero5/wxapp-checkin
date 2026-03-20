@@ -11,8 +11,7 @@
 
 ## 0) 目录速览
 
-- `scripts/start-test-env.sh`：本地联调一键启动（会重置测试数据）
-- `scripts/reset-suda-union-test-data.sh`：只重置 `suda_union` 测试数据
+- `scripts/start-test-env.sh`：本地联调安全启动（只加载本地环境并启动后端，不再重置任何数据库）
 - `scripts/bootstrap-prod-schema.sql`：生产扩展库建表脚本（不含演示数据）
 - `src/main/resources/application.yml`：基础配置（全部由环境变量覆盖）
 - `src/main/resources/application-prod.yml`：生产 profile 覆盖（启用 Flyway，使用 `db/migration_prod`）
@@ -264,16 +263,20 @@ cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
 - `REDIS_*` 能连接本地 Redis
 - `QR_SIGNING_KEY` 不为空
 
-### 3.2 一键启动（会覆盖测试数据）
+### 3.2 一键启动（安全模式，不重置数据库）
 
 ```bash
 cd /path/to/wxapp-checkin/backend
 chmod +x scripts/*.sh
-export WXAPP_CHECKIN_TEST_MODE=1
 ./scripts/start-test-env.sh
 ```
 
-> 注意：该脚本会重置 legacy（`suda_union`）测试数据（drop + recreate），因此默认增加安全护栏，必须显式设置 `WXAPP_CHECKIN_TEST_MODE=1` 才允许运行（生产环境禁止）。
+说明：
+
+- 该脚本现在只负责加载 `backend/.env.test.local.sh`（或 `WXAPP_TEST_ENV_FILE`）并启动后端。
+- 该脚本不会重置 legacy（`suda_union`），也不会清空扩展库业务数据。
+- 为避免把“本地联调入口”误连到真实环境，脚本只允许 loopback 数据库地址；若 `DB_HOST` 或 `LEGACY_DB_URL` 指向远程主机，会直接拒绝执行。
+- 如果你需要一套可随时丢弃的演示数据，请优先使用上面的 Docker Compose 方案。
 
 该脚本默认：
 - `SPRING_PROFILES_ACTIVE=dev`
@@ -302,7 +305,7 @@ npm run dev
 curl http://127.0.0.1:9989/actuator/health
 ```
 
-详细说明与测试账号见：`TEST_ENV_TESTING.md`
+详细说明与安全边界见：`TEST_ENV_TESTING.md`
 
 ### 3.3 登录说明（默认密码与强制改密）
 

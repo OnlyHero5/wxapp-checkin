@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # wxapp-checkin 一键启动：
-# - local：依赖本机 MySQL/Redis，启动后端（默认 9989）+ web dev server；
+# - local：依赖本机 MySQL/Redis，安全地启动后端（默认 9989）+ web dev server；
 # - docker：使用 backend/docker-compose.yml 启动 MySQL/Redis/backend（默认 8080）+ web dev server；
 # - 运行日志与 pid 落在 runtime 目录（优先 workspace local_dev/runtime，其次仓库 local_dev/runtime）。
 
@@ -90,8 +90,9 @@ start_backend_local() {
   local log_file="${rt_dir}/backend-local.log"
   local pid_file="${rt_dir}/backend-local.pid"
 
-  log "Starting backend (local)..."
-  (cd "${REPO_ROOT}/backend" && WXAPP_CHECKIN_TEST_MODE=1 ./scripts/start-test-env.sh) >"${log_file}" 2>&1 &
+  # 说明：local 模式现在只启动后端，不再附带任何数据库重置动作。
+  log "Starting backend (local, safe mode)..."
+  (cd "${REPO_ROOT}/backend" && ./scripts/start-test-env.sh) >"${log_file}" 2>&1 &
   local pid="$!"
   echo "${pid}" >"${pid_file}"
   log "Backend PID: ${pid} (log: ${log_file})"

@@ -1,53 +1,48 @@
-# 后端测试一键脚本说明（Linux）
+# 后端本地联调环境说明（安全版）
 
-> 说明：本文档描述的是当前 `backend/scripts/*.sh` 测试环境脚本与历史联调口径，主要用于迁移期运维和排障参考，不是手机 Web 正式接入文档。正式产品基线请阅读 `../docs/REQUIREMENTS.md`、`../docs/FUNCTIONAL_SPEC.md`、`../docs/API_SPEC.md`。
+> 说明：为避免仓库继续携带“可直接重建 `suda_union`”的危险能力，`wxapp-checkin/backend` 已移除所有 legacy 毁库脚本。本文档只说明当前仍保留的**安全本地启动方式**。
 
-本文档说明 `backend/scripts/start-test-env.sh` 与 `backend/scripts/reset-suda-union-test-data.sh` 的作用与用法。
-
-## 1. 脚本作用
+## 1. 当前保留的本地入口
 
 ### `scripts/start-test-env.sh`
-- 一键加载测试环境变量（默认 `backend/.env.test.local.sh`；仍兼容旧 `~/.wxapp-checkin-test-env.sh` 但不再推荐）。
-- 安全护栏：该脚本会执行 legacy 测试数据重置（drop + recreate），因此必须显式设置 `WXAPP_CHECKIN_TEST_MODE=1` 才允许运行（生产环境禁止）。
-- 自动设置测试运行参数：
+
+作用：
+
+- 加载 `backend/.env.test.local.sh`（可用 `WXAPP_TEST_ENV_FILE` 覆盖）。
+- 默认补齐本地联调常用参数：
   - `SPRING_PROFILES_ACTIVE=dev`
   - `SERVER_PORT=9989`
   - `LEGACY_SYNC_ENABLED=true`
   - `LEGACY_SYNC_INTERVAL_MS=2000`
   - `OUTBOX_RELAY_ENABLED=true`
   - `OUTBOX_RELAY_INTERVAL_MS=2000`
-- **每次启动前强制执行** `scripts/reset-suda-union-test-data.sh`，覆盖测试数据。
-- 每次启动前还会清空扩展库中的 Web 身份与关联测试数据（确保“新一轮测试从全新账号密码态开始”）：
-  - `wx_user_auth_ext`
-  - `wx_session`
-  - `wx_user_activity_status`
-  - `wx_checkin_event`
-  - `wx_qr_issue_log`
-  - `wx_replay_guard`
-  - `wx_sync_outbox`
-- 如果 `9989` 端口被旧的本项目后端进程占用，会先自动停止旧进程后再启动新实例。
+- 如果 `9989` 端口已被本项目旧后端占用，会先停止旧实例再启动新实例。
 - 最后调用 `scripts/start-dev.sh` 启动后端。
 
-### `scripts/reset-suda-union-test-data.sh`
-- 连接测试 MySQL（读取 `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD`）。
-- 重建/清空并写入 `suda_union` 下测试表数据：
-  - `suda_user`
-  - `suda_activity`
-  - `suda_activity_apply`
-- 覆盖场景包括：
-  - 管理员候选、普通用户
-  - 活动进行中/已结束
-  - 已报名未签到、已签到未签退、已签退、取消报名
-- 如果扩展库 `wx_admin_roster` 已存在，自动写入管理员白名单（`2025000007 刘洋`、`2025000008 王敏`）。
+安全边界：
+
+- **不会**重置 `suda_union`。
+- **不会**清空 `wxcheckin_ext` 的业务数据。
+- **不会**再执行任何跨项目数据库重建脚本。
+- 只允许 loopback 数据库地址：
+  - `DB_HOST` 必须是 `127.0.0.1` / `localhost` / `::1`
+  - `LEGACY_DB_URL` 的 host 也必须是本机回环地址
+- 若配置成远程数据库地址，脚本会直接拒绝执行，避免误把“本地联调入口”打到真实环境。
 
 ## 2. 使用方式
 
 在项目根目录执行：
 
 ```bash
-cd /path/to/wxapp-checkin/backend
-chmod +x scripts/start-test-env.sh scripts/reset-suda-union-test-data.sh
-export WXAPP_CHECKIN_TEST_MODE=1
+cd /path/to/wxapp-checkin
+cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
+```
+
+按你的本机 MySQL / Redis 实际情况修改 `backend/.env.test.local.sh` 后，再启动：
+
+```bash
+cd backend
+chmod +x scripts/*.sh
 ./scripts/start-test-env.sh
 ```
 
@@ -75,34 +70,26 @@ curl http://127.0.0.1:9989/actuator/health
 
 注意：
 
-- 不再存在历史小程序 `baseUrl` 配置入口。
-- 如果你改了后端端口，请同步修改 `web/.env.local` 中的 `VITE_API_PROXY_TARGET`。
+- 本地直连模式不再内置“固定测试账号重置”。
+- 你在 local 模式下看到的账号、活动与报名数据，取决于你本机数据库当前已有的内容。
+- 如果你需要一套可随时丢弃、彼此隔离的演示数据，请优先使用 Docker Compose 模式。
 
-## 4. 测试账号（学号 + 初始密码）
+## 4. 推荐的隔离演示方式
 
-说明：
+如果你的目标是“要一套随时可删的演示环境”，推荐走仓库根目录的一键入口：
 
-- 登录账号口径统一为学号 `student_id`。
-- 初始密码固定为 `123`；首次登录成功后必须修改密码。
+```bash
+cd /path/to/wxapp-checkin
+./scripts/dev.sh docker
+```
 
-### 管理员测试账号（应为 `staff`）
-- 初始密码：`123`
-- `2025000007` / `刘洋`
-- `2025000008` / `王敏`
+原因：
 
-### 普通用户测试账号（应为 `normal`）
-- 初始密码：`123`
-- `2025000101` / `张三`
-- `2025000102` / `李四`
-- `2025000103` / `王五`
-- `2025000104` / `赵六`
-- `2025000105` / `孙七`
-- `2025000106` / `周八`
-- `2025000107` / `吴九`
+- Docker Compose 使用容器内 MySQL / Redis，默认不会碰你的本机数据库。
+- 它更适合做演示、冒烟和一次性联调验证。
+- 这样可以把“可丢弃的 demo 数据”和“你本机手工维护的数据”明确隔离开。
 
-## 5. 注意事项
+## 5. 维护约束
 
-- 本脚本仅用于测试/联调环境，禁止用于生产环境。
-- 每次执行 `start-test-env.sh` 都会覆盖 `suda_union` 测试数据，请勿在该库保存手工数据。
-- 每次执行 `start-test-env.sh` 都会重置扩展库中的 Web 身份与会话数据（包括 `wx_user_auth_ext`、`wx_session`），因此你的改密记录也会被清空。
-- 当前项目正式登录流程是“学号 + 密码（默认 123，首次登录强制改密）+ session_token”；不再依赖 Passkey/WebAuthn，也不再要求浏览器唯一绑定。
+- 不要在 `wxapp-checkin/backend` 重新引入任何“重建 / 清空 / 覆盖 `suda_union`”的脚本。
+- 若后续确实需要做 destructive 测试，应放在独立、显式、隔离的测试基础设施中，而不是留在当前业务仓库的默认启动链路里。

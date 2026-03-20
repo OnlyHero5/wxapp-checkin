@@ -23,10 +23,10 @@
 | 目标 | 先看哪里 | 说明 |
 | --- | --- | --- |
 | 快速理解项目现状 | 当前 README | 先确认“唯一正式前端是 `web/`、唯一正式 API 是 `/api/web/**`” |
-| 本地跑起来 | 本文的“**一键启动（推荐）**” | 适合开发联调；`local` 模式会重置本地测试数据 |
+| 本地跑起来 | 本文的“**一键启动（推荐）**” | 适合开发联调；`local` 模式只启动本地服务，不再重置数据库 |
 | 完整生产部署（前后端 + Web） | `docs/DEPLOYMENT.md` | 包含后端构建、Web 打包、Nginx/网关示例与验收步骤 |
 | 生产部署后端 | `backend/README.md` | 包含 systemd、Docker Compose、环境变量与排障说明 |
-| 查看测试账号与本地测试环境细节 | `backend/TEST_ENV_TESTING.md` | 包含本地测试环境、测试账号、手工验证方式 |
+| 查看本地测试环境细节 | `backend/TEST_ENV_TESTING.md` | 包含本地测试环境、安全边界与手工验证方式 |
 | 核对正式产品/接口基线 | `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` | 需求、页面行为、接口契约三份正式基线 |
 
 ## 当前 Web 导航结构
@@ -82,7 +82,7 @@
 
 - 完整部署手册：`docs/DEPLOYMENT.md`
 - 后端部署与配置：`backend/README.md`
-- 本地测试环境与测试账号：`backend/TEST_ENV_TESTING.md`
+- 本地测试环境与安全边界：`backend/TEST_ENV_TESTING.md`
 - 数据库深度说明：`backend/DB_DATABASE_DEEP_DIVE.md`
 
 补充文档（用于设计、兼容性、审查与收尾，不替代正式基线）：
@@ -124,7 +124,7 @@ cd wxapp-checkin
 
 ```bash
 # 本机 MySQL/Redis + 后端 9989 + web dev
-# 注意：会重置本地测试数据（包括 suda_union 测试数据）
+# 只启动本地联调服务，不重置任何数据库
 ./scripts/dev.sh local
 
 # 或：Docker Compose (MySQL + Redis + Backend 8080) + web dev（Vite docker mode）
@@ -151,7 +151,8 @@ cd wxapp-checkin
 
 - `web/.env.example` 给出了默认开发配置（local 默认代理到 `http://127.0.0.1:9989`）。
 - docker 模式通过 `vite --mode docker` 读取 `web/.env.docker.local` 覆盖 `web/.env.local`，默认代理到 `http://127.0.0.1:8080`。
-- `./scripts/dev.sh local` 内部会调用 `backend/scripts/start-test-env.sh`，该脚本会重置本地测试数据；如果你只想连现有测试库排障，请改走本文“手动启动（排障用）”。
+- `./scripts/dev.sh local` 内部会调用 `backend/scripts/start-test-env.sh`；该脚本现在只加载本地 env 并启动后端，不再内置任何 legacy / 扩展库重置逻辑。
+- `backend/scripts/start-test-env.sh` 默认只允许 loopback 数据库地址，避免把“本地联调入口”误连到远程环境。
 - 若要和 `suda-gs-ams` 共域部署，建议至少设置：
   - `VITE_APP_BASE_PATH=/checkin/`
   - `VITE_API_BASE_PATH=/checkin-api/web`
@@ -201,9 +202,14 @@ cp backend/scripts/test-env.example.sh backend/.env.test.local.sh
 
 ```bash
 cd backend
-export WXAPP_CHECKIN_TEST_MODE=1
 ./scripts/start-test-env.sh
 ```
+
+说明：
+
+- 该脚本现在只会加载 `backend/.env.test.local.sh`（或你通过 `WXAPP_TEST_ENV_FILE` 指定的文件）并启动后端。
+- 该脚本不会重置 `suda_union`，也不会清空扩展库业务数据。
+- 若 `DB_HOST` 或 `LEGACY_DB_URL` 指向非本机回环地址，脚本会直接拒绝执行。
 
 2. 启动前端开发服务器：
 

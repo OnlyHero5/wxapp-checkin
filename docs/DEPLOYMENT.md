@@ -156,4 +156,4 @@ curl -I http://<your-host>/checkin/
 - `prod` 下把 `LEGACY_SYNC_ENABLED` 或 `OUTBOX_RELAY_ENABLED` 设成 `false`
   - 结果：后端会被安全护栏拒绝启动
 - 本地联调误用 `./scripts/dev.sh local`
-  - 结果：会重置本地测试数据；如果只是排障现有测试库，请改用手动启动
+  - 结果：当前不会再重置数据库，但该入口只允许 loopback 数据库地址；如果你需要远程排障，请改用更显式的手动启动方式

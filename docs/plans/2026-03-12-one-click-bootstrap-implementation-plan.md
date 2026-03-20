@@ -1,5 +1,7 @@
 # 一键配置/一键启动（local + docker）Implementation Plan
 
+> 历史说明（2026-03-20）：本文成文时 `start-test-env.sh` 仍带有旧的测试重置语义；当前仓库已移除 legacy 毁库脚本，并把该入口改成“只加载本地环境并启动后端”的安全模式。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** 为 `wxapp-checkin` 提供可复用的一键 bootstrap + 一键启动（local / docker）脚本，并把本地配置文件默认落盘到仓库内且不污染 git 状态。
@@ -201,4 +203,3 @@ Expected:
 
 Run: `./scripts/stop.sh`  
 Expected: docker 容器停止；local 后端端口释放；`git status --porcelain` 仍为空
-

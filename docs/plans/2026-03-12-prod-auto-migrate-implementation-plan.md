@@ -1,5 +1,7 @@
 # 生产环境自动迁移 + 测试/生产隔离 Implementation Plan
 
+> 历史说明（2026-03-20）：本文提到的 `reset-suda-union-test-data.sh`、三项目 destructive E2E 脚本与 `WXAPP_CHECKIN_TEST_MODE` 链路已从当前仓库移除，不能再按本文旧步骤执行。
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** `prod` profile 下自动完成 `wxcheckin_ext` 建库（可选）+ Flyway 自动迁移，并为测试重置脚本加硬护栏，避免生产误用；同时提供独立的生产启动入口脚本。
@@ -179,4 +181,3 @@ Run: `bash -n wxapp-checkin/scripts/*.sh wxapp-checkin/backend/scripts/*.sh`
 
 Run: `cd wxapp-checkin && git status --porcelain`  
 Expected: 为空
-
