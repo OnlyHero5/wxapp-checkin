@@ -34,6 +34,11 @@ function resolveErrorMessage(error: unknown) {
   return "活动详情加载失败，请稍后重试。";
 }
 
+function resolveActionAccentTone(actionType: "checkin" | "checkout") {
+  // 详情页按钮只按动作语义映射 accent，避免把 tone 判断散在 JSX 分支里。
+  return actionType === "checkout" ? "checkout" : "checkin";
+}
+
 export function ActivityDetailPage() {
   const { activityId = "" } = useParams();
 
@@ -158,10 +163,19 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         ) : null}
         {/* 签到和签退入口互相独立显示，避免用一个按钮切来切去造成误操作。 */}
         {!isStaff && canCheckin ? (
-          <AppButton onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkin"))}>去签到</AppButton>
+          <AppButton
+            accentTone={resolveActionAccentTone("checkin")}
+            onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkin"))}
+          >
+            去签到
+          </AppButton>
         ) : null}
         {!isStaff && canCheckout ? (
-          <AppButton onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkout"))} tone="secondary">
+          <AppButton
+            accentTone={resolveActionAccentTone("checkout")}
+            onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkout"))}
+            tone="secondary"
+          >
             去签退
           </AppButton>
         ) : null}

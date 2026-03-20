@@ -95,7 +95,13 @@ describe("CheckinPage", () => {
     const input = await screen.findByLabelText("签到验证码");
     const submitButton = screen.getByRole("button", { name: "提交签到码" });
 
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkin");
+    expect(screen.getByText("请在当前活动下输入 6 位动态验证码").closest(".code-input-shell")).toHaveClass(
+      "code-input-shell",
+      "code-input-shell--tone-checkin"
+    );
     expect(screen.getByText("请在当前活动下输入 6 位动态验证码")).toBeInTheDocument();
+    expect(submitButton).toHaveClass("app-button--accent-checkin");
     expect(submitButton).toBeDisabled();
 
     await user.type(input, "12ab34 56");
@@ -149,8 +155,14 @@ describe("CheckinPage", () => {
     renderAttendancePage("/activities/act_101/checkout");
 
     expect(await screen.findByRole("heading", { name: "活动签退" })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkout");
+    expect(screen.getByText("请在当前活动下输入 6 位动态验证码").closest(".code-input-shell")).toHaveClass(
+      "code-input-shell",
+      "code-input-shell--tone-checkout"
+    );
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_101");
+    expect(screen.getByRole("button", { name: "提交签退码" })).toHaveClass("app-button--accent-checkout");
     await user.type(screen.getByLabelText("签退验证码"), "654321");
     await user.click(screen.getByRole("button", { name: "提交签退码" }));
 

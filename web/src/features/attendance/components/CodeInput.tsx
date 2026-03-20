@@ -1,5 +1,6 @@
 import { AppButton } from "../../../shared/ui/AppButton";
 import { InlineNotice } from "../../../shared/ui/InlineNotice";
+import type { VisualTone } from "../../../shared/ui/visual-tone";
 
 /**
  * 动态码输入组件负责“输入体验”而不是“业务动作”：
@@ -16,6 +17,7 @@ type CodeInputProps = {
   onSubmit: () => Promise<void> | void;
   pending?: boolean;
   submitText: string;
+  tone?: Extract<VisualTone, "checkin" | "checkout">;
   value: string;
 };
 
@@ -31,6 +33,7 @@ export function CodeInput({
   onSubmit,
   pending = false,
   submitText,
+  tone = "checkin",
   value
 }: CodeInputProps) {
   const normalizedValue = normalizeCode(value);
@@ -39,7 +42,7 @@ export function CodeInput({
 
   return (
     <section className="stack-form">
-      <div className="code-input-shell">
+      <div className={`code-input-shell code-input-shell--tone-${tone}`}>
         <label className="field" htmlFor={`${label}-input`}>
           <span>{label}</span>
           <div className="code-input-shell__surface">
@@ -60,7 +63,7 @@ export function CodeInput({
         <p className="code-input-shell__hint">请在当前活动下输入 6 位动态验证码</p>
       </div>
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
-      <AppButton disabled={!canSubmit} loading={pending} onClick={() => void onSubmit()}>
+      <AppButton accentTone={tone} disabled={!canSubmit} loading={pending} onClick={() => void onSubmit()}>
         {submitText}
       </AppButton>
     </section>

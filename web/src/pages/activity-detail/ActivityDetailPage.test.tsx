@@ -169,6 +169,39 @@ describe("ActivityDetailPage", () => {
     expect(screen.queryByRole("button", { name: "去签到" })).not.toBeInTheDocument();
   });
 
+  it("uses action-specific accent classes for attendee actions", async () => {
+    activitiesApiMocks.getActivityDetail.mockResolvedValue({
+      activity_id: "act_101",
+      activity_title: "校园志愿活动",
+      activity_type: "志愿",
+      start_time: "2026-03-10 09:00:00",
+      location: "本部操场",
+      description: "负责现场秩序维护",
+      progress_status: "ongoing",
+      support_checkin: true,
+      support_checkout: true,
+      can_checkin: true,
+      can_checkout: true,
+      my_registered: true,
+      my_checked_in: true,
+      my_checked_out: false,
+      checkin_count: 18,
+      checkout_count: 3
+    });
+
+    renderActivityDetailPage();
+
+    expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "去签到" })).toHaveClass(
+      "app-button--primary",
+      "app-button--accent-checkin"
+    );
+    expect(screen.getByRole("button", { name: "去签退" })).toHaveClass(
+      "app-button--secondary",
+      "app-button--accent-checkout"
+    );
+  });
+
   it("shows the roster entry for staff sessions and navigates to roster page", async () => {
     const user = userEvent.setup();
     saveAuthSession({

@@ -15,6 +15,7 @@ import { ApiError, PasswordChangeRequiredError, SessionExpiredError } from "../.
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
+import type { VisualTone } from "../../shared/ui/visual-tone";
 
 /**
  * 这个文件把签到页和签退页的共性逻辑收敛到 `AttendanceActionPage`。
@@ -50,6 +51,11 @@ function resolveSubmitText(actionType: ActivityActionType) {
 function resolveResultTitle(actionType: ActivityActionType) {
   // 成功结果态与输入态区分标题，有助于用户确认“已经提交完成”。
   return actionType === "checkout" ? "签退结果" : "签到结果";
+}
+
+function resolveActionTone(actionType: ActivityActionType): Extract<VisualTone, "checkin" | "checkout"> {
+  // 动作页的 tone 必须只跟动作语义绑定，不跟页面来源或文案状态绑定。
+  return actionType === "checkout" ? "checkout" : "checkin";
 }
 
 /**
@@ -98,6 +104,7 @@ type AttendanceActionPageContentProps = {
 
 function AttendanceActionPageContent({ actionType, activityId }: AttendanceActionPageContentProps) {
   const navigate = useNavigate();
+  const actionTone = resolveActionTone(actionType);
   // `code` 作为受控输入，便于统一做数字规整与按钮禁用判断。
   const [code, setCode] = useState("");
   // `detail` 决定当前页面显示什么活动、是否允许提交。
@@ -213,9 +220,10 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
     return (
       <MobilePage
         eyebrow="提交完成"
+        tone={actionTone}
         title={resolveResultTitle(actionType)}
       >
-        <section className="detail-panel">
+        <section className={`detail-panel detail-panel--tone-${actionTone}`}>
           {/* 结果页只保留最关键信息：结果、活动名、服务端时间。 */}
           <p>{result.message ?? "提交成功"}</p>
           <p>{result.activity_title}</p>
@@ -231,6 +239,7 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
   return (
     <MobilePage
       eyebrow="动态验证码"
+      tone={actionTone}
       title={resolveActionTitle(actionType)}
     >
       {/* 页面级错误一般出现在详情拉取失败阶段。 */}
@@ -241,6 +250,7 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
           <ActivityMetaPanel
             locationText={detail.location}
             timeText={detail.start_time}
+            tone={actionTone}
             title={detail.activity_title}
           />
           {isActionAllowed(detail, actionType) ? (
@@ -253,6 +263,7 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
               onSubmit={handleSubmit}
               pending={pending}
               submitText={resolveSubmitText(actionType)}
+              tone={actionTone}
               value={code}
             />
           ) : (

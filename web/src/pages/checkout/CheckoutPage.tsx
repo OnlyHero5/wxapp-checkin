@@ -7,6 +7,7 @@ import { AttendanceActionPage } from "../checkin/CheckinPage";
  * 后续若要一起调整结果页或错误处理，不会出现两边逻辑分叉。
  */
 export function CheckoutPage() {
-  // 签退页复用同一套动作页逻辑，只切换 actionType。
+  // 签退页复用同一套动作页逻辑，只切换 actionType；
+  // 最终页面 tone 和输入框 tone 都由 `checkout` 动作语义驱动。
   return <AttendanceActionPage actionType="checkout" />;
 }
