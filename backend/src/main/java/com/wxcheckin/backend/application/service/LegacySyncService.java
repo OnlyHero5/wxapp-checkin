@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -341,17 +342,37 @@ public class LegacySyncService {
       WxUserActivityStatusEntity status = statusRepository
           .findByUserIdAndActivityId(user.getId(), activity.getActivityId())
           .orElseGet(WxUserActivityStatusEntity::new);
-      status.setUser(user);
-      status.setActivityId(activity.getActivityId());
-      status.setRegistered(isRegisteredApplyState(row.applyState));
-
-      if (row.checkIn) {
-        // Legacy convention: check_out=1 means already checked out, 0 means not yet checked out.
-        status.setStatus(row.checkOut ? UserActivityState.CHECKED_OUT.getCode() : UserActivityState.CHECKED_IN.getCode());
-      } else {
-        status.setStatus(UserActivityState.NONE.getCode());
+      applyLegacyStatus(status, user, activity.getActivityId(), row);
+      try {
+        statusRepository.save(status);
+      } catch (DataIntegrityViolationException ex) {
+        // on-demand sync 与定时 pull 可能并发写同一 `(user, activity)` 状态行。
+        // 如果当前事务在“先查后插”窗口里撞上唯一键，不应让整轮同步回滚；
+        // 这里退回到“重读现有行并补写字段”，保证同步幂等收敛。
+        WxUserActivityStatusEntity existingStatus = statusRepository
+            .findByUserIdAndActivityId(user.getId(), activity.getActivityId())
+            .orElseThrow(() -> ex);
+        applyLegacyStatus(existingStatus, user, activity.getActivityId(), row);
+        statusRepository.save(existingStatus);
       }
-      statusRepository.save(status);
+    }
+  }
+
+  private void applyLegacyStatus(
+      WxUserActivityStatusEntity status,
+      WxUserAuthExtEntity user,
+      String activityId,
+      LegacyApplyRow row
+  ) {
+    status.setUser(user);
+    status.setActivityId(activityId);
+    status.setRegistered(isRegisteredApplyState(row.applyState));
+
+    if (row.checkIn) {
+      // Legacy convention: check_out=1 means already checked out, 0 means not yet checked out.
+      status.setStatus(row.checkOut ? UserActivityState.CHECKED_OUT.getCode() : UserActivityState.CHECKED_IN.getCode());
+    } else {
+      status.setStatus(UserActivityState.NONE.getCode());
     }
   }
 

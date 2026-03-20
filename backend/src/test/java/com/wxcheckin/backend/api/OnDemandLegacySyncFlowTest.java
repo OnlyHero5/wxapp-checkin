@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxActivityProjectionRepository;
+import com.wxcheckin.backend.application.service.LegacySyncService;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxAdminRosterRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxSessionRepository;
 import com.wxcheckin.backend.infrastructure.persistence.repository.WxUserActivityStatusRepository;
@@ -72,6 +73,9 @@ class OnDemandLegacySyncFlowTest {
 
   @Autowired
   private WebAdminAuditLogRepository adminAuditLogRepository;
+
+  @Autowired
+  private LegacySyncService legacySyncService;
 
   @BeforeEach
   void prepare() {
@@ -177,6 +181,30 @@ class OnDemandLegacySyncFlowTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status", is("success")))
         .andExpect(jsonPath("$.activities", hasSize(0)));
+  }
+
+  @Test
+  void shouldKeepUserStatusSyncIdempotentWhenLegacyContainsDuplicateApplyRows() throws Exception {
+    jdbcTemplate.execute("""
+        INSERT INTO suda_activity_apply (activity_id, username, state, check_in, check_out)
+        VALUES (101, '2025000011', 0, 0, 0)
+        """);
+
+    String sessionToken = loginAndChangePassword("2025000011", "new-pass-normal-duplicate-legacy");
+
+    mockMvc.perform(get("/api/web/activities")
+            .header("Authorization", "Bearer " + sessionToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.activities", hasSize(1)));
+
+    legacySyncService.syncFromLegacy();
+
+    mockMvc.perform(get("/api/web/activities")
+            .header("Authorization", "Bearer " + sessionToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andExpect(jsonPath("$.activities", hasSize(1)));
   }
 
   private String loginAndChangePassword(String studentId, String newPassword) throws Exception {

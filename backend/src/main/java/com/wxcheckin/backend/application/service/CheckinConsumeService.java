@@ -48,6 +48,7 @@ public class CheckinConsumeService {
   private final Clock clock;
   private final DynamicCodeService dynamicCodeService;
   private final InvalidCodeAttemptLimiter invalidCodeAttemptLimiter;
+  private final ActivityTimeWindowService activityTimeWindowService;
 
   public CheckinConsumeService(
       SessionService sessionService,
@@ -61,7 +62,8 @@ public class CheckinConsumeService {
       AppProperties appProperties,
       Clock clock,
       DynamicCodeService dynamicCodeService,
-      InvalidCodeAttemptLimiter invalidCodeAttemptLimiter
+      InvalidCodeAttemptLimiter invalidCodeAttemptLimiter,
+      ActivityTimeWindowService activityTimeWindowService
   ) {
     this.sessionService = sessionService;
     this.activityRepository = activityRepository;
@@ -75,6 +77,7 @@ public class CheckinConsumeService {
     this.clock = clock;
     this.dynamicCodeService = dynamicCodeService;
     this.invalidCodeAttemptLimiter = invalidCodeAttemptLimiter;
+    this.activityTimeWindowService = activityTimeWindowService;
   }
 
   @Transactional
@@ -98,6 +101,9 @@ public class CheckinConsumeService {
 
     WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue(payload.activityId())
         .orElseThrow(() -> new BusinessException("invalid_activity", "活动不存在或已下线"));
+    // 消费端必须和详情页/工作人员发码页共用同一时间窗口径；
+    // 否则 UI 已经明确提示“当前不可签到/签退”时，旧码仍可能被服务端接收，形成契约错位。
+    activityTimeWindowService.ensureWithinIssueWindow(activity);
     if (ActivityProgressStatus.fromCode(activity.getProgressStatus()) == ActivityProgressStatus.COMPLETED) {
       throw new BusinessException("forbidden", "活动已结束，无法再签到/签退");
     }

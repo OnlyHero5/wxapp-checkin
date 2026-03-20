@@ -302,6 +302,40 @@ class ApiFlowIntegrationTest {
   }
 
   @Test
+  void shouldRejectCodeConsumeOutsideActivityTimeWindow() throws Exception {
+    String staffSession = loginAndChangePassword("2025000007", "new-pass-staff-window-consume");
+    String normalSession = loginAndChangePassword("2025000011", "new-pass-normal-window-consume");
+    bindUserActivity(normalSession, "act_hackathon_20260215");
+
+    MvcResult codeResult = mockMvc.perform(get("/api/web/activities/{activityId}/code-session", "act_hackathon_20260215")
+            .header("Authorization", "Bearer " + staffSession)
+            .param("action_type", "checkin"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("success")))
+        .andReturn();
+
+    String code = objectMapper.readTree(codeResult.getResponse().getContentAsString()).get("code").asText();
+    WxActivityProjectionEntity activity = activityRepository.findByActivityIdAndActiveTrue("act_hackathon_20260215").orElseThrow();
+    Instant now = Instant.now();
+    activity.setStartTime(now.plusSeconds(5 * 60L * 60L));
+    activity.setEndTime(now.plusSeconds(6 * 60L * 60L));
+    activityRepository.save(activity);
+
+    mockMvc.perform(post("/api/web/activities/{activityId}/code-consume", "act_hackathon_20260215")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer " + normalSession)
+            .content("""
+                {
+                  "action_type":"checkin",
+                  "code":"%s"
+                }
+                """.formatted(code)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status", is("forbidden")))
+        .andExpect(jsonPath("$.error_code", is("outside_activity_time_window")));
+  }
+
+  @Test
   void shouldRejectCheckinWhenActivityDisablesCheckin() throws Exception {
     String staffSession = loginAndChangePassword(
         "2025000007",
