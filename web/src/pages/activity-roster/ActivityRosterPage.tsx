@@ -196,6 +196,7 @@ export function ActivityRosterPage() {
           返回活动详情
         </Link>
       )}
+      tone="staff"
       title="参会名单"
     >
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
@@ -212,14 +213,17 @@ export function ActivityRosterPage() {
             locationText={roster.location}
             subtitle={roster.activity_type}
             timeText={roster.start_time}
+            tone="staff"
             title={roster.activity_title}
             titleAs="p"
           />
-          <AttendanceBatchActionBar
-            disabled={adjusting}
-            onConfirm={(action) => runAdjustment(selectedIds, action, "批量")}
-            selectedCount={selectedIds.length}
-          />
+          <div data-panel-tone="staff">
+            <AttendanceBatchActionBar
+              disabled={adjusting}
+              onConfirm={(action) => runAdjustment(selectedIds, action, "批量")}
+              selectedCount={selectedIds.length}
+            />
+          </div>
           <AttendanceRosterList
             items={roster.items}
             onSingleAction={(userId, action) => runAdjustment([userId], action, "单人")}

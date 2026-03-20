@@ -895,6 +895,18 @@ select {
   gap: 16px;
 }
 
+.staff-panel[data-panel-tone="staff"] .staff-code-panel__glass,
+[data-panel-tone="staff"] .roster-batch-bar {
+  border-color: rgba(91, 91, 214, 0.2);
+  background: linear-gradient(180deg, rgba(91, 91, 214, 0.08), rgba(255, 255, 255, 0.92));
+}
+
+.staff-panel[data-panel-tone="staff"] .t-tabs,
+.staff-panel[data-panel-tone="staff"] .t-cell-group--card {
+  border-color: rgba(91, 91, 214, 0.18);
+  background: rgba(245, 246, 255, 0.84);
+}
+
 .staff-code-panel {
   position: relative;
 }

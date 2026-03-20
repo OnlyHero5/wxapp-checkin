@@ -101,7 +101,7 @@ export function DynamicCodePanel({
   }, [codeSession]);
 
   return (
-    <section className="staff-panel">
+    <section className="staff-panel" data-panel-tone="staff">
       {/* Tabs 继续走组件库能力，避免页面自己拼“选中态按钮组”。 */}
       <Tabs onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
         <TabPanel label="签到码" value="checkin" />
@@ -121,7 +121,7 @@ export function DynamicCodePanel({
         <Cell note={`${checkoutCount}`} title="签退人数" />
         <Cell note={`${checkinCount}`} title="未签退人数" />
       </CellGroup>
-      <AppButton onClick={onRefresh} tone="secondary">
+      <AppButton accentTone="staff" onClick={onRefresh} tone="secondary">
         立即刷新
       </AppButton>
     </section>

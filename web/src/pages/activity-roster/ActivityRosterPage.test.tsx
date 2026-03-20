@@ -85,10 +85,12 @@ describe("ActivityRosterPage", () => {
     renderActivityRosterPage();
 
     expect(await screen.findByRole("heading", { name: "参会名单" })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
     expect(screen.getByText("测试用户")).toBeInTheDocument();
     expect(screen.getByText("2025000011")).toBeInTheDocument();
     expect(screen.getByText("补签成员")).toBeInTheDocument();
+    expect(screen.getByText("已选 0 人").closest("[data-panel-tone]")).toHaveAttribute("data-panel-tone", "staff");
     expect(screen.getByRole("button", { name: "批量设为已签退" })).toBeInTheDocument();
   });
 

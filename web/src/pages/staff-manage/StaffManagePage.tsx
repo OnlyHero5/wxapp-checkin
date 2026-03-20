@@ -248,6 +248,7 @@ export function StaffManagePage() {
           返回活动详情
         </Link>
       )}
+      tone="staff"
       title="活动管理"
     >
       {wakeLockMessage ? <InlineNotice message={wakeLockMessage} theme="warning" /> : null}
@@ -264,6 +265,7 @@ export function StaffManagePage() {
           locationText={detail.location}
           subtitle={detail.activity_type}
           timeText={detail.start_time}
+          tone="staff"
           title={detail.activity_title}
         />
       ) : null}
