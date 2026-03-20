@@ -38,14 +38,13 @@ type ActivityDetailRow = {
 
 function resolveRows({
   checkinTimeText,
-  counts,
   checkoutTimeText,
   description,
   joinStatusText,
   locationText,
   progressText,
   timeText
-}: Omit<ActivityMetaPanelProps, "as" | "footer" | "statusSlot" | "subtitle" | "title">): {
+}: Omit<ActivityMetaPanelProps, "as" | "counts" | "footer" | "statusSlot" | "subtitle" | "title">): {
   description?: string;
   rows: ActivityDetailRow[];
 } {
@@ -177,7 +176,6 @@ export function ActivityMetaPanel({
   const TitleTag = titleAs;
   const { description: descriptionText, rows } = resolveRows({
     checkinTimeText,
-    counts,
     checkoutTimeText,
     description,
     joinStatusText,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { buildActivityDetailPath } from "../../features/activities/api";
 import {
@@ -90,7 +90,7 @@ export function ActivityRosterPage() {
   const [resultMessage, setResultMessage] = useState("");
   const requestVersionRef = useRef(0);
 
-  async function loadRoster(resetBeforeLoad: boolean) {
+  const loadRoster = useCallback(async (resetBeforeLoad: boolean) => {
     const requestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = requestVersion;
 
@@ -134,7 +134,7 @@ export function ActivityRosterPage() {
         setLoading(false);
       }
     }
-  }
+  }, [activityId, navigate]);
 
   useEffect(() => {
     void loadRoster(true);
@@ -142,7 +142,7 @@ export function ActivityRosterPage() {
     return subscribePageVisible(() => {
       void loadRoster(false);
     });
-  }, [activityId, navigate]);
+  }, [loadRoster]);
 
   async function runAdjustment(userIds: number[], action: AttendanceActionKey, reasonPrefix: "单人" | "批量") {
     if (!activityId || userIds.length === 0) {

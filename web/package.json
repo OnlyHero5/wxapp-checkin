@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "lint": "eslint src vite.config.ts --max-warnings 0",
     "test": "vitest --run",
     "test:watch": "vitest"
   },
@@ -23,7 +24,12 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
+    "@eslint/js": "^9.23.0",
+    "eslint": "^9.23.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
     "jsdom": "^25.0.1",
+    "typescript-eslint": "^8.28.0",
     "typescript": "~5.6.2",
     "vite": "^5.4.10",
     "vitest": "^2.1.4"

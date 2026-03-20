@@ -161,7 +161,14 @@ cd wxapp-checkin
 
 ```bash
 curl http://127.0.0.1:9989/actuator/health
-curl http://127.0.0.1:5174/
+curl http://127.0.0.1:5173/
+```
+
+提交前最小验证：
+
+```bash
+cd wxapp-checkin/web && npm run lint && npm test && npm run build
+cd wxapp-checkin/backend && ./mvnw test
 ```
 
 ## 生产部署

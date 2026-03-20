@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ActivityCard } from "../../features/activities/components/ActivityCard";
 import { getActivities, type ActivitySummary } from "../../features/activities/api";
@@ -53,7 +53,7 @@ export function ActivitiesPage() {
    * 列表加载逻辑独立成函数，而不是直接写在 `useEffect` 里，
    * 是为了让“首次加载”和“手动重试”共用同一套行为。
    */
-  async function loadFirstPage() {
+  const loadFirstPage = useCallback(async () => {
     // 每次发起新请求都推进一个版本号，后返回的旧请求会被自动丢弃。
     const requestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = requestVersion;
@@ -92,7 +92,7 @@ export function ActivitiesPage() {
         setLoading(false);
       }
     }
-  }
+  }, [navigate]);
 
   async function loadMorePage() {
     if (loadingMore || loading || !hasMore) {
@@ -137,7 +137,7 @@ export function ActivitiesPage() {
   useEffect(() => {
     // 首次进入列表页立即拉数据，不依赖用户手动触发。
     void loadFirstPage();
-  }, []);
+  }, [loadFirstPage]);
 
   const isStaff = isStaffSession();
   const eyebrow = isStaff ? "工作人员" : "普通用户";

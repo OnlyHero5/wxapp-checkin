@@ -128,6 +128,7 @@
 ## 4. 快速验证命令（复制即用）
 
 - Web 单测/构建：
+  - `cd wxapp-checkin/web && npm run lint`
   - `cd wxapp-checkin/web && npm test`
   - `cd wxapp-checkin/web && npm run build`
 - 后端单测：
@@ -135,4 +136,4 @@
 - 三项目联调启动：
   - `cd /home/psx/app && ./local_dev/scripts/start_3_projects_integration.sh`
 - 端口占用排查（可选）：
-  - `ss -ltnp | rg ':(8088|5173|9989|5174)\\b'`
+  - `ss -ltnp | rg ':(8088|5173|9989)\\b'`

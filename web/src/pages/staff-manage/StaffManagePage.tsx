@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   buildActivityDetailPath,
@@ -56,7 +56,7 @@ export function StaffManagePage() {
 
   const loading = detailLoading || codeSessionLoading;
 
-  async function loadDetail(resetBeforeLoad: boolean) {
+  const loadDetail = useCallback(async (resetBeforeLoad: boolean) => {
     const requestVersion = detailRequestVersionRef.current + 1;
     detailRequestVersionRef.current = requestVersion;
 
@@ -96,9 +96,12 @@ export function StaffManagePage() {
         setDetailLoading(false);
       }
     }
-  }
+  }, [activityId, navigate]);
 
-  async function loadCodeSession(nextActionType: ActivityActionType, resetBeforeLoad: boolean) {
+  const loadCodeSession = useCallback(async (
+    nextActionType: ActivityActionType,
+    resetBeforeLoad: boolean
+  ) => {
     const requestVersion = codeSessionRequestVersionRef.current + 1;
     codeSessionRequestVersionRef.current = requestVersion;
 
@@ -138,17 +141,21 @@ export function StaffManagePage() {
         setCodeSessionLoading(false);
       }
     }
-  }
+  }, [activityId, navigate]);
 
-  async function refreshPage(options: { reloadDetail: boolean; resetDetail: boolean; resetCodeSession: boolean }) {
+  const refreshPage = useCallback(async (options: {
+    reloadDetail: boolean;
+    resetDetail: boolean;
+    resetCodeSession: boolean;
+  }) => {
     setErrorMessage("");
     await Promise.all([
       options.reloadDetail ? loadDetail(options.resetDetail) : Promise.resolve(),
       loadCodeSession(actionType, options.resetCodeSession)
     ]);
-  }
+  }, [actionType, loadCodeSession, loadDetail]);
 
-  async function releaseWakeLock() {
+  const releaseWakeLock = useCallback(async () => {
     const currentWakeLock = wakeLockRef.current;
     wakeLockRef.current = null;
     if (!currentWakeLock?.release) {
@@ -160,9 +167,9 @@ export function StaffManagePage() {
     } catch {
       return;
     }
-  }
+  }, []);
 
-  async function requestWakeLock() {
+  const requestWakeLock = useCallback(async () => {
     if (typeof document !== "undefined" && document.visibilityState === "hidden") {
       return;
     }
@@ -179,7 +186,7 @@ export function StaffManagePage() {
     } catch {
       setWakeLockMessage("无法自动保持屏幕常亮，请手动关闭自动锁屏或保持屏幕常亮。");
     }
-  }
+  }, []);
 
   useEffect(() => {
     void requestWakeLock();
@@ -187,7 +194,7 @@ export function StaffManagePage() {
     return () => {
       void releaseWakeLock();
     };
-  }, []);
+  }, [releaseWakeLock, requestWakeLock]);
 
   useEffect(() => {
     const activityChanged = previousActivityIdRef.current !== activityId;
@@ -208,7 +215,7 @@ export function StaffManagePage() {
         resetDetail: false
       });
     });
-  }, [activityId, actionType, navigate]);
+  }, [actionType, activityId, refreshPage, requestWakeLock]);
 
   async function handleBulkCheckout(reason: string) {
     setBulkPending(true);

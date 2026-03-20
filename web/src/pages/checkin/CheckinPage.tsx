@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { CodeInput } from "../../features/attendance/components/CodeInput";
 import {
@@ -126,7 +126,7 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
    * 2. 是否允许签到/签退需要依赖最新状态，而不是只看 URL；
    * 3. 页面从后台切回来后，详情是最便宜、最可靠的刷新来源。
    */
-  async function loadDetail() {
+  const loadDetail = useCallback(async () => {
     // 任何较早返回的请求，只要版本落后，就不允许覆盖最新活动状态。
     const requestVersion = detailRequestVersionRef.current + 1;
     detailRequestVersionRef.current = requestVersion;
@@ -160,7 +160,7 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
         setPageError(error instanceof Error && error.message ? error.message : "活动信息加载失败");
       }
     }
-  }
+  }, [activityId, navigate]);
 
   useEffect(() => {
     // 首次进入页面先拉详情，确保动作合法性判断以后端最新状态为准。
@@ -170,7 +170,7 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
       // 页面从后台切回前台时重新拉详情，避免用户拿着旧状态继续操作。
       void loadDetail();
     });
-  }, [activityId, navigate]);
+  }, [loadDetail]);
 
   /**
    * 提交流程刻意保持线性：
