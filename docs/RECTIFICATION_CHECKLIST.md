@@ -24,7 +24,7 @@
   - 活动列表分页：`page/page_size/has_more` 与前端“加载更多”
   - 契约一致性复测：详情 `can_checkin/can_checkout` 与 staff 发码时间窗一致（开始前30分钟~结束后30分钟）
 - 当前缺口（仍建议补“单文档总览”）：
-  - `wxapp-checkin/web -> wxapp-checkin/backend -> outbox -> suda_union -> suda-gs-ams` 的闭环验证证据已落盘在 `docs/TEST_REPORT_2026-03-11_FULL_COVERAGE.md`；本清单仍缺一个直接跳转到该证据的汇总入口
+  - `wxapp-checkin/web -> wxapp-checkin/backend -> outbox -> suda_union -> suda-gs-ams` 的闭环验证证据已落盘在 `docs/TEST_REPORT_2026-03-11_FULL_COVERAGE.md`；后续可再整理成“一页式总览”，方便新对话快速跳转
 
 ## 1. 严重级定义
 

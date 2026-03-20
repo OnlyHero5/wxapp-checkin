@@ -218,6 +218,8 @@ cp .env.example .env
 
 - 当前 compose 已通过 MySQL init 脚本自动初始化 `wxcheckin_ext` 表结构，并写入一份 `suda_union` 演示数据（仅用于本地演示）。
 - 当前认证基线为账号密码（默认 `123` + 首次强制改密），适配 HTTP 内网访问形态。
+- 当前 `.env.example` 与 compose 默认值假设 legacy 指向**容器内 demo `suda_union`**，用于保证 prod-like 单机演示能直接启动。
+- 如果你打算把 `LEGACY_DB_URL` 改成外部/现网 legacy 库，请先确认是否允许真实同步与回写；这类场景更推荐使用上面的 systemd 方案和独立环境变量文件。
 
 2) 一键启动：
 
