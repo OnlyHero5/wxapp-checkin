@@ -9,7 +9,7 @@
 
 本文档定义 `wxapp-checkin` 新手机浏览器 Web 版本的兼容性边界、移动端适配要求与真机验证矩阵。
 
-本文件不描述业务规则本身，业务规则以 `docs/REQUIREMENTS.md` 和 `docs/WEB_DESIGN.md` 为准；本文件只回答两个问题：
+本文件不描述业务规则本身，业务规则以 `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/WEB_OVERVIEW_DESIGN.md`、`docs/WEB_DETAIL_DESIGN.md` 为准；本文件只回答两个问题：
 
 - 哪些手机浏览器属于正式支持范围
 - 页面必须如何适配主流手机屏幕、键盘、前后台切换与能力差异

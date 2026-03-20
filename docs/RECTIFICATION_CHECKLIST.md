@@ -4,6 +4,11 @@
 适用范围：`wxapp-checkin`（Web-only，HTTP 内网账号密码 + 首次强制改密 + 临时会话 session_token）  
 用途：为“新开对话继续修复”提供可直接接手的整改清单与验证口径（问题 -> 目标 -> 建议方案 -> 验证方式）。
 
+> 说明：
+>
+> - 2026-03-11 之后，三项目闭环验证证据已经补充落盘，见 `docs/TEST_REPORT_2026-03-11_FULL_COVERAGE.md`。
+> - 本清单保留“问题与整改历史”视角；若要看最新验证结论，请优先看上面的测试报告。
+
 ## 0. 接手快照（便于新对话快速进入状态）
 
 - 当前分支：`web`
@@ -18,8 +23,8 @@
   - 会话拦截：`password_change_required`
   - 活动列表分页：`page/page_size/has_more` 与前端“加载更多”
   - 契约一致性复测：详情 `can_checkin/can_checkout` 与 staff 发码时间窗一致（开始前30分钟~结束后30分钟）
-- 当前缺口（需要补“可复核证据”）：
-  - `wxapp-checkin/web -> wxapp-checkin/backend -> outbox -> suda_union -> suda-gs-ams` 全链路验收记录（仓库内暂无落盘证据）
+- 当前缺口（仍建议补“单文档总览”）：
+  - `wxapp-checkin/web -> wxapp-checkin/backend -> outbox -> suda_union -> suda-gs-ams` 的闭环验证证据已落盘在 `docs/TEST_REPORT_2026-03-11_FULL_COVERAGE.md`；本清单仍缺一个直接跳转到该证据的汇总入口
 
 ## 1. 严重级定义
 

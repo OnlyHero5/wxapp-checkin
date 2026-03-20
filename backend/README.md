@@ -7,6 +7,8 @@
 2. **数据库/Redis/认证与动态码配置写到哪里**（例如数据库账号密码写哪个文件）
 3. 本地联调脚本怎么跑
 
+如果你还需要把 `web/dist` 一并发布到 Nginx / 网关，请同时阅读：`../docs/DEPLOYMENT.md`。
+
 ## 0) 目录速览
 
 - `scripts/start-test-env.sh`：本地联调一键启动（会重置测试数据）
@@ -15,6 +17,13 @@
 - `src/main/resources/application.yml`：基础配置（全部由环境变量覆盖）
 - `src/main/resources/application-prod.yml`：生产 profile 覆盖（启用 Flyway，使用 `db/migration_prod`）
 - `DB_DATABASE_DEEP_DIVE.md`：后端数据库深度说明（双库架构、表结构、同步链路、排障 SQL）
+
+## 0.1) 按场景跳转
+
+- 只想把后端在服务器上以 systemd 方式跑起来：看 `1) 生产环境一键启动（推荐：systemd）`
+- 只想单机快速演示：看 `2) 生产环境一键启动（可选：Docker Compose）`
+- 只想本地联调：看 `3) 本地联调/验收（一键脚本）`
+- 还需要把 Web 静态资源一起发布：看 `../docs/DEPLOYMENT.md`
 
 ## 1) 生产环境一键启动（推荐：systemd）
 
@@ -107,6 +116,12 @@ SESSION_TTL_SECONDS=7200
 # - 默认密码固定为 123
 # - 首次登录必须修改密码
 # - 不再需要配置 WEBAUTHN_*（Passkey/WebAuthn 已从主链路移除）
+
+# 同步（生产必须开启，否则会被启动安全护栏直接拒绝）
+LEGACY_SYNC_ENABLED=true
+LEGACY_SYNC_INTERVAL_MS=2000
+OUTBOX_RELAY_ENABLED=true
+OUTBOX_RELAY_INTERVAL_MS=1000
 
 # Flyway baseline 兜底（极端情况下使用）
 # WXAPP_FLYWAY_BASELINE_OVERRIDE=11
@@ -217,6 +232,8 @@ curl http://127.0.0.1:8080/actuator/health
 ```
 
 > 注意：该 compose 方案默认使用容器内 MySQL。若你要对接现网 `suda_union`，更推荐使用上面的 systemd 方案（直接连现网 MySQL/Redis）。
+>
+> 当前仓库中的 compose 默认值已对齐 prod 安全护栏：双向同步默认开启，避免出现“文档照做却起不来”的情况。
 
 ## 3) 本地联调/验收（一键脚本）
 
@@ -313,7 +330,9 @@ curl http://127.0.0.1:9989/actuator/health
 
 - 动态码的 time slice 固定为 **10 秒**（与 `docs/REQUIREMENTS.md`、`docs/API_SPEC.md` 一致），不再通过环境变量调整。
 
-## 4.1 与 `suda-gs-ams` / `suda_union` 共域时的路由建议
+## 5) 共域部署与动态码运维补充
+
+### 5.1 与 `suda-gs-ams` / `suda_union` 共域时的路由建议
 
 - `suda_union` 当前真实 controller 仍是 `/activity`、`/user`、`/session`、`/department`、`/suda_login`、`/token` 等旧前缀，不直接占用 `/api/web/**`。
 - 真正的冲突点不在 controller 名字，而在“同域网关怎么分流”：
@@ -329,7 +348,7 @@ curl http://127.0.0.1:9989/actuator/health
 - 已不再写入 `wx_qr_issue_log`，也不再接收/解析 `qr_payload`（二维码扫码链路已删除）。
 - `wx_replay_guard` 仍用于动态码防重放（同一用户 + 活动 + 动作 + slot 防重复提交），建议保留定期清理任务。
 
-### 5.3 生产推荐配置（强烈建议）
+### 5.2 生产推荐配置（强烈建议）
 
 ```bash
 # 必须：设置强随机密钥（多实例必须一致）
@@ -344,18 +363,20 @@ QR_CLEANUP_ENABLED=true
 QR_CLEANUP_INTERVAL_MS=300000
 ```
 
-### 5.4 数据库升级（索引与清理性能）
+### 5.3 数据库升级（索引与清理性能）
 
 生产 profile 默认启用 Flyway 自动迁移（`application-prod.yml`），通常无需手工执行 SQL。
 
 仓库仍保留了历史迁移 `V5__add_qr_retention_indexes.sql`（为 legacy `wx_qr_issue_log` 补索引），
 主要用于排障/回溯历史数据；当前 Web-only 动态码主链路不依赖该表。
 
-### 5.5 运维注意事项
+### 5.4 运维注意事项
 
 - **多实例部署**：所有实例必须使用同一个 `QR_SIGNING_KEY`，否则管理员看到的动态码可能无法在另一实例上通过校验（`invalid_code`）。
 - **密钥轮换**：轮换 `QR_SIGNING_KEY` 会导致动态码立即变化。建议在低峰期轮换，并确保管理员页刷新出新码后再继续对外放行。
 
-## 6) 前端如何连接
+## 6) 前端如何连接与发布
 
 手机 Web 前端默认通过同源 `/api/web/**` 访问后端；若本地分开启动，请在 `web/` 的开发配置中指向当前后端地址。会话凭据统一由前端请求层注入：`Authorization: Bearer <session_token>`。
+
+完整的 Web 打包命令、`web/dist` 托管方式和 Nginx / 网关示例，统一见：`../docs/DEPLOYMENT.md`。

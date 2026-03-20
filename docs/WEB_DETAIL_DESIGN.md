@@ -1,10 +1,15 @@
 # 手机 Web 动态验证码签到详细设计说明书
 
 文档版本: v1.0
-状态: 实施执行稿
+状态: 现状落点稿
 更新日期: 2026-03-10
 项目: `wxapp-checkin`
-定位: 本文档把目标态 Web 方案落到当前仓库的目录、类、表和测试入口，用于后续逐阶段编码。
+定位: 本文档把当前 Web-only 方案落到仓库里的目录、类、表和测试入口，用于后续维护、排障与局部增强。
+
+补充说明（重要）：
+
+- 2026-03-10 当前仓库已落地 `web/` 与 `/api/web/**` 主链路。
+- 文中出现的“建议新增”“后续编码”等措辞，部分保留了当时实施阶段的表达；若与当前仓库状态冲突，以实际代码结构和正式基线为准。
 
 ## 1. 设计输入与适用范围
 
@@ -13,7 +18,7 @@
 - 正式需求基线：`docs/REQUIREMENTS.md`
 - 正式功能基线：`docs/FUNCTIONAL_SPEC.md`
 - 正式接口基线：`docs/API_SPEC.md`
-- 补充设计：`docs/WEB_DESIGN.md`
+- 概要复盘：`docs/WEB_OVERVIEW_DESIGN.md`
 - 审查结论：`docs/WEB_MIGRATION_REVIEW.md`
 - 现有实施计划：`docs/plans/2026-03-10-http-password-auth-implementation-plan.md`
 
@@ -25,9 +30,9 @@
 
 ## 2. 目标仓库结构
 
-### 2.1 新增前端结构
+### 2.1 当前前端结构（对应当时设计落点）
 
-建议在仓库根目录新增 `web/`：
+当前仓库已落地的 `web/` 结构如下：
 
 ```text
 web/
@@ -575,7 +580,7 @@ backend/src/main/java/com/wxcheckin/backend/
 
 ## 10.1 前端测试
 
-单元/组件测试建议新增：
+当前已落地的核心单元/组件测试包括：
 
 - `web/src/app/App.test.tsx`
 - `web/src/shared/session/session-store.test.ts`
@@ -593,7 +598,7 @@ E2E 建议新增：
 
 ## 10.2 后端测试
 
-建议新增：
+仍建议补强：
 
 - `backend/src/test/java/com/wxcheckin/backend/config/FlywayMigrationTest.java`
 - `backend/src/test/java/com/wxcheckin/backend/application/service/WebPasswordAuthServiceTest.java`
@@ -616,4 +621,4 @@ E2E 建议新增：
 
 详细设计结论只有一句话：
 
-后续编码应该按“新建 `web/`、后端新增 `/api/web/**`、数据模型补齐、并发与风控补强、最后删旧”的顺序推进；任何试图跳过 `web/` 重建或继续以微信/二维码正式链路为中心的实现，都将明显增加返工风险。
+历史上项目按“新建 `web/`、后端新增 `/api/web/**`、数据模型补齐、并发与风控补强、最后删旧”的顺序推进完成收口；后续维护若重新引入微信/二维码正式链路，会明显增加返工风险。

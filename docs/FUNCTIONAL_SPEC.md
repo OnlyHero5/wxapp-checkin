@@ -147,6 +147,6 @@
 
 - 需求基线：`docs/REQUIREMENTS.md`
 - 接口基线：`docs/API_SPEC.md`
-- 详细设计：`docs/WEB_DESIGN.md`
+- 详细设计：`docs/WEB_OVERVIEW_DESIGN.md`、`docs/WEB_DETAIL_DESIGN.md`
 - 兼容性：`docs/WEB_COMPATIBILITY.md`
 - 审查与迁移边界：`docs/WEB_MIGRATION_REVIEW.md`

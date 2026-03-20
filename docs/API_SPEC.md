@@ -411,7 +411,7 @@
 
 - 业务规则以 `docs/REQUIREMENTS.md` 为准；
 - 用户流程与页面行为以 `docs/FUNCTIONAL_SPEC.md` 为准；
-- 系统结构与数据模型以 `docs/WEB_DESIGN.md` 为准；
+- 系统结构与数据模型以 `docs/WEB_OVERVIEW_DESIGN.md`、`docs/WEB_DETAIL_DESIGN.md` 为准；
 - 浏览器支持边界以 `docs/WEB_COMPATIBILITY.md` 为准；
 - 审查与迁移边界见 `docs/WEB_MIGRATION_REVIEW.md`；
 - 任务拆解见 `docs/plans/2026-03-10-http-password-auth-implementation-plan.md`。

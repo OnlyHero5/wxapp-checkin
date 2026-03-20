@@ -65,18 +65,22 @@
 
 以下文档是正式基线的补充说明：
 
-- `docs/WEB_DESIGN.md`
+- `docs/WEB_OVERVIEW_DESIGN.md`
+- `docs/WEB_DETAIL_DESIGN.md`
 - `docs/WEB_COMPATIBILITY.md`
 - `docs/WEB_MIGRATION_REVIEW.md`
-- `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+- `docs/plans/2026-03-10-http-password-auth-implementation-plan.md`
 
-### 3.3 当前历史参考与迁移基座文档
+### 3.3 部署文档与历史参考
 
-以下文档不再定义产品基线，只用于理解现状代码、部署和测试环境：
+以下文档不再定义产品基线；其中部署文档用于当前运维/联调，历史资料只用于复盘：
 
+- `docs/DEPLOYMENT.md`
 - `backend/README.md`
 - `backend/DB_DATABASE_DEEP_DIVE.md`
 - `backend/TEST_ENV_TESTING.md`
+- `docs/WEB_DESIGN.md`
+- `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
 - 2026-03-10 删旧前的历史审查结论
 
 ### 3.4 本轮收口动作
@@ -85,7 +89,7 @@
   - `docs/REQUIREMENTS.md`
   - `docs/FUNCTIONAL_SPEC.md`
   - `docs/API_SPEC.md`
-- 保留 `docs/WEB_DESIGN.md`、`docs/WEB_COMPATIBILITY.md`、本文档和实施计划作为补充文档。
+- 保留 `docs/WEB_OVERVIEW_DESIGN.md`、`docs/WEB_DETAIL_DESIGN.md`、`docs/WEB_COMPATIBILITY.md`、本文档和当前实施计划作为补充文档。
 - 更新根 `README.md`、`backend/README.md`、`backend/DB_DATABASE_DEEP_DIVE.md`、`backend/TEST_ENV_TESTING.md` 的定位说明。
 - 删除重复文档：
   - `docs/WEB_REQUIREMENTS.md`
@@ -93,22 +97,25 @@
 
 ## 4. 当前推荐阅读顺序
 
-如果目标是开始做手机 Web 改造，请按下面顺序阅读：
+如果目标是理解当前 Web-only 基线并继续维护，请按下面顺序阅读：
 
 1. `docs/WEB_MIGRATION_REVIEW.md`
 2. `docs/REQUIREMENTS.md`
 3. `docs/FUNCTIONAL_SPEC.md`
 4. `docs/API_SPEC.md`
-5. `docs/WEB_DESIGN.md`
-6. `docs/WEB_COMPATIBILITY.md`
-7. `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+5. `docs/DEPLOYMENT.md`
+6. `docs/WEB_OVERVIEW_DESIGN.md`
+7. `docs/WEB_DETAIL_DESIGN.md`
+8. `docs/WEB_COMPATIBILITY.md`
 
 如果目标是排查当前历史实现或联调基座，再回看：
 
 1. `backend/README.md`
 2. `backend/DB_DATABASE_DEEP_DIVE.md`
 3. `backend/TEST_ENV_TESTING.md`
-4. 本文中的历史审查证据
+4. `docs/WEB_DESIGN.md`
+5. `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+6. 本文中的历史审查证据
 
 ## 5. 仍需在实现前锁定的口径
 

@@ -178,7 +178,9 @@
 
 - 用户流程与页面行为：`docs/FUNCTIONAL_SPEC.md`
 - 接口契约：`docs/API_SPEC.md`
-- 详细设计：`docs/WEB_DESIGN.md`
+- 概要设计（现状复盘）：`docs/WEB_OVERVIEW_DESIGN.md`
+- 详细设计（现状落点）：`docs/WEB_DETAIL_DESIGN.md`
+- 历史设计草案（仅复盘）：`docs/WEB_DESIGN.md`
 - 兼容性范围：`docs/WEB_COMPATIBILITY.md`
 - 审查结论与迁移边界：`docs/WEB_MIGRATION_REVIEW.md`
-- 实施计划：`docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+- 当前实施计划：`docs/plans/2026-03-10-http-password-auth-implementation-plan.md`

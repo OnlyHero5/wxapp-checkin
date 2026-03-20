@@ -16,6 +16,19 @@
 - `backend/` 继续承接活动查询、会话、状态机、动态码与同步回写主干。
 - 默认独立部署时，当前 URL 命名空间与 `suda_union` 不直接重名；若要和 `suda-gs-ams` 共域部署，建议给前端配置子路径，并给网关单独保留 `wxapp-checkin` 的 API 前缀。
 
+## 快速导航
+
+如果你是第一次接手，建议按目标直接跳转：
+
+| 目标 | 先看哪里 | 说明 |
+| --- | --- | --- |
+| 快速理解项目现状 | 当前 README | 先确认“唯一正式前端是 `web/`、唯一正式 API 是 `/api/web/**`” |
+| 本地跑起来 | 本文的“**一键启动（推荐）**” | 适合开发联调；`local` 模式会重置本地测试数据 |
+| 完整生产部署（前后端 + Web） | `docs/DEPLOYMENT.md` | 包含后端构建、Web 打包、Nginx/网关示例与验收步骤 |
+| 生产部署后端 | `backend/README.md` | 包含 systemd、Docker Compose、环境变量与排障说明 |
+| 查看测试账号与本地测试环境细节 | `backend/TEST_ENV_TESTING.md` | 包含本地测试环境、测试账号、手工验证方式 |
+| 核对正式产品/接口基线 | `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md` | 需求、页面行为、接口契约三份正式基线 |
+
 ## 当前 Web 导航结构
 
 - 顶级信息架构已收口为两个稳定入口：`活动`、`我的`。
@@ -65,21 +78,38 @@
 - 功能基线：`docs/FUNCTIONAL_SPEC.md`
 - 接口基线：`docs/API_SPEC.md`
 
-补充文档（用于联调/设计/兼容性/收尾，不替代正式基线）：
+部署与联调文档（第一次接手最常用）：
 
-- 设计文档：`docs/WEB_DESIGN.md`
+- 完整部署手册：`docs/DEPLOYMENT.md`
+- 后端部署与配置：`backend/README.md`
+- 本地测试环境与测试账号：`backend/TEST_ENV_TESTING.md`
+- 数据库深度说明：`backend/DB_DATABASE_DEEP_DIVE.md`
+
+补充文档（用于设计、兼容性、审查与收尾，不替代正式基线）：
+
+- 概要设计（现状复盘）：`docs/WEB_OVERVIEW_DESIGN.md`
+- 详细设计（现状落点）：`docs/WEB_DETAIL_DESIGN.md`
 - 兼容性文档：`docs/WEB_COMPATIBILITY.md`
 - 审查与迁移说明：`docs/WEB_MIGRATION_REVIEW.md`
 - 整改清单（按严重级排序）：`docs/RECTIFICATION_CHECKLIST.md`
 - 认证基线变更设计：`docs/plans/2026-03-10-http-password-auth-design.md`
 - 认证基线变更实施计划：`docs/plans/2026-03-10-http-password-auth-implementation-plan.md`
 
-迁移参考（历史资料 / 运维说明 / 变更记录）：
+历史参考（复盘资料，不代表当前仍存在对应代码入口）：
 
-- 后端部署与配置：`backend/README.md`
-- 数据库深度说明：`backend/DB_DATABASE_DEEP_DIVE.md`
+- 早期 Web 设计草案：`docs/WEB_DESIGN.md`
 - 详细变更：`docs/changes.md`
 - 根目录变更摘要：`changes.md`
+
+## 前置依赖
+
+第一次接手时，至少先确认下面这些依赖：
+
+| 场景 | 最少依赖 |
+| --- | --- |
+| 本地 `local` 联调 | Node/npm、Java 17、MySQL 8、Redis 7、`mysql` CLI、`curl`、`ss` |
+| 本地 `docker` 联调 | Node/npm、Docker、Docker Compose、`curl` |
+| 生产部署 | Node/npm、Java 17、MySQL 8、Redis 7、Nginx（或等价静态资源/网关方案） |
 
 ## 一键启动（推荐）
 
@@ -94,9 +124,11 @@ cd wxapp-checkin
 
 ```bash
 # 本机 MySQL/Redis + 后端 9989 + web dev
+# 注意：会重置本地测试数据（包括 suda_union 测试数据）
 ./scripts/dev.sh local
 
 # 或：Docker Compose (MySQL + Redis + Backend 8080) + web dev（Vite docker mode）
+# 适合隔离演示/快速联调，不会动你的本机 MySQL
 ./scripts/dev.sh docker
 ```
 
@@ -119,18 +151,29 @@ cd wxapp-checkin
 
 - `web/.env.example` 给出了默认开发配置（local 默认代理到 `http://127.0.0.1:9989`）。
 - docker 模式通过 `vite --mode docker` 读取 `web/.env.docker.local` 覆盖 `web/.env.local`，默认代理到 `http://127.0.0.1:8080`。
+- `./scripts/dev.sh local` 内部会调用 `backend/scripts/start-test-env.sh`，该脚本会重置本地测试数据；如果你只想连现有测试库排障，请改走本文“手动启动（排障用）”。
 - 若要和 `suda-gs-ams` 共域部署，建议至少设置：
   - `VITE_APP_BASE_PATH=/checkin/`
   - `VITE_API_BASE_PATH=/checkin-api/web`
 
-## 生产启动（后端）
+启动后可用下面两个地址做最小自检：
 
-生产环境建议使用 systemd 部署，配置与一键启动步骤见：`backend/README.md`。
+```bash
+curl http://127.0.0.1:9989/actuator/health
+curl http://127.0.0.1:5174/
+```
+
+## 生产部署
+
+完整前后端生产发布说明见：`docs/DEPLOYMENT.md`。
+
+如果你当前只需要在单机上构建并启动后端做演示/排障，可按下面的最小流程执行：
 
 仓库也提供了一个“生产后端一键启动（prod）”脚本，适合单机演示/排障（不会执行任何测试数据重置）：
 
 ```bash
 cd wxapp-checkin
+cd backend && ./mvnw -DskipTests clean package && cd ..
 cp backend/.env.prod.example backend/.env.prod
 ./scripts/prod-backend.sh
 ```
@@ -140,6 +183,7 @@ cp backend/.env.prod.example backend/.env.prod
 - `prod` profile 下后端会对 `wxcheckin_ext` 执行 Flyway 自动迁移（不包含演示 seed 数据）。
 - `suda_union`（legacy）必须预先存在；后端不会对 legacy 做 schema 迁移。
 - 若扩展库已存在但缺少 `flyway_schema_history`（历史手工建表/拷贝库），后端会尝试推断 baseline 版本；极端情况下可用 `WXAPP_FLYWAY_BASELINE_OVERRIDE` 兜底（详见 `backend/README.md`）。
+- Web 前端生产构建、`web/dist` 托管路径与 Nginx 反向代理示例，统一写在 `docs/DEPLOYMENT.md`，不要只部署后端而遗漏前端静态资源。
 
 ## 手动启动（排障用）
 
@@ -182,12 +226,15 @@ npm run dev
 1. `docs/REQUIREMENTS.md`
 2. `docs/FUNCTIONAL_SPEC.md`
 3. `docs/API_SPEC.md`
-4. `backend/README.md`
-5. `docs/WEB_DESIGN.md`
-6. `docs/WEB_COMPATIBILITY.md`
+4. `docs/DEPLOYMENT.md`
+5. `backend/README.md`
+6. `docs/WEB_OVERVIEW_DESIGN.md`
+7. `docs/WEB_DETAIL_DESIGN.md`
+8. `docs/WEB_COMPATIBILITY.md`
 
 历史复盘 / 计划文档请按“参考资料”阅读，不要把它们当成当前仓库状态：
 
+- `docs/WEB_DESIGN.md`
 - `docs/WEB_MIGRATION_REVIEW.md`
 - `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
 - `docs/plans/2026-03-09-web-todo-list.md`

@@ -1,15 +1,16 @@
 # 手机 Web 动态验证码签到概要设计说明书
 
 文档版本: v1.0
-状态: 实施执行稿
+状态: 现状复盘稿
 更新日期: 2026-03-10
 项目: `wxapp-checkin`
-定位: 本文档基于当前正式基线与现有实施计划整理，作为后续分阶段编码的大图说明，不替代 `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`。
+定位: 本文档基于当前正式基线与已完成的收口结果整理，作为现状复盘与维护边界说明，不替代 `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`。
 
 补充说明（重要）：
 
 - 2026-03-10 已完成 Web-only 主链路收口，仓库已删除历史小程序前端目录。
 - 因此本文中出现的 `frontend/`、`wx.*` 等内容均属于**迁移背景与复盘证据**，不代表当前仓库仍存在对应目录或代码入口。
+- 本文后面的 `Phase 0 ~ Phase 5` 仅用于回看当时的实施顺序；当前仓库已完成对应主链路收口。
 
 ## 1. 编写目的
 
@@ -30,10 +31,10 @@
   - `docs/FUNCTIONAL_SPEC.md`
   - `docs/API_SPEC.md`
 - 补充设计与实施材料：
-  - `docs/WEB_DESIGN.md`
+  - `docs/WEB_DETAIL_DESIGN.md`
   - `docs/WEB_COMPATIBILITY.md`
   - `docs/WEB_MIGRATION_REVIEW.md`
-  - `docs/plans/2026-03-09-web-only-migration-implementation-plan.md`
+  - `docs/plans/2026-03-10-http-password-auth-implementation-plan.md`
 - 当前代码与迁移基座：
   - （已删除）历史微信小程序实现（曾位于 `frontend/`）
   - `backend/` Spring Boot 后端
@@ -42,13 +43,13 @@
 
 ## 3. 改造结论摘要
 
-当前改造路线已经明确，可以直接进入实施准备阶段，结论如下：
+当前 Web-only 收口已经完成，下面的结论可作为后续维护边界与复盘摘要：
 
-- 前端必须新建 `web/`，不能继续在 `frontend/` 小程序工程上做平移式改造。
-- 后端不需要推倒重来，但需要把“微信登录 + 二维码签发/消费”重构为“Web 身份（账号密码 + 首次强制改密）+ 动态 6 位码”。
+- 当前正式前端已经收口为 `web/`，历史 `frontend/` 小程序工程已删除。
+- 后端正式入口已经收口到“Web 身份（账号密码 + 首次强制改密）+ 动态 6 位码 + `/api/web/**`”。
 - `suda_union` 继续作为实名、报名与最终回写的事实源，仅允许只读查询和最终一致性回写，不做业务逻辑改造。
 - `wxapp-checkin` 的扩展库、状态机、会话、outbox、活动投影等后端主干具有复用价值。
-- 最终目标不是“双前端长期并行”，而是 Web 路线稳定后彻底删除小程序正式链路。
+- 当前目标已不是“双前端长期并行”，而是继续围绕 Web-only 形态演进并维持兼容性。
 
 ## 4. 设计目标与非目标
 
@@ -109,10 +110,10 @@
 
 | 路径 | 角色 | 目标状态 |
 | --- | --- | --- |
-| `web/` | 新手机 Web 前端 | 新建并逐步成为唯一前端 |
+| `web/` | 手机 Web 前端 | 当前唯一正式前端 |
 | `backend/` | 唯一业务后端 | 保留主干并做 Web 化重构 |
-| `frontend/` | 历史小程序 | 迁移参考，最终删除 |
-| `docs/` | 需求、设计、计划、兼容性 | 作为唯一文档入口持续更新 |
+| `frontend/` | 历史小程序 | 已删除，仅保留文档中的迁移背景 |
+| `docs/` | 需求、设计、计划、兼容性 | 当前唯一文档入口，分为正式基线与历史参考 |
 
 ## 7. 核心业务闭环
 
