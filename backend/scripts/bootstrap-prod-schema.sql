@@ -196,6 +196,57 @@ CREATE TABLE IF NOT EXISTS web_browser_binding (
   CONSTRAINT fk_web_browser_binding_user FOREIGN KEY (user_id) REFERENCES wx_user_auth_ext(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ===== Web-only: Passkey 凭证（V7 + V8）=====
+-- 维护意图：
+-- 1. compose 初始化库需要和当前 prod baseline 能力保持一致；
+-- 2. 这里直接落到“已包含 credential_public_key / sign_count”的形态，
+--    避免 fresh 库在 Flyway baseline 推断时被判定成“高版本特征存在、低版本表结构缺失”；
+-- 3. 该表只负责浏览器 passkey 凭证主数据，不承载一次性挑战态。
+CREATE TABLE IF NOT EXISTS web_passkey_credential (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  binding_id BIGINT NOT NULL,
+  credential_id VARCHAR(255) NOT NULL,
+  raw_credential_id VARCHAR(255) NOT NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  attestation_object TEXT NULL,
+  client_data_json TEXT NULL,
+  credential_public_key TEXT NULL,
+  sign_count BIGINT NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  last_used_at DATETIME(3) NULL,
+  revoked_at DATETIME(3) NULL,
+  UNIQUE KEY uk_web_passkey_credential_id (credential_id),
+  UNIQUE KEY uk_web_passkey_binding_active (binding_id, active),
+  CONSTRAINT fk_web_passkey_credential_user FOREIGN KEY (user_id) REFERENCES wx_user_auth_ext(id),
+  CONSTRAINT fk_web_passkey_credential_binding FOREIGN KEY (binding_id) REFERENCES web_browser_binding(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Web-only: Passkey 挑战（V7）=====
+-- 维护边界：
+-- 1. 该表保存注册/登录等一次性 challenge；
+-- 2. fresh compose 库必须同时具备 challenge 与 credential 两类表，避免本地联调时 web 身份能力缺表。
+CREATE TABLE IF NOT EXISTS web_passkey_challenge (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  request_id VARCHAR(64) NULL,
+  bind_ticket VARCHAR(64) NULL,
+  flow_type VARCHAR(16) NOT NULL,
+  user_id BIGINT NOT NULL,
+  browser_binding_key VARCHAR(128) NOT NULL,
+  credential_id VARCHAR(255) NULL,
+  challenge VARCHAR(255) NULL,
+  expires_at DATETIME(3) NOT NULL,
+  used_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uk_web_passkey_challenge_request_id (request_id),
+  UNIQUE KEY uk_web_passkey_challenge_bind_ticket (bind_ticket),
+  KEY idx_web_passkey_challenge_expires (expires_at),
+  KEY idx_web_passkey_challenge_user_flow (user_id, flow_type),
+  CONSTRAINT fk_web_passkey_challenge_user FOREIGN KEY (user_id) REFERENCES wx_user_auth_ext(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS web_admin_audit_log (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   audit_id VARCHAR(64) NOT NULL,
