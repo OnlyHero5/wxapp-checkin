@@ -70,6 +70,9 @@ CREATE TABLE IF NOT EXISTS wx_activity_projection (
   has_detail TINYINT(1) NOT NULL DEFAULT 1,
   checkin_count INT NOT NULL DEFAULT 0,
   checkout_count INT NOT NULL DEFAULT 0,
+  -- registered_count 表示“报名成功 + 候补成功”的人数（即应到人数）。
+  -- compose fresh 库也必须带上这列，避免 backend 首次启动时实体字段先于 schema 生效。
+  registered_count INT NOT NULL DEFAULT 0,
   rotate_seconds INT NOT NULL DEFAULT 10,
   grace_seconds INT NOT NULL DEFAULT 20,
   active TINYINT(1) NOT NULL DEFAULT 1,

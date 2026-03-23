@@ -46,7 +46,10 @@ public class ProdFlywayMigrationStrategy {
 
   private static final String HISTORY_TABLE = "flyway_schema_history";
   private static final String BASELINE_TABLE = "wx_user_auth_ext";
-  private static final int LATEST_VERSION = 11;
+  // 维护约束：
+  // 1. 这里必须和 `db/migration_prod` 的最新版本保持一致；
+  // 2. 一旦 prod baseline 推断落后于真实 schema，baseline 后再 migrate 就会重复执行已存在的 ALTER。
+  private static final int LATEST_VERSION = 12;
 
   private final DataSource dataSource;
   private final String baselineOverride;
@@ -115,6 +118,11 @@ public class ProdFlywayMigrationStrategy {
 
   private int inferBaselineVersion(Connection connection, String schema) throws SQLException {
     // 推断原则：从高到低检查“明确且稳定”的 schema 特征，命中即视为至少达到了该版本。
+    // V12 增加了 wx_activity_projection.registered_count。
+    // 这列会被 Hibernate 实体直接读取；若 prod baseline 仍停在 11，就会让 fresh schema 在启动后立即报 Unknown column。
+    if (columnExists(connection, schema, "wx_activity_projection", "registered_count")) {
+      return 12;
+    }
     if (columnExists(connection, schema, "wx_sync_outbox", "retry_count")) {
       return 11;
     }
@@ -187,6 +195,9 @@ public class ProdFlywayMigrationStrategy {
     }
     if (baselineVersion >= 11) {
       requireColumn(connection, schema, "wx_sync_outbox", "retry_count", baselineVersion);
+    }
+    if (baselineVersion >= 12) {
+      requireColumn(connection, schema, "wx_activity_projection", "registered_count", baselineVersion);
     }
   }
 
@@ -288,4 +299,3 @@ public class ProdFlywayMigrationStrategy {
     return value == null || value.trim().isEmpty();
   }
 }
-
