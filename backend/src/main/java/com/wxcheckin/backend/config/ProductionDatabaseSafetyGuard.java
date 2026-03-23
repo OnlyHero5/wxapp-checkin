@@ -18,15 +18,21 @@ public class ProductionDatabaseSafetyGuard {
   private final Environment environment;
   private final AppProperties appProperties;
   private final String primaryDatasourceUrl;
+  private final String legacyFallbackHost;
+  private final String legacyFallbackPort;
 
   public ProductionDatabaseSafetyGuard(
       Environment environment,
       AppProperties appProperties,
-      @Value("${spring.datasource.url:}") String primaryDatasourceUrl
+      @Value("${spring.datasource.url:}") String primaryDatasourceUrl,
+      @Value("${DB_HOST:127.0.0.1}") String legacyFallbackHost,
+      @Value("${DB_PORT:3306}") String legacyFallbackPort
   ) {
     this.environment = environment;
     this.appProperties = appProperties;
     this.primaryDatasourceUrl = primaryDatasourceUrl;
+    this.legacyFallbackHost = legacyFallbackHost;
+    this.legacyFallbackPort = legacyFallbackPort;
   }
 
   @PostConstruct
@@ -36,7 +42,7 @@ public class ProductionDatabaseSafetyGuard {
     validateProdConfiguration(
         prodProfile,
         primaryDatasourceUrl,
-        appProperties.getLegacy().getDatasource().getUrl(),
+        appProperties.getLegacy().getDatasource().resolveJdbcUrl(legacyFallbackHost, legacyFallbackPort),
         appProperties.getSync().getLegacy().isEnabled(),
         appProperties.getSync().getOutbox().isEnabled()
     );
@@ -56,10 +62,10 @@ public class ProductionDatabaseSafetyGuard {
       throw new IllegalStateException("生产环境禁止将主数据源指向 suda_union；请使用独立扩展库。");
     }
     if (isBlank(legacyDatasourceUrl)) {
-      throw new IllegalStateException("生产环境必须配置 LEGACY_DB_URL 指向 suda_union。");
+      throw new IllegalStateException("生产环境必须配置 LEGACY_DB_URL 或 SUDA_UNION_DB_HOST 指向 suda_union。");
     }
     if (!containsSchema(legacyDatasourceUrl, SUDA_SCHEMA)) {
-      throw new IllegalStateException("LEGACY_DB_URL 必须指向 suda_union 库。");
+      throw new IllegalStateException("legacy 数据源必须指向 suda_union 库。");
     }
     if (!legacySyncEnabled || !outboxRelayEnabled) {
       throw new IllegalStateException("生产环境必须开启双向同步（LEGACY_SYNC_ENABLED=true, OUTBOX_RELAY_ENABLED=true）。");

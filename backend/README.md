@@ -95,7 +95,9 @@ DB_CREATE_DATABASE_IF_NOT_EXIST=true
 
 # 遗留库（suda_union）
 # - 新主口径只需要地址、账号、密码 3 项；
-# - schema 固定为 suda_union，端口默认 3306，由后端自动拼接 JDBC。
+# - schema 固定为 suda_union；
+# - `SUDA_UNION_DB_HOST` 可写成 `host` 或 `host:port`，未写端口时默认 3306；
+# - 旧环境若仍提供完整 `LEGACY_DB_URL`，后端会继续兼容。
 SUDA_UNION_DB_HOST=127.0.0.1
 SUDA_UNION_DB_USER=wxcheckin_app
 SUDA_UNION_DB_PASSWORD=请填真实数据库密码

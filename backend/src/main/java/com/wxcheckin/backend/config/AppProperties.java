@@ -88,7 +88,12 @@ public class AppProperties {
   }
 
   public static class LegacyDatasourceProperties {
+    private static final String DEFAULT_MYSQL_PORT = "3306";
+    private static final String FIXED_JDBC_OPTIONS =
+        "?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false";
+
     private String url = "";
+    private String host = "";
     private String username = "";
     private String password = "";
     private String driverClassName = "com.mysql.cj.jdbc.Driver";
@@ -99,6 +104,14 @@ public class AppProperties {
 
     public void setUrl(String url) {
       this.url = url;
+    }
+
+    public String getHost() {
+      return host;
+    }
+
+    public void setHost(String host) {
+      this.host = host;
     }
 
     public String getUsername() {
@@ -123,6 +136,42 @@ public class AppProperties {
 
     public void setDriverClassName(String driverClassName) {
       this.driverClassName = driverClassName;
+    }
+
+    /**
+     * legacy 连接优先兼容完整 JDBC；如果没有显式 URL，
+     * 再把新口径 `SUDA_UNION_DB_HOST` 解析成固定 schema 的 JDBC 地址。
+     */
+    public String resolveJdbcUrl(String fallbackHost, String fallbackPort) {
+      if (!isBlank(url)) {
+        return url;
+      }
+
+      String address = resolveAddress(fallbackHost, fallbackPort);
+      if (isBlank(address)) {
+        return "";
+      }
+      return "jdbc:mysql://" + address + "/suda_union" + FIXED_JDBC_OPTIONS;
+    }
+
+    private String resolveAddress(String fallbackHost, String fallbackPort) {
+      // 新口径允许用户把端口直接写进 host；
+      // 若只写主机名，则仍按 legacy MySQL 默认端口 3306 兜底。
+      if (!isBlank(host)) {
+        return host.contains(":") ? host : host + ":" + DEFAULT_MYSQL_PORT;
+      }
+
+      // 演示模式没有显式 legacy 地址时，复用主库所在 MySQL 的地址，
+      // 这样 prod profile 可以继续自动回退到 compose 内 demo `suda_union`。
+      if (isBlank(fallbackHost)) {
+        return "";
+      }
+      String port = isBlank(fallbackPort) ? DEFAULT_MYSQL_PORT : fallbackPort;
+      return fallbackHost + ":" + port;
+    }
+
+    private boolean isBlank(String value) {
+      return value == null || value.trim().isEmpty();
     }
   }
 

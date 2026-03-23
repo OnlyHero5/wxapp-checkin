@@ -25,6 +25,16 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  local unexpected="$1"
+  if [[ "${LAST_OUTPUT}" == *"${unexpected}"* ]]; then
+    echo "[preflight-test] expected output to not contain: ${unexpected}" >&2
+    echo "[preflight-test] actual output:" >&2
+    printf '%s\n' "${LAST_OUTPUT}" >&2
+    exit 1
+  fi
+}
+
 assert_status() {
   local expected="$1"
   if [[ "${LAST_STATUS}" -ne "${expected}" ]]; then
@@ -155,6 +165,16 @@ main() {
     "MYSQL_STUB_FAIL_FOR=suda_union"
   assert_status 1
   assert_contains "suda_union 数据库连接问题"
+
+  run_precheck \
+    "SUDA_UNION_DB_HOST=legacy-db:3499" \
+    "SUDA_UNION_DB_USER=legacy_user" \
+    "SUDA_UNION_DB_PASSWORD=legacy_pass" \
+    "MYSQL_STUB_FAIL_FOR=suda_union"
+  assert_status 1
+  assert_contains "suda_union 数据库连接问题"
+  assert_contains "legacy-db:3499/suda_union"
+  assert_not_contains "legacy-db:3499:3306/suda_union"
 
   run_precheck "MYSQL_STUB_FAIL_FOR=wxcheckin_ext"
   assert_status 1

@@ -53,6 +53,32 @@ first_non_blank() {
   printf '%s' ''
 }
 
+parse_host_with_optional_port() {
+  raw_host="$1"
+  default_port="$2"
+  error_message="$3"
+
+  # 外部 legacy 配置现在允许直接写成 host:port；
+  # 这里保持 shell 侧只做最小拆分，具体合法性仍交给 mysql 客户端报错。
+  case "${raw_host}" in
+    *:*)
+      parsed_host="${raw_host%%:*}"
+      parsed_port="${raw_host##*:}"
+      ;;
+    *)
+      parsed_host="${raw_host}"
+      parsed_port="${default_port}"
+      ;;
+  esac
+
+  if [ -z "${parsed_host}" ] || [ -z "${parsed_port}" ]; then
+    fail "${error_message}"
+  fi
+
+  LEGACY_DB_HOST="${parsed_host}"
+  LEGACY_DB_PORT="${parsed_port}"
+}
+
 parse_legacy_jdbc_url() {
   jdbc_url="$1"
 
@@ -73,16 +99,10 @@ parse_legacy_jdbc_url() {
     fail "suda_union 数据库连接问题：LEGACY_DB_URL 缺少库名"
   fi
 
-  case "${host_port_part}" in
-    *:*)
-      LEGACY_DB_HOST="${host_port_part%%:*}"
-      LEGACY_DB_PORT="${host_port_part##*:}"
-      ;;
-    *)
-      LEGACY_DB_HOST="${host_port_part}"
-      LEGACY_DB_PORT='3306'
-      ;;
-  esac
+  parse_host_with_optional_port \
+    "${host_port_part}" \
+    '3306' \
+    "suda_union 数据库连接问题：LEGACY_DB_URL 主机格式错误"
   LEGACY_DB_SCHEMA="${schema_part}"
 
   # 用户明确把 legacy 口径绑定到 suda_union，
@@ -123,8 +143,10 @@ resolve_legacy_connection() {
   fi
 
   if [ -n "${suda_union_host}" ] && [ -n "${suda_union_user}" ] && [ -n "${suda_union_password}" ]; then
-    LEGACY_DB_HOST="${suda_union_host}"
-    LEGACY_DB_PORT='3306'
+    parse_host_with_optional_port \
+      "${suda_union_host}" \
+      '3306' \
+      "suda_union 外部配置不完整：SUDA_UNION_DB_HOST 必须填写主机名，或写成 host:port"
     LEGACY_DB_SCHEMA='suda_union'
     LEGACY_DB_USERNAME="${suda_union_user}"
     LEGACY_DB_PASSWORD_VALUE="${suda_union_password}"
