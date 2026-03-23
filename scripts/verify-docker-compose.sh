@@ -34,6 +34,12 @@ require_service "redis"
 require_service "backend"
 require_service "web"
 
+# MySQL 8.4 已移除 `default-authentication-plugin` 这个启动参数。
+# 这里显式禁止仓库级 compose 渲染结果再带上它，避免容器初始化到一半后直接异常退出。
+if printf '%s\n' "${CONFIG_RENDERED}" | rg -q 'default-authentication-plugin'; then
+  fail "compose 仍包含已移除的 MySQL 参数：default-authentication-plugin"
+fi
+
 # 生产口径下整套 compose 应只保留一个外部入口：web 的 89 端口。
 # 这里先抽取全部 published 端口，再判断是否混入了多余映射。
 PUBLISHED_PORTS="$(
