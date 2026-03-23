@@ -11,6 +11,8 @@ PREFIX='[wxcheckin-preflight]'
 LEGACY_DB_HOST=''
 LEGACY_DB_PORT=''
 LEGACY_DB_SCHEMA=''
+LEGACY_DB_USERNAME=''
+LEGACY_DB_PASSWORD_VALUE=''
 
 log_info() {
   printf '%b%s %s%b\n' "${PURPLE}" "${PREFIX}" "$1" "${RESET}"
@@ -39,6 +41,16 @@ ensure_command() {
   if ! command -v "${command_name}" >/dev/null 2>&1; then
     fail "${display_name}：容器内缺少 ${command_name} 命令"
   fi
+}
+
+first_non_blank() {
+  for candidate in "$@"; do
+    if [ -n "${candidate}" ]; then
+      printf '%s' "${candidate}"
+      return 0
+    fi
+  done
+  printf '%s' ''
 }
 
 parse_legacy_jdbc_url() {
@@ -78,6 +90,49 @@ parse_legacy_jdbc_url() {
   if [ "${LEGACY_DB_SCHEMA}" != 'suda_union' ]; then
     fail "suda_union 数据库连接问题：LEGACY_DB_URL 未指向 suda_union"
   fi
+}
+
+resolve_legacy_connection() {
+  legacy_url="${LEGACY_DB_URL-}"
+  legacy_user="${LEGACY_DB_USER-}"
+  legacy_password="${LEGACY_DB_PASSWORD-}"
+  suda_union_host="${SUDA_UNION_DB_HOST-}"
+  suda_union_user="${SUDA_UNION_DB_USER-}"
+  suda_union_password="${SUDA_UNION_DB_PASSWORD-}"
+
+  # 兼容旧部署：如果仍然显式提供 LEGACY_DB_URL，则按历史口径继续工作，
+  # 避免这次变量收口让已有环境直接失效。
+  if [ -n "${legacy_url}" ]; then
+    parse_legacy_jdbc_url "${legacy_url}"
+    LEGACY_DB_USERNAME="$(first_non_blank "${legacy_user}" "${suda_union_user}" "${DB_USER-}")"
+    LEGACY_DB_PASSWORD_VALUE="$(first_non_blank "${legacy_password}" "${suda_union_password}" "${DB_PASSWORD-}")"
+    log_info "检测到 LEGACY_DB_URL，当前按兼容 legacy 配置模式启动"
+    return 0
+  fi
+
+  if [ -z "${suda_union_host}" ] && [ -z "${suda_union_user}" ] && [ -z "${suda_union_password}" ]; then
+    # 单项目演示状态走 compose 内 demo `suda_union`；
+    # 必须显式提示“非生产在线状态”，避免使用者误以为已连到真实老库。
+    LEGACY_DB_HOST="${DB_HOST}"
+    LEGACY_DB_PORT="${DB_PORT}"
+    LEGACY_DB_SCHEMA='suda_union'
+    LEGACY_DB_USERNAME="${DB_USER}"
+    LEGACY_DB_PASSWORD_VALUE="${DB_PASSWORD-}"
+    log_info "未填写 SUDA_UNION_DB_HOST / SUDA_UNION_DB_USER / SUDA_UNION_DB_PASSWORD，当前是单项目演示状态，非生产在线状态"
+    return 0
+  fi
+
+  if [ -n "${suda_union_host}" ] && [ -n "${suda_union_user}" ] && [ -n "${suda_union_password}" ]; then
+    LEGACY_DB_HOST="${suda_union_host}"
+    LEGACY_DB_PORT='3306'
+    LEGACY_DB_SCHEMA='suda_union'
+    LEGACY_DB_USERNAME="${suda_union_user}"
+    LEGACY_DB_PASSWORD_VALUE="${suda_union_password}"
+    log_info "已填写 SUDA_UNION_DB_HOST / SUDA_UNION_DB_USER / SUDA_UNION_DB_PASSWORD，当前按外部 suda_union 模式启动"
+    return 0
+  fi
+
+  fail "suda_union 外部配置不完整：请同时填写 SUDA_UNION_DB_HOST / SUDA_UNION_DB_USER / SUDA_UNION_DB_PASSWORD"
 }
 
 run_mysql_query() {
@@ -150,15 +205,13 @@ main() {
   require_env "DB_PORT"
   require_env "DB_NAME"
   require_env "DB_USER"
-  require_env "LEGACY_DB_URL"
-  require_env "LEGACY_DB_USER"
   require_env "REDIS_HOST"
   require_env "REDIS_PORT"
 
   ensure_command "mysql" "数据库预检无法执行"
   ensure_command "redis-cli" "Redis 预检无法执行"
 
-  parse_legacy_jdbc_url "${LEGACY_DB_URL}"
+  resolve_legacy_connection
   check_mysql_connection \
     "wxcheckin_ext 数据库连接问题" \
     "${DB_HOST}" \
@@ -171,8 +224,8 @@ main() {
     "${LEGACY_DB_HOST}" \
     "${LEGACY_DB_PORT}" \
     "${LEGACY_DB_SCHEMA}" \
-    "${LEGACY_DB_USER}" \
-    "${LEGACY_DB_PASSWORD-}"
+    "${LEGACY_DB_USERNAME}" \
+    "${LEGACY_DB_PASSWORD_VALUE}"
   check_redis_connection
 
   log_info "依赖预检通过，开始启动 Spring Boot"

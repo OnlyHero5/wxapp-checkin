@@ -97,9 +97,6 @@ run_precheck() {
     "DB_NAME=wxcheckin_ext"
     "DB_USER=wxcheckin"
     "DB_PASSWORD=wxcheckin"
-    "LEGACY_DB_URL=jdbc:mysql://legacy-db:3306/suda_union?useUnicode=true"
-    "LEGACY_DB_USER=wxcheckin"
-    "LEGACY_DB_PASSWORD=wxcheckin"
     "REDIS_HOST=redis"
     "REDIS_PORT=6379"
     "REDIS_PASSWORD="
@@ -130,17 +127,32 @@ main() {
   assert_contains "[wxcheckin-preflight]"
   assert_contains $'\033[35m'
   assert_contains "开始检查 Docker 启动依赖"
+  assert_contains "未填写 SUDA_UNION_DB_HOST / SUDA_UNION_DB_USER / SUDA_UNION_DB_PASSWORD"
+  assert_contains "单项目演示状态，非生产在线状态"
   assert_contains "依赖预检通过，开始启动 Spring Boot"
 
-  # 下面三组用例对应用户最关心的实际排障场景：
-  # - 环境变量没配；
-  # - suda_union 连不上；
-  # - Redis 连不上。
-  run_precheck "LEGACY_DB_URL="
+  # 用户这次明确要把 legacy 配置收口成 3 个值；
+  # 因此只填一部分时必须直接失败，避免演示模式和在线模式混淆。
+  run_precheck "SUDA_UNION_DB_HOST=legacy-db"
   assert_status 1
-  assert_contains "缺少环境变量：LEGACY_DB_URL"
+  assert_contains "suda_union 外部配置不完整"
+
+  run_precheck \
+    "SUDA_UNION_DB_HOST=legacy-db" \
+    "SUDA_UNION_DB_USER=legacy_user" \
+    "SUDA_UNION_DB_PASSWORD=legacy_pass"
+  assert_status 0
+  assert_contains "外部 suda_union 模式"
 
   run_precheck "MYSQL_STUB_FAIL_FOR=suda_union"
+  assert_status 1
+  assert_contains "suda_union 数据库连接问题"
+
+  run_precheck \
+    "SUDA_UNION_DB_HOST=legacy-db" \
+    "SUDA_UNION_DB_USER=legacy_user" \
+    "SUDA_UNION_DB_PASSWORD=legacy_pass" \
+    "MYSQL_STUB_FAIL_FOR=suda_union"
   assert_status 1
   assert_contains "suda_union 数据库连接问题"
 
