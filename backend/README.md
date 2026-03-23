@@ -235,6 +235,12 @@ cp .env.example .env
 docker compose up -d
 ```
 
+启动日志说明：
+
+- backend 容器现在会先执行一层 Docker 预检，再进入 Spring Boot。
+- 预检日志统一使用紫色前缀 `[wxcheckin-preflight]`，便于和框架日志区分。
+- 如果 `wxcheckin_ext`、`suda_union` 或 Redis 连不上，容器会直接退出，不会继续打印一大段 Spring/Flyway 启动日志后才失败。
+
 3) 健康检查：
 
 ```bash
