@@ -76,4 +76,15 @@ if ! printf '%s\n' "${CONFIG_RENDERED}" | rg -q '(?s)web:.*?healthcheck:' -U; th
   fail "web 缺少健康检查"
 fi
 
+# 仓库现在会直接提交 docker/compose.override.env 模板文件。
+# 为了保持“空文件 = 演示模式”的约定，模板里不能存在活跃的空值赋值，
+# 否则 Compose 会把空字符串注入容器，导致 Spring 侧把 legacy host 解析成空串。
+if rg -n '^[[:space:]]*SUDA_UNION_DB_(HOST|USER|PASSWORD)=' docker/compose.override.env >/dev/null 2>&1; then
+  fail "docker/compose.override.env 不能包含活跃的 SUDA_UNION_DB_* 赋值；请改成注释示例"
+fi
+
+if rg -n '^[[:space:]]*SUDA_UNION_DB_(HOST|USER|PASSWORD)=' docker/compose.override.env.example >/dev/null 2>&1; then
+  fail "docker/compose.override.env.example 不能包含活跃的 SUDA_UNION_DB_* 赋值；请改成注释示例"
+fi
+
 echo "[verify-compose] docker compose 静态校验通过"

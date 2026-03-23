@@ -229,7 +229,7 @@ cp .env.example .env
 - 当前 compose 已通过 MySQL init 脚本自动初始化 `wxcheckin_ext` 表结构，并写入一份 `suda_union` 演示数据（仅用于本地演示）。
 - 当前认证基线为账号密码（默认 `123` + 首次强制改密），适配 HTTP 内网访问形态。
 - 当前 `.env.example` 与 compose 默认值会在未填写 `SUDA_UNION_DB_*` 时自动回退到**容器内 demo `suda_union`**，用于保证 prod-like 单机演示能直接启动。
-- 如果你打算接外部/现网 `suda_union`，只需要在 `docker/compose.override.env` 里填写 `SUDA_UNION_DB_HOST`、`SUDA_UNION_DB_USER`、`SUDA_UNION_DB_PASSWORD` 这 3 项。
+- 如果你打算接外部/现网 `suda_union`，只需要在 `docker/compose.override.env` 里取消注释并填写 `SUDA_UNION_DB_HOST`、`SUDA_UNION_DB_USER`、`SUDA_UNION_DB_PASSWORD` 这 3 项。
 
 2) 一键启动：
 

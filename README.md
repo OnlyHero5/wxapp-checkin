@@ -185,7 +185,7 @@ docker compose exec backend curl -fsS http://127.0.0.1:8080/actuator/health
 生产前至少再做两件事：
 
 - 按需编辑仓库内的 `docker/compose.override.env`
-- 若要接外部 `suda_union`，把其中的 `SUDA_UNION_DB_HOST`、`SUDA_UNION_DB_USER`、`SUDA_UNION_DB_PASSWORD` 补齐；若保持空值，则继续走演示模式
+- 若要接外部 `suda_union`，先取消注释其中的 `SUDA_UNION_DB_HOST`、`SUDA_UNION_DB_USER`、`SUDA_UNION_DB_PASSWORD`，再补齐真实值；若保持注释状态，则继续走演示模式
 
 说明：
 

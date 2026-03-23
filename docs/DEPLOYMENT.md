@@ -27,7 +27,7 @@
 ```bash
 cd /path/to/wxapp-checkin
 # 仓库内已自带 docker/compose.override.env
-# 若要接外部 suda_union，只需要补齐其中 3 个 SUDA_UNION_DB_* 值；
+# 若要接外部 suda_union，只需要取消注释并填写其中 3 个 SUDA_UNION_DB_* 值；
 # 若保持空值，则默认按单项目演示状态启动。
 docker compose up -d --build
 ```
