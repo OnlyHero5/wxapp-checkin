@@ -77,7 +77,7 @@ mysql -h <DB_HOST> -P <DB_PORT> -u <DB_ADMIN_USER> -p wxcheckin_ext < scripts/bo
 sudo install -m 600 /dev/null /etc/wxcheckin/backend.prod.env
 ```
 
-内容示例（把 `DB_PASSWORD/LEGACY_DB_PASSWORD/QR_SIGNING_KEY` 换成真实值）：
+内容示例（把 `DB_PASSWORD/SUDA_UNION_DB_PASSWORD/QR_SIGNING_KEY` 换成真实值）：
 
 ```bash
 SPRING_PROFILES_ACTIVE=prod
@@ -94,9 +94,11 @@ DB_PASSWORD=请填真实数据库密码
 DB_CREATE_DATABASE_IF_NOT_EXIST=true
 
 # 遗留库（suda_union）
-LEGACY_DB_URL=jdbc:mysql://127.0.0.1:3306/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
-LEGACY_DB_USER=wxcheckin_app
-LEGACY_DB_PASSWORD=请填真实数据库密码
+# - 新主口径只需要地址、账号、密码 3 项；
+# - schema 固定为 suda_union，端口默认 3306，由后端自动拼接 JDBC。
+SUDA_UNION_DB_HOST=127.0.0.1
+SUDA_UNION_DB_USER=wxcheckin_app
+SUDA_UNION_DB_PASSWORD=请填真实数据库密码
 
 # Redis
 REDIS_HOST=127.0.0.1
@@ -226,8 +228,8 @@ cp .env.example .env
 
 - 当前 compose 已通过 MySQL init 脚本自动初始化 `wxcheckin_ext` 表结构，并写入一份 `suda_union` 演示数据（仅用于本地演示）。
 - 当前认证基线为账号密码（默认 `123` + 首次强制改密），适配 HTTP 内网访问形态。
-- 当前 `.env.example` 与 compose 默认值假设 legacy 指向**容器内 demo `suda_union`**，用于保证 prod-like 单机演示能直接启动。
-- 如果你打算把 `LEGACY_DB_URL` 改成外部/现网 legacy 库，请先确认是否允许真实同步与回写；这类场景更推荐使用上面的 systemd 方案和独立环境变量文件。
+- 当前 `.env.example` 与 compose 默认值会在未填写 `SUDA_UNION_DB_*` 时自动回退到**容器内 demo `suda_union`**，用于保证 prod-like 单机演示能直接启动。
+- 如果你打算接外部/现网 `suda_union`，只需要在 `docker/compose.override.env` 里填写 `SUDA_UNION_DB_HOST`、`SUDA_UNION_DB_USER`、`SUDA_UNION_DB_PASSWORD` 这 3 项。
 
 2) 一键启动：
 
@@ -239,6 +241,8 @@ docker compose up -d
 
 - backend 容器现在会先执行一层 Docker 预检，再进入 Spring Boot。
 - 预检日志统一使用紫色前缀 `[wxcheckin-preflight]`，便于和框架日志区分。
+- 若未填写 `SUDA_UNION_DB_HOST / SUDA_UNION_DB_USER / SUDA_UNION_DB_PASSWORD`，会明确提示“当前是单项目演示状态，非生产在线状态”。
+- 若这 3 个值只填写了一部分，容器会在启动前直接失败。
 - 如果 `wxcheckin_ext`、`suda_union` 或 Redis 连不上，容器会直接退出，不会继续打印一大段 Spring/Flyway 启动日志后才失败。
 
 3) 健康检查：
@@ -290,7 +294,7 @@ chmod +x scripts/*.sh
 
 - 该脚本现在只负责加载 `backend/.env.test.local.sh`（或 `WXAPP_TEST_ENV_FILE`）并启动后端。
 - 该脚本不会重置 legacy（`suda_union`），也不会清空扩展库业务数据。
-- 为避免把“本地联调入口”误连到真实环境，脚本只允许 loopback 数据库地址；若 `DB_HOST` 或 `LEGACY_DB_URL` 指向远程主机，会直接拒绝执行。
+- 为避免把“本地联调入口”误连到真实环境，脚本只允许 loopback 数据库地址；若 `DB_HOST` 或 `LEGACY_DB_URL`（兼容旧口径）指向远程主机，会直接拒绝执行。
 - 如果你需要一套可随时丢弃的演示数据，请优先使用上面的 Docker Compose 方案。
 
 该脚本默认：
@@ -335,7 +339,7 @@ curl http://127.0.0.1:9989/actuator/health
 | 基础 | `SPRING_PROFILES_ACTIVE` | `dev` / `prod` |
 | 基础 | `SERVER_PORT` | 服务端口 |
 | 扩展库 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` | MySQL（`wxcheckin_ext`） |
-| 遗留库 | `LEGACY_DB_URL` `LEGACY_DB_USER` `LEGACY_DB_PASSWORD` | MySQL（`suda_union`） |
+| 遗留库 | `SUDA_UNION_DB_HOST` `SUDA_UNION_DB_USER` `SUDA_UNION_DB_PASSWORD` | MySQL（`suda_union`）；`LEGACY_DB_*` 仍兼容但不再主推 |
 | Redis | `REDIS_HOST` `REDIS_PORT` `REDIS_PASSWORD` | Redis 连接 |
 | 动态码 | `QR_SIGNING_KEY` | 动态码密钥（生产必须替换；**prod profile 会强制校验不可为空/不可用默认占位符**） |
 | 动态码 | `QR_REPLAY_TTL_SECONDS` | 防重放键 TTL（秒），用于限制同一时段重复提交 |
