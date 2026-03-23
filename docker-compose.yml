@@ -51,8 +51,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:8080:8080"
+    # 后端只留在 compose 内网，避免再额外向宿主机暴露调试入口。
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null || exit 1"]
       interval: 10s
@@ -70,7 +69,8 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "8088:80"
+      # 整套容器对外只保留一个入口：宿主机 89 -> web 容器 80。
+      - "89:80"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
       interval: 10s

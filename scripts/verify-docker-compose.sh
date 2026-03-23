@@ -5,7 +5,8 @@ set -euo pipefail
 # 约束故意收得比较窄：
 # - 必须从仓库根目录存在统一 compose 入口；
 # - 必须同时包含 mysql / redis / backend / web 四个服务；
-# - MySQL / Redis 默认不能直接暴露到宿主机；
+# - 默认只允许 `web` 对外暴露宿主机 89 端口；
+# - MySQL / Redis / backend 默认都不能直接暴露到宿主机；
 # - backend / web 需要有健康检查，避免 `up` 后立刻误判可用。
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,9 +34,31 @@ require_service "redis"
 require_service "backend"
 require_service "web"
 
-# 生产口径下数据库与缓存应只留在 compose 内网；若要开放调试端口，应通过 override 文件显式开启。
-if printf '%s\n' "${CONFIG_RENDERED}" | rg -q 'published: "3306"|published: "6379"'; then
-  fail "MySQL/Redis 默认不应映射宿主机端口"
+# 生产口径下整套 compose 应只保留一个外部入口：web 的 89 端口。
+# 这里先抽取全部 published 端口，再判断是否混入了多余映射。
+PUBLISHED_PORTS="$(
+  printf '%s\n' "${CONFIG_RENDERED}" \
+    | rg -o 'published: "[0-9]+"' \
+    | sed -E 's/.*"([0-9]+)"/\1/' \
+    || true
+)"
+
+if [[ -z "${PUBLISHED_PORTS}" ]]; then
+  fail "默认应暴露 web 的 89 端口"
+fi
+
+UNEXPECTED_PORTS="$(printf '%s\n' "${PUBLISHED_PORTS}" | rg -vx '89' || true)"
+if [[ -n "${UNEXPECTED_PORTS}" ]]; then
+  fail "默认只允许暴露宿主机 89 端口，发现：$(printf '%s' "${UNEXPECTED_PORTS}" | paste -sd ',' -)"
+fi
+
+if ! printf '%s\n' "${CONFIG_RENDERED}" | rg -q '(?s)web:.*?published: "89"' -U; then
+  fail "web 默认应映射宿主机 89 端口"
+fi
+
+# 数据库、缓存、后端都不应再直接对宿主机开放调试口，避免单机部署时边界外泄。
+if printf '%s\n' "${PUBLISHED_PORTS}" | rg -q '^(3306|6379|8080|8088)$'; then
+  fail "MySQL/Redis/backend 默认不应映射宿主机端口"
 fi
 
 # backend / web 都应声明健康检查，便于依赖编排和验收。

@@ -33,24 +33,24 @@ docker compose up -d --build
 
 默认暴露：
 
-- 前端入口：`http://127.0.0.1:8088/`
-- 后端健康检查：`http://127.0.0.1:8080/actuator/health`
+- 前端入口：`http://127.0.0.1:89/`
+- 后端健康检查：通过容器内 `http://127.0.0.1:8080/actuator/health`
 
 最小验收：
 
 ```bash
-curl http://127.0.0.1:8080/actuator/health
-curl -I http://127.0.0.1:8088/
+curl -I http://127.0.0.1:89/
+docker compose exec backend curl -fsS http://127.0.0.1:8080/actuator/health
 ./scripts/verify-docker-compose.sh
 ```
 
 这套 compose 的边界如下：
 
 - `mysql` / `redis` 只留在容器网络内，默认不暴露宿主机端口
-- `backend` 只绑定 `127.0.0.1:8080`
-- `web` 用 Nginx 托管前端静态资源，并同源转发 `/api/web/**` 到 `backend`
+- `backend` 只留在 Compose 内网，不再直接暴露宿主机端口
+- `web` 用 Nginx 托管前端静态资源，并同源转发 `/api/web/**` 到 `backend`，对外只暴露 `89`
 
-如果你后续要接入已有 Nginx / 网关，把 `8088` 反代到公网 `80/443` 即可；不建议为了省一步而直接把数据库或 Redis 暴露出去。
+如果你后续要接入已有 Nginx / 网关，把宿主机 `89` 端口继续收口到公网 `80/443` 即可；不建议为了省一步而直接把数据库、Redis 或 backend 暴露出去。
 
 ## 3. 推荐生产部署口径
 

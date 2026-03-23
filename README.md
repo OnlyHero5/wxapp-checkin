@@ -171,14 +171,14 @@ docker compose up -d --build
 
 - `mysql`：容器内初始化 `wxcheckin_ext` 和 demo `suda_union`
 - `redis`：后端缓存与会话
-- `backend`：Spring Boot，宿主机仅绑定 `127.0.0.1:8080`
-- `web`：Nginx 托管 `web/dist`，并同源反代 `/api/web/**` 到后端，默认暴露 `8088`
+- `backend`：Spring Boot，仅保留在 Compose 内网，通过 `web` 容器转发访问
+- `web`：Nginx 托管 `web/dist`，并同源反代 `/api/web/**` 到后端，对外只暴露 `89`
 
 最小验收命令：
 
 ```bash
-curl http://127.0.0.1:8080/actuator/health
-curl -I http://127.0.0.1:8088/
+curl -I http://127.0.0.1:89/
+docker compose exec backend curl -fsS http://127.0.0.1:8080/actuator/health
 ./scripts/verify-docker-compose.sh
 ```
 
@@ -190,7 +190,7 @@ curl -I http://127.0.0.1:8088/
 说明：
 
 - 仓库内的 `docker/compose.env` 只负责保证“新机器上一条命令能跑起来”，不是最终生产密钥文件。
-- MySQL / Redis 默认不映射宿主机端口；如果你确实要对外开放，请通过 override 或额外网关显式处理，不要改回默认裸暴露。
+- 根 Compose 默认只对外暴露 `89`；MySQL / Redis / backend 都只留在容器内网。如果你确实要开放更多入口，请通过 override 或额外网关显式处理，不要改回默认裸暴露。
 
 如果你跑的是上面的 `./scripts/dev.sh local`，启动后可用下面两个地址做最小自检：
 
