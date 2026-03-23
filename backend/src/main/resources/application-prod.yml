@@ -12,9 +12,11 @@ spring:
 app:
   legacy:
     datasource:
-      url: ${LEGACY_DB_URL:jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
-      username: ${LEGACY_DB_USER:${DB_USER:root}}
-      password: ${LEGACY_DB_PASSWORD:${DB_PASSWORD:root}}
+      # legacy 新主口径只暴露 SUDA_UNION_DB_*，把 schema / port / JDBC 参数固定在后端内部。
+      # 旧环境若仍传 LEGACY_DB_*，这里继续兼容优先读取，避免变量升级导致现网直接失效。
+      url: ${LEGACY_DB_URL:jdbc:mysql://${SUDA_UNION_DB_HOST:${DB_HOST:127.0.0.1}}:3306/suda_union?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
+      username: ${LEGACY_DB_USER:${SUDA_UNION_DB_USER:${DB_USER:root}}}
+      password: ${LEGACY_DB_PASSWORD:${SUDA_UNION_DB_PASSWORD:${DB_PASSWORD:root}}}
       driver-class-name: ${LEGACY_DB_DRIVER:com.mysql.cj.jdbc.Driver}
   sync:
     legacy:
