@@ -1,26 +1,32 @@
+name: wxapp-checkin
+
 services:
   mysql:
     image: mysql:8.4
     container_name: wxcheckin-mysql
     command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
     env_file:
-      - ./.env
+      - path: ./docker/compose.env
+        required: true
+      - path: ./docker/compose.override.env
+        required: false
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./scripts/docker/mysql-init/01_suda_union_seed.sql:/docker-entrypoint-initdb.d/01_suda_union_seed.sql:ro
-      - ./scripts/docker/mysql-init/02_bootstrap_wxcheckin_ext.sh:/docker-entrypoint-initdb.d/02_bootstrap_wxcheckin_ext.sh:ro
-      - ./scripts/bootstrap-prod-schema.sql:/docker-entrypoint-initdb.d/bootstrap-prod-schema.sql.disabled:ro
+      - ./backend/scripts/docker/mysql-init/01_suda_union_seed.sql:/docker-entrypoint-initdb.d/01_suda_union_seed.sql:ro
+      - ./backend/scripts/docker/mysql-init/02_bootstrap_wxcheckin_ext.sh:/docker-entrypoint-initdb.d/02_bootstrap_wxcheckin_ext.sh:ro
+      - ./backend/scripts/bootstrap-prod-schema.sql:/docker-entrypoint-initdb.d/bootstrap-prod-schema.sql.disabled:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
-    restart: unless-stopped
 
   redis:
     image: redis:7.4-alpine
     container_name: wxcheckin-redis
     command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
     volumes:
       - redis_data:/data
     healthcheck:
@@ -28,20 +34,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    restart: unless-stopped
 
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: wxcheckin-backend
+    restart: unless-stopped
+    env_file:
+      - path: ./docker/compose.env
+        required: true
+      - path: ./docker/compose.override.env
+        required: false
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file:
-      - ./.env
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
@@ -50,7 +59,23 @@ services:
       timeout: 5s
       retries: 20
       start_period: 20s
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: wxcheckin-web
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8088:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   mysql_data:

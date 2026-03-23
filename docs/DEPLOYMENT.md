@@ -1,6 +1,6 @@
 # wxapp-checkin 部署手册
 
-更新日期：2026-03-20  
+更新日期：2026-03-23
 适用范围：`wxapp-checkin` 当前正式 Web-only 形态（`web/ + backend/ + /api/web/**`）
 
 ## 1. 这份文档解决什么问题
@@ -17,12 +17,44 @@
 | 场景 | 推荐入口 | 说明 |
 | --- | --- | --- |
 | 本地开发联调 | 根 `README.md` | `./scripts/dev.sh local` / `docker`，适合开发与回归 |
-| 单机演示 | `backend/README.md` 第 2 节 | Docker Compose，快速拉起 MySQL + Redis + Backend |
+| 单机演示 / 单机部署验收 | 根 `README.md` 的“全栈 Docker Compose 一键启动” | 一条命令拉起 `mysql + redis + backend + web` |
 | 正式发布 | 本文第 3 节 | 推荐后端 systemd + 前端静态资源托管 + 网关/反向代理 |
+
+## 2.1 单机全栈 Docker Compose（最短路径）
+
+如果你当前的目标是“先确认项目能不能在一台机器上一键跑起完整站点”，最短路径如下：
+
+```bash
+cd /path/to/wxapp-checkin
+cp docker/compose.override.env.example docker/compose.override.env
+# 然后把 override 文件里的密码/密钥改成真实值
+docker compose up -d --build
+```
+
+默认暴露：
+
+- 前端入口：`http://127.0.0.1:8088/`
+- 后端健康检查：`http://127.0.0.1:8080/actuator/health`
+
+最小验收：
+
+```bash
+curl http://127.0.0.1:8080/actuator/health
+curl -I http://127.0.0.1:8088/
+./scripts/verify-docker-compose.sh
+```
+
+这套 compose 的边界如下：
+
+- `mysql` / `redis` 只留在容器网络内，默认不暴露宿主机端口
+- `backend` 只绑定 `127.0.0.1:8080`
+- `web` 用 Nginx 托管前端静态资源，并同源转发 `/api/web/**` 到 `backend`
+
+如果你后续要接入已有 Nginx / 网关，把 `8088` 反代到公网 `80/443` 即可；不建议为了省一步而直接把数据库或 Redis 暴露出去。
 
 ## 3. 推荐生产部署口径
 
-推荐形态：
+正式生产长期运行时，仍推荐下面这套更清晰的拆分口径：
 
 - 后端：Java 17 + systemd
 - 前端：`web/dist` 静态资源托管到 Nginx（或等价静态资源服务）

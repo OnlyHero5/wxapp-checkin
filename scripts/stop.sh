@@ -85,6 +85,10 @@ stop_docker_backend() {
   if ! command -v docker >/dev/null 2>&1; then
     return 0
   fi
+  if [[ -f "${REPO_ROOT}/docker-compose.yml" ]]; then
+    log "Stopping docker compose (root full stack)..."
+    (cd "${REPO_ROOT}" && docker compose down) || true
+  fi
   if [[ ! -f "${REPO_ROOT}/backend/docker-compose.yml" ]]; then
     return 0
   fi
@@ -105,4 +109,3 @@ main() {
 }
 
 main "$@"
-

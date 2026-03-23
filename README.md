@@ -24,6 +24,7 @@
 | --- | --- | --- |
 | 快速理解项目现状 | 当前 README | 先确认“唯一正式前端是 `web/`、唯一正式 API 是 `/api/web/**`” |
 | 本地跑起来 | 本文的“**一键启动（推荐）**” | 适合开发联调；`local` 模式只启动本地服务，不再重置数据库 |
+| 单机一键起完整站点 | 本文的“**全栈 Docker Compose 一键启动**” | 直接拉起 `mysql + redis + backend + web`，适合演示和单机部署验收 |
 | 完整生产部署（前后端 + Web） | `docs/DEPLOYMENT.md` | 包含后端构建、Web 打包、Nginx/网关示例与验收步骤 |
 | 生产部署后端 | `backend/README.md` | 包含 systemd、Docker Compose、环境变量与排障说明 |
 | 查看本地测试环境细节 | `backend/TEST_ENV_TESTING.md` | 包含本地测试环境、安全边界与手工验证方式 |
@@ -157,7 +158,41 @@ cd wxapp-checkin
   - `VITE_APP_BASE_PATH=/checkin/`
   - `VITE_API_BASE_PATH=/checkin-api/web`
 
-启动后可用下面两个地址做最小自检：
+## 全栈 Docker Compose 一键启动
+
+如果你要验证“这个仓库是否能只靠 `docker compose up` 拉起完整站点”，请直接在项目根目录执行：
+
+```bash
+cd wxapp-checkin
+docker compose up -d --build
+```
+
+默认会启动 4 个服务：
+
+- `mysql`：容器内初始化 `wxcheckin_ext` 和 demo `suda_union`
+- `redis`：后端缓存与会话
+- `backend`：Spring Boot，宿主机仅绑定 `127.0.0.1:8080`
+- `web`：Nginx 托管 `web/dist`，并同源反代 `/api/web/**` 到后端，默认暴露 `8088`
+
+最小验收命令：
+
+```bash
+curl http://127.0.0.1:8080/actuator/health
+curl -I http://127.0.0.1:8088/
+./scripts/verify-docker-compose.sh
+```
+
+生产前至少再做两件事：
+
+- 复制 `docker/compose.override.env.example` 为 `docker/compose.override.env`
+- 把其中的数据库密码、`QR_SIGNING_KEY` 等真实值补齐
+
+说明：
+
+- 仓库内的 `docker/compose.env` 只负责保证“新机器上一条命令能跑起来”，不是最终生产密钥文件。
+- MySQL / Redis 默认不映射宿主机端口；如果你确实要对外开放，请通过 override 或额外网关显式处理，不要改回默认裸暴露。
+
+如果你跑的是上面的 `./scripts/dev.sh local`，启动后可用下面两个地址做最小自检：
 
 ```bash
 curl http://127.0.0.1:9989/actuator/health
@@ -191,6 +226,7 @@ cp backend/.env.prod.example backend/.env.prod
 - `prod` profile 下后端会对 `wxcheckin_ext` 执行 Flyway 自动迁移（不包含演示 seed 数据）。
 - `suda_union`（legacy）必须预先存在；后端不会对 legacy 做 schema 迁移。
 - 若扩展库已存在但缺少 `flyway_schema_history`（历史手工建表/拷贝库），后端会尝试推断 baseline 版本；极端情况下可用 `WXAPP_FLYWAY_BASELINE_OVERRIDE` 兜底（详见 `backend/README.md`）。
+- 如果你想单机直接把前后端一起拉起来，而不是分开部署，请优先用上面的“全栈 Docker Compose 一键启动”。
 - Web 前端生产构建、`web/dist` 托管路径与 Nginx 反向代理示例，统一写在 `docs/DEPLOYMENT.md`，不要只部署后端而遗漏前端静态资源。
 
 ## 手动启动（排障用）

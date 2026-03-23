@@ -10,3 +10,6 @@ web/.env*.local
 
 # ===== Runtime artifacts (logs/pids) =====
 local_dev/runtime/
+
+# ===== Docker Compose local overrides =====
+docker/compose.override.env

@@ -16,6 +16,9 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 
 RUN useradd --system --uid 10001 --create-home appuser
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /workspace/target/backend-0.0.1-SNAPSHOT.jar /app/app.jar
 
 ENV TZ=UTC
