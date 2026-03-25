@@ -18,4 +18,10 @@
 - 2026-03-25：已完成 `backend-rust` 验证：
   - `cargo test`
   - `cargo build --release`
-- 2026-03-25：当前剩余工作主要是仓库级切换收口：README、部署文档与启动脚本尚未切到 Rust 后端。
+- 2026-03-25：已完成仓库级切换收口：
+  - `README.md`、`docs/DEPLOYMENT.md`、`docs/REQUIREMENTS.md` 已更新为 Rust + 纯 `suda_union` 正式基线
+  - `scripts/bootstrap.sh`、`scripts/dev.sh`、`scripts/stop.sh`、`scripts/prod-backend.sh` 已切到 `backend-rust`
+  - 旧 Java `backend/`、旧 Docker 入口、旧 Java/双库计划与测试报告已清理
+- 2026-03-25：已补充验证：
+  - `bash -n scripts/bootstrap.sh scripts/dev.sh scripts/stop.sh scripts/prod-backend.sh`
+  - `./scripts/bootstrap.sh`

@@ -14,7 +14,7 @@
 - [completed] 冻结 API 兼容清单与数据库写入白名单
 - [completed] 建立 `backend-rust/` 骨架、配置层、错误层与统一 JSON envelope
 - [completed] 实现认证、活动查询、动态码、签到签退与 staff 管理
-- [pending] 补齐脚本、文档与前端必要收口
+- [completed] 补齐脚本、文档与前端必要收口
 - [in_progress] 完成联调验证、提交子仓库并清空工作区
 
 ## 约束

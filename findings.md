@@ -11,7 +11,7 @@
   - `GET /api/web/staff/activities/{activityId}/roster`
   - `POST /api/web/staff/activities/{activityId}/bulk-checkout`
   - `POST /api/web/staff/activities/{activityId}/attendance-adjustments`
-- 当前 worktree 已建于 `/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union`，且基线脚本 `backend/scripts/test-docker-preflight.sh` 可通过。
+- 当前 worktree 已建于 `/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union`。
 - Rust 工具链原本不存在，现已安装到工作区本地目录：
   - `CARGO_HOME=/home/psx/app/.cargo`
   - `RUSTUP_HOME=/home/psx/app/.rustup`
@@ -31,6 +31,7 @@
 - `backend-rust` 已通过：
   - `cargo test`
   - `cargo build --release`
-- 仍未完成的范围主要是仓库级切换收口：
-  - 顶层 README / 部署文档仍以 Java `backend/` 为正式基线
-  - `scripts/dev.sh` / `scripts/prod-backend.sh` 仍未切到 `backend-rust`
+- 仓库级切换收口已完成：
+  - 顶层 `README.md`、`docs/DEPLOYMENT.md`、`docs/REQUIREMENTS.md` 已切到 Rust 单库基线
+  - `scripts/bootstrap.sh`、`scripts/dev.sh`、`scripts/stop.sh`、`scripts/prod-backend.sh` 已切到 `backend-rust`
+  - 旧 Java `backend/`、旧 Docker 入口与过时计划/报告文档已从仓库移除

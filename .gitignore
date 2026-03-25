@@ -2,7 +2,6 @@
 .backup-untracked/
 node_modules/
 src/miniprogram_npm/
-backend/target/
 backend-rust/target/
 web/dist/
 

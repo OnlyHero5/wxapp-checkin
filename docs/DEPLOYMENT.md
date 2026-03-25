@@ -1,116 +1,45 @@
 # wxapp-checkin 部署手册
 
-更新日期：2026-03-23
-适用范围：`wxapp-checkin` 当前正式 Web-only 形态（`web/ + backend/ + /api/web/**`）
+更新日期：2026-03-25  
+适用范围：`wxapp-checkin` 当前正式形态（`web/ + backend-rust/ + suda_union`）
 
-## 1. 这份文档解决什么问题
+## 1. 部署目标
 
-这份手册只回答一件事：第一次接手项目的人，如何把 **后端 API + 手机 Web 前端** 一起部署起来，并完成最小验收。
+把手机 Web 前端和 Rust 后端部署到一台机器上，并完成最小验收。
 
-如果你只想本地联调，请先看：
+## 2. 当前正式部署口径
 
-- 根 `README.md` 的“一键启动（推荐）”
-- `backend/README.md` 的“本地联调/验收（一键脚本）”
+- 前端：`web/dist`
+- 后端：`backend-rust/target/release/wxapp-checkin-backend-rust`
+- 数据库：`suda_union`
 
-## 2. 部署场景选择
+不再作为正式口径：
 
-| 场景 | 推荐入口 | 说明 |
-| --- | --- | --- |
-| 本地开发联调 | 根 `README.md` | `./scripts/dev.sh local` / `docker`，适合开发与回归 |
-| 单机演示 / 单机部署验收 | 根 `README.md` 的“全栈 Docker Compose 一键启动” | 一条命令拉起 `mysql + redis + backend + web` |
-| 正式发布 | 本文第 3 节 | 推荐后端 systemd + 前端静态资源托管 + 网关/反向代理 |
+- Java `backend/`
+- `wxcheckin_ext`
+- Docker Compose 默认全栈发布
 
-## 2.1 单机全栈 Docker Compose（最短路径）
+## 3. 前置依赖
 
-如果你当前的目标是“先确认项目能不能在一台机器上一键跑起完整站点”，最短路径如下：
-
-```bash
-cd /path/to/wxapp-checkin
-# 仓库内已自带 docker/compose.override.env
-# 若要接外部 suda_union，只需要取消注释并填写其中 3 个 SUDA_UNION_DB_* 值；
-# 若保持空值，则默认按单项目演示状态启动。
-docker compose up -d --build
-```
-
-默认暴露：
-
-- 前端入口：`http://127.0.0.1:89/`
-- 后端健康检查：通过容器内 `http://127.0.0.1:8080/actuator/health`
-
-最小验收：
-
-```bash
-curl -I http://127.0.0.1:89/
-docker compose exec backend curl -fsS http://127.0.0.1:8080/actuator/health
-./scripts/verify-docker-compose.sh
-```
-
-这套 compose 的边界如下：
-
-- `mysql` / `redis` 只留在容器网络内，默认不暴露宿主机端口
-- `backend` 只留在 Compose 内网，不再直接暴露宿主机端口
-- `web` 用 Nginx 托管前端静态资源，并同源转发 `/api/web/**` 到 `backend`，对外只暴露 `89`
-
-如果你后续要接入已有 Nginx / 网关，把宿主机 `89` 端口继续收口到公网 `80/443` 即可；不建议为了省一步而直接把数据库、Redis 或 backend 暴露出去。
-
-## 3. 推荐生产部署口径
-
-正式生产长期运行时，仍推荐下面这套更清晰的拆分口径：
-
-- 后端：Java 17 + systemd
-- 前端：`web/dist` 静态资源托管到 Nginx（或等价静态资源服务）
-- 对外路径：
-  - 前端：`/checkin/`
-  - API：`/checkin-api/web`
-
-这样做的原因很直接：
-
-- 避免和 `suda-gs-ams` 的 `/`、`/login` 路由冲突
-- 避免让 `wxapp-checkin` 的 `/api/web/**` 被更宽的 `/api/*` 规则误吞
-- 前后端部署边界清晰，排障更直接
-
-### 3.1 前置依赖
-
-至少准备：
-
-- Java 17
+- Rust stable（仅构建机需要）
 - Node.js + npm
 - MySQL 8
-- Redis 7
-- Nginx（或等价静态资源/网关方案）
+- Nginx（或等价静态资源/反向代理）
 
-### 3.2 构建后端
+## 4. 构建
 
-```bash
-cd /path/to/wxapp-checkin/backend
-./mvnw -DskipTests clean package
-```
-
-产物默认位于：
-
-- `backend/target/backend-0.0.1-SNAPSHOT.jar`
-
-### 3.3 配置并启动后端
-
-后端环境变量、systemd 服务文件与安全护栏说明，统一按 `backend/README.md` 第 1 节执行。
-
-至少要确认这几项：
-
-- `SPRING_PROFILES_ACTIVE=prod`
-- `LEGACY_DB_URL` 指向 `suda_union`
-- `LEGACY_SYNC_ENABLED=true`
-- `OUTBOX_RELAY_ENABLED=true`
-- `QR_SIGNING_KEY` 已替换为真实强随机密钥
-
-启动成功后先做健康检查：
+### 4.1 构建后端
 
 ```bash
-curl http://127.0.0.1:8080/actuator/health
+cd /path/to/wxapp-checkin/backend-rust
+cargo build --release
 ```
 
-### 3.4 构建前端
+产物：
 
-推荐把前端发布到独立子路径 `/checkin/`，并让 API 走 `/checkin-api/web`：
+- `backend-rust/target/release/wxapp-checkin-backend-rust`
+
+### 4.2 构建前端
 
 ```bash
 cd /path/to/wxapp-checkin/web
@@ -120,25 +49,56 @@ VITE_API_BASE_PATH=/checkin-api/web \
 npm run build
 ```
 
-构建完成后，静态产物位于：
+产物：
 
 - `web/dist/`
 
-### 3.5 发布 `web/dist`
+## 5. 后端环境变量
 
-示例：把构建产物发布到服务器目录 `/var/www/wxapp-checkin/checkin/`
+推荐文件：
+
+- `/etc/wxcheckin/backend-rust.prod.env`
+
+最小示例：
+
+```bash
+DATABASE_URL=mysql://wxcheckin_app:replace-password@127.0.0.1:3306/suda_union
+SERVER_PORT=8080
+SESSION_TTL_SECONDS=7200
+QR_SIGNING_KEY=replace-this-before-prod
+TOKIO_WORKER_THREADS=2
+MYSQL_MAX_CONNECTIONS=4
+```
+
+## 6. 启动后端
+
+```bash
+cd /path/to/wxapp-checkin
+./scripts/prod-backend.sh
+```
+
+最小健康检查：
+
+```bash
+curl http://127.0.0.1:8080/actuator/health
+```
+
+预期：
+
+```json
+{"status":"UP"}
+```
+
+## 7. 发布前端
+
+示例：
 
 ```bash
 sudo mkdir -p /var/www/wxapp-checkin/checkin
 sudo rsync -av --delete /path/to/wxapp-checkin/web/dist/ /var/www/wxapp-checkin/checkin/
 ```
 
-### 3.6 Nginx 示例
-
-下面给一份最小可用示例，核心目的是：
-
-- `/checkin/` 返回前端静态资源
-- `/checkin-api/web/` 反代到后端的 `/api/web/`
+## 8. Nginx 示例
 
 ```nginx
 server {
@@ -159,34 +119,21 @@ server {
 }
 ```
 
-如果你坚持让前端直接走 `/api/web/**`，也可以，但要确保：
-
-- 网关先匹配 `wxapp-checkin` 的 `/api/web/`
-- 再匹配 `suda-gs-ams` / `suda_union` 的通用 `/api/`
-
-### 3.7 最小验收
-
-部署完成后，至少先验证下面 2 项：
+## 9. 最小验收
 
 ```bash
 curl http://127.0.0.1:8080/actuator/health
 curl -I http://<your-host>/checkin/
 ```
 
-你还应该在手机浏览器里人工确认：
+再手工确认：
 
-- `/checkin/` 能正常打开登录页
-- 登录后能进入活动页
-- `must_change_password=true` 的账号会被正确拦到改密页
-- 管理员页能拉到动态码与统计
-
-## 4. 常见坑
-
-- 只部署了后端，没有发布 `web/dist`
-  - 结果：健康检查是好的，但手机打开页面仍是 404
-- 把前端放在 `/`，同时又和 `suda-gs-ams` 共域
-  - 结果：两个 SPA 的 `/login` / `/` 容易互相覆盖
-- `prod` 下把 `LEGACY_SYNC_ENABLED` 或 `OUTBOX_RELAY_ENABLED` 设成 `false`
-  - 结果：后端会被安全护栏拒绝启动
-- 本地联调误用 `./scripts/dev.sh local`
-  - 结果：当前不会再重置数据库，但该入口只允许 loopback 数据库地址；如果你需要远程排障，请改用更显式的手动启动方式
+- 登录
+- 首次改密
+- 活动列表
+- 详情
+- staff 发码
+- 普通用户签到 / 签退
+- roster
+- 名单修正
+- 批量签退

@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # wxapp-checkin 一键停止：
-# - docker：docker compose down（不报错即视为完成）
-# - local：读取 runtime pid 文件安全停止（仅停止本脚本启动过的后端）
+# - 只停止 `./scripts/dev.sh local` 拉起的 Rust 后端；
+# - Java backend / Docker Compose 已不再是正式入口，因此不再在这里兜底处理。
 #
 # 注意：
 # - 为避免误杀，本脚本不会强行 kill 未知进程；
@@ -27,7 +27,7 @@ runtime_dir() {
 }
 
 load_local_backend_port() {
-  local env_file="${REPO_ROOT}/backend/.env.test.local.sh"
+  local env_file="${REPO_ROOT}/backend-rust/.env.local.sh"
   if [[ -f "${env_file}" ]]; then
     # shellcheck disable=SC1090
     source "${env_file}"
@@ -43,7 +43,7 @@ safe_kill_pid() {
 
   local cmdline
   cmdline="$(ps -p "${pid}" -o args= || true)"
-  if [[ "${cmdline}" == *"spring-boot:run"* ]] || [[ "${cmdline}" == *"wxcheckin"* ]] || [[ "${cmdline}" == *"backend-0.0.1-SNAPSHOT.jar"* ]]; then
+  if [[ "${cmdline}" == *"wxapp-checkin-backend-rust"* ]] || [[ "${cmdline}" == *"cargo run"* ]]; then
     log "Stopping PID=${pid} (${cmdline})"
     kill "${pid}" || true
     return 0
@@ -80,29 +80,11 @@ stop_local_backend() {
     echo "[stop] Port ${port} is still in use. If needed, inspect with: ss -ltnp \"sport = :${port}\"" >&2
   fi
 }
-
-stop_docker_backend() {
-  if ! command -v docker >/dev/null 2>&1; then
-    return 0
-  fi
-  if [[ -f "${REPO_ROOT}/docker-compose.yml" ]]; then
-    log "Stopping docker compose (root full stack)..."
-    (cd "${REPO_ROOT}" && docker compose down) || true
-  fi
-  if [[ ! -f "${REPO_ROOT}/backend/docker-compose.yml" ]]; then
-    return 0
-  fi
-
-  log "Stopping docker compose (backend)..."
-  (cd "${REPO_ROOT}/backend" && docker compose down) || true
-}
-
 main() {
   local rt_dir
   rt_dir="$(runtime_dir)"
   mkdir -p "${rt_dir}"
 
-  stop_docker_backend
   stop_local_backend "${rt_dir}"
 
   log "Done."
