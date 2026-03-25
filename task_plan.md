@@ -1,16 +1,24 @@
 # 任务计划
 
 ## 目标
-只读分析 `wxapp-checkin/web` 手机 Web 前端源码，回答以下问题：
-1. 登录后强制改密逻辑的真实依据，以及是否依赖浏览器首次登录。
-2. `staff` 动态码展示页、普通用户签到/签退输入页的路由守卫、会话保持、自动刷新实现方式。
-3. 哪些前端实现最可能导致长链路自动化被打回登录页或误判为读码失败。
+根据 `/home/psx/app/docs/plans/2026-03-25-wxapp-checkin-rust-suda-union-design.md` 与 `/home/psx/app/docs/plans/2026-03-25-wxapp-checkin-rust-suda-union-implementation.md`，在 `wxapp-checkin` 内落地新的 `backend-rust/`：
 
-## 步骤
-- [in_progress] 梳理入口路由、会话存储、HTTP 拦截与登录跳转。
-- [pending] 梳理改密页、动态码页、签到/签退页的页面逻辑与轮询刷新。
-- [pending] 交叉核对测试与设计文档，提炼高风险点并整理成结论。
+- 用 Rust 重写正式后端
+- 正式链路只依赖 `suda_union`
+- 保持 `/api/web/**` 9 个端点契约兼容
+- 数据库写入只允许 `suda_activity_apply`、`suda_log`、`suda_user.password`
+- 尽量压缩常驻内存与连接池占用
+
+## 阶段
+- [completed] 建立隔离 worktree、校验现有基线、补齐 Rust 工具链
+- [completed] 冻结 API 兼容清单与数据库写入白名单
+- [completed] 建立 `backend-rust/` 骨架、配置层、错误层与统一 JSON envelope
+- [completed] 实现认证、活动查询、动态码、签到签退与 staff 管理
+- [pending] 补齐脚本、文档与前端必要收口
+- [in_progress] 完成联调验证、提交子仓库并清空工作区
 
 ## 约束
-- 不改业务代码。
-- 结论必须给出具体文件和行号。
+- 只允许改动 `wxapp-checkin/`，不得改 `suda_union/` 与 `suda-gs-ams/` 业务代码。
+- 新增 Rust 代码必须补中文维护注释，解释业务意图、状态流转与维护边界。
+- 任何产物只能落在 `/home/psx/app/**`。
+- 最终需要在 `wxapp-checkin/` 子仓库提交，并保证 `git status --porcelain` 为空。

@@ -1,5 +1,21 @@
 # 进度记录
 
-- 2026-03-19：建立分析计划，开始梳理 `web` 前端入口、会话和页面链路。
-- 2026-03-19：完成路由守卫、会话存储、HTTP 统一错误处理、staff 动态码页、普通用户签到/签退页的源码交叉分析。
-- 2026-03-19：补充后端 `SessionService` / `WebPasswordAuthService` 与 `docs/API_SPEC.md` 交叉核对，用于确认“非浏览器绑定、后端 must_change_password 驱动”的结论。
+- 2026-03-25：确认本次执行目标是 `/home/psx/app/docs/plans/2026-03-25-wxapp-checkin-rust-suda-union-implementation.md`，不再是 2026-03-23 的 Docker/配置计划。
+- 2026-03-25：已读取 3.25 Rust 设计稿、实施计划，以及根目录 `findings.md / progress.md / task_plan.md`，承接前序调研结论。
+- 2026-03-25：已确认当前 `wxapp-checkin/` 子仓库工作区干净，并在 `.worktrees/rust-suda-union` 建立隔离 worktree。
+- 2026-03-25：已安装工作区本地 Rust 工具链，并完成现有 `backend/scripts/test-docker-preflight.sh` 基线验证。
+- 2026-03-25：已提取前端实际依赖的 9 个 `/api/web/**` 端点及 Java 控制器映射，准备进入 Rust 骨架与兼容清单实现。
+- 2026-03-25：已新增 `docs/plans/2026-03-25-rust-api-compat-checklist.md`，把 9 个正式端点、关键错误码和数据库写入白名单固化为执行清单。
+- 2026-03-25：已创建 `backend-rust/`，落地 `Cargo.toml`、配置读取、共享状态、统一错误 envelope、健康检查与基础单测。
+- 2026-03-25：已实现 Rust 版无状态 HMAC `session_token`，并补齐 round-trip / 过期 / 篡改测试。
+- 2026-03-25：已实现基于 `suda_union` 的数据库访问层：
+  - `suda_user` 认证读取与改密
+  - `suda_activity` 列表/详情查询
+  - `suda_activity_apply` 签到签退与名单修正读写
+  - `suda_log` 事件/审计写入与时间回查
+- 2026-03-25：已实现 9 个正式 `/api/web/**` 端点的 Rust 路由与服务层，包括 auth、activities、attendance、staff 三条主链路。
+- 2026-03-25：已实现进程内 replay guard 与 invalid-code limiter，保持“无 Redis 正式基线”的低内存路线。
+- 2026-03-25：已完成 `backend-rust` 验证：
+  - `cargo test`
+  - `cargo build --release`
+- 2026-03-25：当前剩余工作主要是仓库级切换收口：README、部署文档与启动脚本尚未切到 Rust 后端。

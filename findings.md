@@ -1,10 +1,36 @@
 # 发现记录
 
-- 强制改密的前端真实依据不是“浏览器首次登录”，而是后端返回的 `must_change_password` 与后续业务接口返回的 `password_change_required`。前端只把该标记持久化到 `localStorage.session_context`，并据此做路由导流。
-- 路由守卫是“本地 token/角色的第一层判断”，真正的会话失效和强制改密收口在业务请求异常里：`session_expired` 会清空本地会话，`password_change_required` 会把本地标记改成 true。
-- staff 动态码页的自动刷新有三层：页面首次进入/切换动作页签刷新、`visibilitychange` 回前台刷新、动态码到期定时刷新；同时刷新前会先把 `codeSession` 置空，所以页面会短暂显示 `------` / “动态码加载中...”。
-- 普通用户签到/签退输入页不会自动轮询动态码，只会在首次进入和页面回前台时重拉活动详情；详情刷新时会先把 `detail` 置空，输入区域短暂消失。
-- 高概率自动化风险点：
-  - 前端没有会话续期/心跳；长链路一旦遇到后端 `session_expired`，页面会立即清本地会话并跳登录。
-  - staff 动态码页在到期和回前台时会刷新并清空旧码，自动化若在刷新窗口读到 `------` 或旧码，容易误判为“读码失败”。
-  - 从 staff 页切到普通用户输入页、再切回 staff 页时，两边都会因 `visibilitychange` 触发刷新，导致“刚读到的码”在提交前已过期或已切换。
+- `2026-03-25` 的正式设计与实施计划文件位于工作区根目录 `/home/psx/app/docs/plans/`，不是 `wxapp-checkin/docs/plans/`。
+- 当前前端正式兼容面仅 9 个 `/api/web/**` 端点：
+  - `POST /api/web/auth/login`
+  - `POST /api/web/auth/change-password`
+  - `GET /api/web/activities`
+  - `GET /api/web/activities/{activityId}`
+  - `GET /api/web/activities/{activityId}/code-session`
+  - `POST /api/web/activities/{activityId}/code-consume`
+  - `GET /api/web/staff/activities/{activityId}/roster`
+  - `POST /api/web/staff/activities/{activityId}/bulk-checkout`
+  - `POST /api/web/staff/activities/{activityId}/attendance-adjustments`
+- 当前 worktree 已建于 `/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union`，且基线脚本 `backend/scripts/test-docker-preflight.sh` 可通过。
+- Rust 工具链原本不存在，现已安装到工作区本地目录：
+  - `CARGO_HOME=/home/psx/app/.cargo`
+  - `RUSTUP_HOME=/home/psx/app/.rustup`
+- 现阶段最关键的实现边界仍是：
+  - 对外保持 `snake_case` JSON
+  - 会话继续以 `session_token` + `Authorization: Bearer` 暴露
+  - 数据库写入只命中 `suda_activity_apply`、`suda_log`、`suda_user.password`
+- `backend-rust/` 现已实现 9 个正式 `/api/web/**` 端点对应的 Rust 路由与服务层：
+  - auth：`login`、`change-password`
+  - activities：`list`、`detail`、`code-session`、`code-consume`
+  - staff：`roster`、`attendance-adjustments`、`bulk-checkout`
+- 当前 Rust 方案明确采用：
+  - `axum + tokio + sqlx(MySQL)`
+  - 无状态 HMAC `session_token`
+  - 进程内 replay guard / invalid-code limiter
+  - `suda_log` 作为签到、签退和 staff 审计的统一日志落点
+- `backend-rust` 已通过：
+  - `cargo test`
+  - `cargo build --release`
+- 仍未完成的范围主要是仓库级切换收口：
+  - 顶层 README / 部署文档仍以 Java `backend/` 为正式基线
+  - `scripts/dev.sh` / `scripts/prod-backend.sh` 仍未切到 `backend-rust`

@@ -3,6 +3,7 @@
 node_modules/
 src/miniprogram_npm/
 backend/target/
+backend-rust/target/
 web/dist/
 
 # ===== Local-only env files (do not commit) =====
