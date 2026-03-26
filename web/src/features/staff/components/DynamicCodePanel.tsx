@@ -5,6 +5,7 @@ import type { CodeSessionResponse } from "../api";
 import { AppButton } from "../../../shared/ui/AppButton";
 
 type DynamicCodePanelProps = {
+  activityId: string;
   actionType: ActivityActionType;
   codeSession: CodeSessionResponse | null;
   loading?: boolean;
@@ -29,13 +30,19 @@ function resolveRemainingMs(codeSession: CodeSessionResponse | null) {
 
 /**
  * 页面切换签到/签退页签时，`actionType` 会先更新，再等待对应动态码请求返回。
- * hero 区必须只展示“和当前动作同语义”的动态码，避免出现“当前签退码 + 旧签到码”的短暂错配。
+ * 同理，切换活动路由时也会先拿到新的 `activityId`，再等待新活动的动态码返回。
+ * hero 区必须同时校验“当前动作 + 当前活动”两层语义，避免把旧活动的码短暂挂到新活动标题下。
  */
 function resolveDisplayedCodeSession(
+  activityId: string,
   actionType: ActivityActionType,
   codeSession: CodeSessionResponse | null
 ) {
-  if (!codeSession || codeSession.action_type !== actionType) {
+  if (
+    !codeSession ||
+    codeSession.action_type !== actionType ||
+    codeSession.activity_id !== activityId
+  ) {
     return null;
   }
 
@@ -65,13 +72,14 @@ function resolveAttendanceCounts(codeSession: CodeSessionResponse | null) {
  * 不在这一层直接耦合批量签退或页面级错误处理。
  */
 export function DynamicCodePanel({
+  activityId,
   actionType,
   codeSession,
   loading = false,
   onActionChange,
   onRefresh
 }: DynamicCodePanelProps) {
-  const displayedCodeSession = resolveDisplayedCodeSession(actionType, codeSession);
+  const displayedCodeSession = resolveDisplayedCodeSession(activityId, actionType, codeSession);
   const [remainingMs, setRemainingMs] = useState(() => resolveRemainingMs(displayedCodeSession));
   const lastAutoRefreshKeyRef = useRef("");
   const onRefreshRef = useRef(onRefresh);

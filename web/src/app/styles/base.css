@@ -1191,11 +1191,11 @@ select {
   }
 
   /* 桌面态稍微放宽 hero 与正文内边距，让大码展示有更稳定的留白。 */
-  .mobile-page[data-page-layout="showcase-auto"] .mobile-page__hero {
+  .mobile-page[data-page-layout="showcase-auto"][data-page-tone="staff"] .mobile-page__hero {
     padding: 22px 24px 18px;
   }
 
-  .mobile-page[data-page-layout="showcase-auto"] .mobile-page__section {
+  .mobile-page[data-page-layout="showcase-auto"][data-page-tone="staff"] .mobile-page__section {
     padding: 24px 24px 28px;
   }
 

@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { flushSync } from "react-dom";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { saveAuthSession, clearSession } from "../../shared/session/session-store";
@@ -27,6 +29,27 @@ vi.mock("../../features/staff/api", () => ({
   getCodeSession: staffApiMocks.getCodeSession
 }));
 
+function buildActivityDetail(activityId: string) {
+  return {
+    activity_id: activityId,
+    activity_title: activityId === "act_202" ? "迎新引导活动" : "校园志愿活动",
+    activity_type: "志愿",
+    start_time: "2026-03-10 09:00:00",
+    location: activityId === "act_202" ? "图书馆前广场" : "本部操场",
+    description: "负责现场秩序维护",
+    progress_status: "ongoing",
+    support_checkin: true,
+    support_checkout: true,
+    can_checkin: false,
+    can_checkout: false,
+    my_registered: false,
+    my_checked_in: false,
+    my_checked_out: false,
+    checkin_count: 18,
+    checkout_count: 3
+  };
+}
+
 function renderStaffManagePage() {
   render(
     <MemoryRouter initialEntries={["/staff/activities/act_101/manage"]}>
@@ -37,6 +60,33 @@ function renderStaffManagePage() {
   );
 }
 
+function renderStaffManagePageWithControlledRoute() {
+  let switchToNextActivity: (() => void) | undefined;
+
+  function ControlledRouteHarness() {
+    const [pathname, setPathname] = useState("/staff/activities/act_101/manage");
+    switchToNextActivity = () => {
+      setPathname("/staff/activities/act_202/manage");
+    };
+
+    return (
+      <MemoryRouter initialEntries={["/staff/activities/act_101/manage"]}>
+        <Routes location={pathname}>
+          <Route path="/staff/activities/:activityId/manage" element={<StaffManagePage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  render(<ControlledRouteHarness />);
+
+  return {
+    switchToNextActivity() {
+      switchToNextActivity?.();
+    }
+  };
+}
+
 describe("StaffManagePage", () => {
   beforeEach(() => {
     saveAuthSession({
@@ -44,24 +94,7 @@ describe("StaffManagePage", () => {
       role: "staff",
       session_token: "sess_staff_manage_123"
     });
-    activitiesApiMocks.getActivityDetail.mockResolvedValue({
-      activity_id: "act_101",
-      activity_title: "校园志愿活动",
-      activity_type: "志愿",
-      start_time: "2026-03-10 09:00:00",
-      location: "本部操场",
-      description: "负责现场秩序维护",
-      progress_status: "ongoing",
-      support_checkin: true,
-      support_checkout: true,
-      can_checkin: false,
-      can_checkout: false,
-      my_registered: false,
-      my_checked_in: false,
-      my_checked_out: false,
-      checkin_count: 18,
-      checkout_count: 3
-    });
+    activitiesApiMocks.getActivityDetail.mockImplementation(async (activityId: string) => buildActivityDetail(activityId));
   });
 
   afterEach(() => {
@@ -161,6 +194,66 @@ describe("StaffManagePage", () => {
     });
 
     expect(await screen.findByText("654321")).toBeInTheDocument();
+  });
+
+  it("does not keep the previous activity code in the hero while switching routes on the same action tab", async () => {
+    let resolveNextActivityCode: ((value: unknown) => void) | undefined;
+    const nextActivityCodePromise = new Promise((resolve) => {
+      resolveNextActivityCode = resolve;
+    });
+
+    staffApiMocks.getCodeSession.mockImplementation(async (activityId: string) => {
+      if (activityId === "act_101") {
+        return {
+          action_type: "checkin",
+          activity_id: "act_101",
+          checkin_count: 18,
+          checkout_count: 3,
+          code: "483920",
+          expires_at: 1760000007500,
+          expires_in_ms: 4200,
+          server_time_ms: 1760000003300,
+          status: "success"
+        };
+      }
+
+      return nextActivityCodePromise;
+    });
+
+    const routeDriver = renderStaffManagePageWithControlledRoute();
+
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+
+    act(() => {
+      flushSync(() => {
+        routeDriver.switchToNextActivity();
+      });
+    });
+
+    expect(screen.getByText("当前签到码")).toBeInTheDocument();
+    expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.queryByText("483920")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_202");
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_202", "checkin");
+
+    resolveNextActivityCode?.({
+      action_type: "checkin",
+      activity_id: "act_202",
+      checkin_count: 9,
+      checkout_count: 1,
+      code: "202202",
+      expires_at: 1760000021000,
+      expires_in_ms: 4500,
+      server_time_ms: 1760000016500,
+      status: "success"
+    });
+
+    expect(await screen.findByText("202202")).toBeInTheDocument();
   });
 
   it("refreshes the current code session when the page becomes visible again", async () => {

@@ -267,6 +267,7 @@ export function StaffManagePage() {
         />
       ) : null}
       <DynamicCodePanel
+        activityId={activityId}
         actionType={actionType}
         codeSession={codeSession}
         loading={codeSessionLoading}
