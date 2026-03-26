@@ -28,6 +28,21 @@ function resolveRemainingMs(codeSession: CodeSessionResponse | null) {
 }
 
 /**
+ * 页面切换签到/签退页签时，`actionType` 会先更新，再等待对应动态码请求返回。
+ * hero 区必须只展示“和当前动作同语义”的动态码，避免出现“当前签退码 + 旧签到码”的短暂错配。
+ */
+function resolveDisplayedCodeSession(
+  actionType: ActivityActionType,
+  codeSession: CodeSessionResponse | null
+) {
+  if (!codeSession || codeSession.action_type !== actionType) {
+    return null;
+  }
+
+  return codeSession;
+}
+
+/**
  * 管理端统计口径：
  * - 后端 `checkin_count` 是“已签到未签退”（仍在场）人数；
  * - 后端 `checkout_count` 是“已签退”人数；
@@ -56,23 +71,25 @@ export function DynamicCodePanel({
   onActionChange,
   onRefresh
 }: DynamicCodePanelProps) {
-  const [remainingMs, setRemainingMs] = useState(() => resolveRemainingMs(codeSession));
+  const displayedCodeSession = resolveDisplayedCodeSession(actionType, codeSession);
+  const [remainingMs, setRemainingMs] = useState(() => resolveRemainingMs(displayedCodeSession));
   const lastAutoRefreshKeyRef = useRef("");
   const onRefreshRef = useRef(onRefresh);
   const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
   // 动作标签和当前 tab 绑定，确保首屏还没拿到码时也能给管理员稳定的语义提示。
   const actionLabel = actionType === "checkout" ? "当前签退码" : "当前签到码";
+  const heroLoading = loading || (!!codeSession && !displayedCodeSession);
 
   useEffect(() => {
     onRefreshRef.current = onRefresh;
   }, [onRefresh]);
 
   useEffect(() => {
-    if (!codeSession) {
+    if (!displayedCodeSession) {
       setRemainingMs(0);
       return;
     }
-    const nextCodeSession = codeSession;
+    const nextCodeSession = displayedCodeSession;
 
     const receivedAtMs = Date.now();
     const serverTimeMs = nextCodeSession.server_time_ms ?? receivedAtMs;
@@ -100,7 +117,7 @@ export function DynamicCodePanel({
       window.clearInterval(countdownTimer);
       window.clearTimeout(autoRefreshTimer);
     };
-  }, [codeSession]);
+  }, [displayedCodeSession]);
 
   return (
     <section className="staff-panel" data-panel-tone="staff">
@@ -116,9 +133,9 @@ export function DynamicCodePanel({
         <div className="staff-code-panel__glass">
           <p className="staff-code-panel__label">{actionLabel}</p>
           {/* 大号六码是管理页的视觉焦点，因此刻意和普通文本分层。 */}
-          <p className="staff-code-panel__value">{codeSession?.code ?? "------"}</p>
+          <p className="staff-code-panel__value">{displayedCodeSession?.code ?? "------"}</p>
           <p className="staff-code-panel__meta">
-            {loading ? "动态码加载中..." : `剩余时间：${formatRemainingSeconds(remainingMs)}`}
+            {heroLoading ? "动态码加载中..." : `剩余时间：${formatRemainingSeconds(remainingMs)}`}
           </p>
         </div>
       </div>

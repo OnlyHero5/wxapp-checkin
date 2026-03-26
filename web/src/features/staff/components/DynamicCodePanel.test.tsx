@@ -48,4 +48,62 @@ describe("DynamicCodePanel", () => {
     expect(screen.getByText("------")).toBeInTheDocument();
     expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
   });
+
+  it("keeps the hero placeholder when the incoming code session still belongs to the previous action", () => {
+    const onActionChange = vi.fn();
+    const onRefresh = vi.fn();
+
+    render(
+      <DynamicCodePanel
+        actionType="checkout"
+        codeSession={{
+          action_type: "checkin",
+          activity_id: "act_101",
+          checkin_count: 18,
+          checkout_count: 3,
+          code: "483920",
+          expires_at: Date.now() + 4000,
+          expires_in_ms: 4000,
+          server_time_ms: Date.now(),
+          status: "success"
+        }}
+        onActionChange={onActionChange}
+        onRefresh={onRefresh}
+      />
+    );
+
+    expect(screen.getByText("当前签退码")).toBeInTheDocument();
+    expect(screen.getByText("------")).toBeInTheDocument();
+    expect(screen.queryByText("483920")).not.toBeInTheDocument();
+  });
+
+  it("keeps the mobile reading order as controls, hero, stats, then actions", () => {
+    const onActionChange = vi.fn();
+    const onRefresh = vi.fn();
+
+    render(
+      <DynamicCodePanel
+        actionType="checkin"
+        codeSession={{
+          action_type: "checkin",
+          activity_id: "act_101",
+          checkin_count: 18,
+          checkout_count: 3,
+          code: "483920",
+          expires_at: Date.now() + 4000,
+          expires_in_ms: 4000,
+          server_time_ms: Date.now(),
+          status: "success"
+        }}
+        onActionChange={onActionChange}
+        onRefresh={onRefresh}
+      />
+    );
+
+    const panel = screen.getByText("签到码").closest(".staff-panel");
+    expect(panel).not.toBeNull();
+    expect(
+      Array.from(panel?.children ?? []).map((child) => child.getAttribute("data-display-zone"))
+    ).toEqual(["controls", "hero", "stats", "actions"]);
+  });
 });
