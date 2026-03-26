@@ -31,21 +31,23 @@ pub async fn list_staff_activities(
   limit: i64,
   offset: i64,
 ) -> Result<Vec<ActivityRow>, AppError> {
+  // 正式库活动表的文本列同样使用 `utf8mb4_bin`，
+  // 这里统一在 SQL 投影层转成字符型，避免列表/详情/报名状态读取全部受影响。
   fetch_activities(
     pool,
     r#"
       SELECT
         a.id AS legacy_activity_id,
-        a.name AS activity_title,
-        a.description,
-        a.location,
-        a.activity_stime,
-        a.activity_etime,
+        CAST(a.name AS CHAR(255) CHARACTER SET utf8mb4) AS activity_title,
+        CAST(a.description AS CHAR CHARACTER SET utf8mb4) AS description,
+        CAST(a.location AS CHAR(255) CHARACTER SET utf8mb4) AS location,
+        CAST(a.activity_stime AS DATETIME) AS activity_stime,
+        CAST(a.activity_etime AS DATETIME) AS activity_etime,
         a.type AS legacy_type,
         a.state AS legacy_state,
-        COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS registered_count,
-        COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS checkin_count,
-        COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS checkout_count
+        CAST(COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS SIGNED) AS registered_count,
+        CAST(COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkin_count,
+        CAST(COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkout_count
       FROM suda_activity a
       LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
       GROUP BY a.id, a.name, a.description, a.location, a.activity_stime, a.activity_etime, a.type, a.state
@@ -68,16 +70,16 @@ pub async fn list_normal_activities(
     r#"
       SELECT
         a.id AS legacy_activity_id,
-        a.name AS activity_title,
-        a.description,
-        a.location,
-        a.activity_stime,
-        a.activity_etime,
+        CAST(a.name AS CHAR(255) CHARACTER SET utf8mb4) AS activity_title,
+        CAST(a.description AS CHAR CHARACTER SET utf8mb4) AS description,
+        CAST(a.location AS CHAR(255) CHARACTER SET utf8mb4) AS location,
+        CAST(a.activity_stime AS DATETIME) AS activity_stime,
+        CAST(a.activity_etime AS DATETIME) AS activity_etime,
         a.type AS legacy_type,
         a.state AS legacy_state,
-        COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS registered_count,
-        COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS checkin_count,
-        COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS checkout_count
+        CAST(COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS SIGNED) AS registered_count,
+        CAST(COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkin_count,
+        CAST(COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkout_count
       FROM suda_activity a
       LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
       WHERE EXISTS (
@@ -108,16 +110,16 @@ pub async fn find_activity_by_id(
     r#"
       SELECT
         a.id AS legacy_activity_id,
-        a.name AS activity_title,
-        a.description,
-        a.location,
-        a.activity_stime,
-        a.activity_etime,
+        CAST(a.name AS CHAR(255) CHARACTER SET utf8mb4) AS activity_title,
+        CAST(a.description AS CHAR CHARACTER SET utf8mb4) AS description,
+        CAST(a.location AS CHAR(255) CHARACTER SET utf8mb4) AS location,
+        CAST(a.activity_stime AS DATETIME) AS activity_stime,
+        CAST(a.activity_etime AS DATETIME) AS activity_etime,
         a.type AS legacy_type,
         a.state AS legacy_state,
-        COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS registered_count,
-        COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS checkin_count,
-        COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS checkout_count
+        CAST(COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS SIGNED) AS registered_count,
+        CAST(COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkin_count,
+        CAST(COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkout_count
       FROM suda_activity a
       LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
       WHERE a.id = ?
@@ -139,10 +141,10 @@ pub async fn find_user_activity(
   sqlx::query_as::<_, UserActivityRow>(
     r#"
       SELECT
-        username,
+        CAST(username AS CHAR(20) CHARACTER SET utf8mb4) AS username,
         state,
-        CAST(check_in AS UNSIGNED) AS check_in_flag,
-        CAST(check_out AS UNSIGNED) AS check_out_flag
+        CAST(check_in AS SIGNED) AS check_in_flag,
+        CAST(check_out AS SIGNED) AS check_out_flag
       FROM suda_activity_apply
       WHERE activity_id = ? AND username = ?
       LIMIT 1

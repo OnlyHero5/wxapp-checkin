@@ -40,15 +40,17 @@ pub async fn find_attendance_for_update(
   legacy_activity_id: i64,
   student_id: &str,
 ) -> Result<Option<AttendanceRecord>, AppError> {
+  // 签到写路径读到的用户名/姓名同样来自 `utf8mb4_bin` 文本列。
+  // 若不在这里转型，事务入口和 roster 相关接口都会直接因为解码失败而中断。
   sqlx::query_as::<_, AttendanceRecord>(
     r#"
       SELECT
         id,
         activity_id,
-        username,
+        CAST(username AS CHAR(20) CHARACTER SET utf8mb4) AS username,
         state,
-        CAST(check_in AS UNSIGNED) AS check_in_flag,
-        CAST(check_out AS UNSIGNED) AS check_out_flag
+        CAST(check_in AS SIGNED) AS check_in_flag,
+        CAST(check_out AS SIGNED) AS check_out_flag
       FROM suda_activity_apply
       WHERE activity_id = ? AND username = ?
       LIMIT 1
@@ -93,11 +95,11 @@ pub async fn list_roster(
       SELECT
         aa.id AS record_id,
         u.id AS user_id,
-        u.username AS student_id,
-        u.name,
+        CAST(u.username AS CHAR(20) CHARACTER SET utf8mb4) AS student_id,
+        CAST(u.name AS CHAR(255) CHARACTER SET utf8mb4) AS name,
         aa.state,
-        CAST(aa.check_in AS UNSIGNED) AS check_in_flag,
-        CAST(aa.check_out AS UNSIGNED) AS check_out_flag
+        CAST(aa.check_in AS SIGNED) AS check_in_flag,
+        CAST(aa.check_out AS SIGNED) AS check_out_flag
       FROM suda_activity_apply aa
       INNER JOIN suda_user u ON u.username = aa.username
       WHERE aa.activity_id = ?
@@ -120,11 +122,11 @@ pub async fn list_checked_in_for_update(
       SELECT
         aa.id AS record_id,
         u.id AS user_id,
-        u.username AS student_id,
-        u.name,
+        CAST(u.username AS CHAR(20) CHARACTER SET utf8mb4) AS student_id,
+        CAST(u.name AS CHAR(255) CHARACTER SET utf8mb4) AS name,
         aa.state,
-        CAST(aa.check_in AS UNSIGNED) AS check_in_flag,
-        CAST(aa.check_out AS UNSIGNED) AS check_out_flag
+        CAST(aa.check_in AS SIGNED) AS check_in_flag,
+        CAST(aa.check_out AS SIGNED) AS check_out_flag
       FROM suda_activity_apply aa
       INNER JOIN suda_user u ON u.username = aa.username
       WHERE aa.activity_id = ?
@@ -155,11 +157,11 @@ pub async fn list_by_user_ids_for_update(
       SELECT
         aa.id AS record_id,
         u.id AS user_id,
-        u.username AS student_id,
-        u.name,
+        CAST(u.username AS CHAR(20) CHARACTER SET utf8mb4) AS student_id,
+        CAST(u.name AS CHAR(255) CHARACTER SET utf8mb4) AS name,
         aa.state,
-        CAST(aa.check_in AS UNSIGNED) AS check_in_flag,
-        CAST(aa.check_out AS UNSIGNED) AS check_out_flag
+        CAST(aa.check_in AS SIGNED) AS check_in_flag,
+        CAST(aa.check_out AS SIGNED) AS check_out_flag
       FROM suda_activity_apply aa
       INNER JOIN suda_user u ON u.username = aa.username
       WHERE aa.activity_id = ?

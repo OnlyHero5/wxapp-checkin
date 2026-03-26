@@ -20,9 +20,7 @@ pub async fn get_roster(
 ) -> Result<ActivityRosterResponse, AppError> {
   require_staff(current_user)?;
   let legacy_activity_id = parse_activity_id(activity_id)?;
-  let activity = activity_repo::find_activity_by_id(state.pool(), legacy_activity_id)
-    .await?
-    .ok_or_else(|| AppError::business("invalid_activity", "活动不存在或已下线", Some("invalid_activity")))?;
+  let activity = require_activity(state, legacy_activity_id).await?;
   let rows = attendance_repo::list_roster(state.pool(), legacy_activity_id).await?;
 
   let mut items = Vec::with_capacity(rows.len());
@@ -85,6 +83,7 @@ pub async fn adjust_attendance(
   require_staff(current_user)?;
   validate_patch(checked_in, checked_out)?;
   let legacy_activity_id = parse_activity_id(activity_id)?;
+  require_activity(state, legacy_activity_id).await?;
   let normalized_user_ids = normalize_user_ids(user_ids)?;
   let batch_id = format!("adj_{}", now_millis()?);
   let server_time_ms = now_millis()?;
@@ -152,6 +151,7 @@ pub async fn bulk_checkout(
     return Err(AppError::business("invalid_param", "批量签退必须显式确认", None));
   }
   let legacy_activity_id = parse_activity_id(activity_id)?;
+  require_activity(state, legacy_activity_id).await?;
   let batch_id = format!("batch_{}", now_millis()?);
   let server_time_ms = now_millis()?;
 
@@ -216,6 +216,19 @@ fn require_staff(current_user: &CurrentUser) -> Result<(), AppError> {
   } else {
     Err(AppError::business("forbidden", "仅工作人员可查看或修正参会名单", None))
   }
+}
+
+async fn require_activity(
+  state: &AppState,
+  legacy_activity_id: i64,
+) -> Result<activity_repo::ActivityRow, AppError> {
+  activity_repo::find_activity_by_id(state.pool(), legacy_activity_id)
+    .await?
+    .ok_or_else(missing_activity_error)
+}
+
+fn missing_activity_error() -> AppError {
+  AppError::business("invalid_activity", "活动不存在或已下线", Some("invalid_activity"))
 }
 
 fn normalize_user_ids(user_ids: &[i64]) -> Result<Vec<i64>, AppError> {
@@ -371,7 +384,7 @@ fn now_millis() -> Result<u64, AppError> {
 
 #[cfg(test)]
 mod tests {
-  use super::{resolve_patch, validate_patch};
+  use super::{resolve_patch, validate_patch, missing_activity_error};
   use crate::db::attendance_repo::ManagedAttendanceRow;
 
   #[test]
@@ -392,5 +405,12 @@ mod tests {
   #[test]
   fn patch_should_require_at_least_one_flag() {
     assert!(validate_patch(None, None).is_err());
+  }
+
+  #[test]
+  fn missing_activity_should_use_contract_error_code() {
+    let error = missing_activity_error();
+    assert_eq!(error.status(), "invalid_activity");
+    assert_eq!(error.error_code(), Some("invalid_activity"));
   }
 }

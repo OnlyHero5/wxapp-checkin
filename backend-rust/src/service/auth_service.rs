@@ -46,8 +46,6 @@ pub async fn login(
     .map_err(|_| AppError::internal("系统时间异常，无法计算会话过期时间"))?;
   let session_expires_at = issued_at_ms + state.config().session_ttl_seconds * 1000;
 
-  user_repo::update_last_login_time(state.pool(), &user.username).await?;
-
   Ok(LoginResponse {
     status: "success".to_string(),
     message: if must_change {

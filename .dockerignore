@@ -1,0 +1,12 @@
+.git
+.vscode
+.worktrees
+local_dev
+docs
+design-system
+web/node_modules
+web/dist
+backend-rust/target
+target
+**/.DS_Store
+

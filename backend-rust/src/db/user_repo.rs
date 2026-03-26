@@ -18,16 +18,18 @@ pub async fn find_user_by_student_id(
   pool: &MySqlPool,
   student_id: &str,
 ) -> Result<Option<UserAuthRecord>, AppError> {
+  // `suda_union` 正式库把文本列统一建成 `utf8mb4_bin`；
+  // sqlx 运行时会把这类列按二进制元数据返回，因此这里显式转回字符型，避免认证链路解码失败。
   sqlx::query_as::<_, UserAuthRecord>(
     r#"
       SELECT
         u.id,
-        u.username,
-        u.password,
-        u.name,
+        CAST(u.username AS CHAR(20) CHARACTER SET utf8mb4) AS username,
+        CAST(u.password AS CHAR(60) CHARACTER SET utf8mb4) AS password,
+        CAST(u.name AS CHAR(255) CHARACTER SET utf8mb4) AS name,
         u.role,
-        u.invalid,
-        d.department
+        CAST(u.invalid AS SIGNED) AS invalid,
+        CAST(d.department AS CHAR(255) CHARACTER SET utf8mb4) AS department
       FROM suda_user u
       LEFT JOIN suda_department_u du ON du.username = u.username
       LEFT JOIN suda_department d ON d.id = du.department_id
@@ -58,20 +60,5 @@ pub async fn update_password(
   .execute(pool)
   .await
   .map_err(|error| AppError::internal(format!("更新 suda_user.password 失败：{error}")))?;
-  Ok(())
-}
-
-pub async fn update_last_login_time(pool: &MySqlPool, student_id: &str) -> Result<(), AppError> {
-  sqlx::query(
-    r#"
-      UPDATE suda_user
-      SET last_login_time = CURRENT_TIMESTAMP
-      WHERE username = ?
-    "#,
-  )
-  .bind(student_id)
-  .execute(pool)
-  .await
-  .map_err(|error| AppError::internal(format!("更新最后登录时间失败：{error}")))?;
   Ok(())
 }

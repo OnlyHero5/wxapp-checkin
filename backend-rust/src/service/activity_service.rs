@@ -161,6 +161,7 @@ pub async fn issue_code_session(
   let activity = activity_repo::find_activity_by_id(state.pool(), legacy_activity_id)
     .await?
     .ok_or_else(|| AppError::business("invalid_activity", "活动不存在或已下线", Some("invalid_activity")))?;
+  ensure_activity_time_valid(&activity)?;
   ensure_activity_action_allowed(&activity, normalized_action_type)?;
   ensure_within_issue_window(&activity, SystemTime::now())?;
 
@@ -242,9 +243,17 @@ pub fn format_display_time(value: chrono::NaiveDateTime) -> String {
 
 pub fn is_within_issue_window(activity: &ActivityRow, now: SystemTime) -> Result<bool, AppError> {
   let now_ms = system_time_to_millis(now)?;
-  let start_ms = naive_millis(activity.activity_stime)?;
-  let end_ms = naive_millis(activity.activity_etime)?;
+  let (start_ms, end_ms) = ensure_activity_time_valid(activity)?;
   Ok(now_ms >= start_ms.saturating_sub(30 * 60 * 1000) && now_ms <= end_ms + 30 * 60 * 1000)
+}
+
+fn ensure_activity_time_valid(activity: &ActivityRow) -> Result<(u64, u64), AppError> {
+  let start_ms = naive_millis(activity.activity_stime).map_err(|_| invalid_activity_time_error())?;
+  let end_ms = naive_millis(activity.activity_etime).map_err(|_| invalid_activity_time_error())?;
+  if end_ms < start_ms {
+    return Err(invalid_activity_time_error());
+  }
+  Ok((start_ms, end_ms))
 }
 
 fn ensure_within_issue_window(activity: &ActivityRow, now: SystemTime) -> Result<(), AppError> {
@@ -266,6 +275,14 @@ fn ensure_activity_action_allowed(activity: &ActivityRow, action_type: &str) -> 
     return Err(AppError::business("invalid_param", "action_type 仅支持 checkin/checkout", None));
   }
   Ok(())
+}
+
+fn invalid_activity_time_error() -> AppError {
+  AppError::business(
+    "forbidden",
+    "活动时间信息异常，请先修复活动时间数据",
+    Some("activity_time_invalid"),
+  )
 }
 
 fn to_summary(activity: &ActivityRow, user_activity: Option<&UserActivityRow>) -> ActivitySummaryItem {
@@ -365,7 +382,30 @@ fn naive_millis(value: chrono::NaiveDateTime) -> Result<u64, AppError> {
 
 #[cfg(test)]
 mod tests {
-  use super::{format_display_time, generate_code, is_registered_apply_state, validate_dynamic_code};
+  use super::{
+    format_display_time, generate_code, is_registered_apply_state, validate_dynamic_code,
+    ensure_activity_time_valid,
+  };
+  use crate::db::activity_repo::ActivityRow;
+
+  fn sample_activity_row(
+    start: chrono::NaiveDateTime,
+    end: chrono::NaiveDateTime,
+  ) -> ActivityRow {
+    ActivityRow {
+      legacy_activity_id: 101,
+      activity_title: "测试活动".to_string(),
+      description: Some("desc".to_string()),
+      location: Some("loc".to_string()),
+      activity_stime: start,
+      activity_etime: end,
+      legacy_type: 1,
+      legacy_state: 1,
+      registered_count: 0,
+      checkin_count: 0,
+      checkout_count: 0,
+    }
+  }
 
   #[test]
   fn activity_code_should_be_stable_for_same_slot() {
@@ -402,5 +442,22 @@ mod tests {
       .and_hms_opt(20, 4, 0)
       .expect("time");
     assert_eq!(format_display_time(naive), "2026-03-25 20:04");
+  }
+
+  #[test]
+  fn invalid_activity_time_should_use_contract_error_code() {
+    let start = chrono::NaiveDate::from_ymd_opt(2026, 3, 25)
+      .expect("date")
+      .and_hms_opt(20, 4, 0)
+      .expect("time");
+    let end = chrono::NaiveDate::from_ymd_opt(2026, 3, 25)
+      .expect("date")
+      .and_hms_opt(19, 59, 0)
+      .expect("time");
+    let activity = sample_activity_row(start, end);
+
+    let error = ensure_activity_time_valid(&activity).expect_err("should reject invalid time");
+    assert_eq!(error.status(), "forbidden");
+    assert_eq!(error.error_code(), Some("activity_time_invalid"));
   }
 }

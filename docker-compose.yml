@@ -1,0 +1,31 @@
+services:
+  wxapp-checkin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        HTTP_PROXY: ${DOCKER_BUILD_HTTP_PROXY:-}
+        HTTPS_PROXY: ${DOCKER_BUILD_HTTPS_PROXY:-}
+        ALL_PROXY: ${DOCKER_BUILD_ALL_PROXY:-}
+        NO_PROXY: ${DOCKER_BUILD_NO_PROXY:-}
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+    container_name: wxapp-checkin
+    environment:
+      # 正式三容器联调口径下，`wxapp-checkin` 只连 Docker 网络内的 `suda-union:3499`。
+      DATABASE_URL: ${WXAPP_DATABASE_URL:-mysql://wxcheckin:wxcheckin_test@suda-union:3499/suda_union}
+      QR_SIGNING_KEY: ${WXAPP_QR_SIGNING_KEY:-dev-checkin-signing-key}
+      SERVER_PORT: 8080
+      SESSION_TTL_SECONDS: ${WXAPP_SESSION_TTL_SECONDS:-7200}
+      TOKIO_WORKER_THREADS: ${WXAPP_TOKIO_WORKER_THREADS:-2}
+      MYSQL_MAX_CONNECTIONS: ${WXAPP_MYSQL_MAX_CONNECTIONS:-4}
+    networks:
+      - three-projects-net
+    ports:
+      - "89:89"
+    restart: unless-stopped
+
+networks:
+  three-projects-net:
+    external: true
+    name: ${DOCKER_NETWORK:-three-projects-net}
