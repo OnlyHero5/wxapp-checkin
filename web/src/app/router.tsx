@@ -1,18 +1,13 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { ActivitiesPage } from "../pages/activities/ActivitiesPage";
 import { ActivityDetailPage } from "../pages/activity-detail/ActivityDetailPage";
-import { ChangePasswordPage } from "../pages/change-password/ChangePasswordPage";
 import { CheckinPage } from "../pages/checkin/CheckinPage";
 import { CheckoutPage } from "../pages/checkout/CheckoutPage";
 import { LoginPage } from "../pages/login/LoginPage";
 import { ActivityRosterPage } from "../pages/activity-roster/ActivityRosterPage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
 import { StaffManagePage } from "../pages/staff-manage/StaffManagePage";
-import {
-  getMustChangePassword,
-  getSession,
-  isStaffSession
-} from "../shared/session/session-store";
+import { getSession, isStaffSession } from "../shared/session/session-store";
 import { AppBusinessNav } from "../shared/ui/AppBusinessNav";
 import { MobilePage } from "../shared/ui/MobilePage";
 
@@ -50,14 +45,6 @@ function hasSession() {
   return !!getSession();
 }
 
-function mustChangePassword() {
-  return getMustChangePassword();
-}
-
-function isSelfServicePasswordChange(search: string) {
-  return new URLSearchParams(search).get("mode") === "self-service";
-}
-
 function AppBusinessShell({ children }: { children: JSX.Element }) {
   return (
     <div className="app-business-shell">
@@ -75,38 +62,13 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
   if (!hasSession()) {
     return <Navigate replace to="/login" />;
   }
-  if (mustChangePassword()) {
-    return <Navigate replace to="/change-password" />;
-  }
 
   return <AppBusinessShell>{children}</AppBusinessShell>;
-}
-
-/**
- * 强制改密路由：
- * - 未登录：回 /login
- * - 已完成改密：回 /activities（避免用户误留在改密页）
- */
-function PasswordChangeRoute({ children }: { children: JSX.Element }) {
-  const location = useLocation();
-  if (!hasSession()) {
-    return <Navigate replace to="/login" />;
-  }
-  // 改密页允许两种入口：
-  // 1. 首次登录后的强制改密
-  // 2. 个人中心发起的自助改密
-  if (!mustChangePassword() && !isSelfServicePasswordChange(location.search)) {
-    return <Navigate replace to="/activities" />;
-  }
-  return children;
 }
 
 function StaffRoute({ children }: { children: JSX.Element }) {
   if (!hasSession()) {
     return <Navigate replace to="/login" />;
-  }
-  if (mustChangePassword()) {
-    return <Navigate replace to="/change-password" />;
   }
   if (!isStaffSession()) {
     return <Navigate replace to="/activities" />;
@@ -121,7 +83,7 @@ function StaffRoute({ children }: { children: JSX.Element }) {
  */
 function PublicRoute({ children }: { children: JSX.Element }) {
   if (hasSession()) {
-    return <Navigate replace to={mustChangePassword() ? "/change-password" : "/activities"} />;
+    return <Navigate replace to="/activities" />;
   }
 
   return children;
@@ -140,7 +102,7 @@ export function AppRoutes() {
       {/* 根路径不暴露空白页，直接根据登录态分流到最可能的入口。 */}
       <Route
         path="/"
-        element={<Navigate replace to={hasSession() ? (mustChangePassword() ? "/change-password" : "/activities") : "/login"} />}
+        element={<Navigate replace to={hasSession() ? "/activities" : "/login"} />}
       />
       <Route
         path="/login"
@@ -149,15 +111,6 @@ export function AppRoutes() {
             {/* 登录页只允许未登录用户进入。 */}
             <LoginPage />
           </PublicRoute>
-        }
-      />
-      <Route
-        path="/change-password"
-        element={
-          <PasswordChangeRoute>
-            {/* 改密页是强制入口：只有 must_change_password=true 时允许进入。 */}
-            <ChangePasswordPage />
-          </PasswordChangeRoute>
         }
       />
       <Route

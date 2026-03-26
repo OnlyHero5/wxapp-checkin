@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getMustChangePassword, getSession, setSession } from "../session/session-store";
-import { ApiError, PasswordChangeRequiredError, SessionExpiredError } from "./errors";
+import { getSession, setSession } from "../session/session-store";
+import { ApiError, SessionExpiredError } from "./errors";
 import { requestJson } from "./client";
 
 function createJsonResponse(payload: unknown, init?: ResponseInit) {
@@ -66,7 +66,7 @@ describe("requestJson", () => {
     expect(getSession()).toBe("");
   });
 
-  it("marks must_change_password when the backend reports password_change_required", async () => {
+  it("treats password_change_required as a normal API error", async () => {
     setSession("sess_123");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       createJsonResponse({
@@ -78,9 +78,7 @@ describe("requestJson", () => {
       })
     ));
 
-    await expect(requestJson("/activities")).rejects.toBeInstanceOf(PasswordChangeRequiredError);
-    expect(getMustChangePassword()).toBe(true);
-    // 强制改密不是会话失效，因此不清理 token。
+    await expect(requestJson("/activities")).rejects.toBeInstanceOf(ApiError);
     expect(getSession()).toBe("sess_123");
   });
 

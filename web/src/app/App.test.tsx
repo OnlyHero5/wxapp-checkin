@@ -78,17 +78,7 @@ describe("AppRoutes", () => {
     renderPath("/login");
 
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
-    expect(screen.getByText("账号为学号，初始密码统一为 123。首次登录成功后需要先修改密码。")).toBeInTheDocument();
-  });
-
-  it("renders the change password shell at /change-password when required", () => {
-    saveAuthSession({
-      must_change_password: true,
-      session_token: "sess_change_123"
-    });
-    renderPath("/change-password");
-
-    expect(screen.getByRole("heading", { name: "修改密码" })).toBeInTheDocument();
+    expect(screen.getByText("账号为学号，请输入当前可用密码。")).toBeInTheDocument();
   });
 
   it("renders the activities shell at /activities", async () => {
@@ -112,27 +102,10 @@ describe("AppRoutes", () => {
     expect(screen.getByRole("link", { name: "我的" })).not.toHaveAttribute("aria-current");
   });
 
-  it("redirects /activities to change-password when must_change_password is true", async () => {
-    saveAuthSession({
-      must_change_password: true,
-      session_token: "sess_change_123"
-    });
-    renderPath("/activities");
-
-    expect(await screen.findByRole("heading", { name: "修改密码" })).toBeInTheDocument();
-  });
-
   it("redirects /activities to login when session is missing", () => {
     renderPath("/activities");
 
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
-  });
-
-  it("redirects /change-password to activities when must_change_password is false", async () => {
-    setSession("sess_123");
-    renderPath("/change-password");
-
-    expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
   });
 
   it("redirects /login to activities when session exists", async () => {
@@ -146,16 +119,6 @@ describe("AppRoutes", () => {
     renderPath("/login");
 
     expect(screen.queryByRole("navigation", { name: "业务导航" })).not.toBeInTheDocument();
-  });
-
-  it("redirects /login to change-password when must_change_password is true", async () => {
-    saveAuthSession({
-      must_change_password: true,
-      session_token: "sess_change_123"
-    });
-    renderPath("/login");
-
-    expect(await screen.findByRole("heading", { name: "修改密码" })).toBeInTheDocument();
   });
 
   it("redirects non-staff sessions away from the staff manage route", async () => {

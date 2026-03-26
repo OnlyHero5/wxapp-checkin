@@ -1,14 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { clearSession, getSession, saveAuthSession } from "../../shared/session/session-store";
 import { ProfilePage } from "./ProfilePage";
-
-function ChangePasswordEntryProbe() {
-  const location = useLocation();
-  return <h1>{`改密页已打开${location.search}`}</h1>;
-}
 
 function renderProfilePage() {
   render(
@@ -16,7 +11,6 @@ function renderProfilePage() {
       <Routes>
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<h1>登录页已打开</h1>} />
-        <Route path="/change-password" element={<ChangePasswordEntryProbe />} />
       </Routes>
     </MemoryRouter>
   );
@@ -55,23 +49,10 @@ describe("ProfilePage", () => {
     expect(screen.getByText("社团")).toBeInTheDocument();
     expect(screen.getByText("青年志愿者协会")).toBeInTheDocument();
     expect(screen.getByText(/工作人员/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "修改密码" })).toHaveClass(
-      "app-button--secondary",
-      "app-button--accent-brand"
-    );
     expect(screen.getByRole("button", { name: "退出登录" })).toHaveClass(
       "app-button--primary",
       "app-button--accent-brand"
     );
-  });
-
-  it("opens the self-service change password entry from profile", async () => {
-    const user = userEvent.setup();
-    renderProfilePage();
-
-    await user.click(screen.getByRole("button", { name: "修改密码" }));
-
-    expect(screen.getByRole("heading", { name: "改密页已打开?mode=self-service" })).toBeInTheDocument();
   });
 
   it("clears the session and goes back to login after logout", async () => {

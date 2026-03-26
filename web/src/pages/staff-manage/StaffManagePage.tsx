@@ -10,7 +10,7 @@ import { DynamicCodePanel } from "../../features/staff/components/DynamicCodePan
 import { BulkCheckoutButton } from "../../features/staff/components/BulkCheckoutButton";
 import { bulkCheckout, getCodeSession, type CodeSessionResponse } from "../../features/staff/api";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
-import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/http/errors";
+import { SessionExpiredError } from "../../shared/http/errors";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
@@ -84,10 +84,6 @@ export function StaffManagePage() {
         navigate("/login");
         return;
       }
-      if (error instanceof PasswordChangeRequiredError) {
-        navigate("/change-password");
-        return;
-      }
       if (detailRequestVersionRef.current === requestVersion) {
         setErrorMessage(resolveErrorMessage(error));
       }
@@ -127,10 +123,6 @@ export function StaffManagePage() {
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
-        return;
-      }
-      if (error instanceof PasswordChangeRequiredError) {
-        navigate("/change-password");
         return;
       }
       if (codeSessionRequestVersionRef.current === requestVersion) {
@@ -235,10 +227,6 @@ export function StaffManagePage() {
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
-        return;
-      }
-      if (error instanceof PasswordChangeRequiredError) {
-        navigate("/change-password");
         return;
       }
       setErrorMessage(resolveErrorMessage(error));

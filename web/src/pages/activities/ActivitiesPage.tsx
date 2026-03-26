@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ActivityCard } from "../../features/activities/components/ActivityCard";
 import { getActivities, type ActivitySummary } from "../../features/activities/api";
 import { groupVisibleActivities } from "../../features/activities/view-model";
-import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/http/errors";
+import { SessionExpiredError } from "../../shared/http/errors";
 import { isStaffSession } from "../../shared/session/session-store";
 import { AppButton } from "../../shared/ui/AppButton";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
@@ -80,10 +80,6 @@ export function ActivitiesPage() {
         navigate("/login");
         return;
       }
-      if (error instanceof PasswordChangeRequiredError) {
-        navigate("/change-password");
-        return;
-      }
       if (requestVersionRef.current === requestVersion) {
         setErrorMessage(resolveErrorMessage(error));
       }
@@ -118,10 +114,6 @@ export function ActivitiesPage() {
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
-        return;
-      }
-      if (error instanceof PasswordChangeRequiredError) {
-        navigate("/change-password");
         return;
       }
       if (requestVersionRef.current === requestVersion) {

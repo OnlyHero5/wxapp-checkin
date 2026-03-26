@@ -43,7 +43,7 @@ pub async fn find_latest_action_time(
   let action_pattern = format!("%\"action_type\":\"{action_type}\"%");
   sqlx::query_scalar::<_, chrono::NaiveDateTime>(
     r#"
-      SELECT time
+      SELECT CAST(time AS DATETIME)
       FROM suda_log
       WHERE username = ?
         AND content LIKE ?

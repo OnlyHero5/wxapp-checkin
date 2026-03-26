@@ -1,7 +1,5 @@
 use crate::error::AppError;
 
-const DEFAULT_PASSWORD: &str = "123";
-
 /// Rust 重写后仍然只暴露两种角色：
 /// - `normal`
 /// - `staff`
@@ -45,15 +43,6 @@ pub fn permissions_for_role(role: WebRole) -> Vec<&'static str> {
   }
 }
 
-/// 默认密码是否仍未修改，直接影响 `must_change_password`。
-/// 若 hash 为空或损坏，也按“仍需改密”处理，避免脏数据绕过安全护栏。
-pub fn must_change_password(password_hash: Option<&str>) -> bool {
-  match password_hash.map(str::trim) {
-    Some(value) if !value.is_empty() => bcrypt::verify(DEFAULT_PASSWORD, value).unwrap_or(true),
-    _ => true,
-  }
-}
-
 pub fn format_activity_id(legacy_activity_id: i64) -> String {
   format!("legacy_act_{legacy_activity_id}")
 }
@@ -87,7 +76,7 @@ pub fn progress_status_from_legacy(value: i32) -> &'static str {
 #[cfg(test)]
 mod tests {
   use super::{
-    WebRole, activity_type_from_legacy, format_activity_id, must_change_password, parse_activity_id,
+    WebRole, activity_type_from_legacy, format_activity_id, parse_activity_id,
     permissions_for_role, progress_status_from_legacy, role_from_legacy,
   };
 
@@ -96,18 +85,6 @@ mod tests {
     assert_eq!(role_from_legacy(0), WebRole::Staff);
     assert_eq!(role_from_legacy(3), WebRole::Staff);
     assert_eq!(role_from_legacy(9), WebRole::Normal);
-  }
-
-  #[test]
-  fn default_password_hash_should_require_change() {
-    let hash = bcrypt::hash("123", bcrypt::DEFAULT_COST).expect("hash");
-    assert!(must_change_password(Some(&hash)));
-  }
-
-  #[test]
-  fn changed_password_hash_should_not_require_change() {
-    let hash = bcrypt::hash("new-pass", bcrypt::DEFAULT_COST).expect("hash");
-    assert!(!must_change_password(Some(&hash)));
   }
 
   #[test]

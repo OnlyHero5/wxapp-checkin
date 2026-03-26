@@ -24,3 +24,23 @@ fn user_repo_should_not_write_last_login_time_column() {
     "user_repo should only keep password write path for suda_user"
   );
 }
+
+#[test]
+fn auth_router_should_not_expose_change_password_route_anymore() {
+  let source = fs::read_to_string(manifest_file("src/api/auth.rs"))
+    .expect("read auth.rs");
+  assert!(
+    !source.contains("change-password"),
+    "auth router should no longer expose /change-password"
+  );
+}
+
+#[test]
+fn auth_extractor_should_not_keep_password_change_gate() {
+  let source = fs::read_to_string(manifest_file("src/api/auth_extractor.rs"))
+    .expect("read auth_extractor.rs");
+  assert!(
+    !source.contains("password_change_required"),
+    "auth extractor should not block requests on password-change state anymore"
+  );
+}

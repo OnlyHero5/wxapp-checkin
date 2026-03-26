@@ -131,7 +131,7 @@ async fn list_activities(
   headers: HeaderMap,
   Query(query): Query<ActivityListQuery>,
 ) -> Result<Json<ActivityListResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state, false).await?;
+  let current_user = require_current_user(&headers, &state).await?;
   let response = activity_service::list_activities(&state, &current_user, query.page, query.page_size).await?;
   Ok(Json(response))
 }
@@ -141,7 +141,7 @@ async fn get_activity_detail(
   headers: HeaderMap,
   Path(activity_id): Path<String>,
 ) -> Result<Json<ActivityDetailResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state, false).await?;
+  let current_user = require_current_user(&headers, &state).await?;
   let response = activity_service::get_activity_detail(&state, &current_user, &activity_id).await?;
   Ok(Json(response))
 }
@@ -152,7 +152,7 @@ async fn get_code_session(
   Path(activity_id): Path<String>,
   Query(query): Query<CodeSessionQuery>,
 ) -> Result<Json<CodeSessionResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state, false).await?;
+  let current_user = require_current_user(&headers, &state).await?;
   let response = activity_service::issue_code_session(
     &state,
     &current_user,
@@ -169,7 +169,7 @@ async fn consume_code(
   Path(activity_id): Path<String>,
   Json(request): Json<CodeConsumeRequest>,
 ) -> Result<Json<CodeConsumeResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state, false).await?;
+  let current_user = require_current_user(&headers, &state).await?;
   let response = attendance_service::consume_code(
     &state,
     &current_user,

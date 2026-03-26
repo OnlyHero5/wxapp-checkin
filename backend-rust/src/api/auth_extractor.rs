@@ -8,7 +8,7 @@ use axum::http::header::AUTHORIZATION;
 use std::time::SystemTime;
 
 /// 当前用户快照只保留 handler 真正需要的字段。
-/// 每次请求都从 token 反查一次数据库，确保角色和改密态是最新值。
+/// 每次请求都从 token 反查一次数据库，确保角色和基础资料是最新值。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurrentUser {
   pub user_id: i64,
@@ -16,7 +16,6 @@ pub struct CurrentUser {
   pub name: String,
   pub role: String,
   pub permissions: Vec<String>,
-  pub must_change_password: bool,
   pub department: String,
   pub club: String,
 }
@@ -24,7 +23,6 @@ pub struct CurrentUser {
 pub async fn require_current_user(
   headers: &HeaderMap,
   state: &AppState,
-  allow_password_change: bool,
 ) -> Result<CurrentUser, AppError> {
   let session_token = extract_bearer_token(headers)?;
   let claims = state
@@ -44,16 +42,7 @@ pub async fn require_current_user(
     user.name,
     role_from_legacy(user.role),
     user.department.unwrap_or_default(),
-    user.password.as_deref(),
   );
-
-  if !allow_password_change && current_user.must_change_password {
-    return Err(AppError::business(
-      "forbidden",
-      "请先修改密码",
-      Some("password_change_required"),
-    ));
-  }
 
   Ok(current_user)
 }

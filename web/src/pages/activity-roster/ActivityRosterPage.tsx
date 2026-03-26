@@ -12,7 +12,7 @@ import {
 } from "../../features/staff/components/AttendanceBatchActionBar";
 import { AttendanceRosterList } from "../../features/staff/components/AttendanceRosterList";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
-import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/http/errors";
+import { SessionExpiredError } from "../../shared/http/errors";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
@@ -122,10 +122,6 @@ export function ActivityRosterPage() {
         navigate("/login");
         return;
       }
-      if (error instanceof PasswordChangeRequiredError) {
-        navigate("/change-password");
-        return;
-      }
       if (requestVersionRef.current === requestVersion) {
         setErrorMessage(resolveErrorMessage(error));
       }
@@ -166,10 +162,6 @@ export function ActivityRosterPage() {
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
-        return;
-      }
-      if (error instanceof PasswordChangeRequiredError) {
-        navigate("/change-password");
         return;
       }
       setErrorMessage(resolveErrorMessage(error));

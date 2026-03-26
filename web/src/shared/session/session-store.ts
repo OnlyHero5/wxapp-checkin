@@ -9,7 +9,6 @@ type SessionUserProfile = {
 };
 
 type StoredSessionContext = {
-  must_change_password?: boolean;
   permissions?: string[];
   role?: string;
   user_profile?: SessionUserProfile;
@@ -54,11 +53,6 @@ function normalizePermissions(value: string[] | null | undefined) {
   return (value ?? []).map((item) => `${item ?? ""}`.trim()).filter(Boolean);
 }
 
-function normalizeMustChangePassword(value: unknown) {
-  // 强制改密是布尔开关，只接受严格 boolean，其它类型一律视为 false，避免脏数据把用户锁死。
-  return value === true;
-}
-
 function readSessionContext(storage: Storage | null) {
   if (!storage) {
     return null;
@@ -71,7 +65,6 @@ function readSessionContext(storage: Storage | null) {
     }
     const parsed = JSON.parse(raw) as StoredSessionContext;
     return {
-      must_change_password: normalizeMustChangePassword(parsed.must_change_password),
       permissions: normalizePermissions(parsed.permissions),
       role: normalizeRole(parsed.role),
       user_profile: parsed.user_profile
@@ -95,7 +88,6 @@ function writeSessionContext(storage: Storage | null, context: StoredSessionCont
     storage.setItem(
       SESSION_CONTEXT_STORAGE_KEY,
       JSON.stringify({
-        must_change_password: normalizeMustChangePassword(context.must_change_password),
         permissions: normalizePermissions(context.permissions),
         role: normalizeRole(context.role),
         user_profile: context.user_profile ?? null
@@ -149,7 +141,6 @@ export function setSession(sessionToken: string) {
 }
 
 type AuthSessionPayload = {
-  must_change_password?: boolean;
   permissions?: string[];
   role?: string;
   session_token: string;
@@ -171,7 +162,6 @@ export function saveAuthSession(payload: AuthSessionPayload) {
   try {
     storage.setItem(SESSION_STORAGE_KEY, normalizedToken);
     writeSessionContext(storage, {
-      must_change_password: payload.must_change_password,
       permissions: payload.permissions,
       role: payload.role,
       user_profile: payload.user_profile
@@ -200,27 +190,6 @@ export function getSessionProfileSnapshot(): SessionProfileSnapshot {
     role: context?.role ?? "normal",
     user_profile: context?.user_profile ?? null
   };
-}
-
-export function getMustChangePassword() {
-  return readSessionContext(getStorage())?.must_change_password ?? false;
-}
-
-export function setMustChangePassword(value: boolean) {
-  const storage = getStorage();
-  if (!storage) {
-    return;
-  }
-
-  try {
-    const existing = readSessionContext(storage) ?? {};
-    writeSessionContext(storage, {
-      ...existing,
-      must_change_password: value
-    });
-  } catch {
-    return;
-  }
 }
 
 export function hasSessionPermission(permission: string) {

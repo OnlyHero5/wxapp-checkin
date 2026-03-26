@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PasswordChangeRequiredError, SessionExpiredError } from "../../shared/http/errors";
+import { SessionExpiredError } from "../../shared/http/errors";
 import { clearSession, saveAuthSession } from "../../shared/session/session-store";
 import { ActivityRosterPage } from "./ActivityRosterPage";
 
@@ -21,7 +21,6 @@ function renderActivityRosterPage() {
     <MemoryRouter initialEntries={["/staff/activities/act_101/roster"]}>
       <Routes>
         <Route path="/login" element={<h1>登录页已打开</h1>} />
-        <Route path="/change-password" element={<h1>改密页已打开</h1>} />
         <Route path="/staff/activities/:activityId/roster" element={<ActivityRosterPage />} />
       </Routes>
     </MemoryRouter>
@@ -157,14 +156,13 @@ describe("ActivityRosterPage", () => {
     });
   });
 
-  it("redirects to login or change-password when roster query hits auth errors", async () => {
+  it("redirects to login when roster query hits auth errors", async () => {
     staffApiMocks.getActivityRoster.mockRejectedValueOnce(new SessionExpiredError());
 
     const firstView = render(
       <MemoryRouter initialEntries={["/staff/activities/act_101/roster"]}>
         <Routes>
           <Route path="/login" element={<h1>登录页已打开</h1>} />
-          <Route path="/change-password" element={<h1>改密页已打开</h1>} />
           <Route path="/staff/activities/:activityId/roster" element={<ActivityRosterPage />} />
         </Routes>
       </MemoryRouter>
@@ -173,18 +171,5 @@ describe("ActivityRosterPage", () => {
     expect(await screen.findByRole("heading", { name: "登录页已打开" })).toBeInTheDocument();
 
     firstView.unmount();
-    staffApiMocks.getActivityRoster.mockRejectedValueOnce(new PasswordChangeRequiredError());
-
-    render(
-      <MemoryRouter initialEntries={["/staff/activities/act_101/roster"]}>
-        <Routes>
-          <Route path="/login" element={<h1>登录页已打开</h1>} />
-          <Route path="/change-password" element={<h1>改密页已打开</h1>} />
-          <Route path="/staff/activities/:activityId/roster" element={<ActivityRosterPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByRole("heading", { name: "改密页已打开" })).toBeInTheDocument();
   });
 });

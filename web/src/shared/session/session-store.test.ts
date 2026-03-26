@@ -1,13 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   clearSession,
-  getMustChangePassword,
   getSession,
   getSessionPermissions,
   getSessionRole,
   getSessionUserProfile,
   saveAuthSession,
-  setMustChangePassword,
   setSession
 } from "./session-store";
 
@@ -52,7 +50,6 @@ describe("session-store", () => {
 
   it("persists role, permissions and user profile together with auth session", () => {
     saveAuthSession({
-      must_change_password: true,
       permissions: ["activity:manage"],
       role: "staff",
       session_token: "  session-token  ",
@@ -64,27 +61,11 @@ describe("session-store", () => {
 
     expect(getSession()).toBe("session-token");
     expect(getSessionRole()).toBe("staff");
-    expect(getMustChangePassword()).toBe(true);
     expect(getSessionPermissions()).toEqual(["activity:manage"]);
     expect(getSessionUserProfile()).toEqual({
       name: "刘洋",
       student_id: "2025000007"
     });
-  });
-
-  it("allows updating must_change_password without clearing other session context", () => {
-    saveAuthSession({
-      must_change_password: true,
-      permissions: ["activity:manage"],
-      role: "staff",
-      session_token: "session-token"
-    });
-
-    setMustChangePassword(false);
-
-    expect(getMustChangePassword()).toBe(false);
-    expect(getSessionRole()).toBe("staff");
-    expect(getSessionPermissions()).toEqual(["activity:manage"]);
   });
 
   it("degrades safely when localStorage is unavailable", () => {

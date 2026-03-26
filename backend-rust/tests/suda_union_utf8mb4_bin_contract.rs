@@ -1,6 +1,6 @@
 use sqlx::MySqlPool;
 use sqlx::mysql::MySqlPoolOptions;
-use wxapp_checkin_backend_rust::db::{activity_repo, attendance_repo, user_repo};
+use wxapp_checkin_backend_rust::db::{activity_repo, attendance_repo, log_repo, user_repo};
 
 /// 这些契约测试直接对准 `suda_union` 正式库的 `utf8mb4_bin` 文本列。
 /// 目的不是验证业务流程本身，而是锁住 Rust 读库映射不会再把文本列解成二进制。
@@ -101,4 +101,17 @@ async fn attendance_repo_should_decode_utf8mb4_bin_roster_columns() {
 
   assert_eq!(row.student_id, "2025000101");
   assert_eq!(row.name, "张三");
+}
+
+#[tokio::test]
+async fn log_repo_should_decode_timestamp_action_time() {
+  let Some(pool) = connect_test_pool().await else {
+    return;
+  };
+
+  let latest = log_repo::find_latest_action_time(&pool, "2025000201", "checkin", 103)
+    .await
+    .expect("query latest action time");
+
+  assert!(latest.is_some(), "expected latest checkin log time for activity 103");
 }

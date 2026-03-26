@@ -18,7 +18,6 @@ function renderLoginPage() {
     <MemoryRouter initialEntries={["/login"]}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/change-password" element={<h1>改密页已打开</h1>} />
         <Route path="/activities" element={<h1>活动页已打开</h1>} />
       </Routes>
     </MemoryRouter>
@@ -35,10 +34,9 @@ describe("LoginPage", () => {
     window.localStorage.clear();
   });
 
-  it("logs in and navigates to change-password when must_change_password is true", async () => {
+  it("logs in and navigates directly to activities", async () => {
     const user = userEvent.setup();
     authApiMocks.login.mockResolvedValue({
-      must_change_password: true,
       session_token: "sess_login_123",
       status: "success"
     });
@@ -46,7 +44,7 @@ describe("LoginPage", () => {
     renderLoginPage();
 
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
-    expect(screen.getByText("账号为学号，初始密码统一为 123。首次登录成功后需要先修改密码。")).toBeInTheDocument();
+    expect(screen.getByText("账号为学号，请输入当前可用密码。")).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
     expect(screen.getByRole("button", { name: "登录" })).toHaveClass("app-button--accent-brand");
 
@@ -61,26 +59,6 @@ describe("LoginPage", () => {
       });
     });
     expect(getSession()).toBe("sess_login_123");
-    expect(await screen.findByRole("heading", { name: "改密页已打开" })).toBeInTheDocument();
-  });
-
-  it("logs in and navigates to activities when must_change_password is false", async () => {
-    const user = userEvent.setup();
-    authApiMocks.login.mockResolvedValue({
-      must_change_password: false,
-      session_token: "sess_login_123",
-      status: "success"
-    });
-
-    renderLoginPage();
-
-    await user.type(screen.getByLabelText("学号"), "2025000011");
-    await user.type(screen.getByLabelText("密码"), "123");
-    await user.click(screen.getByRole("button", { name: "登录" }));
-
-    await waitFor(() => {
-      expect(authApiMocks.login).toHaveBeenCalled();
-    });
     expect(await screen.findByRole("heading", { name: "活动页已打开" })).toBeInTheDocument();
   });
 

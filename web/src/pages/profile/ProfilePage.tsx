@@ -43,11 +43,6 @@ export function ProfilePage() {
   const sessionProfile = getSessionProfileSnapshot();
   const userProfile = sessionProfile.user_profile ?? {};
 
-  function handleChangePassword() {
-    // 个人中心走的是“自助改密”分支，需要和首次登录强制改密区分来源。
-    navigate("/change-password?mode=self-service");
-  }
-
   function handleLogout() {
     // 退出登录要先清本地会话，再回公共入口，避免业务壳层残留旧状态。
     clearSession();
@@ -56,7 +51,7 @@ export function ProfilePage() {
 
   return (
     <MobilePage
-      description="查看当前登录信息，并处理密码维护或安全退出。"
+      description="查看当前登录信息，并安全退出当前会话。"
       eyebrow="个人中心"
       tone="brand"
       title="我的"
@@ -73,10 +68,7 @@ export function ProfilePage() {
         </div>
       </section>
       <section className="profile-actions-card">
-        {/* 两个动作都保留大按钮，是为了在手机端降低误触和寻找成本。 */}
-        <AppButton accentTone="brand" onClick={handleChangePassword} tone="secondary">
-          修改密码
-        </AppButton>
+        {/* 当前个人中心只保留一个高频动作：退出登录。 */}
         <AppButton accentTone="brand" onClick={handleLogout}>退出登录</AppButton>
       </section>
     </MobilePage>

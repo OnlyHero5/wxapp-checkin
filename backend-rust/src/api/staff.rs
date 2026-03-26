@@ -95,7 +95,7 @@ async fn get_roster(
   headers: HeaderMap,
   Path(activity_id): Path<String>,
 ) -> Result<Json<ActivityRosterResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state, false).await?;
+  let current_user = require_current_user(&headers, &state).await?;
   let response = staff_service::get_roster(&state, &current_user, &activity_id).await?;
   Ok(Json(response))
 }
@@ -106,7 +106,7 @@ async fn adjust_attendance(
   Path(activity_id): Path<String>,
   Json(request): Json<AttendanceAdjustmentRequest>,
 ) -> Result<Json<AttendanceAdjustmentResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state, false).await?;
+  let current_user = require_current_user(&headers, &state).await?;
   let response = staff_service::adjust_attendance(
     &state,
     &current_user,
@@ -126,7 +126,7 @@ async fn bulk_checkout(
   Path(activity_id): Path<String>,
   Json(request): Json<BulkCheckoutRequest>,
 ) -> Result<Json<BulkCheckoutResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state, false).await?;
+  let current_user = require_current_user(&headers, &state).await?;
   let response = staff_service::bulk_checkout(
     &state,
     &current_user,

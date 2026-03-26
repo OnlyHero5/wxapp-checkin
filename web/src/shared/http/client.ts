@@ -1,6 +1,6 @@
-import { clearSession, getSession, setMustChangePassword } from "../session/session-store";
+import { clearSession, getSession } from "../session/session-store";
 import { resolveRuntimeConfig } from "../runtime/runtime-config";
-import { ApiError, NetworkError, PasswordChangeRequiredError, SessionExpiredError } from "./errors";
+import { ApiError, NetworkError, SessionExpiredError } from "./errors";
 
 /**
  * 当前阶段只需要 GET / POST 两种方法，
@@ -35,10 +35,6 @@ const { apiBasePath } = resolveRuntimeConfig(import.meta.env as Record<string, s
 function isSessionExpired(payload: ApiResponse) {
   // `session_expired` 是当前 Web 端最关键的统一错误信号。
   return `${payload.error_code ?? ""}`.trim().toLowerCase() === "session_expired";
-}
-
-function isPasswordChangeRequired(payload: ApiResponse) {
-  return `${payload.error_code ?? ""}`.trim().toLowerCase() === "password_change_required";
 }
 
 function stableSerialize(value: unknown): string {
@@ -112,11 +108,6 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
       // 只要服务端明确说会话失效，就立刻清本地 token，避免继续带着脏会话请求。
       clearSession();
       throw new SessionExpiredError(payload.message, payload);
-    }
-    if (isPasswordChangeRequired(payload)) {
-      // 只要服务端明确要求改密，就把本地会话打上强制改密标记，路由守卫会统一导流。
-      setMustChangePassword(true);
-      throw new PasswordChangeRequiredError(payload.message, payload);
     }
 
     if (!response.ok) {
