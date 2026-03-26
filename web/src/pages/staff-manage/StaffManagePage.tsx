@@ -39,6 +39,16 @@ function resolveErrorMessage(error: unknown) {
  */
 export function StaffManagePage() {
   const { activityId = "" } = useParams();
+
+  // 活动切换时直接 remount 内容层，避免旧活动的详情、统计、提示语短暂串到新活动页面。
+  return <StaffManagePageContent activityId={activityId} key={activityId} />;
+}
+
+type StaffManagePageContentProps = {
+  activityId: string;
+};
+
+function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
   const navigate = useNavigate();
   const [actionType, setActionType] = useState<ActivityActionType>("checkin");
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
@@ -51,6 +61,7 @@ export function StaffManagePage() {
   const [bulkPending, setBulkPending] = useState(false);
   const detailRequestVersionRef = useRef(0);
   const codeSessionRequestVersionRef = useRef(0);
+  // keyed remount 后，这个 ref 只用来区分“首屏加载”和“同活动内切签到/签退 tab”。
   const previousActivityIdRef = useRef("");
   const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
 

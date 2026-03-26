@@ -196,10 +196,27 @@ describe("StaffManagePage", () => {
     expect(await screen.findByText("654321")).toBeInTheDocument();
   });
 
-  it("does not keep the previous activity code in the hero while switching routes on the same action tab", async () => {
+  it("does not keep the previous activity title, code, or stats while switching routes on the same action tab", async () => {
+    let resolveNextActivityDetail: ((value: unknown) => void) | undefined;
     let resolveNextActivityCode: ((value: unknown) => void) | undefined;
+    const nextActivityDetailPromise = new Promise((resolve) => {
+      resolveNextActivityDetail = resolve;
+    });
     const nextActivityCodePromise = new Promise((resolve) => {
       resolveNextActivityCode = resolve;
+    });
+
+    activitiesApiMocks.getActivityDetail.mockImplementation(async (activityId: string) => {
+      if (activityId === "act_101") {
+        return {
+          ...buildActivityDetail(activityId),
+          activity_title: "旧活动标题 act_101",
+          location: "旧活动场地",
+          registered_count: 1200
+        };
+      }
+
+      return nextActivityDetailPromise;
     });
 
     staffApiMocks.getCodeSession.mockImplementation(async (activityId: string) => {
@@ -207,8 +224,8 @@ describe("StaffManagePage", () => {
         return {
           action_type: "checkin",
           activity_id: "act_101",
-          checkin_count: 18,
-          checkout_count: 3,
+          checkin_count: 900,
+          checkout_count: 101,
           code: "483920",
           expires_at: 1760000007500,
           expires_in_ms: 4200,
@@ -222,17 +239,24 @@ describe("StaffManagePage", () => {
 
     const routeDriver = renderStaffManagePageWithControlledRoute();
 
+    expect(await screen.findByText("旧活动标题 act_101")).toBeInTheDocument();
     expect(await screen.findByText("483920")).toBeInTheDocument();
+    expect(screen.getAllByText("1001")).toHaveLength(2);
 
-    act(() => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
       flushSync(() => {
         routeDriver.switchToNextActivity();
       });
-    });
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
 
     expect(screen.getByText("当前签到码")).toBeInTheDocument();
+    expect(screen.queryByText("旧活动标题 act_101")).not.toBeInTheDocument();
     expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
     expect(screen.queryByText("483920")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("1001")).toHaveLength(0);
     expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_202");
 
     await act(async () => {
@@ -252,8 +276,15 @@ describe("StaffManagePage", () => {
       server_time_ms: 1760000016500,
       status: "success"
     });
+    resolveNextActivityDetail?.({
+      ...buildActivityDetail("act_202"),
+      activity_title: "新活动标题 act_202",
+      location: "新活动场地",
+      registered_count: 66
+    });
 
     expect(await screen.findByText("202202")).toBeInTheDocument();
+    expect(await screen.findByText("新活动标题 act_202")).toBeInTheDocument();
   });
 
   it("refreshes the current code session when the page becomes visible again", async () => {
