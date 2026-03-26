@@ -1,6 +1,13 @@
+import fs from "node:fs";
+import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { MobilePage } from "./MobilePage";
+
+const baseCss = fs.readFileSync(
+  path.resolve(import.meta.dirname, "../../app/styles/base.css"),
+  "utf8"
+);
 
 describe("MobilePage", () => {
   it("defaults to compact layout while keeping the tone hook", () => {
@@ -38,5 +45,20 @@ describe("MobilePage", () => {
 
     expect(actionLink.closest(".mobile-page__hero-actions")).toBeInTheDocument();
     expect(actionLink.closest(".mobile-page__hero-actions-content")).toBeInTheDocument();
+  });
+
+  it("keeps the page shell top-aligned so short pages do not stretch into tall blank cards", () => {
+    render(
+      <MobilePage eyebrow="动态验证码" title="活动签到">
+        <p>请输入签到码</p>
+      </MobilePage>
+    );
+
+    const main = screen.getByRole("main");
+    const shell = main.querySelector(".mobile-page__shell");
+
+    expect(baseCss).toMatch(/\.mobile-page\s*\{[^}]*align-items:\s*flex-start;/);
+    expect(shell).not.toBeNull();
+    expect(baseCss).toMatch(/\.mobile-page__shell\s*\{[^}]*align-content:\s*start;/);
   });
 });

@@ -120,7 +120,9 @@ select {
   /* 100dvh 能更好适配移动端地址栏伸缩；不支持的浏览器会回落到 100vh。 */
   min-height: 100dvh;
   display: flex;
-  align-items: stretch;
+  /* 壳层必须按内容高度收口，不能把唯一子节点强行拉满整屏；
+   * 否则 grid 自动行会把多余高度摊给卡片，短内容页就会出现异常大留白。 */
+  align-items: flex-start;
   justify-content: center;
   padding: 16px 14px 28px;
   padding: calc(16px + constant(safe-area-inset-top)) 14px calc(28px + constant(safe-area-inset-bottom));
@@ -132,6 +134,9 @@ select {
   width: min(100%, 480px);
   display: grid;
   gap: 14px;
+  /* 即使未来外层高度变化，内容也只允许从顶部堆叠，避免再次把空白分摊进卡片。 */
+  align-self: start;
+  align-content: start;
 }
 
 /* 底部导航单独占一个层，避免与正文卡片滚动时互相挤压。 */
@@ -269,6 +274,7 @@ select {
   line-height: 1.12;
   letter-spacing: -0.04em;
   color: var(--app-text-strong);
+  overflow-wrap: anywhere;
 }
 
 /* 正文字体颜色略浅，降低阅读压迫感。 */
@@ -342,6 +348,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
   min-height: 42px;
   padding: 0 12px;
   border: 1px solid var(--app-border);
@@ -350,6 +357,7 @@ select {
   color: var(--app-text-strong);
   font-weight: 600;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 .activity-inline-nav__item:hover {
@@ -440,12 +448,23 @@ select {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* 标题区保持一套结构，避免列表和详情自己发明字号层级。 */
 .activity-meta-panel__title-block {
   display: grid;
   gap: 4px;
+}
+
+.activity-meta-panel__header,
+.activity-meta-panel__title-block,
+.activity-meta-panel__status,
+.activity-meta-panel__detail-item,
+.activity-meta-panel__detail-value,
+.activity-meta-panel__footer,
+.activity-meta-panel__footer-actions {
+  min-width: 0;
 }
 
 .activity-meta-panel__title-stack,
@@ -461,6 +480,7 @@ select {
   margin: 0;
   font-size: 1.125rem;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .activity-meta-panel__subtitle {
@@ -478,6 +498,7 @@ select {
   margin: 0;
   color: var(--app-text);
   line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
 .activity-meta-panel__detail-list {
@@ -511,6 +532,8 @@ select {
   text-align: right;
   color: var(--app-text);
   line-height: 1.6;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* 空态文案需要“看得见但不抢戏”。 */
@@ -628,8 +651,9 @@ select {
 .code-input {
   min-height: 64px;
   text-align: center;
-  letter-spacing: 0.32em;
-  font-size: 1.75rem;
+  /* 6 位动态码必须醒目，但超窄屏下不能靠固定大字距硬顶容器。 */
+  letter-spacing: clamp(0.16em, 0.9vw, 0.32em);
+  font-size: clamp(1.5rem, 7.4vw, 1.75rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -840,6 +864,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
   min-height: 44px;
   padding: 0 12px;
   border-radius: 12px;
@@ -848,6 +873,7 @@ select {
   background: var(--app-surface-muted);
   border: 1px solid transparent;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .page-bottom-nav__item--active,
@@ -1005,9 +1031,9 @@ select {
   z-index: 1;
   margin: 0;
   color: var(--app-text-strong);
-  font-size: 2.35rem;
+  font-size: clamp(2rem, 9vw, 2.35rem);
   font-weight: 800;
-  letter-spacing: 0.28em;
+  letter-spacing: clamp(0.16em, 1vw, 0.28em);
 }
 
 .staff-code-panel__meta {
@@ -1080,11 +1106,13 @@ select {
 .roster-item__identity {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .roster-item__identity strong {
   color: var(--app-text-strong);
   font-size: 1rem;
+  overflow-wrap: anywhere;
 }
 
 .roster-item__identity span,
