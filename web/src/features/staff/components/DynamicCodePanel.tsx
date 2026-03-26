@@ -60,6 +60,8 @@ export function DynamicCodePanel({
   const lastAutoRefreshKeyRef = useRef("");
   const onRefreshRef = useRef(onRefresh);
   const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
+  // 动作标签和当前 tab 绑定，确保首屏还没拿到码时也能给管理员稳定的语义提示。
+  const actionLabel = actionType === "checkout" ? "当前签退码" : "当前签到码";
 
   useEffect(() => {
     onRefreshRef.current = onRefresh;
@@ -102,13 +104,17 @@ export function DynamicCodePanel({
 
   return (
     <section className="staff-panel" data-panel-tone="staff">
-      {/* Tabs 继续走组件库能力，避免页面自己拼“选中态按钮组”。 */}
-      <Tabs onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
-        <TabPanel label="签到码" value="checkin" />
-        <TabPanel label="签退码" value="checkout" />
-      </Tabs>
-      <div className="staff-code-panel">
+      {/* 控制区单独包一层，给展示型壳层稳定的布局挂点，避免依赖 TDesign 内部 DOM。 */}
+      <div className="staff-panel__controls" data-display-zone="controls">
+        <Tabs onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
+          <TabPanel label="签到码" value="checkin" />
+          <TabPanel label="签退码" value="checkout" />
+        </Tabs>
+      </div>
+      {/* hero 区只关心“当前码”和倒计时，桌面大屏放大时不混入其它操作信息。 */}
+      <div className="staff-code-panel" data-display-zone="hero">
         <div className="staff-code-panel__glass">
+          <p className="staff-code-panel__label">{actionLabel}</p>
           {/* 大号六码是管理页的视觉焦点，因此刻意和普通文本分层。 */}
           <p className="staff-code-panel__value">{codeSession?.code ?? "------"}</p>
           <p className="staff-code-panel__meta">
@@ -116,14 +122,19 @@ export function DynamicCodePanel({
           </p>
         </div>
       </div>
-      <CellGroup theme="card" title="实时统计">
-        <Cell note={`${totalCheckedIn}`} title="签到人数" />
-        <Cell note={`${checkoutCount}`} title="签退人数" />
-        <Cell note={`${checkinCount}`} title="未签退人数" />
-      </CellGroup>
-      <AppButton accentTone="staff" onClick={onRefresh} tone="secondary">
-        立即刷新
-      </AppButton>
+      {/* 统计区与弱操作区拆开后，桌面态可以把“读数据”和“做刷新”分成不同视觉层级。 */}
+      <div className="staff-panel__stats" data-display-zone="stats">
+        <CellGroup theme="card" title="实时统计">
+          <Cell note={`${totalCheckedIn}`} title="签到人数" />
+          <Cell note={`${checkoutCount}`} title="签退人数" />
+          <Cell note={`${checkinCount}`} title="未签退人数" />
+        </CellGroup>
+      </div>
+      <div className="staff-panel__actions" data-display-zone="actions">
+        <AppButton accentTone="staff" onClick={onRefresh} tone="secondary">
+          立即刷新
+        </AppButton>
+      </div>
     </section>
   );
 }

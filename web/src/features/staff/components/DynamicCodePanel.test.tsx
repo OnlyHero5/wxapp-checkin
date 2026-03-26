@@ -27,10 +27,25 @@ describe("DynamicCodePanel", () => {
     );
 
     expect(screen.getByText("483920").closest(".staff-panel")).toHaveAttribute("data-panel-tone", "staff");
-    expect(screen.getByRole("button", { name: "立即刷新" })).toHaveClass(
-      "app-button",
-      "app-button--secondary",
-      "app-button--accent-staff"
+    expect(screen.getByText("483920").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.getByText("实时统计").closest(".staff-panel__stats")).toHaveAttribute("data-display-zone", "stats");
+    expect(screen.getByRole("button", { name: "立即刷新" }).closest(".staff-panel__actions")).toHaveAttribute(
+      "data-display-zone",
+      "actions"
     );
+    expect(screen.getByText("签到码").closest(".staff-panel__controls")).toHaveAttribute("data-display-zone", "controls");
+  });
+
+  it("renders a stable placeholder code and action label before the first code session arrives", () => {
+    const onActionChange = vi.fn();
+    const onRefresh = vi.fn();
+
+    render(
+      <DynamicCodePanel actionType="checkout" codeSession={null} onActionChange={onActionChange} onRefresh={onRefresh} />
+    );
+
+    expect(screen.getByText("当前签退码")).toBeInTheDocument();
+    expect(screen.getByText("------")).toBeInTheDocument();
+    expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
   });
 });
