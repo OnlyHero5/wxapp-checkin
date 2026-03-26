@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   buildActivityDetailPath,
   getActivityDetail,
@@ -12,6 +12,7 @@ import { bulkCheckout, getCodeSession, type CodeSessionResponse } from "../../fe
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { SessionExpiredError } from "../../shared/http/errors";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
+import { AppTextLink } from "../../shared/ui/AppTextLink";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 
@@ -251,9 +252,7 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
     <MobilePage
       eyebrow="工作人员"
       headerActions={(
-        <Link className="text-link" to={buildActivityDetailPath(activityId)}>
-          返回活动详情
-        </Link>
+        <AppTextLink to={buildActivityDetailPath(activityId)}>返回活动详情</AppTextLink>
       )}
       layout="showcase-auto"
       tone="staff"

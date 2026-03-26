@@ -1,3 +1,4 @@
+import { Cell, CellGroup } from "tdesign-mobile-react";
 import { useNavigate } from "react-router-dom";
 import {
   clearSession,
@@ -56,18 +57,13 @@ export function ProfilePage() {
       tone="brand"
       title="我的"
     >
-      <section className="profile-summary-card">
-        <p className="profile-role-hint">{resolveRoleHint(sessionProfile.role, sessionProfile.permissions)}</p>
-        <div className="profile-summary-list">
-          {profileFields.map((field) => (
-            <article className="profile-summary-item" key={field.key}>
-              <p className="profile-summary-label">{field.label}</p>
-              <p className="profile-summary-value">{userProfile[field.key] || field.emptyText}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-      <section className="profile-actions-card">
+      <CellGroup theme="card" title="账户信息">
+        <Cell align="top" description={resolveRoleHint(sessionProfile.role, sessionProfile.permissions)} title="当前身份" />
+        {profileFields.map((field) => (
+          <Cell key={field.key} title={field.label} note={userProfile[field.key] || field.emptyText} />
+        ))}
+      </CellGroup>
+      <section>
         {/* 当前个人中心只保留一个高频动作：退出登录。 */}
         <AppButton accentTone="brand" onClick={handleLogout}>退出登录</AppButton>
       </section>

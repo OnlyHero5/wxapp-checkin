@@ -13,7 +13,6 @@ export type MobilePageLayout = "compact" | "showcase-auto";
  * 4. 通过 layout/tone 暴露稳定样式钩子，避免业务页各自拼接 data- 属性
  */
 type MobilePageProps = {
-  bottomNav?: ReactNode;
   children: ReactNode;
   description?: string;
   eyebrow?: string;
@@ -24,7 +23,6 @@ type MobilePageProps = {
 };
 
 export function MobilePage({
-  bottomNav,
   children,
   description,
   eyebrow,
@@ -57,8 +55,6 @@ export function MobilePage({
         <section className="mobile-page__section">
           <div className="mobile-page__content">{children}</div>
         </section>
-        {/* 这里保留的 bottomNav 只服务页内返回或局部链路，不再承接业务态顶级导航。 */}
-        {bottomNav ? <div className="mobile-page__bottom-nav">{bottomNav}</div> : null}
       </div>
     </main>
   );

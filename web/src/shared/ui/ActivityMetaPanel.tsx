@@ -1,4 +1,5 @@
 import { ElementType, ReactNode } from "react";
+import { Cell, CellGroup } from "tdesign-mobile-react";
 import type { VisualTone } from "./visual-tone";
 
 /**
@@ -139,14 +140,11 @@ function renderMetrics(counts?: ActivityMetaPanelProps["counts"]) {
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
   return (
-    <div className="activity-meta-panel__metrics">
+    <CellGroup theme="card" title="统计">
       {metrics.map((metric) => (
-        <div className="activity-meta-panel__metric" key={metric.label}>
-          <span className="activity-meta-panel__metric-label">{metric.label}</span>
-          <strong className="activity-meta-panel__metric-value">{metric.value}</strong>
-        </div>
+        <Cell key={metric.label} title={metric.label} note={metric.value} />
       ))}
-    </div>
+    </CellGroup>
   );
 }
 
@@ -197,14 +195,11 @@ export function ActivityMetaPanel({
         </div>
         {descriptionText ? <p className="activity-meta-panel__description">{descriptionText}</p> : null}
         {rows.length > 0 ? (
-          <div className="activity-meta-panel__detail-list">
+          <CellGroup theme="card" title="活动信息">
             {rows.map((row) => (
-              <p className="activity-meta-panel__detail-item" key={row.label}>
-                <span className="activity-meta-panel__detail-label">{row.label}：</span>
-                <span className="activity-meta-panel__detail-value">{row.value}</span>
-              </p>
+              <Cell key={row.label} title={row.label} note={row.value} align="top" />
             ))}
-          </div>
+          </CellGroup>
         ) : null}
         {renderMetrics(counts)}
         {/* footer 常用于“查看详情”这类补充动作，避免动作和元信息混在同一组文本里。 */}

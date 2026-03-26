@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
 import { buildActivityDetailPath, buildActivityManagePath, type ActivitySummary } from "../api";
 import { resolveJoinStatus, resolveProgressStatus } from "../view-model";
 import { ActivityMetaPanel } from "../../../shared/ui/ActivityMetaPanel";
+import { AppTextLink } from "../../../shared/ui/AppTextLink";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 
 /**
@@ -35,13 +35,9 @@ export function ActivityCard({ activity, showManageEntry = false }: ActivityCard
       } : undefined}
       footer={(
         <>
-          <Link className="text-link" to={buildActivityDetailPath(activity.activity_id)}>
-            查看详情
-          </Link>
+          <AppTextLink to={buildActivityDetailPath(activity.activity_id)}>查看详情</AppTextLink>
           {showManageEntry ? (
-            <Link className="text-link" to={buildActivityManagePath(activity.activity_id)}>
-              进入管理
-            </Link>
+            <AppTextLink to={buildActivityManagePath(activity.activity_id)}>进入管理</AppTextLink>
           ) : null}
         </>
       )}

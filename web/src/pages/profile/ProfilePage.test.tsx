@@ -49,6 +49,8 @@ describe("ProfilePage", () => {
     expect(screen.getByText("社团")).toBeInTheDocument();
     expect(screen.getByText("青年志愿者协会")).toBeInTheDocument();
     expect(screen.getByText(/工作人员/)).toBeInTheDocument();
+    expect(document.querySelector(".t-cell-group--card")).not.toBeNull();
+    expect(document.querySelectorAll(".t-cell").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "退出登录" })).toHaveClass(
       "app-button--primary",
       "app-button--accent-brand"

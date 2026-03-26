@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { buildActivityDetailPath } from "../../features/activities/api";
 import {
   adjustAttendanceStates,
@@ -14,6 +14,7 @@ import { AttendanceRosterList } from "../../features/staff/components/Attendance
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { SessionExpiredError } from "../../shared/http/errors";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
+import { AppTextLink } from "../../shared/ui/AppTextLink";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 
@@ -184,9 +185,7 @@ export function ActivityRosterPage() {
       description="查看当前活动的已报名成员，并在后续执行签到签退修正。"
       eyebrow="工作人员"
       headerActions={(
-        <Link className="text-link" to={buildActivityDetailPath(activityId)}>
-          返回活动详情
-        </Link>
+        <AppTextLink to={buildActivityDetailPath(activityId)}>返回活动详情</AppTextLink>
       )}
       tone="staff"
       title="参会名单"

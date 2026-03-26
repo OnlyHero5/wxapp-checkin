@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   buildActivityActionPath,
   buildActivityManagePath,
@@ -17,6 +17,7 @@ import { SessionExpiredError } from "../../shared/http/errors";
 import { isStaffSession } from "../../shared/session/session-store";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppButton } from "../../shared/ui/AppButton";
+import { AppTextLink } from "../../shared/ui/AppTextLink";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 import { StatusTag } from "../../shared/ui/StatusTag";
@@ -111,9 +112,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
     return (
       <MobilePage
         headerActions={(
-          <Link className="text-link" to="/activities">
-            返回活动列表
-          </Link>
+          <AppTextLink to="/activities">返回活动列表</AppTextLink>
         )}
         eyebrow="活动详情"
         tone={detailTone}
@@ -132,9 +131,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
     <MobilePage
       description={isStaff ? "查看活动状态，并进入管理页展示动态码和批量操作。" : "先确认活动状态，再继续签到或签退。"}
       headerActions={(
-        <Link className="text-link" to="/activities">
-          返回活动列表
-        </Link>
+        <AppTextLink to="/activities">返回活动列表</AppTextLink>
       )}
       eyebrow="活动详情"
       tone={detailTone}

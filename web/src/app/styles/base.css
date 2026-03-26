@@ -13,8 +13,6 @@
 :root {
   color-scheme: light;
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --app-business-nav-offset: 104px;
-
   /* =========================================================
    * App 视觉 Token（轻量版）
    * ---------------------------------------------------------
@@ -137,13 +135,6 @@ select {
   /* 即使未来外层高度变化，内容也只允许从顶部堆叠，避免再次把空白分摊进卡片。 */
   align-self: start;
   align-content: start;
-}
-
-/* 底部导航单独占一个层，避免与正文卡片滚动时互相挤压。 */
-.mobile-page__bottom-nav {
-  position: sticky;
-  bottom: calc(var(--app-business-nav-offset) + env(safe-area-inset-bottom));
-  z-index: 3;
 }
 
 /* 业务态壳层负责给统一顶级导航留出固定空间，
@@ -466,8 +457,6 @@ select {
 .activity-meta-panel__header,
 .activity-meta-panel__title-block,
 .activity-meta-panel__status,
-.activity-meta-panel__detail-item,
-.activity-meta-panel__detail-value,
 .activity-meta-panel__footer,
 .activity-meta-panel__footer-actions {
   min-width: 0;
@@ -475,8 +464,6 @@ select {
 
 .activity-meta-panel__title-stack,
 .activity-meta-panel__description,
-.activity-meta-panel__detail-list,
-.activity-meta-panel__metrics,
 .activity-meta-panel__footer-actions {
   position: relative;
   z-index: 1;
@@ -507,39 +494,9 @@ select {
   overflow-wrap: anywhere;
 }
 
-.activity-meta-panel__detail-list {
-  display: grid;
-  gap: 8px;
-}
-
-.activity-meta-panel__detail-item,
 .detail-panel p,
 .empty-hint {
   margin: 0;
-}
-
-.activity-meta-panel__detail-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(152, 168, 194, 0.2);
-}
-
-.activity-meta-panel__detail-label {
-  flex-shrink: 0;
-  color: var(--app-text-muted);
-}
-
-.activity-meta-panel__detail-value {
-  text-align: right;
-  color: var(--app-text);
-  line-height: 1.6;
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 /* 空态文案需要“看得见但不抢戏”。 */
@@ -561,32 +518,6 @@ select {
   flex-wrap: wrap;
   align-items: center;
   gap: 14px;
-}
-
-.activity-meta-panel__metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.activity-meta-panel__metric {
-  display: grid;
-  gap: 6px;
-  padding: 12px;
-  border-radius: 18px;
-  border: 1px solid rgba(152, 168, 194, 0.18);
-  background: rgba(245, 248, 252, 0.82);
-}
-
-.activity-meta-panel__metric-label {
-  color: var(--app-text-muted);
-  font-size: 0.82rem;
-}
-
-.activity-meta-panel__metric-value {
-  color: var(--app-text-strong);
-  font-size: 1.1rem;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Tag 已由组件库提供样式，这里只补布局，不再自己画胶囊。 */
@@ -690,142 +621,8 @@ select {
   border-radius: 12px;
 }
 
-/* 文本链接仍保留原生链接语义，避免所有导航都伪装成按钮。 */
-.text-link {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  padding: 6px 0;
-  color: var(--app-link);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-/* 只在 MobilePage 的 hero action 语境下开放文本换行，
- * 避免全站链接样式被动变成多行。 */
-.mobile-page__hero-actions .text-link {
-  min-width: 0;
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
 .detail-actions {
   gap: 10px;
-}
-
-.text-link:hover {
-  text-decoration: underline;
-}
-
-.text-link:focus-visible {
-  outline: 2px solid var(--app-focus);
-  outline-offset: 2px;
-  border-radius: var(--app-radius-sm);
-}
-
-/* =========================================================
- * 底部导航
- * ---------------------------------------------------------
- * 这里保持“清晰、稳定、能回去”的目标，不做装饰化 tab 动画。
- * ========================================================= */
-.page-bottom-nav {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  padding-bottom: calc(10px + constant(safe-area-inset-bottom));
-  padding-bottom: calc(10px + env(safe-area-inset-bottom));
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: var(--app-shadow-soft);
-}
-
-.page-bottom-nav__item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 12px;
-  color: var(--app-text);
-  text-decoration: none;
-  background: var(--app-surface-muted);
-  border: 1px solid transparent;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.page-bottom-nav__item--active,
-.page-bottom-nav__item[aria-current="page"] {
-  color: var(--app-text-strong);
-  background: rgba(255, 255, 255, 0.96);
-  border-color: var(--app-border-strong);
-}
-
-/* =========================================================
- * 个人中心
- * ---------------------------------------------------------
- * 第一版个人中心只承载“查看本地资料 + 账户动作”，
- * 不在这里引入新的编辑表单或额外接口请求。
- * ========================================================= */
-.profile-summary-card,
-.profile-actions-card {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-lg);
-  background: var(--app-surface-secondary);
-}
-
-/* 个人中心属于品牌态账户页面，卡片只做轻量品牌色提亮，不盖过资料文本本身。 */
-.mobile-page[data-page-tone="brand"] .profile-summary-card,
-.mobile-page[data-page-tone="brand"] .profile-actions-card {
-  border-color: rgba(22, 119, 255, 0.18);
-  background: linear-gradient(180deg, rgba(22, 119, 255, 0.06), rgba(255, 255, 255, 0.92));
-}
-
-.profile-summary-list {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-}
-
-.profile-summary-item {
-  display: grid;
-  gap: 4px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--app-border-subtle);
-}
-
-.profile-summary-item:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.profile-summary-label,
-.profile-role-hint {
-  margin: 0;
-  color: var(--app-text-muted);
-}
-
-.profile-summary-label {
-  font-size: 0.84rem;
-  font-weight: 600;
-}
-
-.profile-summary-value {
-  margin: 0;
-  color: var(--app-text-strong);
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
-.profile-role-hint {
-  line-height: 1.6;
 }
 
 /* =========================================================
@@ -1164,7 +961,7 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .t-input__control,
-  .text-link {
+  .t-link {
     transition: none;
   }
 }
