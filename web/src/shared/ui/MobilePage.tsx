@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import type { VisualTone } from "./visual-tone";
 
+export type MobilePageLayout = "compact" | "showcase-auto";
+
 /**
  * 所有手机页统一使用的容器。
  *
@@ -8,6 +10,7 @@ import type { VisualTone } from "./visual-tone";
  * 1. 标题区布局统一
  * 2. 宽度、留白、背景卡片统一
  * 3. 页面不用各自重复写壳层结构
+ * 4. 通过 layout/tone 暴露稳定样式钩子，避免业务页各自拼接 data- 属性
  */
 type MobilePageProps = {
   bottomNav?: ReactNode;
@@ -15,6 +18,7 @@ type MobilePageProps = {
   description?: string;
   eyebrow?: string;
   headerActions?: ReactNode;
+  layout?: MobilePageLayout;
   tone?: VisualTone;
   title: string;
 };
@@ -25,11 +29,13 @@ export function MobilePage({
   description,
   eyebrow,
   headerActions,
+  layout = "compact",
   title,
   tone = "default"
 }: MobilePageProps) {
+  // layout 先只承担页面壳层模式声明，后续桌面端重排继续复用同一契约。
   return (
-    <main className="mobile-page" data-page-tone={tone}>
+    <main className="mobile-page" data-page-layout={layout} data-page-tone={tone}>
       <div className="mobile-page__shell">
         <section className="mobile-page__hero">
           <div className="mobile-page__hero-main">

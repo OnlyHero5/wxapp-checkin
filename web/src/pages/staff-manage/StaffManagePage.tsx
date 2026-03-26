@@ -235,6 +235,7 @@ export function StaffManagePage() {
     }
   }
 
+  // staff 管理页先只声明“展示型壳层”，具体桌面重排由后续任务接管。
   return (
     <MobilePage
       eyebrow="工作人员"
@@ -243,6 +244,7 @@ export function StaffManagePage() {
           返回活动详情
         </Link>
       )}
+      layout="showcase-auto"
       tone="staff"
       title="活动管理"
     >

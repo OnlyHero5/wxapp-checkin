@@ -100,6 +100,7 @@ describe("StaffManagePage", () => {
 
     expect(await screen.findByRole("heading", { name: "活动管理" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
+    expect(screen.getByRole("main")).toHaveAttribute("data-page-layout", "showcase-auto");
     expect(screen.getByText("483920")).toBeInTheDocument();
     expect(screen.getByText("483920").closest(".staff-panel")).toHaveAttribute("data-panel-tone", "staff");
     expect(screen.getByText("实时统计")).toBeInTheDocument();

@@ -230,6 +230,23 @@ select {
   gap: 14px;
 }
 
+/* 这些容器后续会进入更宽的壳层模式；
+ * 统一补 `min-width: 0`，避免长文本或组件库默认宽度把父容器撑破。 */
+.mobile-page__shell,
+.mobile-page__hero,
+.mobile-page__section,
+.mobile-page__content,
+.stack-form,
+.activity-grid,
+.activity-section,
+.activity-meta-panel,
+.activity-meta-panel__surface,
+.code-input-shell,
+.t-tabs,
+.t-cell-group--card {
+  min-width: 0;
+}
+
 /* 页面主标题比正文明显更大，但仍控制在手机端可一屏阅读的范围。 */
 .mobile-page__header h1 {
   margin: 0;
@@ -1069,6 +1086,51 @@ select {
 /* Cell 的分割线颜色稍微收敛一点，避免和业务面板的边框抢层级。 */
 .t-cell::after {
   border-bottom-color: var(--app-border-subtle);
+}
+
+/* 359px 以下已经接近旧小屏设备极限，这里只做防溢出收口，不改页面结构。 */
+@media (max-width: 359px) {
+  .mobile-page {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mobile-page__hero {
+    gap: 12px;
+    padding: 16px 14px 14px;
+  }
+
+  .mobile-page__section {
+    padding: 16px 14px 18px;
+  }
+
+  .mobile-page__header h1 {
+    font-size: 1.56rem;
+  }
+
+  .code-input {
+    font-size: 1.5rem;
+    letter-spacing: 0.22em;
+  }
+
+  .staff-code-panel__value {
+    font-size: 2rem;
+    letter-spacing: 0.18em;
+  }
+}
+
+/* showcase-auto 目前只放宽公共壳层宽度，
+ * 管理员页的桌面分栏和结构重排由后续任务在同一契约上继续扩展。 */
+@media (min-width: 768px) {
+  .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
+    width: min(100%, 560px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
+    width: min(100%, 1120px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
