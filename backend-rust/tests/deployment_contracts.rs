@@ -58,18 +58,48 @@ fn docker_env_example_should_document_suda_union_connection_fields() {
     env.contains("SUDA_UNION_DB_PORT=3499"),
     "docker env example should lock the suda-union port to 3499 by default"
   );
+  assert!(
+    env.contains("python3"),
+    "docker env example should include a concrete QR signing key generation command"
+  );
+  assert!(
+    env.contains("secrets.token_urlsafe"),
+    "docker env example should use a cryptographically secure key generation example"
+  );
+  assert!(
+    env.contains("WXAPP_QR_SIGNING_KEY_SAMPLE="),
+    "docker env example should include a sample generated signing key for reference"
+  );
 }
 
 #[test]
-fn docker_start_script_should_stream_backend_logs_to_terminal() {
+fn docker_start_script_should_stream_backend_logs_to_terminal_without_file_log() {
   let script = fs::read_to_string(repo_file("docker/start.sh")).expect("read docker/start.sh");
   assert!(
-    script.contains("tee -a"),
-    "docker start script should mirror backend logs to terminal and file at the same time"
+    !script.contains("/var/log"),
+    "docker start script should not keep container-local log files on storage-constrained servers"
   );
   assert!(
-    !script.contains(" >\"${BACKEND_LOG}\" 2>&1 &"),
-    "docker start script should not hide backend logs in a file only"
+    !script.contains("tee -a"),
+    "docker start script should avoid duplicating logs into files when docker logs already provides terminal visibility"
+  );
+  assert!(
+    script.contains("/usr/local/bin/wxapp-checkin-backend-rust &"),
+    "docker start script should leave backend logs on stdout/stderr"
+  );
+}
+
+#[test]
+fn docker_compose_should_limit_log_retention() {
+  let compose =
+    fs::read_to_string(repo_file("docker-compose.yml")).expect("read docker-compose.yml");
+  assert!(
+    compose.contains("max-size"),
+    "docker compose should configure log rotation to cap docker log storage"
+  );
+  assert!(
+    compose.contains("max-file"),
+    "docker compose should cap the number of rotated docker log files"
   );
 }
 

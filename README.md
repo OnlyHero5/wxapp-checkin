@@ -126,6 +126,8 @@ cp .env.docker.example .env.docker
 ./scripts/docker-prod.sh
 ```
 
+生成 `WXAPP_QR_SIGNING_KEY` 可直接使用 `.env.docker.example` 里的 Python 3 示例命令。
+
 启动后可直接查看容器终端日志：
 
 ```bash
@@ -136,6 +138,8 @@ docker logs -f wxapp-checkin
 
 - 紫色 `[WXAPP-CHECKIN-OK]`：已连上 `suda_union`、已验证关键表、HTTP 监听成功
 - 蓝色 `[WXAPP-CHECKIN-ERROR]`：会明确打印失败阶段和报错原因
+
+日志策略默认只走 `docker logs`，并通过 Compose 把单文件大小限制为 `5m`、保留 `2` 个滚动文件，避免云服务器磁盘被日志持续占满。
 
 ## 正式文档
 

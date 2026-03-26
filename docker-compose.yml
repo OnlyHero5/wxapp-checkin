@@ -26,6 +26,11 @@ services:
       - three-projects-net
     ports:
       - "${WXAPP_HTTP_PORT:-89}:89"
+    logging:
+      driver: json-file
+      options:
+        max-size: ${WXAPP_DOCKER_LOG_MAX_SIZE:-5m}
+        max-file: ${WXAPP_DOCKER_LOG_MAX_FILE:-2}
     restart: unless-stopped
 
 networks:

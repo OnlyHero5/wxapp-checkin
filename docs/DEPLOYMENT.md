@@ -101,6 +101,8 @@ cp .env.docker.example .env.docker
 - `SUDA_UNION_DB_PASSWORD`
 - `WXAPP_QR_SIGNING_KEY`
 
+其中 `WXAPP_QR_SIGNING_KEY` 可以直接参考 `.env.docker.example` 里的 Python 3 生成命令；示例文件里也附了一条实际生成结果，便于你核对格式。
+
 最后执行：
 
 ```bash
@@ -112,6 +114,7 @@ cp .env.docker.example .env.docker
 - 校验 `.env.docker` 是否存在且关键字段不为空
 - 若默认 Docker 网络不存在则自动创建
 - `docker compose --env-file .env.docker up -d --build wxapp-checkin`
+- 容器日志走 `docker logs`，并按 `5m * 2` 的默认滚动上限做保留控制
 
 启动后可用以下命令追日志：
 
@@ -123,6 +126,11 @@ docker logs -f wxapp-checkin
 
 - 紫色 `[WXAPP-CHECKIN-OK]`：已连上 `suda_union`、已成功读取所有需要的表、HTTP 监听成功
 - 蓝色 `[WXAPP-CHECKIN-ERROR]`：明确指出失败阶段、失败对象和原始错误原因
+
+说明：
+
+- 容器内不再额外写 `/var/log` 文本日志文件，避免有限磁盘空间被重复日志占用
+- 如需进一步压缩日志保留量，可在 `.env.docker` 调小 `WXAPP_DOCKER_LOG_MAX_SIZE` 与 `WXAPP_DOCKER_LOG_MAX_FILE`
 
 ## 7. 启动后端
 

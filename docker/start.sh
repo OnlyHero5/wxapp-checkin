@@ -9,8 +9,8 @@ set -euo pipefail
 # - 宿主机只暴露 89
 # - 前后端在容器内部通过 localhost 通信
 # - 停止容器时两个进程都能被正确回收
+# - 资源受限服务器上不额外落容器内日志文件，统一交给 `docker logs` + Compose 日志轮转
 
-BACKEND_LOG="${BACKEND_LOG:-/var/log/wxapp-checkin-backend.log}"
 BACKEND_PID=""
 
 cleanup() {
@@ -25,14 +25,11 @@ trap cleanup EXIT INT TERM
 # 容器内固定把 Rust 后端收敛到 8080；
 # 宿主机不会直接映射它，避免绕开 Nginx 的单入口约束。
 export SERVER_PORT="${SERVER_PORT:-8080}"
-mkdir -p "$(dirname "${BACKEND_LOG}")"
-touch "${BACKEND_LOG}"
 
-# 后端日志既要落到文件，便于容器内排障；
-# 也要直接镜像到 stdout/stderr，便于 `docker logs -f` 第一时间看到紫色/蓝色标识。
-/usr/local/bin/wxapp-checkin-backend-rust \
-  > >(tee -a "${BACKEND_LOG}") \
-  2> >(tee -a "${BACKEND_LOG}" >&2) &
+# 后端直接继承容器 stdout/stderr：
+# - 紫色/蓝色关键标识能第一时间出现在 `docker logs`
+# - 不再把日志复制到容器文件系统，避免有限磁盘持续堆积文本日志
+/usr/local/bin/wxapp-checkin-backend-rust &
 BACKEND_PID="$!"
 
 # 用前台 nginx 托管静态资源并反代 API；
