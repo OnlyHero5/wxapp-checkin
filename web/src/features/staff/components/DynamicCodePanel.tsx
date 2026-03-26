@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Cell, CellGroup, TabPanel, Tabs } from "tdesign-mobile-react";
+import { Badge, Cell, CellGroup, Grid, GridItem, Skeleton, TabPanel, Tabs } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 import type { CodeSessionResponse } from "../api";
 import { AppButton } from "../../../shared/ui/AppButton";
@@ -26,6 +26,10 @@ function resolveRemainingMs(codeSession: CodeSessionResponse | null) {
   }
 
   return Math.max(0, codeSession.expires_in_ms ?? 0);
+}
+
+function resolveActionBadgeColor(actionType: ActivityActionType) {
+  return actionType === "checkout" ? "rgba(217, 119, 6, 0.92)" : "rgba(15, 159, 140, 0.92)";
 }
 
 /**
@@ -67,6 +71,78 @@ function resolveAttendanceCounts(codeSession: CodeSessionResponse | null) {
   };
 }
 
+type DynamicCodeHeroProps = {
+  actionLabel: string;
+  actionType: ActivityActionType;
+  codeText: string;
+  metaText: string;
+  showSkeleton: boolean;
+};
+
+/**
+ * 大码展示区继续保留“业务大字 + 倒计时”的重点，但 surface、角标和占位态都交给组件库组件。
+ *
+ * 这样做的边界很明确：
+ * 1. `Badge` 负责动作语义，不再手写漂浮标签；
+ * 2. `CellGroup` 负责卡片 surface；
+ * 3. `Grid/GridItem` 负责大字与辅助信息的纵向排布；
+ * 4. `Skeleton` 只在真实 loading 时接管展示，避免旧码和新码切换时闪旧内容。
+ */
+function DynamicCodeHero({
+  actionLabel,
+  actionType,
+  codeText,
+  metaText,
+  showSkeleton
+}: DynamicCodeHeroProps) {
+  return (
+    <CellGroup className="staff-code-panel__hero-group" theme="card">
+      <Badge
+        className="staff-code-panel__badge"
+        color={resolveActionBadgeColor(actionType)}
+        count={actionLabel}
+        shape="ribbon-left"
+        size="large"
+      >
+        <Grid align="center" className="staff-code-panel__display-grid" column={1} gutter={12}>
+          <GridItem
+            description={<p className="staff-code-panel__meta">{metaText}</p>}
+            text={
+              <span className="staff-code-panel__value-shell">
+                <span className="staff-code-panel__value">{codeText}</span>
+                {showSkeleton ? (
+                  <Skeleton
+                    animation="gradient"
+                    className="staff-code-panel__value-skeleton"
+                    rowCol={[
+                      [
+                        {
+                          height: "3.6rem",
+                          margin: "0 auto",
+                          type: "text",
+                          width: "12rem"
+                        }
+                      ],
+                      [
+                        {
+                          height: "1rem",
+                          margin: "0.75rem auto 0",
+                          type: "text",
+                          width: "7rem"
+                        }
+                      ]
+                    ]}
+                  />
+                ) : null}
+              </span>
+            }
+          />
+        </Grid>
+      </Badge>
+    </CellGroup>
+  );
+}
+
 /**
  * 动态码面板只负责“当前码长什么样、切哪个动作、剩多久”，
  * 不在这一层直接耦合批量签退或页面级错误处理。
@@ -86,7 +162,9 @@ export function DynamicCodePanel({
   const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
   // 动作标签和当前 tab 绑定，确保首屏还没拿到码时也能给管理员稳定的语义提示。
   const actionLabel = actionType === "checkout" ? "当前签退码" : "当前签到码";
-  const heroLoading = loading || (!!codeSession && !displayedCodeSession);
+  const heroMetaLoading = loading || (!!codeSession && !displayedCodeSession);
+  const heroDisplayCode = displayedCodeSession?.code ?? "------";
+  const heroMetaText = heroMetaLoading ? "动态码加载中..." : `剩余时间：${formatRemainingSeconds(remainingMs)}`;
 
   useEffect(() => {
     onRefreshRef.current = onRefresh;
@@ -138,14 +216,13 @@ export function DynamicCodePanel({
       </div>
       {/* hero 区只关心“当前码”和倒计时，桌面大屏放大时不混入其它操作信息。 */}
       <div className="staff-code-panel" data-display-zone="hero">
-        <div className="staff-code-panel__glass">
-          <p className="staff-code-panel__label">{actionLabel}</p>
-          {/* 大号六码是管理页的视觉焦点，因此刻意和普通文本分层。 */}
-          <p className="staff-code-panel__value">{displayedCodeSession?.code ?? "------"}</p>
-          <p className="staff-code-panel__meta">
-            {heroLoading ? "动态码加载中..." : `剩余时间：${formatRemainingSeconds(remainingMs)}`}
-          </p>
-        </div>
+        <DynamicCodeHero
+          actionLabel={actionLabel}
+          actionType={actionType}
+          codeText={heroDisplayCode}
+          metaText={heroMetaText}
+          showSkeleton={loading}
+        />
       </div>
       {/* 统计区与弱操作区拆开后，桌面态可以把“读数据”和“做刷新”分成不同视觉层级。 */}
       <div className="staff-panel__stats" data-display-zone="stats">

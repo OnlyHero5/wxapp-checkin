@@ -143,8 +143,8 @@ select {
   width: 100%;
 }
 
-.mobile-page__hero,
-.mobile-page__section {
+.mobile-page__hero-group .t-cell-group--card,
+.mobile-page__content-group .t-cell-group--card {
   position: relative;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-xl);
@@ -165,29 +165,29 @@ select {
 
 /* 页面 tone 目前只先作用到 hero 壳层，
  * 这样能先建立全站业务态识别，而不把正文卡片一起染色。 */
-.mobile-page[data-page-tone="brand"] .mobile-page__hero {
+.mobile-page[data-page-tone="brand"] .mobile-page__hero-group .t-cell-group--card {
   border-color: rgba(22, 119, 255, 0.2);
   background: linear-gradient(180deg, rgba(22, 119, 255, 0.14), rgba(255, 255, 255, 0.78));
 }
 
-.mobile-page[data-page-tone="checkin"] .mobile-page__hero {
+.mobile-page[data-page-tone="checkin"] .mobile-page__hero-group .t-cell-group--card {
   border-color: rgba(15, 159, 140, 0.2);
   background: linear-gradient(180deg, rgba(15, 159, 140, 0.14), rgba(255, 255, 255, 0.78));
 }
 
-.mobile-page[data-page-tone="checkout"] .mobile-page__hero {
+.mobile-page[data-page-tone="checkout"] .mobile-page__hero-group .t-cell-group--card {
   border-color: rgba(217, 119, 6, 0.2);
   background: linear-gradient(180deg, rgba(217, 119, 6, 0.14), rgba(255, 255, 255, 0.78));
 }
 
-.mobile-page[data-page-tone="staff"] .mobile-page__hero {
+.mobile-page[data-page-tone="staff"] .mobile-page__hero-group .t-cell-group--card {
   border-color: rgba(91, 91, 214, 0.2);
   background: linear-gradient(180deg, rgba(91, 91, 214, 0.14), rgba(255, 255, 255, 0.78));
 }
 
-.mobile-page__hero::before,
-.mobile-page__section::before,
-.staff-code-panel__glass::before {
+.mobile-page__hero-group .t-cell-group--card::before,
+.mobile-page__content-group .t-cell-group--card::before,
+.staff-code-panel__hero-group .t-cell-group--card::before {
   content: "";
   position: absolute;
   inset: 1px;
@@ -202,6 +202,8 @@ select {
 }
 
 .mobile-page__shell,
+.mobile-page__hero-group,
+.mobile-page__content-group,
 .mobile-page__hero,
 .mobile-page__navbar,
 .mobile-page__section,
@@ -213,6 +215,12 @@ select {
 .mobile-page__navbar .t-navbar__center,
 .mobile-page__navbar .t-navbar__right {
   min-width: 0;
+}
+
+.mobile-page__hero-group .t-cell-group__title {
+  position: relative;
+  z-index: 1;
+  padding: 0 2px 8px;
 }
 
 .mobile-page__navbar .t-navbar__center-title,
@@ -238,7 +246,6 @@ select {
 
 .mobile-page__section {
   padding: 18px 16px 20px;
-  background: var(--app-surface);
 }
 
 /* 所有页面正文统一用 grid 垂直堆叠，减少每页自己处理间距。 */
@@ -277,14 +284,6 @@ select {
  * - 如果未来需要深色模式，优先改颜色层，不要改布局层 */
 
 /* eyebrow 是页面辅助标签，例如“欢迎回来”“首次访问”“活动详情”。 */
-.mobile-page__eyebrow {
-  margin: 0;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--app-text-muted);
-}
-
 .mobile-page__description {
   margin: 0;
   color: var(--app-text);
@@ -631,7 +630,7 @@ select {
   min-width: 0;
 }
 
-.staff-panel[data-panel-tone="staff"] .staff-code-panel__glass,
+.staff-panel[data-panel-tone="staff"] .staff-code-panel__hero-group .t-cell-group--card,
 [data-panel-tone="staff"] .roster-batch-bar {
   border-color: rgba(91, 91, 214, 0.2);
   background: linear-gradient(180deg, rgba(91, 91, 214, 0.08), rgba(255, 255, 255, 0.92));
@@ -647,10 +646,8 @@ select {
   position: relative;
 }
 
-.staff-code-panel__glass {
+.staff-code-panel__hero-group .t-cell-group--card {
   position: relative;
-  display: grid;
-  gap: 8px;
   padding: 22px 18px 18px;
   border: 1px solid var(--app-border);
   border-radius: 26px;
@@ -661,17 +658,53 @@ select {
   overflow: hidden;
   backdrop-filter: var(--app-backdrop-blur);
   -webkit-backdrop-filter: var(--app-backdrop-blur);
+}
+
+.staff-code-panel__badge {
+  position: relative;
+  display: block;
+}
+
+.staff-code-panel__badge .t-badge__content {
+  display: block;
+}
+
+.staff-code-panel__badge .t-badge__count {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.staff-code-panel__display-grid .t-grid-item {
+  padding: 0;
+}
+
+.staff-code-panel__display-grid .t-grid-item__image {
+  display: none;
+}
+
+.staff-code-panel__display-grid .t-grid-item__content {
+  margin-top: 0;
   text-align: center;
 }
 
-.staff-code-panel__label {
+.staff-code-panel__display-grid .t-grid-item__description {
+  margin-top: 10px;
+}
+
+.staff-code-panel__value-shell {
   position: relative;
-  z-index: 1;
-  margin: 0;
-  color: var(--app-text-muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  display: grid;
+  justify-items: center;
+}
+
+.staff-code-panel__value-skeleton {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  pointer-events: none;
 }
 
 .staff-code-panel__value {
@@ -689,6 +722,7 @@ select {
   z-index: 1;
   margin: 0;
   color: var(--app-text-muted);
+  text-align: center;
 }
 
 .staff-panel__stats,
@@ -855,11 +889,9 @@ select {
     grid-area: hero;
   }
 
-  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__glass {
+  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__hero-group .t-cell-group--card {
     min-height: 360px;
-    gap: 14px;
     padding: 42px 32px 36px;
-    align-content: center;
   }
 
   .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__value {

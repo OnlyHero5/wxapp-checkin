@@ -10,6 +10,18 @@ const baseCss = fs.readFileSync(
 );
 
 describe("MobilePage", () => {
+  it("renders hero and content surfaces through TDesign card groups instead of raw section shells", () => {
+    render(
+      <MobilePage description="请先确认当前页面操作，再继续执行。" eyebrow="活动管理" title="动态签到">
+        <p>当前为签到展示模式</p>
+      </MobilePage>
+    );
+
+    expect(document.querySelector(".mobile-page__hero-group .t-cell-group--card")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__content-group .t-cell-group--card")).toBeInTheDocument();
+    expect(screen.getByText("活动管理").closest(".t-cell-group__title")).toBeInTheDocument();
+  });
+
   it("defaults to compact layout while keeping the tone hook", () => {
     render(
       <MobilePage tone="checkin" title="活动签到">

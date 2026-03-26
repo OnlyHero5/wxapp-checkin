@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Navbar } from "tdesign-mobile-react";
+import { CellGroup, Navbar } from "tdesign-mobile-react";
 import type { VisualTone } from "./visual-tone";
 
 export type MobilePageLayout = "compact" | "showcase-auto";
@@ -36,24 +36,28 @@ export function MobilePage({
   return (
     <main className="mobile-page" data-page-layout={layout} data-page-tone={tone}>
       <div className="mobile-page__shell">
-        <section className="mobile-page__hero">
-          {/* 标题行优先交给组件库 Navbar，减少自定义头部布局对安全区、换行和左右动作位的重复处理。 */}
-          <Navbar
-            animation={false}
-            className="mobile-page__navbar"
-            fixed={false}
-            right={headerActions}
-            safeAreaInsetTop={false}
-            title={<h1 className="mobile-page__navbar-title">{title}</h1>}
-          />
-          {/* eyebrow / description 仍然属于项目特有语义，继续作为轻量补充信息保留在标题行上下文里。 */}
-          {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
-          {description ? <p className="mobile-page__description">{description}</p> : null}
-        </section>
-        {/* content 区交给业务页自由组合表单、说明、结果态。 */}
-        <section className="mobile-page__section">
-          <div className="mobile-page__content">{children}</div>
-        </section>
+        {/* 玻璃卡面本身改交给 CellGroup 承担，避免继续维护“看起来像组件、实际上是 div”的壳层。 */}
+        <CellGroup className="mobile-page__hero-group" theme="card" title={eyebrow}>
+          <section className="mobile-page__hero">
+            {/* 标题行优先交给组件库 Navbar，减少自定义头部布局对安全区、换行和左右动作位的重复处理。 */}
+            <Navbar
+              animation={false}
+              className="mobile-page__navbar"
+              fixed={false}
+              right={headerActions}
+              safeAreaInsetTop={false}
+              title={<h1 className="mobile-page__navbar-title">{title}</h1>}
+            />
+            {/* description 仍然保留在标题语境里，但不再额外包一层手写卡片。 */}
+            {description ? <p className="mobile-page__description">{description}</p> : null}
+          </section>
+        </CellGroup>
+        {/* content 区同样交给 CellGroup 提供 surface，业务页只关心内容本身。 */}
+        <CellGroup className="mobile-page__content-group" theme="card">
+          <section className="mobile-page__section">
+            <div className="mobile-page__content">{children}</div>
+          </section>
+        </CellGroup>
       </div>
     </main>
   );

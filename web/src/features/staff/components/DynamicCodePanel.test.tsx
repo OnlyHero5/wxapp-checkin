@@ -37,6 +37,63 @@ describe("DynamicCodePanel", () => {
     expect(screen.getByText("签到码").closest(".staff-panel__controls")).toHaveAttribute("data-display-zone", "controls");
   });
 
+  it("renders the hero through TDesign badge and grid surfaces instead of a plain handwritten glass box", () => {
+    const onActionChange = vi.fn();
+    const onRefresh = vi.fn();
+
+    render(
+      <DynamicCodePanel
+        activityId="act_101"
+        actionType="checkin"
+        codeSession={{
+          action_type: "checkin",
+          activity_id: "act_101",
+          checkin_count: 18,
+          checkout_count: 3,
+          code: "483920",
+          expires_at: Date.now() + 4000,
+          expires_in_ms: 4000,
+          server_time_ms: Date.now(),
+          status: "success"
+        }}
+        onActionChange={onActionChange}
+        onRefresh={onRefresh}
+      />
+    );
+
+    expect(screen.getByText("当前签到码").closest(".t-badge")).toBeInTheDocument();
+    expect(document.querySelector(".staff-code-panel__hero-group .t-cell-group--card")).toBeInTheDocument();
+    expect(screen.getByText("483920").closest(".t-grid-item")).toBeInTheDocument();
+  });
+
+  it("uses a component-library skeleton in the hero while the latest code is still loading", () => {
+    const onActionChange = vi.fn();
+    const onRefresh = vi.fn();
+
+    render(
+      <DynamicCodePanel
+        activityId="act_101"
+        actionType="checkin"
+        codeSession={{
+          action_type: "checkin",
+          activity_id: "act_101",
+          checkin_count: 18,
+          checkout_count: 3,
+          code: "483920",
+          expires_at: Date.now() + 4000,
+          expires_in_ms: 4000,
+          server_time_ms: Date.now(),
+          status: "success"
+        }}
+        loading
+        onActionChange={onActionChange}
+        onRefresh={onRefresh}
+      />
+    );
+
+    expect(document.querySelector(".staff-code-panel__value-skeleton")).toBeInTheDocument();
+  });
+
   it("renders a stable placeholder code and action label before the first code session arrives", () => {
     const onActionChange = vi.fn();
     const onRefresh = vi.fn();
