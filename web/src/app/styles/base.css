@@ -161,6 +161,7 @@ select {
 
 .mobile-page__hero {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
@@ -208,10 +209,38 @@ select {
 
 .mobile-page__hero-main {
   display: grid;
+  flex: 1 1 220px;
   gap: 8px;
 }
 
 .mobile-page__hero-actions {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+/* hero 的左右分栏都要显式允许收缩，
+ * 否则标题和返回入口在超窄屏下会互相顶爆。 */
+.mobile-page__shell,
+.mobile-page__hero,
+.mobile-page__hero-main,
+.mobile-page__hero-actions,
+.mobile-page__hero-actions-content,
+.mobile-page__header,
+.mobile-page__section,
+.mobile-page__content {
+  min-width: 0;
+}
+
+/* action slot 只负责承接业务自带的按钮/链接，
+ * 统一在壳层这里兜住最大宽度，避免各页自己补溢出修复。 */
+.mobile-page__hero-actions,
+.mobile-page__hero-actions-content {
+  max-width: 100%;
+}
+
+.mobile-page__hero-actions-content {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
@@ -228,23 +257,6 @@ select {
   z-index: 1;
   display: grid;
   gap: 14px;
-}
-
-/* 这些容器后续会进入更宽的壳层模式；
- * 统一补 `min-width: 0`，避免长文本或组件库默认宽度把父容器撑破。 */
-.mobile-page__shell,
-.mobile-page__hero,
-.mobile-page__section,
-.mobile-page__content,
-.stack-form,
-.activity-grid,
-.activity-section,
-.activity-meta-panel,
-.activity-meta-panel__surface,
-.code-input-shell,
-.t-tabs,
-.t-cell-group--card {
-  min-width: 0;
 }
 
 /* 页面主标题比正文明显更大，但仍控制在手机端可一屏阅读的范围。 */
@@ -760,6 +772,15 @@ select {
   font-weight: 600;
 }
 
+/* 只在 MobilePage 的 hero action 语境下开放文本换行，
+ * 避免全站链接样式被动变成多行。 */
+.mobile-page__hero-actions .text-link {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .detail-actions {
   gap: 10px;
 }
@@ -1102,6 +1123,18 @@ select {
 
   .mobile-page__section {
     padding: 16px 14px 18px;
+  }
+
+  /* 小于 360px 时直接让 action 入口换到下一行，
+   * 保证标题优先可读，返回链接不再和标题抢同一行宽度。 */
+  .mobile-page__hero-actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .mobile-page__hero-actions-content {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .mobile-page__header h1 {

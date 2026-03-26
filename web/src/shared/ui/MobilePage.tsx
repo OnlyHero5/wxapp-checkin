@@ -46,7 +46,12 @@ export function MobilePage({
             </header>
             {description ? <p className="mobile-page__description">{description}</p> : null}
           </div>
-          {headerActions ? <div className="mobile-page__hero-actions">{headerActions}</div> : null}
+          {/* headerActions 统一包一层可收缩 slot，避免业务页直接塞链接时把标题顶出卡片。 */}
+          {headerActions ? (
+            <div className="mobile-page__hero-actions">
+              <div className="mobile-page__hero-actions-content">{headerActions}</div>
+            </div>
+          ) : null}
         </section>
         {/* content 区交给业务页自由组合表单、说明、结果态。 */}
         <section className="mobile-page__section">

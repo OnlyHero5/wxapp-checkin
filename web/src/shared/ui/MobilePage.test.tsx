@@ -23,4 +23,20 @@ describe("MobilePage", () => {
 
     expect(screen.getByRole("main")).toHaveAttribute("data-page-layout", "showcase-auto");
   });
+
+  it("wraps header actions in a dedicated slot for narrow-screen overflow control", () => {
+    render(
+      <MobilePage
+        headerActions={<a className="text-link" href="/activities/act_101">返回活动详情</a>}
+        title="活动管理"
+      >
+        <p>当前动态码</p>
+      </MobilePage>
+    );
+
+    const actionLink = screen.getByRole("link", { name: "返回活动详情" });
+
+    expect(actionLink.closest(".mobile-page__hero-actions")).toBeInTheDocument();
+    expect(actionLink.closest(".mobile-page__hero-actions-content")).toBeInTheDocument();
+  });
 });
