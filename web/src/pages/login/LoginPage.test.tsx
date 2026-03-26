@@ -47,9 +47,12 @@ describe("LoginPage", () => {
     expect(screen.getByText("账号为学号，请输入当前可用密码。")).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
     expect(screen.getByRole("button", { name: "登录" })).toHaveClass("app-button--accent-brand");
+    expect(screen.getByPlaceholderText("请输入学号").closest(".t-input")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("请输入密码").closest(".t-input")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("请输入学号").closest(".t-form")).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("学号"), " 2025000011 ");
-    await user.type(screen.getByLabelText("密码"), " 123 ");
+    await user.type(screen.getByPlaceholderText("请输入学号"), " 2025000011 ");
+    await user.type(screen.getByPlaceholderText("请输入密码"), " 123 ");
     await user.click(screen.getByRole("button", { name: "登录" }));
 
     await waitFor(() => {
@@ -68,8 +71,8 @@ describe("LoginPage", () => {
 
     renderLoginPage();
 
-    await user.type(screen.getByLabelText("学号"), "2025000011");
-    await user.type(screen.getByLabelText("密码"), "wrong");
+    await user.type(screen.getByPlaceholderText("请输入学号"), "2025000011");
+    await user.type(screen.getByPlaceholderText("请输入密码"), "wrong");
     await user.click(screen.getByRole("button", { name: "登录" }));
 
     expect(await screen.findByText("密码错误")).toBeInTheDocument();

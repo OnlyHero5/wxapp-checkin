@@ -147,10 +147,9 @@ select {
 }
 
 /* 业务态壳层负责给统一顶级导航留出固定空间，
- * 否则底部浮层会压住页面正文和局部返回入口。 */
+ * 当前由组件库 TabBar 自带 placeholder 负责占位，这里只保留宽度语义。 */
 .app-business-shell {
   width: 100%;
-  padding-bottom: calc(var(--app-business-nav-offset) + env(safe-area-inset-bottom));
 }
 
 .mobile-page__hero,
@@ -264,6 +263,9 @@ select {
   position: relative;
   z-index: 1;
   display: grid;
+  /* 页面正文默认就是单列堆叠，必须显式写成可收缩轨道，
+   * 避免隐式列按内容最大宽度计算后把整页撑出手机视口。 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -327,12 +329,16 @@ select {
  * 改动前最好先跑一遍全量截图或至少全量单测。 */
 .stack-form {
   display: grid;
+  /* 表单页中的卡片、输入区和主按钮都依赖这一层同列堆叠；
+   * 不显式锁列宽时，移动端浏览器可能按 max-content 取宽导致右侧被切掉。 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
 /* 活动列表卡片区域采用一列堆叠，后续如需平板适配可在媒体查询里扩成多列。 */
 .activity-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -597,121 +603,6 @@ select {
 }
 
 /* 单个字段统一采用 label + input 的垂直排列。 */
-.field {
-  display: grid;
-  gap: 8px;
-  font-weight: 600;
-}
-
-/* 输入框统一圆角与边框，增强移动端触控区域。 */
-.field input,
-.field textarea {
-  padding: 14px 16px;
-  border: 1px solid var(--app-border-strong);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.88);
-  color: var(--app-text-strong);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
-}
-
-/* 登录页和其他轻表单页面都依赖这组输入框样式，所以保持克制，不做花哨动画。 */
-/* brand 页面下只给表单加一层轻蓝品牌气质，不去改交互模型和结构。 */
-.mobile-page[data-page-tone="brand"] .field input,
-.mobile-page[data-page-tone="brand"] .field textarea {
-  border-color: rgba(22, 119, 255, 0.2);
-  background: linear-gradient(180deg, rgba(22, 119, 255, 0.05), rgba(255, 255, 255, 0.92));
-}
-
-/* 聚焦态给出柔和但清晰的视觉反馈。 */
-.field input:focus,
-.field textarea:focus {
-  outline: 2px solid var(--app-focus);
-  outline-offset: 1px;
-  border-color: var(--app-link);
-}
-
-/* textarea 在移动端默认样式差异很大，这里明确收口到与 input 同款。 */
-.field textarea {
-  resize: vertical;
-}
-
-.field input::placeholder,
-.field textarea::placeholder {
-  color: var(--app-text-placeholder);
-}
-
-.field input:disabled,
-.field textarea:disabled {
-  background: #f3f4f6;
-  color: var(--app-text-muted);
-}
-
-/* 动态码输入框需要明显区别于普通文本输入框。 */
-.code-input {
-  min-height: 64px;
-  text-align: center;
-  /* 6 位动态码必须醒目，但超窄屏下不能靠固定大字距硬顶容器。 */
-  letter-spacing: clamp(0.16em, 0.9vw, 0.32em);
-  font-size: clamp(1.5rem, 7.4vw, 1.75rem);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 占位文案的职责只是提示用户“这里输入六码”，
- * 不需要复用真实验证码的大字距，否则在旗舰窄屏宽度下也会被截断。 */
-.code-input::placeholder {
-  letter-spacing: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.code-input-shell {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 22px;
-  border: 1px solid var(--app-border);
-  background: rgba(246, 248, 252, 0.88);
-  box-shadow: var(--app-shadow-soft);
-}
-
-.code-input-shell--tone-checkin {
-  border-color: rgba(15, 159, 140, 0.2);
-  background: linear-gradient(180deg, rgba(15, 159, 140, 0.08), rgba(246, 248, 252, 0.92));
-}
-
-.code-input-shell--tone-checkout {
-  border-color: rgba(217, 119, 6, 0.2);
-  background: linear-gradient(180deg, rgba(217, 119, 6, 0.08), rgba(246, 248, 252, 0.92));
-}
-
-.code-input-shell__surface {
-  padding: 8px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(152, 168, 194, 0.16);
-}
-
-.code-input-shell--tone-checkin .code-input-shell__surface {
-  border-color: rgba(15, 159, 140, 0.16);
-}
-
-.code-input-shell--tone-checkout .code-input-shell__surface {
-  border-color: rgba(217, 119, 6, 0.16);
-}
-
-.code-input-shell__hint {
-  margin: 0;
-  color: var(--app-text-muted);
-  line-height: 1.5;
-}
-
-/* 对动态码输入框的维护建议：
- * - 字距是为了让用户更像在看“六码”，不是普通文本；
- * - 如果以后改成 6 个独立格子，这个类可以保留给“隐藏真实输入框”；
- * - 不建议把字号调得太小，否则数字输入的“确认感”会明显下降。 */
-
 /* =========================================================
  * 组件库拼接层
  * ---------------------------------------------------------
@@ -850,16 +741,6 @@ select {
   box-shadow: var(--app-shadow-soft);
 }
 
-/* 顶级业务导航固定在视口底部居中，所有业务页共享同一套入口。 */
-.app-business-nav {
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  z-index: 20;
-  width: min(calc(100% - 28px), 480px);
-  transform: translateX(-50%);
-}
-
 .page-bottom-nav__item {
   display: flex;
   align-items: center;
@@ -881,20 +762,6 @@ select {
   color: var(--app-text-strong);
   background: rgba(255, 255, 255, 0.96);
   border-color: var(--app-border-strong);
-}
-
-.page-bottom-nav__item--accent-brand.page-bottom-nav__item--active,
-.page-bottom-nav__item--accent-brand[aria-current="page"] {
-  color: var(--app-tone-brand-accent);
-  border-color: rgba(22, 119, 255, 0.24);
-  background: rgba(22, 119, 255, 0.08);
-}
-
-.page-bottom-nav__item--accent-staff.page-bottom-nav__item--active,
-.page-bottom-nav__item--accent-staff[aria-current="page"] {
-  color: var(--app-tone-staff-accent);
-  border-color: rgba(91, 91, 214, 0.24);
-  background: rgba(91, 91, 214, 0.08);
 }
 
 /* =========================================================
@@ -922,6 +789,7 @@ select {
 
 .profile-summary-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -970,6 +838,7 @@ select {
 .staff-panel,
 .review-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -1050,6 +919,7 @@ select {
 
 .review-list__actions {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   padding: 12px 16px 16px;
   border-top: 1px solid var(--app-border-subtle);
@@ -1072,11 +942,13 @@ select {
 
 .roster-batch-bar__actions {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
 .roster-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -1291,8 +1163,7 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .field input,
-  .field textarea,
+  .t-input__control,
   .text-link {
     transition: none;
   }

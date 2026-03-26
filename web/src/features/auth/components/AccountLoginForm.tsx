@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import { Form, FormItem, Input } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
 import { InlineNotice } from "../../../shared/ui/InlineNotice";
 
@@ -28,8 +29,7 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
   const normalizedPassword = normalizeText(password);
   const canSubmit = !!normalizedStudentId && !!normalizedPassword && !pending;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit() {
     if (!canSubmit) {
       return;
     }
@@ -41,31 +41,33 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
   }
 
   return (
-    <form className="stack-form" onSubmit={handleSubmit}>
-      <label className="field">
-        <span>学号</span>
-        <input
-          autoComplete="username"
-          inputMode="numeric"
-          onChange={(event) => setStudentId(event.target.value)}
-          placeholder="请输入学号"
-          value={studentId}
-        />
-      </label>
-      <label className="field">
-        <span>密码</span>
-        <input
-          autoComplete="current-password"
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="请输入密码"
-          type="password"
-          value={password}
-        />
-      </label>
+    <div className="stack-form">
+      <Form labelAlign="top">
+        <FormItem label="学号" name="student_id">
+          <Input
+            autocomplete="username"
+            clearable
+            maxlength={20}
+            onChange={(value) => setStudentId(`${value ?? ""}`)}
+            placeholder="请输入学号"
+            type="tel"
+            value={studentId}
+          />
+        </FormItem>
+        <FormItem label="密码" name="password">
+          <Input
+            autocomplete="current-password"
+            onChange={(value) => setPassword(`${value ?? ""}`)}
+            placeholder="请输入密码"
+            type="password"
+            value={password}
+          />
+        </FormItem>
+        <AppButton accentTone="brand" disabled={!canSubmit} loading={pending} onClick={() => void handleSubmit()}>
+          登录
+        </AppButton>
+      </Form>
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
-      <AppButton accentTone="brand" disabled={!canSubmit} loading={pending} type="submit">
-        登录
-      </AppButton>
-    </form>
+    </div>
   );
 }

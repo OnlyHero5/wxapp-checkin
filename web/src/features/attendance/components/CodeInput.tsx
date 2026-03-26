@@ -1,5 +1,5 @@
+import { CellGroup, Form, FormItem, Input } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
-import { InlineNotice } from "../../../shared/ui/InlineNotice";
 import type { VisualTone } from "../../../shared/ui/visual-tone";
 
 /**
@@ -42,30 +42,27 @@ export function CodeInput({
 
   return (
     <section className="stack-form">
-      <div className={`code-input-shell code-input-shell--tone-${tone}`}>
-        <label className="field" htmlFor={`${label}-input`}>
-          <span>{label}</span>
-          <div className="code-input-shell__surface">
-            <input
-              className="code-input"
-              // 这三个属性共同服务于手机端数字键盘体验。
-              enterKeyHint="done"
-              id={`${label}-input`}
-              inputMode="numeric"
-              maxLength={6}
-              onChange={(event) => onChange(normalizeCode(event.target.value))}
-              pattern="[0-9]*"
+      <CellGroup theme="card" title={label}>
+        <Form className="stack-form" labelAlign="top">
+          <FormItem name="dynamic_code">
+            <Input
+              align="center"
+              clearable={!pending}
+              enterkeyhint="done"
+              maxlength={6}
+              onChange={(nextValue) => onChange(normalizeCode(`${nextValue ?? ""}`))}
               placeholder="输入6位码"
+              status={errorMessage ? "error" : "default"}
+              tips={errorMessage || "请在当前活动下输入 6 位动态验证码"}
+              type="number"
               value={normalizedValue}
             />
-          </div>
-        </label>
-        <p className="code-input-shell__hint">请在当前活动下输入 6 位动态验证码</p>
-      </div>
-      {errorMessage ? <InlineNotice message={errorMessage} /> : null}
-      <AppButton accentTone={tone} disabled={!canSubmit} loading={pending} onClick={() => void onSubmit()}>
-        {submitText}
-      </AppButton>
+          </FormItem>
+          <AppButton accentTone={tone} disabled={!canSubmit} loading={pending} onClick={() => void onSubmit()}>
+            {submitText}
+          </AppButton>
+        </Form>
+      </CellGroup>
     </section>
   );
 }

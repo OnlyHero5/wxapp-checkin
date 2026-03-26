@@ -92,20 +92,18 @@ describe("CheckinPage", () => {
 
     renderAttendancePage("/activities/act_101/checkin");
 
-    const input = await screen.findByLabelText("签到验证码");
+    const input = await screen.findByPlaceholderText("输入6位码");
     const submitButton = screen.getByRole("button", { name: "提交签到码" });
 
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkin");
-    expect(screen.getByText("请在当前活动下输入 6 位动态验证码").closest(".code-input-shell")).toHaveClass(
-      "code-input-shell",
-      "code-input-shell--tone-checkin"
-    );
+    expect(input.closest(".t-input")).toBeInTheDocument();
+    expect(input.closest(".t-form")).toBeInTheDocument();
     expect(screen.getByText("请在当前活动下输入 6 位动态验证码")).toBeInTheDocument();
     expect(submitButton).toHaveClass("app-button--accent-checkin");
     expect(submitButton).toBeDisabled();
 
     await user.type(input, "12ab34 56");
-    expect(input).toHaveValue("123456");
+    expect(input).toHaveValue(123456);
     expect(submitButton).toBeEnabled();
 
     await user.click(submitButton);
@@ -117,10 +115,11 @@ describe("CheckinPage", () => {
       });
     });
     expect(screen.getByRole("heading", { name: "签到结果" })).toBeInTheDocument();
+    expect(screen.getByText("提交成功").closest(".t-result")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByText("提交成功")).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_101");
+    expect(screen.getByRole("button", { name: "返回活动详情" })).toBeInTheDocument();
   });
 
   it("shows a clear error message for expired codes", async () => {
@@ -134,12 +133,10 @@ describe("CheckinPage", () => {
 
     renderAttendancePage("/activities/act_101/checkin");
 
-    await user.type(await screen.findByLabelText("签到验证码"), "123456");
+    await user.type(await screen.findByPlaceholderText("输入6位码"), "123456");
     await user.click(screen.getByRole("button", { name: "提交签到码" }));
 
-    expect(await screen.findByText("验证码已过期，请重新输入最新验证码", {
-      selector: ".t-notice-bar__content"
-    })).toBeInTheDocument();
+    expect(await screen.findByText("验证码已过期，请重新输入最新验证码")).toBeInTheDocument();
   });
 
   it("renders checkout copy and submits checkout codes", async () => {
@@ -156,14 +153,12 @@ describe("CheckinPage", () => {
 
     expect(await screen.findByRole("heading", { name: "活动签退" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkout");
-    expect(screen.getByText("请在当前活动下输入 6 位动态验证码").closest(".code-input-shell")).toHaveClass(
-      "code-input-shell",
-      "code-input-shell--tone-checkout"
-    );
+    expect(screen.getByPlaceholderText("输入6位码").closest(".t-input")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("输入6位码").closest(".t-form")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_101");
+    expect(screen.getByRole("button", { name: "返回活动详情" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "提交签退码" })).toHaveClass("app-button--accent-checkout");
-    await user.type(screen.getByLabelText("签退验证码"), "654321");
+    await user.type(screen.getByPlaceholderText("输入6位码"), "654321");
     await user.click(screen.getByRole("button", { name: "提交签退码" }));
 
     await waitFor(() => {
@@ -203,7 +198,7 @@ describe("CheckinPage", () => {
 
     const view = renderAttendancePage("/activities/act_101/checkin");
 
-    await user.type(await screen.findByLabelText("签到验证码"), "123456");
+    await user.type(await screen.findByPlaceholderText("输入6位码"), "123456");
     await user.click(screen.getByRole("button", { name: "提交签到码" }));
 
     expect(await screen.findByRole("heading", { name: "签到结果" })).toBeInTheDocument();

@@ -171,11 +171,11 @@ describe("ActivitiesPage", () => {
   it("marks the active business nav item with a stable accent class", () => {
     renderBusinessNav("/activities");
 
-    expect(screen.getByRole("link", { name: "活动" })).toHaveClass(
-      "page-bottom-nav__item",
-      "page-bottom-nav__item--active",
-      "page-bottom-nav__item--accent-staff"
-    );
-    expect(screen.getByRole("link", { name: "我的" })).toHaveClass("page-bottom-nav__item--accent-brand");
+    expect(screen.getByRole("navigation", { name: "业务导航" })).toBeInTheDocument();
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")[0]).toHaveAttribute("aria-selected", "true");
+    expect(screen.getAllByRole("tab")[1]).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByText("活动")).toBeInTheDocument();
+    expect(screen.getByText("我的")).toBeInTheDocument();
   });
 });

@@ -87,9 +87,11 @@ describe("AppRoutes", () => {
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "业务导航" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "活动" })).toHaveAttribute("href", "/activities");
-    expect(screen.getByRole("link", { name: "活动" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "我的" })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByText("活动")).toBeInTheDocument();
+    expect(screen.getByText("我的")).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")[0]).toHaveAttribute("aria-selected", "true");
+    expect(screen.getAllByRole("tab")[1]).toHaveAttribute("aria-selected", "false");
   });
 
   it("keeps the activities business nav active on activity action routes", async () => {
@@ -98,8 +100,8 @@ describe("AppRoutes", () => {
 
     expect(await screen.findByRole("heading", { name: "活动签到" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "业务导航" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "活动" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "我的" })).not.toHaveAttribute("aria-current");
+    expect(screen.getAllByRole("tab")[0]).toHaveAttribute("aria-selected", "true");
+    expect(screen.getAllByRole("tab")[1]).toHaveAttribute("aria-selected", "false");
   });
 
   it("redirects /activities to login when session is missing", () => {

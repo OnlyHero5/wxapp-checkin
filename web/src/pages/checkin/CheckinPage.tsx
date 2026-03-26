@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Cell, CellGroup, Result } from "tdesign-mobile-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { CodeInput } from "../../features/attendance/components/CodeInput";
 import {
   buildActivityDetailPath,
@@ -12,7 +13,7 @@ import {
 import { formatServerTime, resolveCanCheckin, resolveCanCheckout } from "../../features/activities/view-model";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { ApiError, SessionExpiredError } from "../../shared/http/errors";
-import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
+import { AppButton } from "../../shared/ui/AppButton";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 import type { VisualTone } from "../../shared/ui/visual-tone";
@@ -215,15 +216,17 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
         tone={actionTone}
         title={resolveResultTitle(actionType)}
       >
-        <section className={`detail-panel detail-panel--tone-${actionTone}`}>
-          {/* 结果页只保留最关键信息：结果、活动名、服务端时间。 */}
-          <p>{result.message ?? "提交成功"}</p>
-          <p>{result.activity_title}</p>
-          {result.server_time_ms ? <p>服务器时间：{formatServerTime(result.server_time_ms)}</p> : null}
-        </section>
-        <Link className="text-link" to={buildActivityDetailPath(activityId)}>
+        <Result
+          description={result.server_time_ms ? `服务器时间：${formatServerTime(result.server_time_ms)}` : undefined}
+          theme="success"
+          title={result.message ?? "提交成功"}
+        />
+        <CellGroup theme="card" title="活动信息">
+          <Cell title="活动" note={result.activity_title} />
+        </CellGroup>
+        <AppButton onClick={() => navigate(buildActivityDetailPath(activityId))} tone="secondary">
           返回活动详情
-        </Link>
+        </AppButton>
       </MobilePage>
     );
   }
@@ -238,13 +241,12 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
       {pageError ? <InlineNotice message={pageError} /> : null}
       {detail ? (
         <>
-          {/* 详情头部在输入页重复出现，是为了降低“我现在在哪个活动下输入”的心智负担。 */}
-          <ActivityMetaPanel
-            locationText={detail.location}
-            timeText={detail.start_time}
-            tone={actionTone}
-            title={detail.activity_title}
-          />
+          <CellGroup theme="card" title={detail.activity_title}>
+            {detail.activity_type ? <Cell title="类型" note={detail.activity_type} /> : null}
+            {detail.start_time ? <Cell title="时间" note={detail.start_time} /> : null}
+            {detail.location ? <Cell title="地点" note={detail.location} /> : null}
+            {detail.description ? <Cell align="top" description={detail.description} title="说明" /> : null}
+          </CellGroup>
           {isActionAllowed(detail, actionType) ? (
             /* 真正的输入与提交行为下沉到 `CodeInput`，
              * 当前页面只保留动作语义和结果切换逻辑。 */
@@ -266,9 +268,9 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
       ) : (
         <p>活动信息加载中...</p>
       )}
-      <Link className="text-link" to={buildActivityDetailPath(activityId)}>
+      <AppButton onClick={() => navigate(buildActivityDetailPath(activityId))} tone="secondary">
         返回活动详情
-      </Link>
+      </AppButton>
     </MobilePage>
   );
 }

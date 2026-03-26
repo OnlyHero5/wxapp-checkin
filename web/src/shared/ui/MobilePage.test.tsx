@@ -61,4 +61,25 @@ describe("MobilePage", () => {
     expect(shell).not.toBeNull();
     expect(baseCss).toMatch(/\.mobile-page__shell\s*\{[^}]*align-content:\s*start;/);
   });
+
+  it("pins the content grid to a shrinkable single column so form pages cannot overflow horizontally", () => {
+    render(
+      <MobilePage eyebrow="动态验证码" title="活动签到">
+        <p>请输入签到码</p>
+      </MobilePage>
+    );
+
+    expect(baseCss).toMatch(/\.mobile-page__content\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+  });
+
+  it("keeps shared single-column containers shrinkable instead of relying on ad-hoc form wrappers", () => {
+    render(
+      <MobilePage eyebrow="动态验证码" title="活动签到">
+        <p>请输入签到码</p>
+      </MobilePage>
+    );
+
+    expect(baseCss).toMatch(/\.stack-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+    expect(baseCss).toMatch(/\.activity-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+  });
 });
