@@ -1,5 +1,6 @@
 import { Cell, CellGroup, Checkbox } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
+import { AppEmptyState } from "../../../shared/ui/AppEmptyState";
 import type { ActivityRosterItem } from "../api";
 import type { AttendanceActionKey } from "./AttendanceBatchActionBar";
 
@@ -29,7 +30,7 @@ export function AttendanceRosterList({
   selectedIds
 }: AttendanceRosterListProps) {
   if (items.length === 0) {
-    return <p>当前活动暂无已报名成员。</p>;
+    return <AppEmptyState message="当前活动暂无已报名成员。" />;
   }
 
   return (

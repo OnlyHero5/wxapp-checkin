@@ -314,52 +314,17 @@ select {
   gap: 12px;
 }
 
-/* 活动页分段入口下沉到内容区后，视觉上更接近“页内筛选器 / 锚点条”。
- * 这样用户会把它理解成列表辅助结构，而不是站点主导航。 */
-.activity-inline-nav {
+/* 页面级状态块统一承接 Loading / Empty，避免各页继续手写一段灰字段落。 */
+.app-state {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.activity-inline-nav__item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  min-height: 42px;
-  padding: 0 12px;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-sm);
-  background: var(--app-surface-secondary);
-  color: var(--app-text-strong);
-  font-weight: 600;
-  text-decoration: none;
-  overflow-wrap: anywhere;
-}
-
-.activity-inline-nav__item:hover {
-  text-decoration: none;
-  border-color: var(--app-border-strong);
-}
-
-.activity-inline-nav__item:focus-visible {
-  outline: 2px solid var(--app-focus);
-  outline-offset: 2px;
+  justify-items: stretch;
+  gap: 12px;
 }
 
 /* 每个活动分组自身也是一个独立区块。 */
 .activity-section {
   display: grid;
   gap: 12px;
-}
-
-/* 分组标题比普通正文更醒目，但不抢主标题层级。 */
-.activity-section__header h2 {
-  margin: 0;
-  font-size: 0.95rem;
-  color: var(--app-text-muted);
-  font-weight: 700;
 }
 
 /* 信息面板是当前阶段最稳定的重复结构，列表/详情/输入页都在复用。 */
@@ -475,14 +440,8 @@ select {
   overflow-wrap: anywhere;
 }
 
-.detail-panel p,
-.empty-hint {
+.detail-panel p {
   margin: 0;
-}
-
-/* 空态文案需要“看得见但不抢戏”。 */
-.empty-hint {
-  color: var(--app-text-muted);
 }
 
 .activity-meta-panel__footer {
@@ -636,7 +595,6 @@ select {
   background: linear-gradient(180deg, rgba(91, 91, 214, 0.08), rgba(255, 255, 255, 0.92));
 }
 
-.staff-panel[data-panel-tone="staff"] .t-tabs,
 .staff-panel[data-panel-tone="staff"] .t-cell-group--card {
   border-color: rgba(91, 91, 214, 0.18);
   background: rgba(245, 246, 255, 0.84);
@@ -665,31 +623,11 @@ select {
   display: block;
 }
 
-.staff-code-panel__badge .t-badge__content {
-  display: block;
-}
-
-.staff-code-panel__badge .t-badge__count {
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.staff-code-panel__display-grid .t-grid-item {
-  padding: 0;
-}
-
-.staff-code-panel__display-grid .t-grid-item__image {
-  display: none;
-}
-
-.staff-code-panel__display-grid .t-grid-item__content {
-  margin-top: 0;
+.staff-code-panel__body {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
   text-align: center;
-}
-
-.staff-code-panel__display-grid .t-grid-item__description {
-  margin-top: 10px;
 }
 
 .staff-code-panel__value-shell {
@@ -721,8 +659,16 @@ select {
   position: relative;
   z-index: 1;
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
   color: var(--app-text-muted);
-  text-align: center;
+}
+
+.staff-code-panel__countdown {
+  display: inline-flex;
 }
 
 .staff-panel__stats,
@@ -799,16 +745,6 @@ select {
   line-height: 1.4;
   font-size: 0.875rem;
   color: var(--app-text-muted);
-}
-
-/* Tabs 的背景默认是纯白；在卡片内展示时保持一致即可。 */
-.t-tabs {
-  padding: 4px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid var(--app-border);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
 }
 
 /* Cell 的分割线颜色稍微收敛一点，避免和业务面板的边框抢层级。 */

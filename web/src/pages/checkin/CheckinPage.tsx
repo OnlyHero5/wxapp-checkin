@@ -14,6 +14,8 @@ import { formatServerTime, resolveCanCheckin, resolveCanCheckout } from "../../f
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { ApiError, SessionExpiredError } from "../../shared/http/errors";
 import { AppButton } from "../../shared/ui/AppButton";
+import { AppEmptyState } from "../../shared/ui/AppEmptyState";
+import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 import type { VisualTone } from "../../shared/ui/visual-tone";
@@ -262,11 +264,11 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
             />
           ) : (
             // 即使用户通过错误链接进入，也要明确告诉他为什么不能提交。
-            <p>当前状态下暂不可执行该动作，请先返回详情页确认活动状态。</p>
+            <AppEmptyState message="当前状态下暂不可执行该动作，请先返回详情页确认活动状态。" />
           )}
         </>
       ) : (
-        <p>活动信息加载中...</p>
+        <AppLoadingState message="活动信息加载中..." />
       )}
       <AppButton onClick={() => navigate(buildActivityDetailPath(activityId))} tone="secondary">
         返回活动详情

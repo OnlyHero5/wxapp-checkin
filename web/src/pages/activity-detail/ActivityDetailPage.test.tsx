@@ -122,7 +122,7 @@ describe("ActivityDetailPage", () => {
     view.rerender(<DetailTestApp nextPath="/activities/act_202" />);
 
     expect(screen.getByRole("heading", { name: "活动详情" })).toBeInTheDocument();
-    expect(screen.getByText("活动详情加载中...")).toBeInTheDocument();
+    expect(screen.getByText("活动详情加载中...").closest(".t-loading")).toBeInTheDocument();
     expect(screen.queryByText("校园志愿活动")).not.toBeInTheDocument();
     expect(screen.queryByText("负责现场秩序维护")).not.toBeInTheDocument();
 
@@ -239,5 +239,31 @@ describe("ActivityDetailPage", () => {
     await user.click(screen.getByRole("button", { name: "参会名单" }));
 
     expect(await screen.findByRole("heading", { name: "参会名单页已打开" })).toBeInTheDocument();
+  });
+
+  it("uses a component-library empty state when the current activity has no available attendee action", async () => {
+    activitiesApiMocks.getActivityDetail.mockResolvedValue({
+      activity_id: "act_101",
+      activity_title: "校园志愿活动",
+      activity_type: "志愿",
+      start_time: "2026-03-10 09:00:00",
+      location: "本部操场",
+      description: "负责现场秩序维护",
+      progress_status: "completed",
+      support_checkin: false,
+      support_checkout: false,
+      can_checkin: false,
+      can_checkout: false,
+      my_registered: true,
+      my_checked_in: true,
+      my_checked_out: true,
+      checkin_count: 18,
+      checkout_count: 18
+    });
+
+    renderActivityDetailPage();
+
+    expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
+    expect(screen.getByText("当前状态下暂无可执行动作。").closest(".t-empty")).toBeInTheDocument();
   });
 });

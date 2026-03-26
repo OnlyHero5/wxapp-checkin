@@ -9,6 +9,7 @@ import { ProfilePage } from "../pages/profile/ProfilePage";
 import { StaffManagePage } from "../pages/staff-manage/StaffManagePage";
 import { getSession, isStaffSession } from "../shared/session/session-store";
 import { AppBusinessNav } from "../shared/ui/AppBusinessNav";
+import { AppEmptyState } from "../shared/ui/AppEmptyState";
 import { MobilePage } from "../shared/ui/MobilePage";
 
 /**
@@ -25,7 +26,7 @@ type PlaceholderPageProps = {
 function PlaceholderPage({ description, title }: PlaceholderPageProps) {
   return (
     <MobilePage eyebrow="手机 Web 改造首批" title={title}>
-      <p>{description}</p>
+      <AppEmptyState message={description} />
     </MobilePage>
   );
 }

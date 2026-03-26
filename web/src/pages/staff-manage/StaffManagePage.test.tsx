@@ -420,16 +420,18 @@ describe("StaffManagePage", () => {
     renderStaffManagePage();
 
     await act(async () => {
+      vi.advanceTimersByTime(16);
       await Promise.resolve();
     });
 
-    expect(screen.getByText("剩余时间：2 秒")).toBeInTheDocument();
+    expect(document.querySelector(".staff-code-panel__meta")).toHaveTextContent("剩余时间：");
+    expect(document.querySelector(".staff-code-panel__countdown")).toBeInTheDocument();
 
     await act(async () => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(screen.getByText("剩余时间：1 秒")).toBeInTheDocument();
+    expect(document.querySelector(".staff-code-panel__countdown")).toBeInTheDocument();
 
     await act(async () => {
       vi.advanceTimersByTime(1200);

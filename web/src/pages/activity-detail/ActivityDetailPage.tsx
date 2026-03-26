@@ -17,6 +17,8 @@ import { SessionExpiredError } from "../../shared/http/errors";
 import { isStaffSession } from "../../shared/session/session-store";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppButton } from "../../shared/ui/AppButton";
+import { AppEmptyState } from "../../shared/ui/AppEmptyState";
+import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { AppTextLink } from "../../shared/ui/AppTextLink";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
@@ -118,7 +120,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         tone={detailTone}
         title="活动详情"
       >
-        {errorMessage ? <InlineNotice message={errorMessage} /> : <p>活动详情加载中...</p>}
+        {errorMessage ? <InlineNotice message={errorMessage} /> : <AppLoadingState message="活动详情加载中..." />}
       </MobilePage>
     );
   }
@@ -184,7 +186,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
           </AppButton>
         ) : null}
         {/* 两个动作都不可用时，也明确告诉用户是“当前状态不允许”，而不是页面坏了。 */}
-        {!isStaff && !canCheckin && !canCheckout ? <p>当前状态下暂无可执行动作。</p> : null}
+        {!isStaff && !canCheckin && !canCheckout ? <AppEmptyState message="当前状态下暂无可执行动作。" /> : null}
       </section>
     </MobilePage>
   );

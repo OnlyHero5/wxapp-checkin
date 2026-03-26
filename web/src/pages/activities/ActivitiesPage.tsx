@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { TabPanel, Tabs } from "tdesign-mobile-react";
 import { useNavigate } from "react-router-dom";
 import { ActivityCard } from "../../features/activities/components/ActivityCard";
 import { getActivities, type ActivitySummary } from "../../features/activities/api";
@@ -6,6 +7,8 @@ import { groupVisibleActivities } from "../../features/activities/view-model";
 import { SessionExpiredError } from "../../shared/http/errors";
 import { isStaffSession } from "../../shared/session/session-store";
 import { AppButton } from "../../shared/ui/AppButton";
+import { AppEmptyState } from "../../shared/ui/AppEmptyState";
+import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 
@@ -32,6 +35,7 @@ export function ActivitiesPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [activeSectionKey, setActiveSectionKey] = useState("ongoing");
   // 只认最后一次请求结果，避免手动重试时旧响应反写新状态。
   const requestVersionRef = useRef(0);
 
@@ -152,17 +156,12 @@ export function ActivitiesPage() {
     }
     return section;
   });
-  // 这里保留的只是活动页内容区内的二级分段。
-  // 它服务“快速跳到进行中 / 历史活动”，不再承担全局底部导航职责。
-  const sectionNavItems = isStaff
-    ? [
-        { href: "#ongoing", label: "进行中" },
-        { href: "#completed", label: "已完成" }
-      ]
-    : [
-        { href: "#ongoing", label: "进行中" },
-        { href: "#completed", label: "历史活动" }
-      ];
+  useEffect(() => {
+    // 分组来源固定，但仍然只在当前 key 失效时回落，避免刷新后把用户手动切换的页签强行重置。
+    if (!sections.some((section) => section.key === activeSectionKey)) {
+      setActiveSectionKey(sections[0]?.key ?? "ongoing");
+    }
+  }, [activeSectionKey, sections]);
 
   return (
     <MobilePage description={description} eyebrow={eyebrow} title="活动列表" tone={pageTone}>
@@ -174,34 +173,32 @@ export function ActivitiesPage() {
           </AppButton>
         </section>
       ) : null}
+      {loading ? <AppLoadingState message="活动列表加载中..." /> : null}
       {!loading ? (
-        <nav aria-label="活动分段" className="activity-inline-nav">
-          {sectionNavItems.map((item) => (
-            <a className="activity-inline-nav__item" href={item.href} key={item.href}>
-              {item.label}
-            </a>
+        <Tabs
+          onChange={(value) => setActiveSectionKey(`${value}`)}
+          spaceEvenly
+          theme="line"
+          value={activeSectionKey}
+        >
+          {sections.map((section) => (
+            <TabPanel destroyOnHide={false} key={section.key} label={section.title} value={section.key}>
+              <section className="activity-section" data-section-key={section.key}>
+                {section.items.length > 0 ? (
+                  <div className="activity-grid">
+                    {section.items.map((activity) => (
+                      // 卡片组件负责单活动展示，列表页只保留分组与布局职责。
+                      <ActivityCard activity={activity} key={activity.activity_id} showManageEntry={isStaff} />
+                    ))}
+                  </div>
+                ) : (
+                  <AppEmptyState message={`${section.title}暂无活动。`} />
+                )}
+              </section>
+            </TabPanel>
           ))}
-        </nav>
+        </Tabs>
       ) : null}
-      {loading ? <p>活动列表加载中...</p> : null}
-      {sections.map((section) => (
-        <section className="activity-section" id={section.key} key={section.key}>
-          <header className="activity-section__header">
-            {/* 标题来自统一 view-model，页面层不再自行判断该放什么文案。 */}
-            <h2>{section.title}</h2>
-          </header>
-          {section.items.length > 0 ? (
-            <div className="activity-grid">
-              {section.items.map((activity) => (
-                // 卡片组件负责单活动展示，列表页只保留分组与布局职责。
-                <ActivityCard activity={activity} key={activity.activity_id} showManageEntry={isStaff} />
-              ))}
-            </div>
-          ) : (
-            <p className="empty-hint">{section.title}暂无活动。</p>
-          )}
-        </section>
-      ))}
       {!loading && hasMore ? (
         <section className="stack-form">
           <AppButton disabled={loadingMore} loading={loadingMore} onClick={() => void loadMorePage()} tone="secondary">

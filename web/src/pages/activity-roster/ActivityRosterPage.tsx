@@ -14,6 +14,7 @@ import { AttendanceRosterList } from "../../features/staff/components/Attendance
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { SessionExpiredError } from "../../shared/http/errors";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
+import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { AppTextLink } from "../../shared/ui/AppTextLink";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
@@ -223,7 +224,7 @@ export function ActivityRosterPage() {
           />
         </>
       ) : null}
-      {!roster && loading ? <p>参会名单加载中...</p> : null}
+      {!roster && loading ? <AppLoadingState message="参会名单加载中..." /> : null}
     </MobilePage>
   );
 }

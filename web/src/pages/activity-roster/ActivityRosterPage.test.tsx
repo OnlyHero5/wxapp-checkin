@@ -175,4 +175,12 @@ describe("ActivityRosterPage", () => {
 
     firstView.unmount();
   });
+
+  it("uses a component-library loading state before roster data arrives", () => {
+    staffApiMocks.getActivityRoster.mockReturnValue(new Promise(() => {}));
+
+    renderActivityRosterPage();
+
+    expect(screen.getByText("参会名单加载中...").closest(".t-loading")).toBeInTheDocument();
+  });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DynamicCodePanel } from "./DynamicCodePanel";
 
@@ -37,7 +37,7 @@ describe("DynamicCodePanel", () => {
     expect(screen.getByText("签到码").closest(".staff-panel__controls")).toHaveAttribute("data-display-zone", "controls");
   });
 
-  it("renders the hero through TDesign badge and grid surfaces instead of a plain handwritten glass box", () => {
+  it("renders the hero through TDesign badge and count-down surfaces instead of a plain handwritten glass box", async () => {
     const onActionChange = vi.fn();
     const onRefresh = vi.fn();
 
@@ -63,7 +63,10 @@ describe("DynamicCodePanel", () => {
 
     expect(screen.getByText("当前签到码").closest(".t-badge")).toBeInTheDocument();
     expect(document.querySelector(".staff-code-panel__hero-group .t-cell-group--card")).toBeInTheDocument();
-    expect(screen.getByText("483920").closest(".t-grid-item")).toBeInTheDocument();
+    expect(screen.getByText("483920")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector(".staff-code-panel__meta .t-count-down")).toBeInTheDocument();
+    });
   });
 
   it("uses a component-library skeleton in the hero while the latest code is still loading", () => {

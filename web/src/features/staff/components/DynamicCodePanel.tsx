@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Badge, Cell, CellGroup, Grid, GridItem, Skeleton, TabPanel, Tabs } from "tdesign-mobile-react";
+import { useEffect, useRef } from "react";
+import { Badge, Cell, CellGroup, CountDown, Skeleton, TabPanel, Tabs } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 import type { CodeSessionResponse } from "../api";
 import { AppButton } from "../../../shared/ui/AppButton";
@@ -12,21 +12,6 @@ type DynamicCodePanelProps = {
   onActionChange: (value: ActivityActionType) => void;
   onRefresh: () => void;
 };
-
-function formatRemainingSeconds(expiresInMs?: number) {
-  if (!expiresInMs || expiresInMs <= 0) {
-    return "0 秒";
-  }
-  return `${Math.ceil(expiresInMs / 1000)} 秒`;
-}
-
-function resolveRemainingMs(codeSession: CodeSessionResponse | null) {
-  if (!codeSession) {
-    return 0;
-  }
-
-  return Math.max(0, codeSession.expires_in_ms ?? 0);
-}
 
 function resolveActionBadgeColor(actionType: ActivityActionType) {
   return actionType === "checkout" ? "rgba(217, 119, 6, 0.92)" : "rgba(15, 159, 140, 0.92)";
@@ -74,25 +59,40 @@ function resolveAttendanceCounts(codeSession: CodeSessionResponse | null) {
 type DynamicCodeHeroProps = {
   actionLabel: string;
   actionType: ActivityActionType;
+  countdownTimeMs: number;
   codeText: string;
-  metaText: string;
+  loadingMetaText?: string;
+  onCountdownFinish: () => void;
   showSkeleton: boolean;
 };
 
+function resolveCountdownTimeMs(codeSession: CodeSessionResponse | null) {
+  if (!codeSession) {
+    return 0;
+  }
+
+  const receivedAtMs = Date.now();
+  const serverTimeMs = codeSession.server_time_ms ?? receivedAtMs;
+  const serverOffsetMs = serverTimeMs - receivedAtMs;
+  return Math.max(0, codeSession.expires_at - (Date.now() + serverOffsetMs));
+}
+
 /**
- * 大码展示区继续保留“业务大字 + 倒计时”的重点，但 surface、角标和占位态都交给组件库组件。
+ * 大码展示区继续保留“业务大字 + 倒计时”的重点，但状态组件尽量回到组件库能力。
  *
  * 这样做的边界很明确：
  * 1. `Badge` 负责动作语义，不再手写漂浮标签；
  * 2. `CellGroup` 负责卡片 surface；
- * 3. `Grid/GridItem` 负责大字与辅助信息的纵向排布；
+ * 3. `CountDown` 负责倒计时渲染，不再手写定时器和秒数字符串；
  * 4. `Skeleton` 只在真实 loading 时接管展示，避免旧码和新码切换时闪旧内容。
  */
 function DynamicCodeHero({
   actionLabel,
   actionType,
+  countdownTimeMs,
   codeText,
-  metaText,
+  loadingMetaText,
+  onCountdownFinish,
   showSkeleton
 }: DynamicCodeHeroProps) {
   return (
@@ -104,40 +104,53 @@ function DynamicCodeHero({
         shape="ribbon-left"
         size="large"
       >
-        <Grid align="center" className="staff-code-panel__display-grid" column={1} gutter={12}>
-          <GridItem
-            description={<p className="staff-code-panel__meta">{metaText}</p>}
-            text={
-              <span className="staff-code-panel__value-shell">
-                <span className="staff-code-panel__value">{codeText}</span>
-                {showSkeleton ? (
-                  <Skeleton
-                    animation="gradient"
-                    className="staff-code-panel__value-skeleton"
-                    rowCol={[
-                      [
-                        {
-                          height: "3.6rem",
-                          margin: "0 auto",
-                          type: "text",
-                          width: "12rem"
-                        }
-                      ],
-                      [
-                        {
-                          height: "1rem",
-                          margin: "0.75rem auto 0",
-                          type: "text",
-                          width: "7rem"
-                        }
-                      ]
-                    ]}
+        <section className="staff-code-panel__body">
+          <span className="staff-code-panel__value-shell">
+            <span className="staff-code-panel__value">{codeText}</span>
+            {showSkeleton ? (
+              <Skeleton
+                animation="gradient"
+                className="staff-code-panel__value-skeleton"
+                rowCol={[
+                  [
+                    {
+                      height: "3.6rem",
+                      margin: "0 auto",
+                      type: "text",
+                      width: "12rem"
+                    }
+                  ],
+                  [
+                    {
+                      height: "1rem",
+                      margin: "0.75rem auto 0",
+                      type: "text",
+                      width: "7rem"
+                    }
+                  ]
+                ]}
+              />
+            ) : null}
+          </span>
+          <div className="staff-code-panel__meta">
+            {showSkeleton || loadingMetaText ? (
+              loadingMetaText
+            ) : (
+              <>
+                <span>剩余时间：</span>
+                <span className="staff-code-panel__countdown">
+                  <CountDown
+                    format="ss"
+                    key={`${actionType}:${countdownTimeMs}`}
+                    onFinish={onCountdownFinish}
+                    splitWithUnit
+                    time={countdownTimeMs}
                   />
-                ) : null}
-              </span>
-            }
-          />
-        </Grid>
+                </span>
+              </>
+            )}
+          </div>
+        </section>
       </Badge>
     </CellGroup>
   );
@@ -156,7 +169,6 @@ export function DynamicCodePanel({
   onRefresh
 }: DynamicCodePanelProps) {
   const displayedCodeSession = resolveDisplayedCodeSession(activityId, actionType, codeSession);
-  const [remainingMs, setRemainingMs] = useState(() => resolveRemainingMs(displayedCodeSession));
   const lastAutoRefreshKeyRef = useRef("");
   const onRefreshRef = useRef(onRefresh);
   const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
@@ -164,46 +176,38 @@ export function DynamicCodePanel({
   const actionLabel = actionType === "checkout" ? "当前签退码" : "当前签到码";
   const heroMetaLoading = loading || (!!codeSession && !displayedCodeSession);
   const heroDisplayCode = displayedCodeSession?.code ?? "------";
-  const heroMetaText = heroMetaLoading ? "动态码加载中..." : `剩余时间：${formatRemainingSeconds(remainingMs)}`;
+  const countdownTimeMs = heroMetaLoading ? 0 : resolveCountdownTimeMs(displayedCodeSession);
 
   useEffect(() => {
     onRefreshRef.current = onRefresh;
   }, [onRefresh]);
 
   useEffect(() => {
-    if (!displayedCodeSession) {
-      setRemainingMs(0);
+    /**
+     * `CountDown` 现在只负责显示，不直接承担“业务自动刷新”职责。
+     *
+     * 原因：
+     * 1. 到期后重拉新码是页面级业务行为，不能完全依赖组件内部时序；
+     * 2. 这样测试和真实页面都能以同一口径在到期后触发刷新；
+     * 3. 即使未来替换倒计时展示组件，也不需要重写刷新语义。
+     */
+    if (!displayedCodeSession || heroMetaLoading) {
       return;
     }
-    const nextCodeSession = displayedCodeSession;
 
-    const receivedAtMs = Date.now();
-    const serverTimeMs = nextCodeSession.server_time_ms ?? receivedAtMs;
-    const serverOffsetMs = serverTimeMs - receivedAtMs;
-
-    function measureRemainingMs() {
-      return Math.max(0, nextCodeSession.expires_at - (Date.now() + serverOffsetMs));
-    }
-
-    setRemainingMs(measureRemainingMs());
-
-    const countdownTimer = window.setInterval(() => {
-      setRemainingMs(measureRemainingMs());
-    }, 250);
-    const refreshKey = `${nextCodeSession.activity_id}:${nextCodeSession.action_type}:${nextCodeSession.expires_at}`;
-    const autoRefreshTimer = window.setTimeout(() => {
+    const refreshKey = `${displayedCodeSession.activity_id}:${displayedCodeSession.action_type}:${displayedCodeSession.expires_at}`;
+    const refreshTimer = window.setTimeout(() => {
       if (lastAutoRefreshKeyRef.current === refreshKey) {
         return;
       }
       lastAutoRefreshKeyRef.current = refreshKey;
       onRefreshRef.current();
-    }, Math.max(0, measureRemainingMs()) + 50);
+    }, countdownTimeMs + 50);
 
     return () => {
-      window.clearInterval(countdownTimer);
-      window.clearTimeout(autoRefreshTimer);
+      window.clearTimeout(refreshTimer);
     };
-  }, [displayedCodeSession]);
+  }, [countdownTimeMs, displayedCodeSession, heroMetaLoading]);
 
   return (
     <section className="staff-panel" data-panel-tone="staff">
@@ -219,8 +223,10 @@ export function DynamicCodePanel({
         <DynamicCodeHero
           actionLabel={actionLabel}
           actionType={actionType}
+          countdownTimeMs={countdownTimeMs}
           codeText={heroDisplayCode}
-          metaText={heroMetaText}
+          loadingMetaText={heroMetaLoading ? "动态码加载中..." : undefined}
+          onCountdownFinish={() => undefined}
           showSkeleton={loading}
         />
       </div>

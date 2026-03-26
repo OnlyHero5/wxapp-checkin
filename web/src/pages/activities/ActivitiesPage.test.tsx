@@ -101,18 +101,18 @@ describe("ActivitiesPage", () => {
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
     expect(screen.getByText("查看你当前可见的活动，并进入详情页继续签到或签退。")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "正在进行" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "历史活动" })).toBeInTheDocument();
+    expect(document.querySelector(".t-tabs")).toBeInTheDocument();
+    expect(screen.getByText("正在进行")).toBeInTheDocument();
+    expect(screen.getByText("历史活动")).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
     expect(screen.getByText("创新论坛")).toBeInTheDocument();
     expect(screen.getByText("已报名")).toBeInTheDocument();
     expect(screen.getAllByText("已签退").length).toBeGreaterThan(0);
     expect(screen.queryByText("不应展示的活动")).not.toBeInTheDocument();
     expect(screen.queryByText("累计签到")).not.toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "活动分段" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "活动分段" })).not.toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "历史活动" })).toHaveAttribute("href", "#completed");
-    expect(screen.getAllByRole("link", { name: "查看详情" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { hidden: true, name: "查看详情" })).toHaveLength(2);
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
   });
 
@@ -163,7 +163,7 @@ describe("ActivitiesPage", () => {
     expect(screen.getByText("查看活动并进入管理页展示动态码、处理批量签退。")).toBeInTheDocument();
     expect(screen.getByText("管理态活动 A")).toBeInTheDocument();
     expect(screen.getByText("管理态活动 B")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "进入管理" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { hidden: true, name: "进入管理" })).toHaveLength(2);
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
     expect(screen.getByText("管理态活动 A").closest("article")).toHaveAttribute("data-panel-tone", "staff");
   });
@@ -177,5 +177,25 @@ describe("ActivitiesPage", () => {
     expect(screen.getAllByRole("tab")[1]).toHaveAttribute("aria-selected", "false");
     expect(screen.getByText("活动")).toBeInTheDocument();
     expect(screen.getByText("我的")).toBeInTheDocument();
+  });
+
+  it("uses a component-library loading state while the first page is still pending", () => {
+    activitiesApiMocks.getActivities.mockReturnValue(new Promise(() => {}));
+
+    renderActivitiesPage();
+
+    expect(screen.getByText("活动列表加载中...").closest(".t-loading")).toBeInTheDocument();
+  });
+
+  it("uses component-library empty states instead of handwritten empty paragraphs", async () => {
+    activitiesApiMocks.getActivities.mockResolvedValue({
+      activities: []
+    });
+
+    renderActivitiesPage();
+
+    expect(await screen.findByText("正在进行暂无活动。")).toBeInTheDocument();
+    expect(screen.getAllByText(/暂无活动/)[0].closest(".t-empty")).toBeInTheDocument();
+    expect(screen.getAllByText(/暂无活动/)[1].closest(".t-empty")).toBeInTheDocument();
   });
 });
