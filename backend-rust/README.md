@@ -4,7 +4,7 @@
 
 技术基线：
 
-- `Rust`
+- `Rust stable`
 - `axum`
 - `tokio`
 - `sqlx`（MySQL）
@@ -12,16 +12,16 @@
 
 硬约束：
 
-- 只允许写：
+- 运行期写库只允许：
   - `suda_activity_apply`
   - `suda_log`
-  - `suda_user.password`
 - 不再依赖：
   - `wxcheckin_ext`
   - `wx_*` 逻辑表
   - 双库同步
   - outbox relay
   - Redis 正式基线
+  - `/api/web/auth/change-password`
 
 本地联调：
 

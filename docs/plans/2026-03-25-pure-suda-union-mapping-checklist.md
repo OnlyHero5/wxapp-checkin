@@ -1,6 +1,6 @@
 # pure suda_union 改造映射清单
 
-更新日期：2026-03-25  
+更新日期：2026-03-26  
 适用仓库：`/home/psx/app/wxapp-checkin`
 
 ## 1. 目的
@@ -12,18 +12,18 @@
 - 不再保留独立 `wxcheckin_ext`
 - 不再把运行态能力建立在 `wx_*` 逻辑表之上
 - 对外 `/api/web/**` 契约继续兼容当前 Web 前端
-- Rust 后端只允许写 `suda_activity_apply`、`suda_log`、`suda_user.password`
+- Rust 后端运行期只写 `suda_activity_apply`、`suda_log`
 
 ## 2. 待删除表与当前替代落点
 
 | 旧表 | 原职责 | Rust 正式落点 / 替代方案 | 备注 |
 | --- | --- | --- | --- |
-| `wx_user_auth_ext` | 扩展用户资料、密码影子、角色快照 | `suda_user` 作为唯一账号源；密码直接读写 `suda_user.password`；`must_change_password` 改为动态判断密码是否仍是默认口令 `123` | `department` 通过 `suda_department_u -> suda_department` 拼装；`club` 当前固定空串 |
+| `wx_user_auth_ext` | 扩展用户资料、密码影子、角色快照 | `suda_user` 作为唯一账号源；登录只读 `password`、`role`、`name` 等最小字段 | 当前正式基线不再提供独立改密链路 |
 | `wx_admin_roster` | staff 管理员白名单 | 直接读取 `suda_user.role`；Rust 侧把 legacy `role` 映射为 `staff/normal` 并组装 `permissions` | 当前实现把 `0..=3` 视为 `staff` |
-| `wx_session` | Web 登录态、权限快照 | 无状态签名 token，继续对外返回 `session_token` | 每次请求验签后再回查 `suda_user`，保证角色和改密态是最新值 |
-| `wx_activity_projection` | 活动列表/详情读模型 | 直接查询 `suda_activity`，并按需要聚合 `suda_activity_apply` | 对外仍使用兼容 DTO；`activity_id` 继续包装成 `legacy_act_<id>` |
-| `wx_user_activity_status` | 用户对活动的报名/签到/签退状态 | 直接查询/更新 `suda_activity_apply` | 普通用户可见性、详情态、名单页状态都从现有表即时计算 |
-| `wx_checkin_event` | 用户签到/签退事件流水 | `suda_log` 结构化日志 | 既承担用户动作回查，也承担业务审计 |
+| `wx_session` | Web 登录态、权限快照 | 无状态签名 token，继续对外返回 `session_token` | 每次请求验签后再回查 `suda_user`，保证角色最新 |
+| `wx_activity_projection` | 活动列表 / 详情读模型 | 直接查询 `suda_activity`，并按需要聚合 `suda_activity_apply` | 对外仍使用兼容 DTO；`activity_id` 继续包装成 `legacy_act_<id>` |
+| `wx_user_activity_status` | 用户对活动的报名 / 签到 / 签退状态 | 直接查询 / 更新 `suda_activity_apply` | 普通用户可见性、详情态、名单页状态都从现有表即时计算 |
+| `wx_checkin_event` | 用户签到 / 签退事件流水 | `suda_log` 结构化日志 | 既承担用户动作回查，也承担业务审计 |
 | `wx_qr_issue_log` | 动态码发码过程日志 | 不再作为运行态依赖；动态码改为按时间槽 HMAC 即算即验 | 如需补运营日志，统一落 `suda_log` |
 | `wx_replay_guard` | 防重放保护 | `backend-rust/src/replay_guard.rs` 的进程内 TTL 防重 | 当前正式基线不再以 Redis 为必要依赖 |
 | `wx_sync_outbox` | 最终一致性回写 `suda_activity_apply` | 直接更新 `suda_activity_apply`，不再经过 outbox | 删除同步链路后不再需要 |
@@ -34,18 +34,14 @@
 | 能力 | 旧实现 | Rust 正式实现 |
 | --- | --- | --- |
 | Web 登录 | `wx_user_auth_ext + wx_session` | `suda_user + 无状态 session_token` |
-| 强制改密门槛 | `wx_user_auth_ext.must_change_password` | 动态判断 `suda_user.password` 是否仍匹配默认密码 `123` |
-| 改密 | 更新 `wx_user_auth_ext.password_hash` | 直接更新 `suda_user.password` |
 | 角色与权限 | `wx_user_auth_ext.role_code / permissions_json` + `wx_admin_roster` | `suda_user.role` 映射 `role`，权限数组由 Rust 后端组装 |
-| 活动列表/详情 | `wx_activity_projection` | `suda_activity + suda_activity_apply` 即时查询 |
+| 活动列表 / 详情 | `wx_activity_projection` | `suda_activity + suda_activity_apply` 即时查询 |
 | 动态码 | 投影表时间窗 + 发码日志 | 直接基于活动时间窗生成 6 位 HMAC 动态码 |
-| 签到/签退写入 | `wx_user_activity_status + wx_checkin_event + wx_sync_outbox` | `suda_activity_apply + suda_log + 进程内 replay guard` |
+| 签到 / 签退写入 | `wx_user_activity_status + wx_checkin_event + wx_sync_outbox` | `suda_activity_apply + suda_log + 进程内 replay guard` |
 | 名单页 / staff 修正 | `wx_user_activity_status + web_admin_audit_log` | `suda_activity_apply + suda_user + suda_log` |
 | 错误次数限流 | Java 内存窗口 / 设计中的 Redis | `backend-rust/src/rate_limit.rs` 的进程内窗口计数 |
 
 ## 4. 必须保持兼容的 DTO 字段
-
-以下字段对当前 Web 前端和 Rust 兼容清单仍是强约束：
 
 ### 4.1 登录响应
 
@@ -55,7 +51,6 @@
 - `session_expires_at`
 - `role`
 - `permissions`
-- `must_change_password`
 - `user_profile.student_id`
 - `user_profile.name`
 - `user_profile.department`
@@ -103,29 +98,27 @@
 - `invalid_param`
 - `invalid_activity`
 - `outside_activity_time_window`
+- `activity_time_invalid`
 - `invalid_code`
 - `expired`
 - `duplicate`
+- `rate_limited`
 - `forbidden`
-- `password_change_required`
-- `password_too_short`
-- `password_too_long`
 
 ## 6. 当前正式删除边界
 
 以下能力在当前 `web` 分支里都已有明确承接，不需要再保留旧 Java / ext 表实现：
 
 - 登录态：由无状态 `session_token` 承接
-- 强制改密：由 `suda_user.password` 是否仍为默认密码动态承接
-- 角色/权限：由 `suda_user.role` + Rust 权限映射承接
+- 角色 / 权限：由 `suda_user.role` + Rust 权限映射承接
 - 活动读模型：由 `suda_activity / suda_activity_apply` 即时查询承接
 - 用户签到签退时间与审计：由 `suda_log` 承接
 - 防重放：由进程内 TTL replay guard 承接
 - 错误次数限流：由进程内窗口计数承接
 - 同步回写：直接写 `suda_activity_apply`，不再需要 outbox
+- 独立改密链路：当前正式基线不再保留
 
 ## 7. 当前批次收口结论
 
 - `pure-suda-union-refactor` 里的 Java 单库化代码属于 Rust 切换前的过渡实现，不应再直接并回 `web`。
-- 该工作分支真正仍有价值的产物，是这份“旧能力 -> Rust 正式落点”的映射清单；其余 Java 代码级改造已被 `web` 上的 Rust 基线整体替代。
 - 后续若再新开 Web / Rust 工作分支，应继续以这份清单和 `docs/plans/2026-03-25-rust-api-compat-checklist.md` 作为兼容基线，而不是回退到 Java 单库化路径。

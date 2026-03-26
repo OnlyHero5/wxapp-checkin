@@ -1,19 +1,19 @@
 # 手机 Web 动态验证码签到 API 协议规范
 
-文档版本: v1.0
-状态: 正式基线
-更新日期: 2026-03-10
-项目: `wxapp-checkin`
+文档版本：v1.1  
+状态：正式基线  
+更新日期：2026-03-26  
+项目：`wxapp-checkin`
 
 ## 1. 文档目标与适用范围
 
-本文档定义 `wxapp-checkin` 手机 Web 版本的目标态 API 契约，供后端实现、Web 前端联调、测试用例编写与后续验收使用。
+本文档定义 `wxapp-checkin` 手机 Web 版本的当前正式 API 契约，供后端实现、Web 前端联调、测试用例编写与后续验收使用。
 
 本文件覆盖：
 
-- `/api/web/**` 新接口；
-- Web 身份（账号密码）、会话、动态码、签到/签退、一键全部签退；
-- 全局错误码、时间字段、鉴权传递与实施前必须锁定的约束。
+- `/api/web/**` 当前正式 8 个端点；
+- Web 身份（账号密码）、会话、动态码、签到 / 签退、名单修正、一键全部签退；
+- 全局错误码、时间字段、鉴权传递与当前实现边界。
 
 本文件不覆盖：
 
@@ -21,11 +21,11 @@
 - 历史二维码 payload 协议；
 - 页面视觉设计与浏览器适配细节。
 
-## 2. 当前状态与历史链路
+## 2. 当前状态与发布口径
 
 - 本文档是当前正式 API 基线。
-- 当前正式后端入口已统一收口到 `/api/web/**`。
-- 历史小程序与旧微信登录正式入口已从主干删除；若文档中提到历史链路，均只作为迁移背景说明。
+- 当前正式后端入口统一收口到 `/api/web/**`。
+- 当前正式认证链路只保留 `POST /api/web/auth/login`，不再提供 `/api/web/auth/change-password`。
 
 ## 3. 全局协议约定
 
@@ -33,27 +33,20 @@
 
 - 正式 Web 接口统一放在 `/api/web/**`。
 
-### 3.1.1 与 `suda-gs-ams` / `suda_union` 共域时的路径约束
+### 3.2 与其他站点共域时的路径约束
 
-- `suda_union` 当前历史 controller 前缀主要是 `/activity`、`/user`、`/session`、`/department`、`/suda_login`、`/token`，不直接占用 `/api/web/**`。
-- 因此从“接口命名”本身看，`wxapp-checkin` 与 `suda_union` 没有直接重名冲突。
-- 但若与 `suda-gs-ams` 共用同一个域名 / 网关，需要注意两层冲突：
-  - SPA 页面路由：`wxapp-checkin` 与 `suda-gs-ams` 都会使用 `/`、`/login`
-  - API 网关路由：`suda-gs-ams` 生态里常见的是更宽的 `/api/*` 代理规则
-- 推荐方案：
-  - `wxapp-checkin` 前端部署到独立子路径，例如 `/checkin/`
-  - `wxapp-checkin` API 要么保留 `/api/web/**` 并在网关上优先匹配 `/api/web/`
-  - 要么由前端改用独立外部前缀（例如 `/checkin-api/web`），再在网关层重写到本服务实际的 `/api/web/**`
+- 若与 `suda-gs-ams` 共用域名 / 网关，推荐把前端部署到独立子路径，例如 `/checkin/`。
+- API 可继续保留内部真实路径 `/api/web/**`，并在网关层把外部路径（例如 `/checkin-api/web/**`）重写到本服务。
 - 当前 `web/` 已支持通过环境变量覆盖：
   - `VITE_APP_BASE_PATH`
   - `VITE_API_BASE_PATH`
   - `VITE_API_PROXY_TARGET`
 
-### 3.2 Content-Type
+### 3.3 Content-Type
 
 - 请求与响应统一使用 `application/json; charset=utf-8`。
 
-### 3.3 鉴权传递
+### 3.4 鉴权传递
 
 推荐口径：
 
@@ -67,11 +60,10 @@
 
 说明：
 
-- 当前后端已有 `SessionTokenExtractor`，已支持上述几种入口；
-- 新 Web 前端应优先使用 `Authorization: Bearer`；
-- 本项目不再要求浏览器唯一绑定；服务端鉴权只依赖 `session_token`（仍保留“首次登录强制改密”的统一拦截）。
+- 新 Web 前端应优先使用 `Authorization: Bearer`。
+- 服务端鉴权只依赖 `session_token`。
 
-### 3.4 通用响应
+### 3.5 通用响应
 
 除特殊二进制场景外，所有接口返回 JSON。
 
@@ -84,7 +76,7 @@
 
 - `status`
 - `message`
-- `error_code`（建议必带）
+- `error_code`（建议带上）
 
 推荐状态值：
 
@@ -95,7 +87,7 @@
 - `expired`
 - `failed`
 
-### 3.5 会话失效信号
+### 3.6 会话失效信号
 
 所有需要登录态的接口，若会话失效，统一返回：
 
@@ -107,28 +99,27 @@
 }
 ```
 
-### 3.6 时间字段
+### 3.7 时间字段
 
 - 统一使用毫秒级 Unix 时间戳；
 - 字段名统一为 `*_at` 或 `*_time_ms`；
 - 一切时效判断以后端时间为准。
 
-## 4. Web 身份与账号密码接口
+## 4. 认证接口
 
 ### 4.1 `POST /api/web/auth/login`
 
 用途：
 
 - 使用 `student_id + password` 登录；
-- 若首次登录或仍处于强制改密状态，返回 `must_change_password=true`；
-- 并签发业务会话。
+- 签发业务会话，并返回当前角色、权限与用户资料。
 
 请求体：
 
 ```json
 {
   "student_id": "2025000011",
-  "password": "123"
+  "password": "your-password"
 }
 ```
 
@@ -137,16 +128,15 @@
 ```json
 {
   "status": "success",
-  "message": "登录成功，请修改密码",
+  "message": "登录成功",
   "session_token": "sess_xxx",
   "session_expires_at": 1760003600000,
   "role": "normal",
   "permissions": [],
-  "must_change_password": true,
   "user_profile": {
     "student_id": "2025000011",
     "name": "测试用户",
-    "department": "",
+    "department": "计算机科学与技术学院",
     "club": ""
   }
 }
@@ -156,39 +146,7 @@
 
 - `identity_not_found`：学号不存在；
 - `invalid_password`：密码错误；
-- `invalid_param`：请求体缺字段（由参数校验触发）。
-
-### 4.2 `POST /api/web/auth/change-password`
-
-用途：
-
-- 修改密码；
-- 用于首次登录强制改密的唯一放行入口。
-
-请求体：
-
-```json
-{
-  "old_password": "123",
-  "new_password": "newStrongPass"
-}
-```
-
-成功响应示例：
-
-```json
-{
-  "status": "success",
-  "message": "密码修改成功",
-  "must_change_password": false
-}
-```
-
-失败语义：
-
-- `invalid_password`：旧密码不正确；
-- `invalid_param`：新密码不合法（空、过短等）；
-- `session_expired`：会话失效。
+- `invalid_param`：请求体缺字段或为空。
 
 ## 5. 活动与动态码接口
 
@@ -217,14 +175,19 @@
     {
       "activity_id": "legacy_act_101",
       "activity_title": "校园志愿活动",
+      "activity_type": "活动",
+      "start_time": "2026-03-26 18:30",
+      "location": "钟楼广场",
+      "description": "校内志愿服务",
       "progress_status": "ongoing",
       "support_checkin": true,
       "support_checkout": true,
+      "registered_count": 26,
+      "checkin_count": 18,
+      "checkout_count": 3,
       "my_registered": true,
       "my_checked_in": false,
-      "my_checked_out": false,
-      "checkin_count": 18,
-      "checkout_count": 3
+      "my_checked_out": false
     }
   ],
   "page": 1,
@@ -234,6 +197,11 @@
 }
 ```
 
+补充约束：
+
+- `activity_id` 对外继续使用 `legacy_act_<id>`。
+- staff 可见全部活动；普通用户只看自己相关活动。
+
 ### 5.2 `GET /api/web/activities/{activity_id}`
 
 用途：
@@ -241,11 +209,41 @@
 - 获取活动详情；
 - 返回当前用户在该活动下的状态和页面展示所需字段。
 
-成功响应建议补充：
+成功响应示例：
 
-- `can_checkin`
-- `can_checkout`
-- `server_time_ms`
+```json
+{
+  "status": "success",
+  "message": "活动详情获取成功",
+  "activity_id": "legacy_act_101",
+  "activity_title": "校园志愿活动",
+  "activity_type": "活动",
+  "start_time": "2026-03-26 18:30",
+  "location": "钟楼广场",
+  "description": "校内志愿服务",
+  "progress_status": "ongoing",
+  "support_checkin": true,
+  "support_checkout": true,
+  "has_detail": true,
+  "registered_count": 26,
+  "checkin_count": 18,
+  "checkout_count": 3,
+  "my_registered": true,
+  "my_checked_in": false,
+  "my_checked_out": false,
+  "my_checkin_time": "",
+  "my_checkout_time": "",
+  "can_checkin": true,
+  "can_checkout": false,
+  "server_time_ms": 1760000001000
+}
+```
+
+失败语义：
+
+- `session_expired`
+- `invalid_activity`
+- `forbidden`
 
 ### 5.3 `GET /api/web/activities/{activity_id}/code-session?action_type=checkin|checkout`
 
@@ -266,10 +264,10 @@
   "activity_id": "legacy_act_101",
   "action_type": "checkin",
   "code": "483920",
-  "slot": 234666666,
   "expires_at": 1760000010000,
   "expires_in_ms": 4200,
   "server_time_ms": 1760000003300,
+  "registered_count": 26,
   "checkin_count": 18,
   "checkout_count": 3
 }
@@ -279,13 +277,14 @@
 
 - `forbidden`
 - `invalid_activity`
+- `invalid_param`
 - `outside_activity_time_window`
 - `activity_time_invalid`
 
 补充说明：
 
-- 发码允许窗口：活动开始前 30 分钟 ~ 活动结束后 30 分钟（包含边界）。
-- 活动时间信息异常时返回 `activity_time_invalid`（需要先修复活动时间数据）。
+- 发码允许窗口：活动开始前 30 分钟到活动结束后 30 分钟（包含边界）。
+- 动态码固定为 6 位数字码。
 
 ### 5.4 `POST /api/web/activities/{activity_id}/code-consume`
 
@@ -318,22 +317,106 @@
 
 失败语义：
 
+- `invalid_activity`
+- `invalid_param`
 - `invalid_code`
 - `expired`
 - `duplicate`
 - `rate_limited`
 - `forbidden`
 - `session_expired`
+- `outside_activity_time_window`
 
 补充约束：
 
-- 正式 Web 口径不再接收 `qr_payload`；
-- 后端必须以 `activity_id + action_type + code` 判定动态码；
-- 防重放唯一键应收敛为 `user_id + activity_id + action_type + slot`。
+- 正式 Web 口径不接收 `qr_payload`；
+- 后端以 `activity_id + action_type + code` 判定动态码；
+- 防重放唯一键收敛为 `user_id + activity_id + action_type + slot`。
 
-## 6. 管理员高权限接口
+## 6. staff 管理接口
 
-### 6.1 `POST /api/web/staff/activities/{activity_id}/bulk-checkout`
+### 6.1 `GET /api/web/staff/activities/{activity_id}/roster`
+
+用途：
+
+- 读取当前活动的参会名单与状态概览。
+
+成功响应示例：
+
+```json
+{
+  "status": "success",
+  "message": "参会名单获取成功",
+  "activity_id": "legacy_act_101",
+  "activity_title": "校园志愿活动",
+  "activity_type": "活动",
+  "start_time": "2026-03-26 18:30",
+  "location": "钟楼广场",
+  "description": "校内志愿服务",
+  "registered_count": 26,
+  "checkin_count": 18,
+  "checkout_count": 3,
+  "items": [
+    {
+      "user_id": 7,
+      "student_id": "2025000007",
+      "name": "测试用户",
+      "checked_in": true,
+      "checked_out": false,
+      "checkin_time": "2026-03-26 18:31",
+      "checkout_time": ""
+    }
+  ],
+  "server_time_ms": 1760000005000
+}
+```
+
+失败语义：
+
+- `forbidden`
+- `invalid_activity`
+- `session_expired`
+
+### 6.2 `POST /api/web/staff/activities/{activity_id}/attendance-adjustments`
+
+用途：
+
+- staff 修正一个或多个成员的签到 / 签退状态。
+
+请求体：
+
+```json
+{
+  "user_ids": [7, 8],
+  "patch": {
+    "checked_in": true,
+    "checked_out": false
+  },
+  "reason": "批量设为已签到"
+}
+```
+
+成功响应示例：
+
+```json
+{
+  "status": "success",
+  "message": "名单状态修正完成",
+  "activity_id": "legacy_act_101",
+  "affected_count": 2,
+  "batch_id": "adj_1760000005000",
+  "server_time_ms": 1760000005000
+}
+```
+
+失败语义：
+
+- `forbidden`
+- `invalid_activity`
+- `invalid_param`
+- `session_expired`
+
+### 6.3 `POST /api/web/staff/activities/{activity_id}/bulk-checkout`
 
 用途：
 
@@ -366,6 +449,7 @@
 - `forbidden`
 - `invalid_activity`
 - `invalid_param`
+- `session_expired`
 
 ## 7. 错误码建议表
 
@@ -373,45 +457,28 @@
 | --- | --- | --- |
 | `session_expired` | 会话失效 | 全部鉴权接口 |
 | `identity_not_found` | 学号不存在 | `auth/login` |
-| `invalid_password` | 密码错误 | `auth/login` / `auth/change-password` |
-| `password_change_required` | 必须先修改密码 | 全部业务接口 |
-| `password_too_short` | 新密码过短 | `auth/change-password` |
-| `password_too_long` | 新密码过长 | `auth/change-password` |
-| `invalid_activity` | 活动不存在或不可见 | 活动 / 动态码 |
+| `invalid_password` | 密码错误 | `auth/login` |
+| `invalid_param` | 请求字段缺失或非法 | 多数写接口 |
+| `invalid_activity` | 活动不存在或不可见 | 活动 / staff / 动态码 |
 | `invalid_code` | 动态码错误 | `code-consume` |
 | `expired` | 动态码过期 | `code-consume` |
 | `rate_limited` | 动态码错误尝试过多被限流 | `code-consume` |
 | `duplicate` | 同一时段重复提交 | `code-consume` |
-| `outside_activity_time_window` | 不在发码允许时间窗 | `code-session` |
+| `outside_activity_time_window` | 不在发码或验码允许时间窗 | `code-session` / `code-consume` |
 | `activity_time_invalid` | 活动时间信息异常 | `code-session` |
 
-## 8. 实施前必须锁定的约束
+## 8. 当前实现边界
 
-以下项目必须在编码前由后端与前端共同收口，否则接口虽然能写，线上行为仍会漂：
-
-### 8.1 密码策略口径
-
-- 默认密码与强制改密的触发条件（本项目固定为默认 `123` + `must_change_password` 机制）。
-- 新密码最小长度与合法字符集（建议至少 6 位；避免全空格）。
-- 改密后是否要刷新会话 token（本项目以“保留会话 + 更新会话上下文”为主）。
-
-### 8.2 会话策略
-
-- `session_token` TTL
-- 是否允许同一账号同时存在多个会话（本项目允许多端同时登录）
-- 是否提供显式登出接口
-
-### 8.3 动态码风控
-
-- 错误码尝试限流阈值
-- 限流维度
-- 触发限流后的解锁策略
+- 当前正式端点总数固定为 8 个。
+- JSON 字段继续使用 `snake_case`。
+- 业务失败继续保持 `HTTP 200 + JSON envelope` 口径。
+- 运行期写库边界只允许命中：
+  - `suda_activity_apply`
+  - `suda_log`
 
 ## 9. 文档关系
 
 - 业务规则以 `docs/REQUIREMENTS.md` 为准；
-- 用户流程与页面行为以 `docs/FUNCTIONAL_SPEC.md` 为准；
-- 系统结构与数据模型以 `docs/WEB_OVERVIEW_DESIGN.md`、`docs/WEB_DETAIL_DESIGN.md` 为准；
-- 浏览器支持边界以 `docs/WEB_COMPATIBILITY.md` 为准；
-- 审查与迁移边界见 `docs/WEB_MIGRATION_REVIEW.md`；
-- 任务拆解见 `docs/plans/2026-03-10-http-password-auth-implementation-plan.md`。
+- 页面行为以 `docs/FUNCTIONAL_SPEC.md` 为准；
+- 部署口径以 `docs/DEPLOYMENT.md` 为准；
+- 兼容清单见 `docs/plans/2026-03-25-rust-api-compat-checklist.md`。

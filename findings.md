@@ -1,5 +1,35 @@
 # 发现记录
 
+- `2026-03-26` 当前 `wxapp-checkin/` 子仓库位于 `web` 分支，`git status --short --branch` 显示工作区干净，可安全开展一次完整整改并在结束时直接提交。
+- `2026-03-26` 当前正式形态已不是历史 `frontend/ + backend/` 小程序/Java 双端，而是：
+  - `web/`：手机浏览器 Web 前端
+  - `backend-rust/`：Rust 后端
+  - `docs/`：当前正式需求、接口、部署文档
+- `2026-03-26` 顶层 `README.md`、`docs/REQUIREMENTS.md`、`docs/DEPLOYMENT.md` 已切到 Rust + `suda_union` 基线，但仍需继续核对是否与当前实现、接口文档、验证命令完全一致。
+- `2026-03-26` `docs/API_SPEC.md` 的更新时间仍是 `2026-03-10`，早于 3 月 25 日的 Rust 基线收口，存在文档版本与仓库状态可能不同步的风险，需要重点复核。
+- `2026-03-26` `README.md` 当前仍残留 `.worktrees/rust-suda-union` 绝对路径链接，这些链接只在历史 worktree 下有效，不是当前子仓库主路径，属于正式文档硬伤。
+- `2026-03-26` `docs/API_SPEC.md` 当前缺少正式存在的两个 staff 接口：
+  - `GET /api/web/staff/activities/{activity_id}/roster`
+  - `POST /api/web/staff/activities/{activity_id}/attendance-adjustments`
+- `2026-03-26` `docs/API_SPEC.md` 末尾仍引用不存在的 `docs/plans/2026-03-10-http-password-auth-implementation-plan.md` 与多份已清理的 Web 设计文档，当前已不能作为完整联调基线。
+- `2026-03-26` `docs/FUNCTIONAL_SPEC.md` 仍描述 `/change-password` 独立页面与“首次登录强制改密”流程，但当前前端路由 `web/src/app/router.tsx` 不存在 `/change-password`，后端 `backend-rust/src/api/auth.rs` 也只保留 `/login`。
+- `2026-03-26` 当前代码库已经有“移除改密链路”的硬约束证据：
+  - 最近提交为 `266378b fix(auth): 移除改密链路`
+  - `backend-rust/tests/contract_source_guards.rs` 明确断言 auth router 不再暴露 `/change-password`
+  - 因此需求/API/功能文档与代码实现存在系统性漂移，需要先决定“文档回写当前代码”还是“代码补回旧需求”。
+- `2026-03-26` `backend-rust` 当前缺少可直接约束工具链的仓库级声明；在当前环境里直接执行 `cargo test` 会因 `rustup` 没有默认 toolchain 而失败，这和 README / REQUIREMENTS 中“直接运行 cargo 命令即可验证”的口径不一致。
+- `2026-03-26` 本轮收口后，当前正式基线已统一为：
+  - 正式端点数：8 个
+  - 正式认证链路：只保留 `POST /api/web/auth/login`
+  - 运行期写库边界：`suda_activity_apply`、`suda_log`
+- `2026-03-26` 已完成的代码侧收口：
+  - 新增 `backend-rust/rust-toolchain.toml` 固定 `stable`
+  - 删除 `backend-rust/src/db/user_repo.rs` 中未使用的 `update_password`
+  - 删除 `web/src/features/auth/components/ChangePasswordForm.tsx`
+- `2026-03-26` 已完成的文档侧收口：
+  - `README.md` 修复 `.worktrees` 绝对路径链接
+  - `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`、`docs/DEPLOYMENT.md` 已回写到当前无改密链路基线
+  - 两份 `docs/plans/*checklist.md` 已同步改为当前 8 端点兼容口径
 - `2026-03-25` 的正式设计与实施计划文件位于工作区根目录 `/home/psx/app/docs/plans/`，不是 `wxapp-checkin/docs/plans/`。
 - 当前前端正式兼容面仅 9 个 `/api/web/**` 端点：
   - `POST /api/web/auth/login`

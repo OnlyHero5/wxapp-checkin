@@ -16,12 +16,22 @@ fn auth_service_should_not_update_last_login_time() {
 }
 
 #[test]
-fn user_repo_should_not_write_last_login_time_column() {
+fn user_repo_should_not_touch_last_login_time_column() {
   let source = fs::read_to_string(manifest_file("src/db/user_repo.rs"))
     .expect("read user_repo.rs");
   assert!(
     !source.contains("last_login_time"),
-    "user_repo should only keep password write path for suda_user"
+    "current auth baseline should not mutate suda_user.last_login_time"
+  );
+}
+
+#[test]
+fn user_repo_should_not_keep_password_write_path_anymore() {
+  let source = fs::read_to_string(manifest_file("src/db/user_repo.rs"))
+    .expect("read user_repo.rs");
+  assert!(
+    !source.contains("pub async fn update_password"),
+    "current auth baseline no longer exposes password write path"
   );
 }
 

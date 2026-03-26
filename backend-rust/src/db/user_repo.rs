@@ -42,23 +42,3 @@ pub async fn find_user_by_student_id(
   .await
   .map_err(|error| AppError::internal(format!("读取 suda_user 失败：{error}")))
 }
-
-pub async fn update_password(
-  pool: &MySqlPool,
-  student_id: &str,
-  password_hash: &str,
-) -> Result<(), AppError> {
-  sqlx::query(
-    r#"
-      UPDATE suda_user
-      SET password = ?
-      WHERE username = ?
-    "#,
-  )
-  .bind(password_hash)
-  .bind(student_id)
-  .execute(pool)
-  .await
-  .map_err(|error| AppError::internal(format!("更新 suda_user.password 失败：{error}")))?;
-  Ok(())
-}

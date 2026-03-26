@@ -1,6 +1,6 @@
 # wxapp-checkin 部署手册
 
-更新日期：2026-03-25  
+更新日期：2026-03-26  
 适用范围：`wxapp-checkin` 当前正式形态（`web/ + backend-rust/ + suda_union`）
 
 ## 1. 部署目标
@@ -15,16 +15,17 @@
 
 不再作为正式口径：
 
+- 微信小程序 `frontend/`
 - Java `backend/`
 - `wxcheckin_ext`
 - Docker Compose 默认全栈发布
 
 ## 3. 前置依赖
 
-- Rust stable（仅构建机需要）
+- Rust stable（仅构建机需要，仓库已通过 `backend-rust/rust-toolchain.toml` 固定）
 - Node.js + npm
 - MySQL 8
-- Nginx（或等价静态资源/反向代理）
+- Nginx（或等价静态资源 / 反向代理）
 
 ## 4. 构建
 
@@ -32,6 +33,7 @@
 
 ```bash
 cd /path/to/wxapp-checkin/backend-rust
+cargo test
 cargo build --release
 ```
 
@@ -44,6 +46,8 @@ cargo build --release
 ```bash
 cd /path/to/wxapp-checkin/web
 npm install
+npm test
+npm run lint
 VITE_APP_BASE_PATH=/checkin/ \
 VITE_API_BASE_PATH=/checkin-api/web \
 npm run build
@@ -129,7 +133,6 @@ curl -I http://<your-host>/checkin/
 再手工确认：
 
 - 登录
-- 首次改密
 - 活动列表
 - 详情
 - staff 发码

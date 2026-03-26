@@ -6,12 +6,13 @@
 - Rust 后端：`backend-rust/`
 - 唯一数据库：`suda_union`
 
-正式链路不再保留：
+当前正式基线不再保留：
 
+- 微信小程序 `frontend/`
 - Java `backend/`
 - `wxcheckin_ext`
 - `wx_*` 逻辑表
-- 双库同步 / outbox relay
+- `/api/web/auth/change-password`
 - Docker Compose 作为默认发布入口
 
 ## 目录
@@ -22,6 +23,17 @@
 | `backend-rust/` | 唯一正式后端 |
 | `docs/` | 正式需求、功能、接口、部署文档 |
 | `scripts/` | bootstrap、启动、停止脚本 |
+
+## 当前正式能力
+
+- `POST /api/web/auth/login`：账号密码登录
+- `GET /api/web/activities`：活动列表
+- `GET /api/web/activities/{activity_id}`：活动详情
+- `GET /api/web/activities/{activity_id}/code-session`：staff 动态码
+- `POST /api/web/activities/{activity_id}/code-consume`：普通用户签到 / 签退
+- `GET /api/web/staff/activities/{activity_id}/roster`：参会名单
+- `POST /api/web/staff/activities/{activity_id}/attendance-adjustments`：名单修正
+- `POST /api/web/staff/activities/{activity_id}/bulk-checkout`：批量签退
 
 ## 快速开始
 
@@ -53,11 +65,24 @@ curl http://127.0.0.1:5173/
 
 ## 本地依赖
 
-- Rust stable
+- Rust stable（`backend-rust/rust-toolchain.toml` 已固定工具链）
 - Node.js + npm
 - MySQL 8（只需要 `suda_union`）
 - `mysql` CLI
 - `curl`
+
+## 推荐验证命令
+
+```bash
+cd web
+npm test
+npm run lint
+npm run build
+
+cd ../backend-rust
+cargo test
+cargo build --release
+```
 
 ## 生产部署
 
@@ -81,12 +106,12 @@ cd ..
 2. `/etc/wxcheckin/backend-rust.prod.env`
 3. `backend-rust/.env.prod`
 
-更多部署细节见 [`docs/DEPLOYMENT.md`](/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union/docs/DEPLOYMENT.md)。
+更多部署细节见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
 
 ## 正式文档
 
-- 需求基线：[`docs/REQUIREMENTS.md`](/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union/docs/REQUIREMENTS.md)
-- 功能基线：[`docs/FUNCTIONAL_SPEC.md`](/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union/docs/FUNCTIONAL_SPEC.md)
-- 接口基线：[`docs/API_SPEC.md`](/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union/docs/API_SPEC.md)
-- 部署手册：[`docs/DEPLOYMENT.md`](/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union/docs/DEPLOYMENT.md)
-- Rust 兼容清单：[`docs/plans/2026-03-25-rust-api-compat-checklist.md`](/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union/docs/plans/2026-03-25-rust-api-compat-checklist.md)
+- 需求基线：[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)
+- 功能基线：[docs/FUNCTIONAL_SPEC.md](docs/FUNCTIONAL_SPEC.md)
+- 接口基线：[docs/API_SPEC.md](docs/API_SPEC.md)
+- 部署手册：[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- Rust 兼容清单：[docs/plans/2026-03-25-rust-api-compat-checklist.md](docs/plans/2026-03-25-rust-api-compat-checklist.md)

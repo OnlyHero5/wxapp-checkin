@@ -1,5 +1,26 @@
 # 进度记录
 
+- 2026-03-26：接受新的“前后端代码 + 文档规范审计与优化”任务，已按要求优先加载 `brainstorming`、`software-architecture`、`senior-pm`、`planning-with-files`、`clean-code`、`verification-before-completion` 等 skills。
+- 2026-03-26：已确认 `wxapp-checkin/` 当前在 `web` 分支且工作区干净，可以在不影响其他子仓库的前提下开展整改。
+- 2026-03-26：已重新对齐 `task_plan.md`，将本次工作目标切换为“审计现有 Web/Rust/文档基线并按规范收口”。
+- 2026-03-26：已读取 `README.md`、`docs/REQUIREMENTS.md`、`docs/API_SPEC.md`、`docs/DEPLOYMENT.md` 及前后端包配置，开始建立文档口径与实现边界的核对清单。
+- 2026-03-26：已跑出当前前端基线验证：
+  - `cd web && npm test`：19 个文件、65 个测试全部通过
+  - `cd web && npm run lint`：通过
+- 2026-03-26：尝试执行 `cd backend-rust && cargo test` 时发现当前环境 `rustup` 没有默认 toolchain，导致文档中的 Rust 验证命令在现环境不可直接复现。
+- 2026-03-26：已确认文档与代码之间存在系统性漂移，尤其是“改密链路已被代码删除，但需求/API/功能文档仍保留旧承诺”的问题，正在收敛整改策略。
+- 2026-03-26：已按“以当前代码为准”的策略完成整改：
+  - 新增 `backend-rust/rust-toolchain.toml`
+  - 删除 `backend-rust/src/db/user_repo.rs` 中未使用的 `update_password`
+  - 删除 `web/src/features/auth/components/ChangePasswordForm.tsx`
+  - 回写 README、需求、功能、接口、部署与兼容清单到当前 8 端点基线
+- 2026-03-26：已完成最终验证：
+  - `cd web && npm test`
+  - `cd web && npm run lint`
+  - `cd web && npm run build`
+  - `bash -n scripts/bootstrap.sh scripts/dev.sh scripts/stop.sh scripts/prod-backend.sh`
+  - `cd backend-rust && cargo test`
+  - `cd backend-rust && cargo build --release`
 - 2026-03-25：确认本次执行目标是 `/home/psx/app/docs/plans/2026-03-25-wxapp-checkin-rust-suda-union-implementation.md`，不再是 2026-03-23 的 Docker/配置计划。
 - 2026-03-25：已读取 3.25 Rust 设计稿、实施计划，以及根目录 `findings.md / progress.md / task_plan.md`，承接前序调研结论。
 - 2026-03-25：已确认当前 `wxapp-checkin/` 子仓库工作区干净，并在 `.worktrees/rust-suda-union` 建立隔离 worktree。

@@ -66,15 +66,15 @@ describe("requestJson", () => {
     expect(getSession()).toBe("");
   });
 
-  it("treats password_change_required as a normal API error", async () => {
+  it("keeps the local session for non-session business errors", async () => {
     setSession("sess_123");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       createJsonResponse({
-        error_code: "password_change_required",
-        message: "请先修改密码",
+        error_code: "invalid_activity",
+        message: "活动不存在或已下线",
         status: "forbidden"
       }, {
-        status: 403
+        status: 404
       })
     ));
 

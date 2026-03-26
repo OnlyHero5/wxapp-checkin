@@ -79,7 +79,7 @@ find_binary() {
 main() {
   local env_file
   env_file="$(detect_env_file)"
-  [[ -n "${env_file}" ]] || die "No env file found. Set WXAPP_PROD_ENV_FILE or create /etc/wxcheckin/backend.prod.env"
+  [[ -n "${env_file}" ]] || die "No env file found. Set WXAPP_PROD_ENV_FILE or create /etc/wxcheckin/backend-rust.prod.env"
 
   load_env "${env_file}"
 

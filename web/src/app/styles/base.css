@@ -285,7 +285,7 @@ select {
  * ========================================================= */
 
 /* 这些区块类在当前阶段属于“低风险复用件”：
- * 登录页、改密页、活动详情页、结果页都在依赖它们，
+ * 登录页、活动详情页、结果页都在依赖它们，
  * 改动前最好先跑一遍全量截图或至少全量单测。 */
 .stack-form {
   display: grid;
@@ -557,7 +557,7 @@ select {
   transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 
-/* 登录与改密页都大量依赖表单，所以输入框样式尽量保持克制，不做花哨动画。 */
+/* 登录页和其他轻表单页面都依赖这组输入框样式，所以保持克制，不做花哨动画。 */
 /* brand 页面下只给表单加一层轻蓝品牌气质，不去改交互模型和结构。 */
 .mobile-page[data-page-tone="brand"] .field input,
 .mobile-page[data-page-tone="brand"] .field textarea {
