@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { Navbar } from "tdesign-mobile-react";
 import type { VisualTone } from "./visual-tone";
 
 export type MobilePageLayout = "compact" | "showcase-auto";
@@ -36,20 +37,18 @@ export function MobilePage({
     <main className="mobile-page" data-page-layout={layout} data-page-tone={tone}>
       <div className="mobile-page__shell">
         <section className="mobile-page__hero">
-          <div className="mobile-page__hero-main">
-            {/* eyebrow 用于表达“欢迎回来 / 首次访问 / 活动详情”这类辅助上下文。 */}
-            {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
-            <header className="mobile-page__header">
-              <h1>{title}</h1>
-            </header>
-            {description ? <p className="mobile-page__description">{description}</p> : null}
-          </div>
-          {/* headerActions 统一包一层可收缩 slot，避免业务页直接塞链接时把标题顶出卡片。 */}
-          {headerActions ? (
-            <div className="mobile-page__hero-actions">
-              <div className="mobile-page__hero-actions-content">{headerActions}</div>
-            </div>
-          ) : null}
+          {/* 标题行优先交给组件库 Navbar，减少自定义头部布局对安全区、换行和左右动作位的重复处理。 */}
+          <Navbar
+            animation={false}
+            className="mobile-page__navbar"
+            fixed={false}
+            right={headerActions}
+            safeAreaInsetTop={false}
+            title={<h1 className="mobile-page__navbar-title">{title}</h1>}
+          />
+          {/* eyebrow / description 仍然属于项目特有语义，继续作为轻量补充信息保留在标题行上下文里。 */}
+          {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
+          {description ? <p className="mobile-page__description">{description}</p> : null}
         </section>
         {/* content 区交给业务页自由组合表单、说明、结果态。 */}
         <section className="mobile-page__section">

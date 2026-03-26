@@ -43,8 +43,8 @@ describe("MobilePage", () => {
 
     const actionLink = screen.getByRole("link", { name: "返回活动详情" });
 
-    expect(actionLink.closest(".mobile-page__hero-actions")).toBeInTheDocument();
-    expect(actionLink.closest(".mobile-page__hero-actions-content")).toBeInTheDocument();
+    expect(document.querySelector(".t-navbar")).not.toBeNull();
+    expect(actionLink.closest(".t-navbar__right")).toBeInTheDocument();
   });
 
   it("keeps the page shell top-aligned so short pages do not stretch into tall blank cards", () => {

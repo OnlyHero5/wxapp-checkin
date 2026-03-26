@@ -158,12 +158,9 @@ select {
 }
 
 .mobile-page__hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 18px 16px;
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 14px;
 }
 
 /* 页面 tone 目前只先作用到 hero 壳层，
@@ -199,49 +196,44 @@ select {
   pointer-events: none;
 }
 
-.mobile-page__hero-main,
-.mobile-page__hero-actions {
+.mobile-page__navbar {
   position: relative;
   z-index: 1;
 }
 
-.mobile-page__hero-main {
-  display: grid;
-  flex: 1 1 220px;
-  gap: 8px;
-}
-
-.mobile-page__hero-actions {
-  display: flex;
-  flex: 0 1 auto;
-  align-items: flex-start;
-  justify-content: flex-end;
-}
-
-/* hero 的左右分栏都要显式允许收缩，
- * 否则标题和返回入口在超窄屏下会互相顶爆。 */
 .mobile-page__shell,
 .mobile-page__hero,
-.mobile-page__hero-main,
-.mobile-page__hero-actions,
-.mobile-page__hero-actions-content,
-.mobile-page__header,
+.mobile-page__navbar,
 .mobile-page__section,
 .mobile-page__content {
   min-width: 0;
 }
 
-/* action slot 只负责承接业务自带的按钮/链接，
- * 统一在壳层这里兜住最大宽度，避免各页自己补溢出修复。 */
-.mobile-page__hero-actions,
-.mobile-page__hero-actions-content {
-  max-width: 100%;
+.mobile-page__navbar .t-navbar__content,
+.mobile-page__navbar .t-navbar__center,
+.mobile-page__navbar .t-navbar__right {
+  min-width: 0;
 }
 
-.mobile-page__hero-actions-content {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
+.mobile-page__navbar .t-navbar__center-title,
+.mobile-page__navbar .t-navbar__right {
+  overflow-wrap: anywhere;
+}
+
+.mobile-page__navbar-title {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+  color: var(--app-text-strong);
+}
+
+.mobile-page__navbar .t-navbar__left {
+  display: none;
+}
+
+.mobile-page__navbar.t-navbar {
+  background: transparent;
 }
 
 .mobile-page__section {
@@ -258,16 +250,6 @@ select {
    * 避免隐式列按内容最大宽度计算后把整页撑出手机视口。 */
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
-}
-
-/* 页面主标题比正文明显更大，但仍控制在手机端可一屏阅读的范围。 */
-.mobile-page__header h1 {
-  margin: 0;
-  font-size: 1.8rem;
-  line-height: 1.12;
-  letter-spacing: -0.04em;
-  color: var(--app-text-strong);
-  overflow-wrap: anywhere;
 }
 
 /* 正文字体颜色略浅，降低阅读压迫感。 */
@@ -752,54 +734,6 @@ select {
 .roster-item {
   display: grid;
   gap: 10px;
-  padding: 16px;
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.roster-item__header {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.roster-item__select {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--app-text-muted);
-  font-size: 0.875rem;
-}
-
-.roster-item__identity {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.roster-item__identity strong {
-  color: var(--app-text-strong);
-  font-size: 1rem;
-  overflow-wrap: anywhere;
-}
-
-.roster-item__identity span,
-.roster-item__status,
-.roster-item__time {
-  color: var(--app-text-muted);
-}
-
-.roster-item__status {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 0.9375rem;
-}
-
-.roster-item__time {
-  margin: 0;
-  font-size: 0.875rem;
 }
 
 .roster-item__actions {
@@ -864,19 +798,7 @@ select {
     padding: 16px 14px 18px;
   }
 
-  /* 小于 360px 时直接让 action 入口换到下一行，
-   * 保证标题优先可读，返回链接不再和标题抢同一行宽度。 */
-  .mobile-page__hero-actions {
-    flex-basis: 100%;
-    justify-content: flex-start;
-  }
-
-  .mobile-page__hero-actions-content {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .mobile-page__header h1 {
+  .mobile-page__navbar-title {
     font-size: 1.56rem;
   }
 

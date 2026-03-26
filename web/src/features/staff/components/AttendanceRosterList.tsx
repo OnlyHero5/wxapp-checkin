@@ -1,3 +1,4 @@
+import { Cell, CellGroup, Checkbox } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
 import type { ActivityRosterItem } from "../api";
 import type { AttendanceActionKey } from "./AttendanceBatchActionBar";
@@ -37,28 +38,24 @@ export function AttendanceRosterList({
         const checked = selectedIds.includes(item.user_id);
         return (
           <article className="roster-item" key={item.user_id}>
-            <div className="roster-item__header">
-              <label className="roster-item__select">
-                {/* 这里保留原生 checkbox，是为了让移动端点击范围和可访问性语义都更稳定。 */}
-                <input
-                  aria-label={`选择 ${item.name}`}
-                  checked={checked}
-                  onChange={(event) => onToggleSelection(item.user_id, event.target.checked)}
-                  type="checkbox"
-                />
-                <span>选择</span>
-              </label>
-              <div className="roster-item__identity">
-                <strong>{item.name}</strong>
-                <span>{item.student_id}</span>
-              </div>
-            </div>
-            <div className="roster-item__status">
-              <span>签到：{resolveCheckinText(item)}</span>
-              <span>签退：{resolveCheckoutText(item)}</span>
-            </div>
-            {item.checkin_time ? <p className="roster-item__time">签到时间：{item.checkin_time}</p> : null}
-            {item.checkout_time ? <p className="roster-item__time">签退时间：{item.checkout_time}</p> : null}
+            <CellGroup theme="card" title={item.name}>
+              <Cell title="学号" note={item.student_id} />
+              <Cell
+                title="选择成员"
+                note={(
+                  <Checkbox
+                    block={false}
+                    checked={checked}
+                    label={`选择 ${item.name}`}
+                    onChange={(value) => onToggleSelection(item.user_id, !!value)}
+                  />
+                )}
+              />
+              <Cell title="签到状态" note={resolveCheckinText(item)} />
+              <Cell title="签退状态" note={resolveCheckoutText(item)} />
+              {item.checkin_time ? <Cell title="签到时间" note={item.checkin_time} /> : null}
+              {item.checkout_time ? <Cell title="签退时间" note={item.checkout_time} /> : null}
+            </CellGroup>
             <div className="roster-item__actions">
               {!item.checked_in ? (
                 <AppButton onClick={() => void onSingleAction(item.user_id, "set_checked_in")}>设为已签到</AppButton>

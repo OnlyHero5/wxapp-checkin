@@ -89,6 +89,8 @@ describe("ActivityRosterPage", () => {
     expect(screen.getByText("测试用户")).toBeInTheDocument();
     expect(screen.getByText("2025000011")).toBeInTheDocument();
     expect(screen.getByText("补签成员")).toBeInTheDocument();
+    expect(document.querySelectorAll(".t-checkbox").length).toBeGreaterThan(0);
+    expect(document.querySelectorAll(".t-cell-group--card").length).toBeGreaterThan(1);
     expect(screen.getByText("已选 0 人").closest("[data-panel-tone]")).toHaveAttribute("data-panel-tone", "staff");
     expect(screen.getByRole("button", { name: "批量设为已签退" })).toBeInTheDocument();
   });
@@ -137,8 +139,9 @@ describe("ActivityRosterPage", () => {
     renderActivityRosterPage();
 
     expect(await screen.findByText("测试用户")).toBeInTheDocument();
-    await user.click(screen.getByLabelText("选择 测试用户"));
-    await user.click(screen.getByLabelText("选择 补签成员"));
+    const checkboxes = document.querySelectorAll(".t-checkbox");
+    await user.click(checkboxes[0] as HTMLElement);
+    await user.click(checkboxes[1] as HTMLElement);
     await user.click(screen.getByRole("button", { name: "批量设为已签退" }));
 
     expect(await screen.findByText("设为已签退会自动补成已签到。")).toBeInTheDocument();
