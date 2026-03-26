@@ -30,10 +30,8 @@ impl AppState {
     // 现阶段先复用 `QR_SIGNING_KEY` 派生会话签名能力：
     // - 避免在第一阶段再引入新的密钥配置面；
     // - 后续若要拆分 session / code secret，再在配置层显式扩字段。
-    let session_token_signer = SessionTokenSigner::new(
-      config.qr_signing_key.as_bytes(),
-      config.session_ttl_seconds,
-    );
+    let session_token_signer =
+      SessionTokenSigner::new(config.qr_signing_key.as_bytes(), config.session_ttl_seconds);
     Ok(Self {
       shared: Arc::new(SharedState {
         config,

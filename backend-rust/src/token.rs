@@ -55,7 +55,10 @@ impl SessionTokenSigner {
       .map_err(|error| AppError::internal(format!("序列化 session token 失败：{error}")))?;
     let encoded_payload = URL_SAFE_NO_PAD.encode(payload);
     let signature = self.sign(encoded_payload.as_bytes())?;
-    Ok(format!("{encoded_payload}.{}", URL_SAFE_NO_PAD.encode(signature)))
+    Ok(format!(
+      "{encoded_payload}.{}",
+      URL_SAFE_NO_PAD.encode(signature)
+    ))
   }
 
   pub fn verify(&self, token: &str, now: SystemTime) -> Result<SessionTokenClaims, AppError> {
@@ -63,24 +66,32 @@ impl SessionTokenSigner {
       .trim()
       .split_once('.')
       .ok_or_else(session_expired_error)?;
-    let expected_signature = self.sign(payload_part.as_bytes())?;
     let provided_signature = URL_SAFE_NO_PAD
       .decode(signature_part)
       .map_err(|_| session_expired_error())?;
-
-    if expected_signature.as_slice() != provided_signature.as_slice() {
-      return Err(session_expired_error());
-    }
+    self.verify_signature(payload_part.as_bytes(), &provided_signature)?;
 
     let payload = URL_SAFE_NO_PAD
       .decode(payload_part)
       .map_err(|_| session_expired_error())?;
-    let claims: SessionTokenClaims = serde_json::from_slice(&payload).map_err(|_| session_expired_error())?;
+    let claims: SessionTokenClaims =
+      serde_json::from_slice(&payload).map_err(|_| session_expired_error())?;
     let now_seconds = unix_seconds(now)?;
     if now_seconds > claims.exp {
       return Err(session_expired_error());
     }
     Ok(claims)
+  }
+
+  // 这里显式走 HMAC 库自带的验签接口，而不是自己比较字节数组。
+  // 这样后续即使摘要实现变更，也仍然由库层统一维护验签语义。
+  fn verify_signature(&self, payload: &[u8], signature: &[u8]) -> Result<(), AppError> {
+    let mut mac = HmacSha256::new_from_slice(&self.secret)
+      .map_err(|error| AppError::internal(format!("初始化 session token 签名器失败：{error}")))?;
+    mac.update(payload);
+    mac
+      .verify_slice(signature)
+      .map_err(|_| session_expired_error())
   }
 
   fn sign(&self, payload: &[u8]) -> Result<Vec<u8>, AppError> {

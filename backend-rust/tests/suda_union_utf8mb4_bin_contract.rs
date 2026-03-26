@@ -113,5 +113,8 @@ async fn log_repo_should_decode_timestamp_action_time() {
     .await
     .expect("query latest action time");
 
-  assert!(latest.is_some(), "expected latest checkin log time for activity 103");
+  assert!(
+    latest.is_some(),
+    "expected latest checkin log time for activity 103"
+  );
 }

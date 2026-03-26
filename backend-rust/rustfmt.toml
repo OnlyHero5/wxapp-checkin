@@ -1,0 +1,4 @@
+# 这个仓库在前后端与 Java 侧统一采用 2 空格缩进。
+# Rust 官方默认风格是 4 空格，这里显式落一个项目级 rustfmt 配置，
+# 目的是让 `cargo fmt --check` 在团队内可收敛，避免持续出现纯格式噪音 diff。
+tab_spaces = 2

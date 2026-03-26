@@ -3,17 +3,23 @@ use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::staff_service;
 use axum::Json;
+use axum::Router;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::routing::{get, post};
-use axum::Router;
 use serde::{Deserialize, Serialize};
 
 pub fn router() -> Router<AppState> {
   Router::new()
     .route("/activities/{activity_id}/roster", get(get_roster))
-    .route("/activities/{activity_id}/attendance-adjustments", post(adjust_attendance))
-    .route("/activities/{activity_id}/bulk-checkout", post(bulk_checkout))
+    .route(
+      "/activities/{activity_id}/attendance-adjustments",
+      post(adjust_attendance),
+    )
+    .route(
+      "/activities/{activity_id}/bulk-checkout",
+      post(bulk_checkout),
+    )
 }
 
 #[derive(Debug, Clone, Deserialize)]

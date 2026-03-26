@@ -12,7 +12,11 @@ pub struct ErrorResponse {
 }
 
 impl ErrorResponse {
-  pub fn new(status: impl Into<String>, message: impl Into<String>, error_code: Option<String>) -> Self {
+  pub fn new(
+    status: impl Into<String>,
+    message: impl Into<String>,
+    error_code: Option<String>,
+  ) -> Self {
     Self {
       status: status.into(),
       message: message.into(),

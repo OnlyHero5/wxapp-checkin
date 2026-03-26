@@ -1,18 +1,22 @@
 use crate::error::AppError;
 use serde_json::Value;
+use sqlx::Executor;
 use sqlx::MySqlPool;
 
 /// `suda_log` 既承担普通用户签到流水，也承担 staff 审计。
 /// 因此这里把“结构化 JSON content”固定为仓储层统一入口，避免上层各自拼字符串。
-pub async fn insert_log(
-  pool: &MySqlPool,
+pub async fn insert_log<'e, E>(
+  executor: E,
   username: &str,
   name: &str,
   path: &str,
   content: &Value,
   ip: &str,
   address: &str,
-) -> Result<(), AppError> {
+) -> Result<(), AppError>
+where
+  E: Executor<'e, Database = sqlx::MySql>,
+{
   let content_text = serde_json::to_string(content)
     .map_err(|error| AppError::internal(format!("序列化 suda_log.content 失败：{error}")))?;
   sqlx::query(
@@ -27,7 +31,7 @@ pub async fn insert_log(
   .bind(content_text)
   .bind(ip)
   .bind(address)
-  .execute(pool)
+  .execute(executor)
   .await
   .map_err(|error| AppError::internal(format!("写入 suda_log 失败：{error}")))?;
   Ok(())

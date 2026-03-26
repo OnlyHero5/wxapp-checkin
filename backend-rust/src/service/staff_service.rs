@@ -13,6 +13,34 @@ use serde_json::json;
 use sqlx::Executor;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// 这两个 staff 写接口都会写 `suda_log`，但共享的上下文较多：
+/// 操作人、批次号、活动号、服务端时间和原因在一次事务里都不变。
+/// 把这些字段收敛成上下文对象，可以同时解决可读性和 `clippy::too_many_arguments`。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StaffAuditActionKind {
+  AttendanceAdjustment,
+  BulkCheckout,
+}
+
+impl StaffAuditActionKind {
+  fn path(self) -> &'static str {
+    match self {
+      Self::AttendanceAdjustment => "/api/web/staff/attendance-adjustment",
+      Self::BulkCheckout => "/api/web/staff/bulk-checkout",
+    }
+  }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct StaffLogContext<'a> {
+  current_user: &'a CurrentUser,
+  legacy_activity_id: i64,
+  action_kind: StaffAuditActionKind,
+  batch_id: &'a str,
+  server_time_ms: u64,
+  reason: &'a str,
+}
+
 pub async fn get_roster(
   state: &AppState,
   current_user: &CurrentUser,
@@ -28,18 +56,28 @@ pub async fn get_roster(
     let checked_in = row.check_in_flag == 1;
     let checked_out = row.check_out_flag == 1;
     let checkin_time = if checked_in || checked_out {
-      log_repo::find_latest_action_time(state.pool(), &row.student_id, "checkin", legacy_activity_id)
-        .await?
-        .map(activity_service::format_display_time)
-        .unwrap_or_default()
+      log_repo::find_latest_action_time(
+        state.pool(),
+        &row.student_id,
+        "checkin",
+        legacy_activity_id,
+      )
+      .await?
+      .map(activity_service::format_display_time)
+      .unwrap_or_default()
     } else {
       String::new()
     };
     let checkout_time = if checked_out {
-      log_repo::find_latest_action_time(state.pool(), &row.student_id, "checkout", legacy_activity_id)
-        .await?
-        .map(activity_service::format_display_time)
-        .unwrap_or_default()
+      log_repo::find_latest_action_time(
+        state.pool(),
+        &row.student_id,
+        "checkout",
+        legacy_activity_id,
+      )
+      .await?
+      .map(activity_service::format_display_time)
+      .unwrap_or_default()
     } else {
       String::new()
     };
@@ -93,9 +131,23 @@ pub async fn adjust_attendance(
     .begin()
     .await
     .map_err(|error| AppError::internal(format!("开启名单修正事务失败：{error}")))?;
-  let rows = attendance_repo::list_by_user_ids_for_update(&mut tx, legacy_activity_id, &normalized_user_ids).await?;
+  let log_context = StaffLogContext {
+    current_user,
+    legacy_activity_id,
+    action_kind: StaffAuditActionKind::AttendanceAdjustment,
+    batch_id: &batch_id,
+    server_time_ms,
+    reason,
+  };
+  let rows =
+    attendance_repo::list_by_user_ids_for_update(&mut tx, legacy_activity_id, &normalized_user_ids)
+      .await?;
   if rows.len() != normalized_user_ids.len() {
-    return Err(AppError::business("invalid_param", "目标成员不存在、未报名或不属于当前活动", None));
+    return Err(AppError::business(
+      "invalid_param",
+      "目标成员不存在、未报名或不属于当前活动",
+      None,
+    ));
   }
 
   let mut affected_count = 0_i64;
@@ -105,19 +157,7 @@ pub async fn adjust_attendance(
       continue;
     }
     attendance_repo::update_attendance_flags(&mut tx, row.record_id, check_in, check_out).await?;
-    insert_staff_log(
-      tx.as_mut(),
-      current_user,
-      &row,
-      legacy_activity_id,
-      "attendance-adjustment",
-      &batch_id,
-      server_time_ms,
-      reason,
-      check_in,
-      check_out,
-    )
-    .await?;
+    insert_staff_log(tx.as_mut(), &log_context, &row, check_in, check_out).await?;
     affected_count += 1;
   }
 
@@ -148,7 +188,11 @@ pub async fn bulk_checkout(
 ) -> Result<BulkCheckoutResponse, AppError> {
   require_staff(current_user)?;
   if !confirm {
-    return Err(AppError::business("invalid_param", "批量签退必须显式确认", None));
+    return Err(AppError::business(
+      "invalid_param",
+      "批量签退必须显式确认",
+      None,
+    ));
   }
   let legacy_activity_id = parse_activity_id(activity_id)?;
   require_activity(state, legacy_activity_id).await?;
@@ -160,37 +204,24 @@ pub async fn bulk_checkout(
     .begin()
     .await
     .map_err(|error| AppError::internal(format!("开启批量签退事务失败：{error}")))?;
+  let log_context = StaffLogContext {
+    current_user,
+    legacy_activity_id,
+    action_kind: StaffAuditActionKind::BulkCheckout,
+    batch_id: &batch_id,
+    server_time_ms,
+    reason,
+  };
   let rows = attendance_repo::list_checked_in_for_update(&mut tx, legacy_activity_id).await?;
   let mut affected_count = 0_i64;
 
   for row in rows {
     attendance_repo::update_attendance_flags(&mut tx, row.record_id, 1, 1).await?;
-    insert_staff_log(
-      tx.as_mut(),
-      current_user,
-      &row,
-      legacy_activity_id,
-      "bulk-checkout",
-      &batch_id,
-      server_time_ms,
-      reason,
-      1,
-      1,
-    )
-    .await?;
+    insert_staff_log(tx.as_mut(), &log_context, &row, 1, 1).await?;
     affected_count += 1;
   }
 
-  insert_batch_summary_log(
-    tx.as_mut(),
-    current_user,
-    legacy_activity_id,
-    &batch_id,
-    server_time_ms,
-    reason,
-    affected_count,
-  )
-  .await?;
+  insert_batch_summary_log(tx.as_mut(), &log_context, affected_count).await?;
 
   tx.commit()
     .await
@@ -214,7 +245,11 @@ fn require_staff(current_user: &CurrentUser) -> Result<(), AppError> {
   if current_user.role == "staff" {
     Ok(())
   } else {
-    Err(AppError::business("forbidden", "仅工作人员可查看或修正参会名单", None))
+    Err(AppError::business(
+      "forbidden",
+      "仅工作人员可查看或修正参会名单",
+      None,
+    ))
   }
 }
 
@@ -228,12 +263,20 @@ async fn require_activity(
 }
 
 fn missing_activity_error() -> AppError {
-  AppError::business("invalid_activity", "活动不存在或已下线", Some("invalid_activity"))
+  AppError::business(
+    "invalid_activity",
+    "活动不存在或已下线",
+    Some("invalid_activity"),
+  )
 }
 
 fn normalize_user_ids(user_ids: &[i64]) -> Result<Vec<i64>, AppError> {
   if user_ids.is_empty() {
-    return Err(AppError::business("invalid_param", "user_ids 不能为空", None));
+    return Err(AppError::business(
+      "invalid_param",
+      "user_ids 不能为空",
+      None,
+    ));
   }
   let mut normalized = user_ids
     .iter()
@@ -247,7 +290,11 @@ fn normalize_user_ids(user_ids: &[i64]) -> Result<Vec<i64>, AppError> {
 
 fn validate_patch(checked_in: Option<bool>, checked_out: Option<bool>) -> Result<(), AppError> {
   if checked_in.is_none() && checked_out.is_none() {
-    return Err(AppError::business("invalid_param", "patch 至少要包含一个状态位", None));
+    return Err(AppError::business(
+      "invalid_param",
+      "patch 至少要包含一个状态位",
+      None,
+    ));
   }
   Ok(())
 }
@@ -277,13 +324,8 @@ fn resolve_patch(
 
 async fn insert_staff_log<'e, E>(
   executor: E,
-  current_user: &CurrentUser,
+  context: &StaffLogContext<'_>,
   row: &ManagedAttendanceRow,
-  legacy_activity_id: i64,
-  action_kind: &str,
-  batch_id: &str,
-  server_time_ms: u64,
-  reason: &str,
   check_in: i64,
   check_out: i64,
 ) -> Result<(), AppError>
@@ -297,82 +339,63 @@ where
   } else {
     "reset"
   };
-  let path = if action_kind == "bulk-checkout" {
-    "/api/web/staff/bulk-checkout"
-  } else {
-    "/api/web/staff/attendance-adjustment"
-  };
   let content = json!({
-    "activity_id": format_activity_id(legacy_activity_id),
-    "legacy_activity_numeric_id": legacy_activity_id,
+    "activity_id": format_activity_id(context.legacy_activity_id),
+    "legacy_activity_numeric_id": context.legacy_activity_id,
     "student_id": row.student_id,
     "user_id": row.user_id,
     "action_type": action_type,
-    "server_time_ms": server_time_ms,
-    "record_id": format!("{}_{}_{}", batch_id, row.user_id, server_time_ms),
-    "operator_student_id": current_user.student_id,
-    "reason": reason.trim(),
+    "server_time_ms": context.server_time_ms,
+    "record_id": format!("{}_{}_{}", context.batch_id, row.user_id, context.server_time_ms),
+    "operator_student_id": context.current_user.student_id,
+    "reason": context.reason.trim(),
     "check_in": check_in,
     "check_out": check_out,
     "source": "wxapp-checkin-rust"
   });
-  sqlx::query(
-    r#"
-      INSERT INTO suda_log(username, name, path, content, ip, address)
-      VALUES (?, ?, ?, ?, ?, ?)
-    "#,
+  log_repo::insert_log(
+    executor,
+    &row.student_id,
+    &row.name,
+    context.action_kind.path(),
+    &content,
+    "",
+    "",
   )
-  .bind(&row.student_id)
-  .bind(&row.name)
-  .bind(path)
-  .bind(content.to_string())
-  .bind("")
-  .bind("")
-  .execute(executor)
   .await
-  .map_err(|error| AppError::internal(format!("写入 staff 审计日志失败：{error}")))?;
-  Ok(())
+  .map_err(|error| AppError::internal(format!("写入 staff 审计日志失败：{error}")))
 }
 
 async fn insert_batch_summary_log<'e, E>(
   executor: E,
-  current_user: &CurrentUser,
-  legacy_activity_id: i64,
-  batch_id: &str,
-  server_time_ms: u64,
-  reason: &str,
+  context: &StaffLogContext<'_>,
   affected_count: i64,
 ) -> Result<(), AppError>
 where
   E: Executor<'e, Database = sqlx::MySql>,
 {
   let content = json!({
-    "activity_id": format_activity_id(legacy_activity_id),
-    "legacy_activity_numeric_id": legacy_activity_id,
+    "activity_id": format_activity_id(context.legacy_activity_id),
+    "legacy_activity_numeric_id": context.legacy_activity_id,
     "action_type": "bulk-checkout",
-    "server_time_ms": server_time_ms,
-    "record_id": batch_id,
-    "operator_student_id": current_user.student_id,
-    "reason": reason.trim(),
+    "server_time_ms": context.server_time_ms,
+    "record_id": context.batch_id,
+    "operator_student_id": context.current_user.student_id,
+    "reason": context.reason.trim(),
     "affected_count": affected_count,
     "source": "wxapp-checkin-rust"
   });
-  sqlx::query(
-    r#"
-      INSERT INTO suda_log(username, name, path, content, ip, address)
-      VALUES (?, ?, ?, ?, ?, ?)
-    "#,
+  log_repo::insert_log(
+    executor,
+    &context.current_user.student_id,
+    &context.current_user.name,
+    context.action_kind.path(),
+    &content,
+    "",
+    "",
   )
-  .bind(&current_user.student_id)
-  .bind(&current_user.name)
-  .bind("/api/web/staff/bulk-checkout")
-  .bind(content.to_string())
-  .bind("")
-  .bind("")
-  .execute(executor)
   .await
-  .map_err(|error| AppError::internal(format!("写入批量签退汇总日志失败：{error}")))?;
-  Ok(())
+  .map_err(|error| AppError::internal(format!("写入批量签退汇总日志失败：{error}")))
 }
 
 fn now_millis() -> Result<u64, AppError> {
@@ -384,7 +407,7 @@ fn now_millis() -> Result<u64, AppError> {
 
 #[cfg(test)]
 mod tests {
-  use super::{resolve_patch, validate_patch, missing_activity_error};
+  use super::{missing_activity_error, resolve_patch, validate_patch};
   use crate::db::attendance_repo::ManagedAttendanceRow;
 
   #[test]
@@ -399,7 +422,10 @@ mod tests {
       check_out_flag: 1,
     };
 
-    assert_eq!(resolve_patch(&row, Some(false), Some(false)).expect("patch"), (0, 0));
+    assert_eq!(
+      resolve_patch(&row, Some(false), Some(false)).expect("patch"),
+      (0, 0)
+    );
   }
 
   #[test]

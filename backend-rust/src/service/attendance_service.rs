@@ -3,6 +3,7 @@ use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::db::activity_repo;
 use crate::db::attendance_repo;
+use crate::db::log_repo;
 use crate::domain::{WebRole, format_activity_id};
 use crate::error::AppError;
 use crate::service::activity_service;
@@ -18,24 +19,36 @@ pub async fn consume_code(
   code: &str,
 ) -> Result<CodeConsumeResponse, AppError> {
   if role_from_user(current_user) != WebRole::Normal {
-    return Err(AppError::business("forbidden", "仅普通用户可签到/签退", None));
+    return Err(AppError::business(
+      "forbidden",
+      "仅普通用户可签到/签退",
+      None,
+    ));
   }
 
   let legacy_activity_id = crate::domain::parse_activity_id(activity_id)?;
   let activity = activity_repo::find_activity_by_id(state.pool(), legacy_activity_id)
     .await?
-    .ok_or_else(|| AppError::business("invalid_activity", "活动不存在或已下线", Some("invalid_activity")))?;
-  activity_service::is_within_issue_window(&activity, SystemTime::now()).and_then(|within_window| {
-    if within_window {
-      Ok(true)
-    } else {
-      Err(AppError::business(
-        "forbidden",
-        "仅可在活动开始前30分钟到结束后30分钟内生成动态码",
-        Some("outside_activity_time_window"),
-      ))
-    }
-  })?;
+    .ok_or_else(|| {
+      AppError::business(
+        "invalid_activity",
+        "活动不存在或已下线",
+        Some("invalid_activity"),
+      )
+    })?;
+  activity_service::is_within_issue_window(&activity, SystemTime::now()).and_then(
+    |within_window| {
+      if within_window {
+        Ok(true)
+      } else {
+        Err(AppError::business(
+          "forbidden",
+          "仅可在活动开始前30分钟到结束后30分钟内生成动态码",
+          Some("outside_activity_time_window"),
+        ))
+      }
+    },
+  )?;
 
   let server_time_ms = now_millis()?;
   let slot = match activity_service::validate_dynamic_code(
@@ -48,11 +61,9 @@ pub async fn consume_code(
     Ok(slot) => slot,
     Err(error) => {
       if matches!(error.error_code(), Some("invalid_code") | Some("expired")) {
-        state.invalid_code_limiter().record_invalid_attempt_or_throw(
-          current_user.user_id,
-          activity_id,
-          server_time_ms,
-        )?;
+        state
+          .invalid_code_limiter()
+          .record_invalid_attempt_or_throw(current_user.user_id, activity_id, server_time_ms)?;
       }
       return Err(error);
     }
@@ -81,7 +92,11 @@ pub async fn consume_code(
   .await?
   .ok_or_else(|| AppError::business("forbidden", "你未报名该活动，无法签到/签退", None))?;
   if !activity_service::is_registered_apply_state(attendance.state) {
-    return Err(AppError::business("forbidden", "你未报名该活动，无法签到/签退", None));
+    return Err(AppError::business(
+      "forbidden",
+      "你未报名该活动，无法签到/签退",
+      None,
+    ));
   }
 
   let (check_in, check_out) = next_flags(&attendance, action_type)?;
@@ -127,9 +142,17 @@ fn next_flags(
         return Ok((1, 0));
       }
       if attendance.check_in_flag == 1 && attendance.check_out_flag == 0 {
-        return Err(AppError::business("duplicate", "你已签到，请勿重复提交", None));
+        return Err(AppError::business(
+          "duplicate",
+          "你已签到，请勿重复提交",
+          None,
+        ));
       }
-      Err(AppError::business("forbidden", "当前状态不允许再次签到", None))
+      Err(AppError::business(
+        "forbidden",
+        "当前状态不允许再次签到",
+        None,
+      ))
     }
     "checkout" => {
       if attendance.check_in_flag == 0 {
@@ -138,7 +161,11 @@ fn next_flags(
       if attendance.check_in_flag == 1 && attendance.check_out_flag == 0 {
         return Ok((1, 1));
       }
-      Err(AppError::business("duplicate", "你已签退，请勿重复提交", None))
+      Err(AppError::business(
+        "duplicate",
+        "你已签退，请勿重复提交",
+        None,
+      ))
     }
     _ => Err(AppError::business(
       "invalid_param",
@@ -174,23 +201,16 @@ where
     "record_id": record_id,
     "source": "wxapp-checkin-rust"
   });
-
-  sqlx::query(
-    r#"
-      INSERT INTO suda_log(username, name, path, content, ip, address)
-      VALUES (?, ?, ?, ?, ?, ?)
-    "#,
+  log_repo::insert_log(
+    executor,
+    &current_user.student_id,
+    &current_user.name,
+    path,
+    &content,
+    "",
+    "",
   )
-  .bind(&current_user.student_id)
-  .bind(&current_user.name)
-  .bind(path)
-  .bind(content.to_string())
-  .bind("")
-  .bind("")
-  .execute(executor)
   .await
-  .map_err(|error| AppError::internal(format!("写入 suda_log 失败：{error}")))?;
-  Ok(())
 }
 
 fn role_from_user(current_user: &CurrentUser) -> WebRole {

@@ -35,5 +35,5 @@ cd wxapp-checkin
 
 ```bash
 curl http://127.0.0.1:9989/actuator/health
-cd backend-rust && cargo test && cargo build --release
+cd backend-rust && cargo fmt --all -- --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test && cargo build --release
 ```

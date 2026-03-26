@@ -48,9 +48,10 @@ where
   T: std::str::FromStr,
 {
   match env::var(key) {
-    Ok(raw) if !raw.trim().is_empty() => raw.trim().parse::<T>().map_err(|_| {
-      AppError::invalid_config(format!("环境变量 {key} 格式不合法"))
-    }),
+    Ok(raw) if !raw.trim().is_empty() => raw
+      .trim()
+      .parse::<T>()
+      .map_err(|_| AppError::invalid_config(format!("环境变量 {key} 格式不合法"))),
     Ok(_) | Err(_) => Ok(default),
   }
 }
@@ -72,7 +73,10 @@ mod tests {
     // Rust 2024 把环境变量写操作标成 unsafe；
     // 这里已经用全局互斥锁串行化测试，避免并发读写同一进程环境带来的未定义行为。
     unsafe {
-      env::set_var("DATABASE_URL", "mysql://root:root@127.0.0.1:3306/suda_union");
+      env::set_var(
+        "DATABASE_URL",
+        "mysql://root:root@127.0.0.1:3306/suda_union",
+      );
       env::set_var("QR_SIGNING_KEY", "test-secret");
       env::remove_var("SERVER_PORT");
       env::remove_var("SESSION_TTL_SECONDS");

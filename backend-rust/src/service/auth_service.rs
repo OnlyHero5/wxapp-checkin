@@ -18,12 +18,22 @@ pub async fn login(
   let normalized_student_id = normalize(student_id);
   let normalized_password = normalize(password);
   if normalized_student_id.is_empty() || normalized_password.is_empty() {
-    return Err(AppError::business("invalid_param", "student_id 和 password 不能为空", None));
+    return Err(AppError::business(
+      "invalid_param",
+      "student_id 和 password 不能为空",
+      None,
+    ));
   }
 
   let user = user_repo::find_user_by_student_id(state.pool(), &normalized_student_id)
     .await?
-    .ok_or_else(|| AppError::business("forbidden", "学号不存在，请确认后重试", Some("identity_not_found")))?;
+    .ok_or_else(|| {
+      AppError::business(
+        "forbidden",
+        "学号不存在，请确认后重试",
+        Some("identity_not_found"),
+      )
+    })?;
 
   verify_password(user.password.as_deref(), &normalized_password)?;
   let role = role_from_legacy(user.role);
@@ -32,9 +42,10 @@ pub async fn login(
     .map(str::to_string)
     .collect::<Vec<_>>();
   let issued_at = SystemTime::now();
-  let session_token = state
-    .session_token_signer()
-    .issue(user.id, &user.username, role.as_str(), issued_at)?;
+  let session_token =
+    state
+      .session_token_signer()
+      .issue(user.id, &user.username, role.as_str(), issued_at)?;
   let issued_at_ms = issued_at
     .duration_since(UNIX_EPOCH)
     .map(|duration| duration.as_millis() as u64)
@@ -81,12 +92,20 @@ pub fn build_current_user(
 fn verify_password(password_hash: Option<&str>, password: &str) -> Result<(), AppError> {
   let normalized_hash = password_hash.map(str::trim).unwrap_or("");
   if normalized_hash.is_empty() {
-    return Err(AppError::business("forbidden", "密码错误", Some("invalid_password")));
+    return Err(AppError::business(
+      "forbidden",
+      "密码错误",
+      Some("invalid_password"),
+    ));
   }
   let matches = bcrypt::verify(password, normalized_hash)
     .map_err(|_| AppError::business("forbidden", "密码错误", Some("invalid_password")))?;
   if !matches {
-    return Err(AppError::business("forbidden", "密码错误", Some("invalid_password")));
+    return Err(AppError::business(
+      "forbidden",
+      "密码错误",
+      Some("invalid_password"),
+    ));
   }
   Ok(())
 }
@@ -111,6 +130,10 @@ mod tests {
     );
 
     assert_eq!(current_user.role, "staff");
-    assert!(current_user.permissions.contains(&"activity:manage".to_string()));
+    assert!(
+      current_user
+        .permissions
+        .contains(&"activity:manage".to_string())
+    );
   }
 }

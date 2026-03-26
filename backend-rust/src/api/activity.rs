@@ -1,13 +1,13 @@
 use crate::api::auth_extractor::require_current_user;
 use crate::app_state::AppState;
 use crate::error::AppError;
-use crate::service::attendance_service;
 use crate::service::activity_service;
+use crate::service::attendance_service;
 use axum::Json;
+use axum::Router;
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::routing::{get, post};
-use axum::Router;
 use serde::{Deserialize, Serialize};
 
 pub fn router() -> Router<AppState> {
@@ -132,7 +132,8 @@ async fn list_activities(
   Query(query): Query<ActivityListQuery>,
 ) -> Result<Json<ActivityListResponse>, AppError> {
   let current_user = require_current_user(&headers, &state).await?;
-  let response = activity_service::list_activities(&state, &current_user, query.page, query.page_size).await?;
+  let response =
+    activity_service::list_activities(&state, &current_user, query.page, query.page_size).await?;
   Ok(Json(response))
 }
 
@@ -153,13 +154,9 @@ async fn get_code_session(
   Query(query): Query<CodeSessionQuery>,
 ) -> Result<Json<CodeSessionResponse>, AppError> {
   let current_user = require_current_user(&headers, &state).await?;
-  let response = activity_service::issue_code_session(
-    &state,
-    &current_user,
-    &activity_id,
-    &query.action_type,
-  )
-  .await?;
+  let response =
+    activity_service::issue_code_session(&state, &current_user, &activity_id, &query.action_type)
+      .await?;
   Ok(Json(response))
 }
 

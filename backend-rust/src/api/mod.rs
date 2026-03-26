@@ -1,8 +1,8 @@
+pub mod activity;
 pub mod auth;
+pub mod auth_extractor;
 pub mod error_response;
 pub mod health;
-pub mod auth_extractor;
-pub mod activity;
 pub mod staff;
 
 use crate::app_state::AppState;

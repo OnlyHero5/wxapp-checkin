@@ -1,10 +1,13 @@
-use crate::api::activity::{ActivityDetailResponse, ActivityListResponse, ActivitySummaryItem, CodeSessionResponse};
+use crate::api::activity::{
+  ActivityDetailResponse, ActivityListResponse, ActivitySummaryItem, CodeSessionResponse,
+};
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::db::activity_repo::{self, ActivityRow, UserActivityRow};
 use crate::db::log_repo;
 use crate::domain::{
-  WebRole, activity_type_from_legacy, format_activity_id, parse_activity_id, progress_status_from_legacy,
+  WebRole, activity_type_from_legacy, format_activity_id, parse_activity_id,
+  progress_status_from_legacy,
 };
 use crate::error::AppError;
 use hmac::{Hmac, Mac};
@@ -33,7 +36,8 @@ pub async fn list_activities(
   let mut rows = match role {
     WebRole::Staff => activity_repo::list_staff_activities(state.pool(), limit, offset).await?,
     WebRole::Normal => {
-      activity_repo::list_normal_activities(state.pool(), &current_user.student_id, limit, offset).await?
+      activity_repo::list_normal_activities(state.pool(), &current_user.student_id, limit, offset)
+        .await?
     }
   };
 
@@ -72,15 +76,24 @@ pub async fn get_activity_detail(
   let legacy_activity_id = parse_activity_id(activity_id)?;
   let activity = activity_repo::find_activity_by_id(state.pool(), legacy_activity_id)
     .await?
-    .ok_or_else(|| AppError::business("invalid_activity", "活动不存在或已下线", Some("invalid_activity")))?;
-  let user_activity = activity_repo::find_user_activity(
-    state.pool(),
-    legacy_activity_id,
-    &current_user.student_id,
-  )
-  .await?;
-  if role_from_user(current_user) == WebRole::Normal && !is_visible_for_normal(user_activity.as_ref()) {
-    return Err(AppError::business("forbidden", "你无权查看该活动详情", None));
+    .ok_or_else(|| {
+      AppError::business(
+        "invalid_activity",
+        "活动不存在或已下线",
+        Some("invalid_activity"),
+      )
+    })?;
+  let user_activity =
+    activity_repo::find_user_activity(state.pool(), legacy_activity_id, &current_user.student_id)
+      .await?;
+  if role_from_user(current_user) == WebRole::Normal
+    && !is_visible_for_normal(user_activity.as_ref())
+  {
+    return Err(AppError::business(
+      "forbidden",
+      "你无权查看该活动详情",
+      None,
+    ));
   }
 
   let within_window = is_within_issue_window(&activity, SystemTime::now())?;
@@ -91,7 +104,8 @@ pub async fn get_activity_detail(
   let my_checked_in = user_activity.as_ref().map(is_checked_in).unwrap_or(false);
   let my_checked_out = user_activity.as_ref().map(is_checked_out).unwrap_or(false);
   let activity_not_completed = progress_status_from_legacy(activity.legacy_state) != "completed";
-  let can_checkin = within_window && activity_not_completed && my_registered && !my_checked_in && !my_checked_out;
+  let can_checkin =
+    within_window && activity_not_completed && my_registered && !my_checked_in && !my_checked_out;
   let can_checkout = within_window && activity_not_completed && my_checked_in && !my_checked_out;
   let my_checkin_time = if my_checked_in || my_checked_out {
     log_repo::find_latest_action_time(
@@ -154,13 +168,23 @@ pub async fn issue_code_session(
   action_type: &str,
 ) -> Result<CodeSessionResponse, AppError> {
   if role_from_user(current_user) != WebRole::Staff {
-    return Err(AppError::business("forbidden", "仅工作人员可获取动态码", None));
+    return Err(AppError::business(
+      "forbidden",
+      "仅工作人员可获取动态码",
+      None,
+    ));
   }
   let normalized_action_type = normalize_action_type(action_type)?;
   let legacy_activity_id = parse_activity_id(activity_id)?;
   let activity = activity_repo::find_activity_by_id(state.pool(), legacy_activity_id)
     .await?
-    .ok_or_else(|| AppError::business("invalid_activity", "活动不存在或已下线", Some("invalid_activity")))?;
+    .ok_or_else(|| {
+      AppError::business(
+        "invalid_activity",
+        "活动不存在或已下线",
+        Some("invalid_activity"),
+      )
+    })?;
   ensure_activity_time_valid(&activity)?;
   ensure_activity_action_allowed(&activity, normalized_action_type)?;
   ensure_within_issue_window(&activity, SystemTime::now())?;
@@ -202,17 +226,31 @@ pub fn validate_dynamic_code(
   let normalized_action_type = normalize_action_type(action_type)?;
   let normalized_code = code.trim();
   if normalized_code.is_empty() {
-    return Err(AppError::business("invalid_code", "动态码错误，请重新确认", None));
+    return Err(AppError::business(
+      "invalid_code",
+      "动态码错误，请重新确认",
+      None,
+    ));
   }
 
   let slot_window_ms = ROTATE_SECONDS * 1000;
   let current_slot = now_ms / slot_window_ms;
-  let current_code = generate_code(signing_key, activity_id, normalized_action_type, current_slot)?;
+  let current_code = generate_code(
+    signing_key,
+    activity_id,
+    normalized_action_type,
+    current_slot,
+  )?;
   if current_code == normalized_code {
     return Ok(current_slot);
   }
   if current_slot > 0 {
-    let previous_code = generate_code(signing_key, activity_id, normalized_action_type, current_slot - 1)?;
+    let previous_code = generate_code(
+      signing_key,
+      activity_id,
+      normalized_action_type,
+      current_slot - 1,
+    )?;
     if previous_code == normalized_code {
       return Err(AppError::business(
         "expired",
@@ -222,7 +260,11 @@ pub fn validate_dynamic_code(
     }
   }
 
-  Err(AppError::business("invalid_code", "动态码错误，请重新确认", Some("invalid_code")))
+  Err(AppError::business(
+    "invalid_code",
+    "动态码错误，请重新确认",
+    Some("invalid_code"),
+  ))
 }
 
 pub fn is_registered_apply_state(value: i32) -> bool {
@@ -248,7 +290,8 @@ pub fn is_within_issue_window(activity: &ActivityRow, now: SystemTime) -> Result
 }
 
 fn ensure_activity_time_valid(activity: &ActivityRow) -> Result<(u64, u64), AppError> {
-  let start_ms = naive_millis(activity.activity_stime).map_err(|_| invalid_activity_time_error())?;
+  let start_ms =
+    naive_millis(activity.activity_stime).map_err(|_| invalid_activity_time_error())?;
   let end_ms = naive_millis(activity.activity_etime).map_err(|_| invalid_activity_time_error())?;
   if end_ms < start_ms {
     return Err(invalid_activity_time_error());
@@ -267,12 +310,23 @@ fn ensure_within_issue_window(activity: &ActivityRow, now: SystemTime) -> Result
   Ok(())
 }
 
-fn ensure_activity_action_allowed(activity: &ActivityRow, action_type: &str) -> Result<(), AppError> {
+fn ensure_activity_action_allowed(
+  activity: &ActivityRow,
+  action_type: &str,
+) -> Result<(), AppError> {
   if progress_status_from_legacy(activity.legacy_state) == "completed" {
-    return Err(AppError::business("forbidden", "活动已结束，无法生成动态码", None));
+    return Err(AppError::business(
+      "forbidden",
+      "活动已结束，无法生成动态码",
+      None,
+    ));
   }
   if action_type != "checkin" && action_type != "checkout" {
-    return Err(AppError::business("invalid_param", "action_type 仅支持 checkin/checkout", None));
+    return Err(AppError::business(
+      "invalid_param",
+      "action_type 仅支持 checkin/checkout",
+      None,
+    ));
   }
   Ok(())
 }
@@ -285,7 +339,10 @@ fn invalid_activity_time_error() -> AppError {
   )
 }
 
-fn to_summary(activity: &ActivityRow, user_activity: Option<&UserActivityRow>) -> ActivitySummaryItem {
+fn to_summary(
+  activity: &ActivityRow,
+  user_activity: Option<&UserActivityRow>,
+) -> ActivitySummaryItem {
   ActivitySummaryItem {
     activity_id: format_activity_id(activity.legacy_activity_id),
     activity_title: activity.activity_title.clone(),
@@ -299,7 +356,9 @@ fn to_summary(activity: &ActivityRow, user_activity: Option<&UserActivityRow>) -
     registered_count: activity.registered_count,
     checkin_count: activity.checkin_count,
     checkout_count: activity.checkout_count,
-    my_registered: user_activity.map(|row| is_registered_apply_state(row.state)).unwrap_or(false),
+    my_registered: user_activity
+      .map(|row| is_registered_apply_state(row.state))
+      .unwrap_or(false),
     my_checked_in: user_activity.map(is_checked_in).unwrap_or(false),
     my_checked_out: user_activity.map(is_checked_out).unwrap_or(false),
   }
@@ -360,7 +419,9 @@ fn generate_code(
     .map_err(|error| AppError::internal(format!("初始化动态码签名器失败：{error}")))?;
   mac.update(format!("web-code:v1|{activity_id}|{action_type}|{slot}").as_bytes());
   let digest = mac.finalize().into_bytes();
-  let value = i32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]).wrapping_abs() as u32 % 1_000_000;
+  let value = i32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]).wrapping_abs()
+    as u32
+    % 1_000_000;
   Ok(format!("{value:06}"))
 }
 
@@ -383,15 +444,12 @@ fn naive_millis(value: chrono::NaiveDateTime) -> Result<u64, AppError> {
 #[cfg(test)]
 mod tests {
   use super::{
-    format_display_time, generate_code, is_registered_apply_state, validate_dynamic_code,
-    ensure_activity_time_valid,
+    ensure_activity_time_valid, format_display_time, generate_code, is_registered_apply_state,
+    validate_dynamic_code,
   };
   use crate::db::activity_repo::ActivityRow;
 
-  fn sample_activity_row(
-    start: chrono::NaiveDateTime,
-    end: chrono::NaiveDateTime,
-  ) -> ActivityRow {
+  fn sample_activity_row(start: chrono::NaiveDateTime, end: chrono::NaiveDateTime) -> ActivityRow {
     ActivityRow {
       legacy_activity_id: 101,
       activity_title: "测试活动".to_string(),
@@ -416,7 +474,8 @@ mod tests {
 
   #[test]
   fn previous_slot_code_should_be_marked_expired() {
-    let previous_code = generate_code("test-secret", "legacy_act_101", "checkin", 11).expect("code");
+    let previous_code =
+      generate_code("test-secret", "legacy_act_101", "checkin", 11).expect("code");
     let error = validate_dynamic_code(
       "test-secret",
       "legacy_act_101",

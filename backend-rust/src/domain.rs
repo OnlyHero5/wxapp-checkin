@@ -49,28 +49,28 @@ pub fn format_activity_id(legacy_activity_id: i64) -> String {
 
 pub fn parse_activity_id(activity_id: &str) -> Result<i64, AppError> {
   let raw = activity_id.trim();
-  let suffix = raw
-    .strip_prefix("legacy_act_")
-    .ok_or_else(|| AppError::business("invalid_param", "activity_id 格式非法", Some("invalid_activity")))?;
-  suffix
-    .parse::<i64>()
-    .map_err(|_| AppError::business("invalid_param", "activity_id 格式非法", Some("invalid_activity")))
+  let suffix = raw.strip_prefix("legacy_act_").ok_or_else(|| {
+    AppError::business(
+      "invalid_param",
+      "activity_id 格式非法",
+      Some("invalid_activity"),
+    )
+  })?;
+  suffix.parse::<i64>().map_err(|_| {
+    AppError::business(
+      "invalid_param",
+      "activity_id 格式非法",
+      Some("invalid_activity"),
+    )
+  })
 }
 
 pub fn activity_type_from_legacy(value: i32) -> &'static str {
-  if value == 1 {
-    "讲座"
-  } else {
-    "活动"
-  }
+  if value == 1 { "讲座" } else { "活动" }
 }
 
 pub fn progress_status_from_legacy(value: i32) -> &'static str {
-  if value >= 4 {
-    "completed"
-  } else {
-    "ongoing"
-  }
+  if value >= 4 { "completed" } else { "ongoing" }
 }
 
 #[cfg(test)]

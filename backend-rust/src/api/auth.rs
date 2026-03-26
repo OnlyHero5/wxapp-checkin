@@ -2,14 +2,13 @@ use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::auth_service;
 use axum::Json;
+use axum::Router;
 use axum::extract::State;
 use axum::routing::post;
-use axum::Router;
 use serde::{Deserialize, Serialize};
 
 pub fn router() -> Router<AppState> {
-  Router::new()
-    .route("/login", post(login))
+  Router::new().route("/login", post(login))
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -9,8 +9,8 @@ use wxapp_checkin_backend_rust::error::AppError;
 
 #[tokio::test]
 async fn api_error_response_should_keep_contract_fields() {
-  let response = AppError::business("forbidden", "权限不足", Some("permission_denied"))
-    .into_response();
+  let response =
+    AppError::business("forbidden", "权限不足", Some("permission_denied")).into_response();
 
   assert_eq!(response.status(), StatusCode::OK);
 

@@ -26,7 +26,11 @@ impl ReplayGuard {
       .map_err(|_| AppError::internal("replay guard 已损坏"))?;
     entries.retain(|_, expires_at| *expires_at > now_ms);
     if entries.get(key).copied().unwrap_or(0) > now_ms {
-      return Err(AppError::business("duplicate", "当前时段已提交，请勿重复操作", None));
+      return Err(AppError::business(
+        "duplicate",
+        "当前时段已提交，请勿重复操作",
+        None,
+      ));
     }
     entries.insert(key.to_string(), now_ms + self.ttl.as_millis() as u64);
     Ok(())

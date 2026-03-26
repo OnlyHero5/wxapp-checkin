@@ -151,7 +151,9 @@ pub async fn list_by_user_ids_for_update(
     return Ok(Vec::new());
   }
 
-  let placeholders = std::iter::repeat_n("?", user_ids.len()).collect::<Vec<_>>().join(", ");
+  let placeholders = std::iter::repeat_n("?", user_ids.len())
+    .collect::<Vec<_>>()
+    .join(", ");
   let sql = format!(
     r#"
       SELECT
