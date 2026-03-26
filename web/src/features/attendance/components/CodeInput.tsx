@@ -55,7 +55,7 @@ export function CodeInput({
               maxLength={6}
               onChange={(event) => onChange(normalizeCode(event.target.value))}
               pattern="[0-9]*"
-              placeholder="请输入 6 位数字"
+              placeholder="输入6位码"
               value={normalizedValue}
             />
           </div>

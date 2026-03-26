@@ -155,6 +155,9 @@ select {
   border-radius: var(--app-radius-xl);
   background: var(--app-bg-elevated);
   box-shadow: var(--app-shadow-soft);
+  /* 玻璃滤镜和高光伪元素都挂在卡片内部；
+   * 这里显式裁剪，避免 Chromium 截图时出现半透明层向右外溢。 */
+  overflow: hidden;
   backdrop-filter: var(--app-backdrop-blur);
   -webkit-backdrop-filter: var(--app-backdrop-blur);
 }
@@ -393,6 +396,9 @@ select {
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 252, 0.98));
   box-shadow: var(--app-shadow-soft);
+  /* 摘要卡同样会叠加一层高光伪元素，
+   * 裁剪后可避免在窄屏和截图环境里出现边界拖影。 */
+  overflow: hidden;
 }
 
 /* ActivityMetaPanel 在 Task 2 只先收口普通列表和 staff 列表两种语境，
@@ -626,6 +632,14 @@ select {
   font-size: 1.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* 占位文案的职责只是提示用户“这里输入六码”，
+ * 不需要复用真实验证码的大字距，否则在旗舰窄屏宽度下也会被截断。 */
+.code-input::placeholder {
+  letter-spacing: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .code-input-shell {
@@ -968,6 +982,9 @@ select {
   border-radius: 26px;
   background: rgba(255, 255, 255, 0.76);
   box-shadow: 0 14px 36px rgba(61, 77, 104, 0.12);
+  /* 动态码玻璃卡会同时使用 backdrop-filter 和 ::before 高光，
+   * 不裁剪时截图里容易出现右侧透明拖尾。 */
+  overflow: hidden;
   backdrop-filter: var(--app-backdrop-blur);
   -webkit-backdrop-filter: var(--app-backdrop-blur);
   text-align: center;
