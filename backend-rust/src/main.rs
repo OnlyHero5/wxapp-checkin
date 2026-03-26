@@ -6,11 +6,13 @@ use tracing::{info, warn};
 use wxapp_checkin_backend_rust::api;
 use wxapp_checkin_backend_rust::app_state::AppState;
 use wxapp_checkin_backend_rust::config::Config;
+use wxapp_checkin_backend_rust::db;
 use wxapp_checkin_backend_rust::error::AppError;
+use wxapp_checkin_backend_rust::terminal_banner;
 
 fn main() -> ExitCode {
   if let Err(error) = bootstrap() {
-    eprintln!("{error}");
+    terminal_banner::print_error("启动失败", error.to_string());
     return ExitCode::from(1);
   }
 
@@ -35,10 +37,20 @@ fn bootstrap() -> Result<(), AppError> {
 async fn run(config: Config) -> Result<(), AppError> {
   let address = config.bind_address();
   let state = AppState::new(config.clone())?;
+  let startup_report = db::run_startup_checks(state.pool()).await?;
+  terminal_banner::print_success(format!(
+    "已成功连上 suda_union 数据库：{}",
+    startup_report.database_name
+  ));
+  terminal_banner::print_success(format!(
+    "已成功读取所有需要的表：{}",
+    startup_report.verified_tables.join(", ")
+  ));
   let app = api::build_router(state);
   let listener = TcpListener::bind(address)
     .await
     .map_err(|error| AppError::internal(format!("监听地址 {address} 失败：{error}")))?;
+  terminal_banner::print_success(format!("HTTP 服务监听成功：{address}"));
 
   info!(
     server_port = config.server_port,

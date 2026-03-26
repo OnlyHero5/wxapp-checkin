@@ -7,6 +7,7 @@ web/dist/
 
 # ===== Local-only env files (do not commit) =====
 web/.env*.local
+.env.docker
 
 # ===== Runtime artifacts (logs/pids) =====
 local_dev/runtime/

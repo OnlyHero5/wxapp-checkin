@@ -13,7 +13,10 @@
 - `wxcheckin_ext`
 - `wx_*` 逻辑表
 - `/api/web/auth/change-password`
-- Docker Compose 作为默认发布入口
+
+当前推荐发布入口：
+
+- 云服务器 Docker 一键部署：`./scripts/docker-prod.sh`
 
 ## 目录
 
@@ -107,6 +110,32 @@ cd ..
 3. `backend-rust/.env.prod`
 
 更多部署细节见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+
+## 云服务器 Docker 一键部署
+
+先准备 Docker 配置文件：
+
+```bash
+cd wxapp-checkin
+cp .env.docker.example .env.docker
+```
+
+然后在 `.env.docker` 里填写 `suda-union` 的账号、密码和签名密钥，再执行：
+
+```bash
+./scripts/docker-prod.sh
+```
+
+启动后可直接查看容器终端日志：
+
+```bash
+docker logs -f wxapp-checkin
+```
+
+预期会看到：
+
+- 紫色 `[WXAPP-CHECKIN-OK]`：已连上 `suda_union`、已验证关键表、HTTP 监听成功
+- 蓝色 `[WXAPP-CHECKIN-ERROR]`：会明确打印失败阶段和报错原因
 
 ## 正式文档
 

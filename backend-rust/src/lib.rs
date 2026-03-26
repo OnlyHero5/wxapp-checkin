@@ -7,4 +7,5 @@ pub mod error;
 pub mod rate_limit;
 pub mod replay_guard;
 pub mod service;
+pub mod terminal_banner;
 pub mod token;

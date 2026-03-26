@@ -1,4 +1,5 @@
 use crate::api::error_response::ErrorResponse;
+use crate::terminal_banner;
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -61,6 +62,16 @@ impl Error for AppError {}
 
 impl IntoResponse for AppError {
   fn into_response(self) -> Response {
+    // API 错误继续返回现有 envelope，但同时在容器终端补一条蓝色标识日志。
+    // 这样前端拿到 JSON 的同时，运维也能从 docker logs 直接定位失败原因。
+    let error_code = self.error_code.clone();
+    terminal_banner::print_error(
+      "接口请求失败",
+      match error_code.as_deref() {
+        Some(code) => format!("{code}: {}", self.message),
+        None => self.message.clone(),
+      },
+    );
     let body = ErrorResponse::new(self.status, self.message, self.error_code);
 
     // 这里先继续沿用“HTTP 200 + JSON envelope”的前端兼容模式，

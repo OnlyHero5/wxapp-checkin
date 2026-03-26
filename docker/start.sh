@@ -25,11 +25,16 @@ trap cleanup EXIT INT TERM
 # 容器内固定把 Rust 后端收敛到 8080；
 # 宿主机不会直接映射它，避免绕开 Nginx 的单入口约束。
 export SERVER_PORT="${SERVER_PORT:-8080}"
+mkdir -p "$(dirname "${BACKEND_LOG}")"
+touch "${BACKEND_LOG}"
 
-/usr/local/bin/wxapp-checkin-backend-rust >"${BACKEND_LOG}" 2>&1 &
+# 后端日志既要落到文件，便于容器内排障；
+# 也要直接镜像到 stdout/stderr，便于 `docker logs -f` 第一时间看到紫色/蓝色标识。
+/usr/local/bin/wxapp-checkin-backend-rust \
+  > >(tee -a "${BACKEND_LOG}") \
+  2> >(tee -a "${BACKEND_LOG}" >&2) &
 BACKEND_PID="$!"
 
 # 用前台 nginx 托管静态资源并反代 API；
 # 这样容器主进程稳定，docker stop 也能按预期回收。
 exec nginx -g 'daemon off;'
-

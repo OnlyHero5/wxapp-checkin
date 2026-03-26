@@ -18,7 +18,7 @@
 - 微信小程序 `frontend/`
 - Java `backend/`
 - `wxcheckin_ext`
-- Docker Compose 默认全栈发布
+- 旧版“前后端 + 其它依赖一起塞进同一套 Compose 模板”的全栈发布口径
 
 ## 3. 前置依赖
 
@@ -26,6 +26,11 @@
 - Node.js + npm
 - MySQL 8
 - Nginx（或等价静态资源 / 反向代理）
+
+如果你准备直接走当前推荐的云服务器 Docker 方案，还需要：
+
+- Docker / Docker Compose Plugin
+- 与 `suda-union` 容器互通的 Docker 网络（脚本会自动创建默认网络）
 
 ## 4. 构建
 
@@ -66,7 +71,7 @@ npm run build
 最小示例：
 
 ```bash
-DATABASE_URL=mysql://wxcheckin_app:replace-password@127.0.0.1:3306/suda_union
+DATABASE_URL=mysql://wxcheckin_app:replace-password@suda-union:3499/suda_union
 SERVER_PORT=8080
 SESSION_TTL_SECONDS=7200
 QR_SIGNING_KEY=replace-this-before-prod
@@ -74,7 +79,52 @@ TOKIO_WORKER_THREADS=2
 MYSQL_MAX_CONNECTIONS=4
 ```
 
-## 6. 启动后端
+说明：
+
+- `suda-union:3499` 是当前三容器 / 云服务器口径下的数据库入口
+- 如果数据库账号、密码有变动，优先改 `DATABASE_URL` 或 `.env.docker` 中的拆分字段
+
+## 6. 云服务器 Docker 一键部署
+
+先准备配置文件：
+
+```bash
+cd /path/to/wxapp-checkin
+cp .env.docker.example .env.docker
+```
+
+然后编辑 `.env.docker`，至少填好：
+
+- `SUDA_UNION_DB_HOST`
+- `SUDA_UNION_DB_PORT=3499`
+- `SUDA_UNION_DB_USER`
+- `SUDA_UNION_DB_PASSWORD`
+- `WXAPP_QR_SIGNING_KEY`
+
+最后执行：
+
+```bash
+./scripts/docker-prod.sh
+```
+
+部署脚本会自动完成：
+
+- 校验 `.env.docker` 是否存在且关键字段不为空
+- 若默认 Docker 网络不存在则自动创建
+- `docker compose --env-file .env.docker up -d --build wxapp-checkin`
+
+启动后可用以下命令追日志：
+
+```bash
+docker logs -f wxapp-checkin
+```
+
+预期终端标识：
+
+- 紫色 `[WXAPP-CHECKIN-OK]`：已连上 `suda_union`、已成功读取所有需要的表、HTTP 监听成功
+- 蓝色 `[WXAPP-CHECKIN-ERROR]`：明确指出失败阶段、失败对象和原始错误原因
+
+## 7. 启动后端
 
 ```bash
 cd /path/to/wxapp-checkin
@@ -93,7 +143,7 @@ curl http://127.0.0.1:8080/actuator/health
 {"status":"UP"}
 ```
 
-## 7. 发布前端
+## 8. 发布前端
 
 示例：
 
@@ -102,7 +152,7 @@ sudo mkdir -p /var/www/wxapp-checkin/checkin
 sudo rsync -av --delete /path/to/wxapp-checkin/web/dist/ /var/www/wxapp-checkin/checkin/
 ```
 
-## 8. Nginx 示例
+## 9. Nginx 示例
 
 ```nginx
 server {
@@ -123,7 +173,7 @@ server {
 }
 ```
 
-## 9. 最小验收
+## 10. 最小验收
 
 ```bash
 curl http://127.0.0.1:8080/actuator/health

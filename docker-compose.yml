@@ -12,17 +12,20 @@ services:
         - "host.docker.internal:host-gateway"
     container_name: wxapp-checkin
     environment:
-      # 正式三容器联调口径下，`wxapp-checkin` 只连 Docker 网络内的 `suda-union:3499`。
-      DATABASE_URL: ${WXAPP_DATABASE_URL:-mysql://wxcheckin:wxcheckin_test@suda-union:3499/suda_union}
-      QR_SIGNING_KEY: ${WXAPP_QR_SIGNING_KEY:-dev-checkin-signing-key}
-      SERVER_PORT: 8080
+      # 云服务器与三容器联调都统一走这组 env：
+      # - 账号、密码、主机、端口都从 `.env.docker` 一类配置文件读；
+      # - 默认端口固定收敛到用户确认过的 3499；
+      # - 容器内仍然只把 Rust 后端监听在 8080，外部统一经由 nginx:89。
+      DATABASE_URL: mysql://${SUDA_UNION_DB_USER:-wxcheckin_app}:${SUDA_UNION_DB_PASSWORD:-replace-me}@${SUDA_UNION_DB_HOST:-suda-union}:${SUDA_UNION_DB_PORT:-3499}/${SUDA_UNION_DB_NAME:-suda_union}
+      QR_SIGNING_KEY: ${WXAPP_QR_SIGNING_KEY:-replace-this-before-prod}
+      SERVER_PORT: ${WXAPP_INTERNAL_PORT:-8080}
       SESSION_TTL_SECONDS: ${WXAPP_SESSION_TTL_SECONDS:-7200}
       TOKIO_WORKER_THREADS: ${WXAPP_TOKIO_WORKER_THREADS:-2}
       MYSQL_MAX_CONNECTIONS: ${WXAPP_MYSQL_MAX_CONNECTIONS:-4}
     networks:
       - three-projects-net
     ports:
-      - "89:89"
+      - "${WXAPP_HTTP_PORT:-89}:89"
     restart: unless-stopped
 
 networks:
