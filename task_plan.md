@@ -1,25 +1,29 @@
 # 任务计划
 
 ## 当前目标
-对 `wxapp-checkin/` 当前正式基线（`web/ + backend-rust/ + docs/`）执行一次面向规范的代码与文档审计：
+在 `wxapp-checkin/` 当前正式基线（`web/ + backend-rust/ + docs/`）上完成活动列表搜索需求的设计落地与验证收口：
 
-- 用 `software-architecture` 视角审查前后端代码边界、命名、职责拆分、重复与测试覆盖。
-- 用 `senior-pm` 视角审查 README、需求、接口、部署文档之间的口径一致性、验收可执行性与治理信息完整度。
-- 找出“不符合仓库规范 / 当前正式基线”的问题，并在 `wxapp-checkin/` 内完成小步收口。
-- 验证修改结果，并保证子仓库工作区最终可提交且状态干净。
+- 前端活动列表页增加搜索框，普通用户和工作人员都可用。
+- 搜索必须走服务端分页过滤，不允许通过前端一次性拉全量活动做本地搜索。
+- 搜索范围覆盖标题、地点、描述、数据库活动 ID 和前端活动 ID。
+- 继续保持“能用组件库就用组件库”，禁止手写搜索输入壳、手写空态壳、伪组件化包裹层。
+- 顺手消除活动列表服务中的 N+1 用户状态读取问题。
+- 完成验证并在 `wxapp-checkin/` 子仓库提交，保持工作区干净。
 
 ## 当前阶段
-- [completed] 读取适用 skills，确认本次任务采用“先审计、再设计整改、最后验证收口”的流程。
-- [completed] 检查 `wxapp-checkin/` 当前分支与工作区状态，确认位于 `web` 分支且工作区干净。
-- [completed] 采样前端、后端、文档主入口，整理当前基线问题、风险与整改方案。
-- [completed] 与用户确认整改策略后，按优先级实施代码与文档优化。
-- [in_progress] 运行验证命令、提交 `wxapp-checkin/` 子仓库并清空工作区。
+- [completed] 完成需求澄清、方案对比和设计确认。
+- [completed] 写入并提交搜索设计文档 `docs/superpowers/specs/2026-03-27-activities-search-design.md`。
+- [completed] 生成实现计划并按 TDD 完成前后端实现。
+- [completed] 完成前端搜索组件接入、后端分页搜索和批量状态读取。
+- [in_progress] 完成记录回写并准备子仓库提交。
 
 ## 约束
 - 只允许改动 `wxapp-checkin/`，不得改 `suda_union/` 与 `suda-gs-ams/` 业务代码。
 - 任何产物只能落在 `/home/psx/app/**`。
 - 涉及 `wxapp-checkin/` 源码改动时，优先补充中文维护注释，解释业务意图、状态流转、复用边界与维护注意事项。
+- 前端必须优先使用 `tdesign-mobile-react` 现有能力，不能用手写 DOM/CSS 复刻组件库已有功能，也不能做“表面是组件库、实则核心功能仍靠手写”的伪组件化实现。
 - 最终需要在 `wxapp-checkin/` 子仓库提交，并保证 `git status --porcelain` 为空。
 
-## 历史背景
-- `2026-03-25` 已完成 Rust 后端替换 Java 基线的仓库级切换，本次任务是在该基线之上做规范审计与收口，不回退到旧形态。
+## 当前实现计划
+- 计划文档：`docs/superpowers/plans/2026-03-27-activities-search-implementation.md`
+- 执行模式：inline，当前会话直接实现，不额外分派子代理。

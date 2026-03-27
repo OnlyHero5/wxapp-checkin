@@ -12,11 +12,13 @@ use crate::domain::{
 use crate::error::AppError;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const DEFAULT_PAGE: i64 = 1;
 const DEFAULT_PAGE_SIZE: i64 = 50;
 const MAX_PAGE_SIZE: i64 = 200;
+const MAX_KEYWORD_LENGTH: usize = 100;
 const ROTATE_SECONDS: u64 = 10;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -26,19 +28,33 @@ pub async fn list_activities(
   current_user: &CurrentUser,
   page: Option<i64>,
   page_size: Option<i64>,
+  keyword: Option<String>,
 ) -> Result<ActivityListResponse, AppError> {
   let normalized_page = normalize_page(page);
   let normalized_page_size = normalize_page_size(page_size)?;
+  let normalized_keyword = normalize_keyword(keyword)?;
   let offset = (normalized_page - 1) * normalized_page_size;
   let limit = normalized_page_size + 1;
   let role = role_from_user(current_user);
 
   let mut rows = match role {
-    WebRole::Staff => activity_repo::list_staff_activities(state.pool(), limit, offset).await?,
-    WebRole::Normal => {
-      activity_repo::list_normal_activities(state.pool(), &current_user.student_id, limit, offset)
-        .await?
+    WebRole::Staff => {
+      activity_repo::list_staff_activities(
+        state.pool(),
+        limit,
+        offset,
+        normalized_keyword.as_deref(),
+      )
+      .await?
     }
+    WebRole::Normal => activity_repo::list_normal_activities(
+      state.pool(),
+      &current_user.student_id,
+      limit,
+      offset,
+      normalized_keyword.as_deref(),
+    )
+    .await?,
   };
 
   let has_more = rows.len() as i64 > normalized_page_size;
@@ -46,15 +62,21 @@ pub async fn list_activities(
     rows.truncate(normalized_page_size as usize);
   }
 
+  // 列表页一页通常会有几十条活动，如果继续逐条补查用户状态，
+  // 搜索和分页叠加后会把数据库压力放大成明显的 N+1。
+  // 这里统一先批量查状态，再在内存里按活动 ID 映射，保持接口契约不变。
+  let user_activities = activity_repo::find_user_activities(
+    state.pool(),
+    &current_user.student_id,
+    &collect_activity_ids(&rows),
+  )
+  .await?;
+  let user_activity_map = build_user_activity_map(user_activities);
+
   let mut activities = Vec::with_capacity(rows.len());
   for row in rows {
-    let user_activity = activity_repo::find_user_activity(
-      state.pool(),
-      row.legacy_activity_id,
-      &current_user.student_id,
-    )
-    .await?;
-    activities.push(to_summary(&row, user_activity.as_ref()));
+    let user_activity = user_activity_map.get(&row.legacy_activity_id);
+    activities.push(to_summary(&row, user_activity));
   }
 
   Ok(ActivityListResponse {
@@ -397,6 +419,46 @@ fn normalize_page_size(value: Option<i64>) -> Result<i64, AppError> {
   }
 }
 
+fn normalize_keyword(value: Option<String>) -> Result<Option<String>, AppError> {
+  let Some(raw_keyword) = value else {
+    return Ok(None);
+  };
+  let normalized_keyword = raw_keyword.trim();
+  if normalized_keyword.is_empty() {
+    return Ok(None);
+  }
+  if normalized_keyword.chars().count() > MAX_KEYWORD_LENGTH {
+    return Err(AppError::business(
+      "invalid_param",
+      format!("keyword 过长，最大允许 {MAX_KEYWORD_LENGTH} 个字符"),
+      None,
+    ));
+  }
+  Ok(Some(normalized_keyword.to_string()))
+}
+
+fn collect_activity_ids(rows: &[ActivityRow]) -> Vec<i64> {
+  rows.iter().map(|row| row.legacy_activity_id).collect()
+}
+
+fn build_user_activity_map(
+  rows: Vec<activity_repo::UserActivityWithActivityIdRow>,
+) -> HashMap<i64, UserActivityRow> {
+  let mut map = HashMap::with_capacity(rows.len());
+  for row in rows {
+    map.insert(
+      row.legacy_activity_id,
+      UserActivityRow {
+        username: row.username,
+        state: row.state,
+        check_in_flag: row.check_in_flag,
+        check_out_flag: row.check_out_flag,
+      },
+    );
+  }
+  map
+}
+
 fn normalize_action_type(value: &str) -> Result<&str, AppError> {
   match value.trim() {
     "checkin" => Ok("checkin"),
@@ -444,10 +506,10 @@ fn naive_millis(value: chrono::NaiveDateTime) -> Result<u64, AppError> {
 #[cfg(test)]
 mod tests {
   use super::{
-    ensure_activity_time_valid, format_display_time, generate_code, is_registered_apply_state,
-    validate_dynamic_code,
+    build_user_activity_map, ensure_activity_time_valid, format_display_time, generate_code,
+    is_registered_apply_state, normalize_keyword, validate_dynamic_code,
   };
-  use crate::db::activity_repo::ActivityRow;
+  use crate::db::activity_repo::{ActivityRow, UserActivityWithActivityIdRow};
 
   fn sample_activity_row(start: chrono::NaiveDateTime, end: chrono::NaiveDateTime) -> ActivityRow {
     ActivityRow {
@@ -518,5 +580,49 @@ mod tests {
     let error = ensure_activity_time_valid(&activity).expect_err("should reject invalid time");
     assert_eq!(error.status(), "forbidden");
     assert_eq!(error.error_code(), Some("activity_time_invalid"));
+  }
+
+  #[test]
+  fn normalize_keyword_should_trim_and_collapse_blank() {
+    assert_eq!(normalize_keyword(None).expect("none keyword"), None);
+    assert_eq!(
+      normalize_keyword(Some("  奖学金补录  ".to_string())).expect("trimmed keyword"),
+      Some("奖学金补录".to_string())
+    );
+    assert_eq!(
+      normalize_keyword(Some("   ".to_string())).expect("blank keyword"),
+      None
+    );
+  }
+
+  #[test]
+  fn normalize_keyword_should_reject_too_long_value() {
+    let error = normalize_keyword(Some("a".repeat(101))).expect_err("should reject long keyword");
+    assert_eq!(error.status(), "invalid_param");
+    assert_eq!(error.error_code(), None);
+  }
+
+  #[test]
+  fn build_user_activity_map_should_index_rows_by_activity_id() {
+    let activity_map = build_user_activity_map(vec![
+      UserActivityWithActivityIdRow {
+        legacy_activity_id: 101,
+        username: "2025000001".to_string(),
+        state: 0,
+        check_in_flag: 0,
+        check_out_flag: 0,
+      },
+      UserActivityWithActivityIdRow {
+        legacy_activity_id: 202,
+        username: "2025000001".to_string(),
+        state: 2,
+        check_in_flag: 1,
+        check_out_flag: 1,
+      },
+    ]);
+
+    assert_eq!(activity_map.len(), 2);
+    assert_eq!(activity_map.get(&101).map(|row| row.state), Some(0));
+    assert_eq!(activity_map.get(&202).map(|row| row.check_out_flag), Some(1));
   }
 }

@@ -108,13 +108,19 @@ export function buildActivityRosterPath(activityId: string) {
 }
 
 // 拉取当前用户可见活动列表。
-export function getActivities(input?: { page?: number; page_size?: number }) {
+export function getActivities(input?: { keyword?: string; page?: number; page_size?: number }) {
   const search = new URLSearchParams();
   if (input?.page) {
     search.set("page", `${input.page}`);
   }
   if (input?.page_size) {
     search.set("page_size", `${input.page_size}`);
+  }
+  const normalizedKeyword = `${input?.keyword ?? ""}`.trim();
+  if (normalizedKeyword) {
+    // 搜索参数继续走 query string，和现有分页参数放在同一处组装，
+    // 避免页面层手写 URL 模板导致漏传或编码不一致。
+    search.set("keyword", normalizedKeyword);
   }
   const suffix = search.toString();
   return requestJson<ActivityListResponse>(`/activities${suffix ? `?${suffix}` : ""}`);

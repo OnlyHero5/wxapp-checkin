@@ -1,5 +1,32 @@
 # 发现记录
 
+- `2026-03-27` 活动列表搜索需求已确认：
+  - 普通用户和工作人员都要有搜索框
+  - 搜索范围覆盖标题、地点、描述、数据库活动 ID、前端活动 ID
+  - 搜索必须与服务端分页联动，不能前端全量拉取
+- `2026-03-27` 当前活动列表主链路入口为：
+  - 前端页面：`web/src/pages/activities/ActivitiesPage.tsx`
+  - 前端接口封装：`web/src/features/activities/api.ts`
+  - 后端 API：`backend-rust/src/api/activity.rs`
+  - 后端 service：`backend-rust/src/service/activity_service.rs`
+  - 后端仓储：`backend-rust/src/db/activity_repo.rs`
+- `2026-03-27` 当前活动列表后端虽然已支持分页，但仍存在明显 N+1：
+  - 先查分页活动列表
+  - 再对每条活动逐条调用 `find_user_activity`
+  - 这会在搜索启用后继续放大数据库读取次数
+- `2026-03-27` 当前前端已安装 `tdesign-mobile-react`，且本地类型声明确认导出了 `Search` 组件；本轮搜索框应直接使用组件库 `Search`，不能再手写输入框壳。
+- `2026-03-27` 当前 `ActivitiesPage` 已有组件库化空态/加载态和 Tabs 分组；本轮搜索接入应复用这些出口，不应重新造搜索结果壳层或手写空态组件。
+- `2026-03-27` 已完成的实现收口：
+  - 前端直接接入 `tdesign-mobile-react` 的 `Search` 组件，没有新增手写搜索壳层
+  - `web/src/features/activities/api.ts` 继续统一用 `URLSearchParams` 组装 `keyword/page/page_size`
+  - Rust 后端 `GET /api/web/activities` 新增可选 `keyword`
+  - Rust 仓储新增关键字过滤与 `find_user_activities` 批量读取，替换列表页逐条 `find_user_activity`
+- `2026-03-27` 最新验证结果：
+  - `cd web && npm test`：30 个测试文件、102 个测试全部通过
+  - `cd web && npm run lint`：通过
+  - `cd web && npm run build`：通过
+  - `cd backend-rust && cargo test`：24 个单测、26 个集成测试全部通过
+
 - `2026-03-26` 当前 `wxapp-checkin/` 子仓库位于 `web` 分支，`git status --short --branch` 显示工作区干净，可安全开展一次完整整改并在结束时直接提交。
 - `2026-03-26` 当前正式形态已不是历史 `frontend/ + backend/` 小程序/Java 双端，而是：
   - `web/`：手机浏览器 Web 前端

@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearSession, saveAuthSession, setSession } from "../../shared/session/session-store";
@@ -36,13 +37,46 @@ function renderBusinessNav(pathname: string) {
   );
 }
 
+function createActivity(overrides: Partial<{
+  activity_id: string;
+  activity_title: string;
+  activity_type: string;
+  start_time: string;
+  location: string;
+  progress_status: string;
+  support_checkin: boolean;
+  support_checkout: boolean;
+  my_registered: boolean;
+  my_checked_in: boolean;
+  my_checked_out: boolean;
+  checkin_count: number;
+  checkout_count: number;
+}> = {}) {
+  return {
+    activity_id: "act_default_101",
+    activity_title: "默认活动",
+    activity_type: "活动",
+    start_time: "2026-03-10 09:00:00",
+    location: "独墅湖校区",
+    progress_status: "ongoing",
+    support_checkin: true,
+    support_checkout: true,
+    my_registered: true,
+    my_checked_in: false,
+    my_checked_out: false,
+    checkin_count: 18,
+    checkout_count: 3,
+    ...overrides
+  };
+}
+
 describe("ActivitiesPage", () => {
   beforeEach(() => {
     setSession("sess_activities_123");
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     clearSession();
   });
 
@@ -197,5 +231,116 @@ describe("ActivitiesPage", () => {
     expect(await screen.findByText("正在进行暂无活动。")).toBeInTheDocument();
     expect(screen.getAllByText(/暂无活动/)[0].closest(".t-empty")).toBeInTheDocument();
     expect(screen.getAllByText(/暂无活动/)[1].closest(".t-empty")).toBeInTheDocument();
+  });
+
+  it("submits search with the first page and keeps the keyword while loading more", async () => {
+    const user = userEvent.setup();
+    activitiesApiMocks.getActivities
+      .mockResolvedValueOnce({
+        activities: [createActivity({
+          activity_id: "act_initial_101",
+          activity_title: "默认第一页活动"
+        })],
+        has_more: false,
+        page: 1
+      })
+      .mockResolvedValueOnce({
+        activities: [createActivity({
+          activity_id: "act_search_101",
+          activity_title: "奖学金补录专场"
+        })],
+        has_more: true,
+        page: 1
+      })
+      .mockResolvedValueOnce({
+        activities: [createActivity({
+          activity_id: "act_search_202",
+          activity_title: "奖学金历史补签"
+        })],
+        has_more: false,
+        page: 2
+      });
+
+    renderActivitiesPage();
+
+    expect(await screen.findByText("默认第一页活动")).toBeInTheDocument();
+    expect(activitiesApiMocks.getActivities).toHaveBeenNthCalledWith(1, {
+      page: 1,
+      page_size: 50
+    });
+
+    const searchInput = screen.getByPlaceholderText(/搜索活动/i);
+    await user.type(searchInput, "奖学金");
+    fireEvent.keyDown(searchInput, { code: "Enter", key: "Enter" });
+
+    await waitFor(() => {
+      expect(activitiesApiMocks.getActivities).toHaveBeenNthCalledWith(2, {
+        keyword: "奖学金",
+        page: 1,
+        page_size: 50
+      });
+    });
+    expect(await screen.findByText("奖学金补录专场")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "加载更多" }));
+
+    await waitFor(() => {
+      expect(activitiesApiMocks.getActivities).toHaveBeenNthCalledWith(3, {
+        keyword: "奖学金",
+        page: 2,
+        page_size: 50
+      });
+    });
+    expect(await screen.findByText("奖学金历史补签")).toBeInTheDocument();
+  });
+
+  it("clears the submitted keyword and reloads the default first page", async () => {
+    const user = userEvent.setup();
+    activitiesApiMocks.getActivities
+      .mockResolvedValueOnce({
+        activities: [createActivity({
+          activity_id: "act_initial_301",
+          activity_title: "默认活动列表"
+        })],
+        has_more: false,
+        page: 1
+      })
+      .mockResolvedValueOnce({
+        activities: [createActivity({
+          activity_id: "act_search_301",
+          activity_title: "漏加分专场"
+        })],
+        has_more: false,
+        page: 1
+      })
+      .mockResolvedValueOnce({
+        activities: [createActivity({
+          activity_id: "act_reset_301",
+          activity_title: "恢复默认列表"
+        })],
+        has_more: false,
+        page: 1
+      });
+
+    renderActivitiesPage();
+
+    expect(await screen.findByText("默认活动列表")).toBeInTheDocument();
+
+    const searchInput = screen.getByPlaceholderText(/搜索活动/i);
+    await user.type(searchInput, "漏加分");
+    fireEvent.keyDown(searchInput, { code: "Enter", key: "Enter" });
+
+    expect(await screen.findByText("漏加分专场")).toBeInTheDocument();
+
+    await user.clear(searchInput);
+    fireEvent.keyDown(searchInput, { code: "Enter", key: "Enter" });
+
+    await waitFor(() => {
+      expect(activitiesApiMocks.getActivities).toHaveBeenNthCalledWith(3, {
+        page: 1,
+        page_size: 50
+      });
+    });
+    expect(await screen.findByText("恢复默认列表")).toBeInTheDocument();
   });
 });

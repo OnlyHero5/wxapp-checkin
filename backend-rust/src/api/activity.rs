@@ -23,6 +23,7 @@ pub fn router() -> Router<AppState> {
 pub struct ActivityListQuery {
   pub page: Option<i64>,
   pub page_size: Option<i64>,
+  pub keyword: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -132,8 +133,14 @@ async fn list_activities(
   Query(query): Query<ActivityListQuery>,
 ) -> Result<Json<ActivityListResponse>, AppError> {
   let current_user = require_current_user(&headers, &state).await?;
-  let response =
-    activity_service::list_activities(&state, &current_user, query.page, query.page_size).await?;
+  let response = activity_service::list_activities(
+    &state,
+    &current_user,
+    query.page,
+    query.page_size,
+    query.keyword,
+  )
+  .await?;
   Ok(Json(response))
 }
 

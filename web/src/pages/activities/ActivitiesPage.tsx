@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Search } from "tdesign-mobile-react";
 import { ActivityCard } from "../../features/activities/components/ActivityCard";
 import { ActivitySectionsTabs } from "../../features/activities/components/ActivitySectionsTabs";
 import { getActivities, type ActivitySummary } from "../../features/activities/api";
@@ -29,7 +30,9 @@ function resolveErrorMessage(error: unknown) {
 export function ActivitiesPage() {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<ActivitySummary[]>([]);
+  const [draftKeyword, setDraftKeyword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -52,11 +55,24 @@ export function ActivitiesPage() {
     return Array.from(map.values());
   }
 
+  function normalizeSearchKeyword(value: string) {
+    return `${value}`.trim();
+  }
+
+  const buildActivityListInput = useCallback((targetPage: number, activeKeyword: string) => {
+    const normalizedKeyword = normalizeSearchKeyword(activeKeyword);
+    return {
+      ...(normalizedKeyword ? { keyword: normalizedKeyword } : {}),
+      page: targetPage,
+      page_size: pageSize
+    };
+  }, [pageSize]);
+
   /**
    * 列表加载逻辑独立成函数，而不是直接写在 `useEffect` 里，
    * 是为了让“首次加载”和“手动重试”共用同一套行为。
    */
-  const loadFirstPage = useCallback(async () => {
+  const loadFirstPage = useCallback(async (activeKeyword: string) => {
     // 每次发起新请求都推进一个版本号，后返回的旧请求会被自动丢弃。
     const requestVersion = requestVersionRef.current + 1;
     requestVersionRef.current = requestVersion;
@@ -68,10 +84,7 @@ export function ActivitiesPage() {
     setHasMore(false);
 
     try {
-      const result = await getActivities({
-        page: 1,
-        page_size: pageSize
-      });
+      const result = await getActivities(buildActivityListInput(1, activeKeyword));
       if (requestVersionRef.current === requestVersion) {
         setActivities(result.activities ?? []);
         setPage(result.page ?? 1);
@@ -91,7 +104,7 @@ export function ActivitiesPage() {
         setLoading(false);
       }
     }
-  }, [navigate]);
+  }, [buildActivityListInput, navigate]);
 
   async function loadMorePage() {
     if (loadingMore || loading || !hasMore) {
@@ -105,10 +118,7 @@ export function ActivitiesPage() {
     setErrorMessage("");
 
     try {
-      const result = await getActivities({
-        page: targetPage,
-        page_size: pageSize
-      });
+      const result = await getActivities(buildActivityListInput(targetPage, keyword));
       if (requestVersionRef.current === requestVersion) {
         setActivities((previous) => mergeActivitiesById(previous, result.activities ?? []));
         setPage(result.page ?? targetPage);
@@ -131,8 +141,14 @@ export function ActivitiesPage() {
 
   useEffect(() => {
     // 首次进入列表页立即拉数据，不依赖用户手动触发。
-    void loadFirstPage();
-  }, [loadFirstPage]);
+    void loadFirstPage(keyword);
+  }, [keyword, loadFirstPage]);
+
+  function applySearchKeyword(nextKeyword: string) {
+    const normalizedKeyword = normalizeSearchKeyword(nextKeyword);
+    setDraftKeyword(normalizedKeyword);
+    setKeyword(normalizedKeyword);
+  }
 
   const isStaff = isStaffSession();
   const eyebrow = isStaff ? "工作人员" : "普通用户";
@@ -164,10 +180,22 @@ export function ActivitiesPage() {
 
   return (
     <MobilePage description={description} eyebrow={eyebrow} title="活动列表" tone={pageTone}>
+      <section className="stack-form">
+        {/* 搜索框直接复用 TDesign `Search`，避免为了“多一个输入框”又回到手写壳层。 */}
+        <Search
+          action="搜索"
+          onActionClick={() => applySearchKeyword(draftKeyword)}
+          onChange={(value) => setDraftKeyword(value)}
+          onClear={() => applySearchKeyword("")}
+          onSubmit={({ value }) => applySearchKeyword(value)}
+          placeholder="搜索活动标题、地点、描述或ID"
+          value={draftKeyword}
+        />
+      </section>
       {errorMessage ? (
         <section className="stack-form">
           <InlineNotice message={errorMessage} />
-          <AppButton onClick={() => void loadFirstPage()} tone="secondary">
+          <AppButton onClick={() => void loadFirstPage(keyword)} tone="secondary">
             重新加载
           </AppButton>
         </section>

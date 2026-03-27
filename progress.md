@@ -1,5 +1,21 @@
 # 进度记录
 
+- 2026-03-27：用户确认活动列表搜索要覆盖普通用户和工作人员，且搜索范围包括标题、地点、描述和活动 ID。
+- 2026-03-27：已完成活动列表搜索设计文档并提交 `0f6dad1 docs: 补充活动列表搜索设计`。
+- 2026-03-27：已读取 `writing-plans` 与 `planning-with-files` 技能说明，开始把搜索设计收口成实现计划并准备 inline 落地。
+- 2026-03-27：已新增实现计划 `docs/superpowers/plans/2026-03-27-activities-search-implementation.md`，执行策略为“测试先行 + 组件库优先 + 前后端一起收口”。
+- 2026-03-27：已按 TDD 补齐前端搜索分页测试、活动 API query string 测试，以及后端关键字归一化 / LIKE 转义 / 批量状态映射测试。
+- 2026-03-27：已完成活动列表搜索实现：
+  - 前端 `ActivitiesPage` 接入 TDesign `Search`
+  - 前端分页请求支持 `keyword`
+  - 后端 `GET /api/web/activities` 支持 `keyword`
+  - 后端活动列表读路径改为批量读取当前页用户状态
+- 2026-03-27：已完成 fresh 验证：
+  - `cd web && npm test`
+  - `cd web && npm run lint`
+  - `cd web && npm run build`
+  - `cd backend-rust && cargo test`
+
 - 2026-03-26：接受新的“前后端代码 + 文档规范审计与优化”任务，已按要求优先加载 `brainstorming`、`software-architecture`、`senior-pm`、`planning-with-files`、`clean-code`、`verification-before-completion` 等 skills。
 - 2026-03-26：已确认 `wxapp-checkin/` 当前在 `web` 分支且工作区干净，可以在不影响其他子仓库的前提下开展整改。
 - 2026-03-26：已重新对齐 `task_plan.md`，将本次工作目标切换为“审计现有 Web/Rust/文档基线并按规范收口”。
