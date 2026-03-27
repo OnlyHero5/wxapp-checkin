@@ -1,8 +1,49 @@
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 
 fn manifest_file(relative_path: &str) -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(relative_path)
+}
+
+fn read_path_or_tree(relative_path: &str) -> String {
+  let path = manifest_file(relative_path);
+  let path = if path.exists() {
+    path
+  } else {
+    manifest_file(&format!("{relative_path}.rs"))
+  };
+  if path.is_file() {
+    return fs::read_to_string(path).expect("read source file");
+  }
+
+  let mut files = fs::read_dir(&path)
+    .expect("read source dir")
+    .map(|entry| entry.expect("dir entry").path())
+    .filter(|path| path.extension().and_then(|value| value.to_str()) == Some("rs"))
+    .collect::<Vec<_>>();
+  files.sort();
+
+  let mut merged = String::new();
+  for file in files {
+    merged.push_str(&fs::read_to_string(file).expect("read nested source file"));
+    merged.push('\n');
+  }
+  merged
+}
+
+fn collect_rs_files(root: &Path, output: &mut Vec<PathBuf>) {
+  let entries = fs::read_dir(root).expect("read dir");
+  for entry in entries {
+    let path = entry.expect("dir entry").path();
+    if path.is_dir() {
+      collect_rs_files(&path, output);
+      continue;
+    }
+    if path.extension().and_then(|value| value.to_str()) == Some("rs") {
+      output.push(path);
+    }
+  }
 }
 
 #[test]
@@ -53,15 +94,49 @@ fn auth_extractor_should_not_keep_password_change_gate() {
 }
 
 #[test]
-fn token_signer_should_use_library_verify_api() {
-  let source = fs::read_to_string(manifest_file("src/token.rs")).expect("read token.rs");
+fn auth_chain_should_use_axum_extractor_instead_of_manual_header_map() {
+  let extractor_source =
+    fs::read_to_string(manifest_file("src/api/auth_extractor.rs")).expect("read auth_extractor.rs");
+  let activity_api =
+    fs::read_to_string(manifest_file("src/api/activity.rs")).expect("read activity.rs");
+  let staff_api = fs::read_to_string(manifest_file("src/api/staff.rs")).expect("read staff.rs");
+
   assert!(
-    source.contains(".verify_slice("),
-    "session token verification should use HMAC library verify_slice for signature checks"
+    extractor_source.contains("FromRequestParts"),
+    "current user auth should be implemented as an axum request-parts extractor"
   );
   assert!(
-    !source.contains("as_slice() !="),
-    "session token verification should not use manual byte comparison anymore"
+    !activity_api.contains("HeaderMap"),
+    "activity handlers should not manually receive raw HeaderMap for auth anymore"
+  );
+  assert!(
+    !staff_api.contains("HeaderMap"),
+    "staff handlers should not manually receive raw HeaderMap for auth anymore"
+  );
+  assert!(
+    !activity_api.contains("require_current_user("),
+    "activity handlers should rely on framework extraction instead of manual auth calls"
+  );
+  assert!(
+    !staff_api.contains("require_current_user("),
+    "staff handlers should rely on framework extraction instead of manual auth calls"
+  );
+}
+
+#[test]
+fn token_signer_should_delegate_jwt_encoding_and_decoding_to_library() {
+  let source = fs::read_to_string(manifest_file("src/token.rs")).expect("read token.rs");
+  assert!(
+    source.contains("jsonwebtoken"),
+    "session token should use jsonwebtoken instead of maintaining a handwritten token format"
+  );
+  assert!(
+    !source.contains("HmacSha256"),
+    "session token module should not keep handwritten HMAC token plumbing after the refactor"
+  );
+  assert!(
+    !source.contains("base64::engine"),
+    "session token module should not keep manual base64 token framing after switching to JWT"
   );
 }
 
@@ -71,5 +146,89 @@ fn main_should_enable_graceful_shutdown() {
   assert!(
     source.contains(".with_graceful_shutdown("),
     "axum server should install graceful shutdown handling for container stop signals"
+  );
+}
+
+#[test]
+fn infra_guards_should_use_libraries_instead_of_manual_hashmaps() {
+  let rate_limit_source =
+    fs::read_to_string(manifest_file("src/rate_limit.rs")).expect("read rate_limit.rs");
+  let replay_guard_source =
+    fs::read_to_string(manifest_file("src/replay_guard.rs")).expect("read replay_guard.rs");
+
+  assert!(
+    rate_limit_source.contains("governor"),
+    "invalid code limiter should be backed by governor instead of handwritten counters"
+  );
+  assert!(
+    !rate_limit_source.contains("Mutex<HashMap"),
+    "invalid code limiter should not maintain manual hashmap state anymore"
+  );
+  assert!(
+    replay_guard_source.contains("moka::sync::Cache"),
+    "replay guard should use a cache library with TTL support"
+  );
+  assert!(
+    !replay_guard_source.contains("Mutex<HashMap"),
+    "replay guard should not maintain manual hashmap state anymore"
+  );
+}
+
+#[test]
+fn dynamic_in_queries_should_use_sqlx_query_builder() {
+  let source = fs::read_to_string(manifest_file("src/db/attendance_repo.rs"))
+    .expect("read attendance_repo.rs");
+  assert!(
+    source.contains("QueryBuilder"),
+    "attendance repo should use sqlx::QueryBuilder for dynamic IN clauses"
+  );
+  assert!(
+    !source.contains("repeat_n(\"?\""),
+    "attendance repo should not manually concatenate SQL placeholders anymore"
+  );
+}
+
+#[test]
+fn roster_service_should_not_do_per_user_log_n_plus_one_queries() {
+  let source = read_path_or_tree("src/service/staff_service");
+  assert!(
+    !source.contains("find_latest_action_time("),
+    "staff roster flow should batch load log timestamps instead of querying one user at a time"
+  );
+  assert!(
+    source.contains("find_latest_action_times"),
+    "staff roster flow should rely on batch timestamp queries from log_repo"
+  );
+}
+
+#[test]
+fn backend_source_files_should_stay_under_220_lines() {
+  let mut files = Vec::new();
+  collect_rs_files(&manifest_file("src"), &mut files);
+  files.sort();
+
+  let offenders = files
+    .into_iter()
+    .filter_map(|path| {
+      let lines = fs::read_to_string(&path)
+        .expect("read rust source")
+        .lines()
+        .count();
+      (lines > 220).then(|| {
+        format!(
+          "{}:{lines}",
+          path
+            .strip_prefix(env!("CARGO_MANIFEST_DIR"))
+            .expect("relative path")
+            .display()
+        )
+      })
+    })
+    .collect::<Vec<_>>();
+
+  assert!(
+    offenders.is_empty(),
+    "backend rust source files should stay small enough to maintain: {}",
+    offenders.join(", ")
   );
 }

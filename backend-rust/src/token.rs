@@ -1,19 +1,22 @@
 use crate::error::AppError;
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use hmac::{Hmac, Mac};
+use jsonwebtoken::Algorithm;
+use jsonwebtoken::DecodingKey;
+use jsonwebtoken::EncodingKey;
+use jsonwebtoken::Header;
+use jsonwebtoken::Validation;
+use jsonwebtoken::decode;
+use jsonwebtoken::encode;
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-type HmacSha256 = Hmac<Sha256>;
-
 /// 会话 token 不引入完整 JWT 生态，原因有两个：
-/// 1. 当前只需要极小的 claims 集合；
-/// 2. 目标是继续压低依赖和运行时负担，而不是追求协议花样。
+/// 1. 当前 claims 很小，仍然可以把载荷控制在极低体积；
+/// 2. 但协议打包、签名和解码校验不该继续手写，应交给成熟库维护。
 #[derive(Debug, Clone)]
 pub struct SessionTokenSigner {
-  secret: Vec<u8>,
+  encoding_key: EncodingKey,
+  decoding_key: DecodingKey,
+  validation: Validation,
   ttl_seconds: u64,
 }
 
@@ -30,8 +33,17 @@ pub struct SessionTokenClaims {
 
 impl SessionTokenSigner {
   pub fn new(secret: impl AsRef<[u8]>, ttl_seconds: u64) -> Self {
+    let secret = secret.as_ref().to_vec();
+    // 这里显式关闭库内的过期时间判断：
+    // - 现有接口需要注入 `now` 以便测试和业务层显式控制时间；
+    // - 签名、结构校验仍由 jsonwebtoken 承担；
+    // - 过期判断继续由当前模块统一映射成现有业务错误码。
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.validate_exp = false;
     Self {
-      secret: secret.as_ref().to_vec(),
+      encoding_key: EncodingKey::from_secret(&secret),
+      decoding_key: DecodingKey::from_secret(&secret),
+      validation,
       ttl_seconds,
     }
   }
@@ -51,54 +63,21 @@ impl SessionTokenSigner {
       exp: iat.saturating_add(self.ttl_seconds),
       iat,
     };
-    let payload = serde_json::to_vec(&claims)
-      .map_err(|error| AppError::internal(format!("序列化 session token 失败：{error}")))?;
-    let encoded_payload = URL_SAFE_NO_PAD.encode(payload);
-    let signature = self.sign(encoded_payload.as_bytes())?;
-    Ok(format!(
-      "{encoded_payload}.{}",
-      URL_SAFE_NO_PAD.encode(signature)
-    ))
+    // header/claims 的序列化、base64url 封装与 HS256 签名都交给库层完成，
+    // 这样后续不会再由业务代码维护 JWT 细节。
+    encode(&Header::new(Algorithm::HS256), &claims, &self.encoding_key)
+      .map_err(|error| AppError::internal(format!("生成 session token 失败：{error}")))
   }
 
   pub fn verify(&self, token: &str, now: SystemTime) -> Result<SessionTokenClaims, AppError> {
-    let (payload_part, signature_part) = token
-      .trim()
-      .split_once('.')
-      .ok_or_else(session_expired_error)?;
-    let provided_signature = URL_SAFE_NO_PAD
-      .decode(signature_part)
-      .map_err(|_| session_expired_error())?;
-    self.verify_signature(payload_part.as_bytes(), &provided_signature)?;
-
-    let payload = URL_SAFE_NO_PAD
-      .decode(payload_part)
-      .map_err(|_| session_expired_error())?;
-    let claims: SessionTokenClaims =
-      serde_json::from_slice(&payload).map_err(|_| session_expired_error())?;
+    let claims = decode::<SessionTokenClaims>(token.trim(), &self.decoding_key, &self.validation)
+      .map_err(|_| session_expired_error())?
+      .claims;
     let now_seconds = unix_seconds(now)?;
     if now_seconds > claims.exp {
       return Err(session_expired_error());
     }
     Ok(claims)
-  }
-
-  // 这里显式走 HMAC 库自带的验签接口，而不是自己比较字节数组。
-  // 这样后续即使摘要实现变更，也仍然由库层统一维护验签语义。
-  fn verify_signature(&self, payload: &[u8], signature: &[u8]) -> Result<(), AppError> {
-    let mut mac = HmacSha256::new_from_slice(&self.secret)
-      .map_err(|error| AppError::internal(format!("初始化 session token 签名器失败：{error}")))?;
-    mac.update(payload);
-    mac
-      .verify_slice(signature)
-      .map_err(|_| session_expired_error())
-  }
-
-  fn sign(&self, payload: &[u8]) -> Result<Vec<u8>, AppError> {
-    let mut mac = HmacSha256::new_from_slice(&self.secret)
-      .map_err(|error| AppError::internal(format!("初始化 session token 签名器失败：{error}")))?;
-    mac.update(payload);
-    Ok(mac.finalize().into_bytes().to_vec())
   }
 }
 

@@ -1,11 +1,10 @@
-use crate::api::auth_extractor::require_current_user;
+use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::staff_service;
 use axum::Json;
 use axum::Router;
 use axum::extract::{Path, State};
-use axum::http::HeaderMap;
 use axum::routing::{get, post};
 use serde::{Deserialize, Serialize};
 
@@ -98,21 +97,19 @@ pub struct BulkCheckoutResponse {
 
 async fn get_roster(
   State(state): State<AppState>,
-  headers: HeaderMap,
+  current_user: CurrentUser,
   Path(activity_id): Path<String>,
 ) -> Result<Json<ActivityRosterResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state).await?;
   let response = staff_service::get_roster(&state, &current_user, &activity_id).await?;
   Ok(Json(response))
 }
 
 async fn adjust_attendance(
   State(state): State<AppState>,
-  headers: HeaderMap,
+  current_user: CurrentUser,
   Path(activity_id): Path<String>,
   Json(request): Json<AttendanceAdjustmentRequest>,
 ) -> Result<Json<AttendanceAdjustmentResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state).await?;
   let response = staff_service::adjust_attendance(
     &state,
     &current_user,
@@ -128,11 +125,10 @@ async fn adjust_attendance(
 
 async fn bulk_checkout(
   State(state): State<AppState>,
-  headers: HeaderMap,
+  current_user: CurrentUser,
   Path(activity_id): Path<String>,
   Json(request): Json<BulkCheckoutRequest>,
 ) -> Result<Json<BulkCheckoutResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state).await?;
   let response = staff_service::bulk_checkout(
     &state,
     &current_user,

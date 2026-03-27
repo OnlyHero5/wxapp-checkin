@@ -1,16 +1,23 @@
+use super::audit::insert_action_log;
+use super::now_millis;
+use super::role_from_user;
+use super::state_rules::next_flags;
 use crate::api::activity::CodeConsumeResponse;
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::db::activity_repo;
 use crate::db::attendance_repo;
-use crate::db::log_repo;
-use crate::domain::{WebRole, format_activity_id};
+use crate::domain::WebRole;
+use crate::domain::format_activity_id;
 use crate::error::AppError;
 use crate::service::activity_service;
-use serde_json::json;
-use sqlx::Executor;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 
+/// 消费动态码是当前普通用户签到/签退的主流程。
+/// 这个流程只负责串联：
+/// - 活动与时间窗口校验；
+/// - 动态码验签、限流和防重；
+/// - 事务内更新报名记录并写日志。
 pub async fn consume_code(
   state: &AppState,
   current_user: &CurrentUser,
@@ -130,136 +137,4 @@ pub async fn consume_code(
     record_id,
     server_time_ms,
   })
-}
-
-fn next_flags(
-  attendance: &attendance_repo::AttendanceRecord,
-  action_type: &str,
-) -> Result<(i64, i64), AppError> {
-  match action_type.trim() {
-    "checkin" => {
-      if attendance.check_in_flag == 0 {
-        return Ok((1, 0));
-      }
-      if attendance.check_in_flag == 1 && attendance.check_out_flag == 0 {
-        return Err(AppError::business(
-          "duplicate",
-          "你已签到，请勿重复提交",
-          None,
-        ));
-      }
-      Err(AppError::business(
-        "forbidden",
-        "当前状态不允许再次签到",
-        None,
-      ))
-    }
-    "checkout" => {
-      if attendance.check_in_flag == 0 {
-        return Err(AppError::business("forbidden", "请先完成签到再签退", None));
-      }
-      if attendance.check_in_flag == 1 && attendance.check_out_flag == 0 {
-        return Ok((1, 1));
-      }
-      Err(AppError::business(
-        "duplicate",
-        "你已签退，请勿重复提交",
-        None,
-      ))
-    }
-    _ => Err(AppError::business(
-      "invalid_param",
-      "action_type 仅支持 checkin/checkout",
-      None,
-    )),
-  }
-}
-
-async fn insert_action_log<'e, E>(
-  executor: E,
-  current_user: &CurrentUser,
-  legacy_activity_id: i64,
-  action_type: &str,
-  record_id: &str,
-  server_time_ms: u64,
-) -> Result<(), AppError>
-where
-  E: Executor<'e, Database = sqlx::MySql>,
-{
-  let path = if action_type == "checkin" {
-    "/api/web/attendance/checkin"
-  } else {
-    "/api/web/attendance/checkout"
-  };
-  let content = json!({
-    "activity_id": format_activity_id(legacy_activity_id),
-    "legacy_activity_numeric_id": legacy_activity_id,
-    "student_id": current_user.student_id,
-    "user_id": current_user.user_id,
-    "action_type": action_type,
-    "server_time_ms": server_time_ms,
-    "record_id": record_id,
-    "source": "wxapp-checkin-rust"
-  });
-  log_repo::insert_log(
-    executor,
-    &current_user.student_id,
-    &current_user.name,
-    path,
-    &content,
-    "",
-    "",
-  )
-  .await
-}
-
-fn role_from_user(current_user: &CurrentUser) -> WebRole {
-  if current_user.role == "staff" {
-    WebRole::Staff
-  } else {
-    WebRole::Normal
-  }
-}
-
-fn now_millis() -> Result<u64, AppError> {
-  SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .map(|duration| duration.as_millis() as u64)
-    .map_err(|_| AppError::internal("系统时间早于 UNIX_EPOCH"))
-}
-
-#[cfg(test)]
-mod tests {
-  use super::next_flags;
-  use crate::db::attendance_repo::AttendanceRecord;
-
-  #[test]
-  fn checkin_should_move_none_to_checked_in() {
-    let record = AttendanceRecord {
-      id: 1,
-      activity_id: 101,
-      username: "2025000011".to_string(),
-      state: 0,
-      check_in_flag: 0,
-      check_out_flag: 0,
-    };
-
-    let flags = next_flags(&record, "checkin").expect("flags");
-    assert_eq!(flags, (1, 0));
-  }
-
-  #[test]
-  fn checkout_should_reject_when_not_checked_in() {
-    let record = AttendanceRecord {
-      id: 1,
-      activity_id: 101,
-      username: "2025000011".to_string(),
-      state: 0,
-      check_in_flag: 0,
-      check_out_flag: 0,
-    };
-
-    let error = next_flags(&record, "checkout").expect_err("should reject");
-    assert_eq!(error.status(), "forbidden");
-  }
 }

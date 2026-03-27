@@ -1,4 +1,4 @@
-use crate::api::auth_extractor::require_current_user;
+use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::activity_service;
@@ -6,7 +6,6 @@ use crate::service::attendance_service;
 use axum::Json;
 use axum::Router;
 use axum::extract::{Path, Query, State};
-use axum::http::HeaderMap;
 use axum::routing::{get, post};
 use serde::{Deserialize, Serialize};
 
@@ -129,10 +128,9 @@ pub struct CodeConsumeResponse {
 
 async fn list_activities(
   State(state): State<AppState>,
-  headers: HeaderMap,
+  current_user: CurrentUser,
   Query(query): Query<ActivityListQuery>,
 ) -> Result<Json<ActivityListResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state).await?;
   let response = activity_service::list_activities(
     &state,
     &current_user,
@@ -146,21 +144,19 @@ async fn list_activities(
 
 async fn get_activity_detail(
   State(state): State<AppState>,
-  headers: HeaderMap,
+  current_user: CurrentUser,
   Path(activity_id): Path<String>,
 ) -> Result<Json<ActivityDetailResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state).await?;
   let response = activity_service::get_activity_detail(&state, &current_user, &activity_id).await?;
   Ok(Json(response))
 }
 
 async fn get_code_session(
   State(state): State<AppState>,
-  headers: HeaderMap,
+  current_user: CurrentUser,
   Path(activity_id): Path<String>,
   Query(query): Query<CodeSessionQuery>,
 ) -> Result<Json<CodeSessionResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state).await?;
   let response =
     activity_service::issue_code_session(&state, &current_user, &activity_id, &query.action_type)
       .await?;
@@ -169,11 +165,10 @@ async fn get_code_session(
 
 async fn consume_code(
   State(state): State<AppState>,
-  headers: HeaderMap,
+  current_user: CurrentUser,
   Path(activity_id): Path<String>,
   Json(request): Json<CodeConsumeRequest>,
 ) -> Result<Json<CodeConsumeResponse>, AppError> {
-  let current_user = require_current_user(&headers, &state).await?;
   let response = attendance_service::consume_code(
     &state,
     &current_user,

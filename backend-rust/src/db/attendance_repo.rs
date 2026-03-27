@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use sqlx::{FromRow, MySqlPool, Transaction};
+use sqlx::{FromRow, MySql, MySqlPool, QueryBuilder, Transaction};
 
 /// 签到写路径后续会直接锁定 `suda_activity_apply`。
 /// 这里先把读写函数和 roster 查询抽出来，避免业务层自己拼 SQL。
@@ -151,10 +151,9 @@ pub async fn list_by_user_ids_for_update(
     return Ok(Vec::new());
   }
 
-  let placeholders = std::iter::repeat_n("?", user_ids.len())
-    .collect::<Vec<_>>()
-    .join(", ");
-  let sql = format!(
+  // 项目里已经在别的仓储使用了 `sqlx::QueryBuilder`，
+  // 这里统一收口成同一动态 SQL 构造方式，避免继续手拼占位符字符串。
+  let mut query_builder = QueryBuilder::<MySql>::new(
     r#"
       SELECT
         aa.id AS record_id,
@@ -167,18 +166,20 @@ pub async fn list_by_user_ids_for_update(
       FROM suda_activity_apply aa
       INNER JOIN suda_user u ON u.username = aa.username
       WHERE aa.activity_id = ?
-        AND u.id IN ({placeholders})
-      ORDER BY u.username ASC
-      FOR UPDATE
-    "#
+    "#,
   );
-
-  let mut query = sqlx::query_as::<_, ManagedAttendanceRow>(&sql).bind(legacy_activity_id);
-  for user_id in user_ids {
-    query = query.bind(*user_id);
+  query_builder.push_bind(legacy_activity_id);
+  query_builder.push(" AND u.id IN (");
+  {
+    let mut separated = query_builder.separated(", ");
+    for user_id in user_ids {
+      separated.push_bind(user_id);
+    }
   }
+  query_builder.push(") ORDER BY u.username ASC FOR UPDATE");
 
-  query
+  query_builder
+    .build_query_as::<ManagedAttendanceRow>()
     .fetch_all(&mut **tx)
     .await
     .map_err(|error| AppError::internal(format!("锁定名单修正目标失败：{error}")))
