@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TabPanel, Tabs } from "tdesign-mobile-react";
 import { useNavigate } from "react-router-dom";
 import { ActivityCard } from "../../features/activities/components/ActivityCard";
+import { ActivitySectionsTabs } from "../../features/activities/components/ActivitySectionsTabs";
 import { getActivities, type ActivitySummary } from "../../features/activities/api";
 import { groupVisibleActivities } from "../../features/activities/view-model";
 import { SessionExpiredError } from "../../shared/http/errors";
 import { isStaffSession } from "../../shared/session/session-store";
 import { AppButton } from "../../shared/ui/AppButton";
-import { AppEmptyState } from "../../shared/ui/AppEmptyState";
 import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
@@ -175,29 +174,14 @@ export function ActivitiesPage() {
       ) : null}
       {loading ? <AppLoadingState message="活动列表加载中..." /> : null}
       {!loading ? (
-        <Tabs
-          onChange={(value) => setActiveSectionKey(`${value}`)}
-          spaceEvenly
-          theme="line"
-          value={activeSectionKey}
-        >
-          {sections.map((section) => (
-            <TabPanel destroyOnHide={false} key={section.key} label={section.title} value={section.key}>
-              <section className="activity-section" data-section-key={section.key}>
-                {section.items.length > 0 ? (
-                  <div className="activity-grid">
-                    {section.items.map((activity) => (
-                      // 卡片组件负责单活动展示，列表页只保留分组与布局职责。
-                      <ActivityCard activity={activity} key={activity.activity_id} showManageEntry={isStaff} />
-                    ))}
-                  </div>
-                ) : (
-                  <AppEmptyState message={`${section.title}暂无活动。`} />
-                )}
-              </section>
-            </TabPanel>
-          ))}
-        </Tabs>
+        <ActivitySectionsTabs
+          activeSectionKey={activeSectionKey}
+          onSectionChange={setActiveSectionKey}
+          renderActivity={(activity) => (
+            <ActivityCard activity={activity} key={activity.activity_id} showManageEntry={isStaff} />
+          )}
+          sections={sections}
+        />
       ) : null}
       {!loading && hasMore ? (
         <section className="stack-form">

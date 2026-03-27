@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Cell, CellGroup, Result } from "tdesign-mobile-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { CodeInput } from "../../features/attendance/components/CodeInput";
+import { AttendanceActionDetailSection } from "../../features/attendance/components/AttendanceActionDetailSection";
+import { AttendanceActionResultView } from "../../features/attendance/components/AttendanceActionResultView";
+import {
+  isActionAllowed,
+  resolveActionTitle,
+  resolveConsumeError,
+  resolveActionTone
+} from "../../features/attendance/attendance-action-utils";
 import {
   buildActivityDetailPath,
   consumeActivityCode,
@@ -10,15 +16,12 @@ import {
   type ActivityDetail,
   type CodeConsumeResponse
 } from "../../features/activities/api";
-import { formatServerTime, resolveCanCheckin, resolveCanCheckout } from "../../features/activities/view-model";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
-import { ApiError, SessionExpiredError } from "../../shared/http/errors";
+import { SessionExpiredError } from "../../shared/http/errors";
 import { AppButton } from "../../shared/ui/AppButton";
-import { AppEmptyState } from "../../shared/ui/AppEmptyState";
 import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
-import type { VisualTone } from "../../shared/ui/visual-tone";
 
 /**
  * 这个文件把签到页和签退页的共性逻辑收敛到 `AttendanceActionPage`。
@@ -36,76 +39,13 @@ type AttendanceActionPageProps = {
   actionType: ActivityActionType;
 };
 
-function resolveActionTitle(actionType: ActivityActionType) {
-  // 标题直接决定用户现在执行的是哪种动作，必须足够明确。
-  return actionType === "checkout" ? "活动签退" : "活动签到";
-}
-
-function resolveInputLabel(actionType: ActivityActionType) {
-  // label 同时用于可访问性和测试定位，因此单独抽函数保持稳定。
-  return actionType === "checkout" ? "签退验证码" : "签到验证码";
-}
-
-function resolveSubmitText(actionType: ActivityActionType) {
-  // 按钮文案和标题保持一致，降低误操作概率。
-  return actionType === "checkout" ? "提交签退码" : "提交签到码";
-}
-
-function resolveResultTitle(actionType: ActivityActionType) {
-  // 成功结果态与输入态区分标题，有助于用户确认“已经提交完成”。
-  return actionType === "checkout" ? "签退结果" : "签到结果";
-}
-
-function resolveActionTone(actionType: ActivityActionType): Extract<VisualTone, "checkin" | "checkout"> {
-  // 动作页的 tone 必须只跟动作语义绑定，不跟页面来源或文案状态绑定。
-  return actionType === "checkout" ? "checkout" : "checkin";
-}
-
-/**
- * 动态码提交失败时，页面需要把后端错误码翻译成用户能立即理解的中文提示。
- *
- * 当前优先覆盖三类高频场景：
- * - 错码
- * - 过期
- * - 重复提交
- */
-function resolveConsumeError(error: unknown) {
-  if (error instanceof ApiError) {
-    if (error.code === "invalid_code") {
-      return "验证码错误，请重新确认";
-    }
-    if (error.code === "expired") {
-      return "验证码已过期，请重新输入最新验证码";
-    }
-    if (error.code === "duplicate") {
-      return "当前时段已提交，请勿重复操作";
-    }
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return "提交失败，请稍后重试。";
-}
-
-// 不把这段逻辑散落在 JSX 内，是为了让签到和签退两种动作统一复用。
-function isActionAllowed(detail: ActivityDetail, actionType: ActivityActionType) {
-  return actionType === "checkout" ? resolveCanCheckout(detail) : resolveCanCheckin(detail);
-}
-
 function AttendanceActionPage({ actionType }: AttendanceActionPageProps) {
   const { activityId = "" } = useParams();
   // 动作页切活动或切 checkin/checkout 时，直接重建内部状态最稳妥。
   return <AttendanceActionPageContent actionType={actionType} activityId={activityId} key={`${actionType}:${activityId}`} />;
 }
 
-type AttendanceActionPageContentProps = {
-  actionType: ActivityActionType;
-  activityId: string;
-};
-
-function AttendanceActionPageContent({ actionType, activityId }: AttendanceActionPageContentProps) {
+function AttendanceActionPageContent({ actionType, activityId }: { actionType: ActivityActionType; activityId: string }) {
   const navigate = useNavigate();
   const actionTone = resolveActionTone(actionType);
   // `code` 作为受控输入，便于统一做数字规整与按钮禁用判断。
@@ -213,23 +153,11 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
   // 成功结果页与输入页拆成两个视觉状态，用户更容易确认“本次操作已经被服务端接受”。
   if (result) {
     return (
-      <MobilePage
-        eyebrow="提交完成"
-        tone={actionTone}
-        title={resolveResultTitle(actionType)}
-      >
-        <Result
-          description={result.server_time_ms ? `服务器时间：${formatServerTime(result.server_time_ms)}` : undefined}
-          theme="success"
-          title={result.message ?? "提交成功"}
-        />
-        <CellGroup theme="card" title="活动信息">
-          <Cell title="活动" note={result.activity_title} />
-        </CellGroup>
-        <AppButton onClick={() => navigate(buildActivityDetailPath(activityId))} tone="secondary">
-          返回活动详情
-        </AppButton>
-      </MobilePage>
+      <AttendanceActionResultView
+        actionType={actionType}
+        onBack={() => navigate(buildActivityDetailPath(activityId))}
+        result={result}
+      />
     );
   }
 
@@ -242,31 +170,15 @@ function AttendanceActionPageContent({ actionType, activityId }: AttendanceActio
       {/* 页面级错误一般出现在详情拉取失败阶段。 */}
       {pageError ? <InlineNotice message={pageError} /> : null}
       {detail ? (
-        <>
-          <CellGroup theme="card" title={detail.activity_title}>
-            {detail.activity_type ? <Cell title="类型" note={detail.activity_type} /> : null}
-            {detail.start_time ? <Cell title="时间" note={detail.start_time} /> : null}
-            {detail.location ? <Cell title="地点" note={detail.location} /> : null}
-            {detail.description ? <Cell align="top" description={detail.description} title="说明" /> : null}
-          </CellGroup>
-          {isActionAllowed(detail, actionType) ? (
-            /* 真正的输入与提交行为下沉到 `CodeInput`，
-             * 当前页面只保留动作语义和结果切换逻辑。 */
-            <CodeInput
-              errorMessage={errorMessage}
-              label={resolveInputLabel(actionType)}
-              onChange={setCode}
-              onSubmit={handleSubmit}
-              pending={pending}
-              submitText={resolveSubmitText(actionType)}
-              tone={actionTone}
-              value={code}
-            />
-          ) : (
-            // 即使用户通过错误链接进入，也要明确告诉他为什么不能提交。
-            <AppEmptyState message="当前状态下暂不可执行该动作，请先返回详情页确认活动状态。" />
-          )}
-        </>
+        <AttendanceActionDetailSection
+          actionType={actionType}
+          code={code}
+          detail={detail}
+          errorMessage={errorMessage}
+          onCodeChange={setCode}
+          onSubmit={handleSubmit}
+          pending={pending}
+        />
       ) : (
         <AppLoadingState message="活动信息加载中..." />
       )}

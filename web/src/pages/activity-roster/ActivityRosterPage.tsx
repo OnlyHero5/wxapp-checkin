@@ -7,6 +7,10 @@ import {
   type ActivityRosterResponse
 } from "../../features/staff/api";
 import {
+  resolveAttendanceActionPayload,
+  toggleSelectedRosterMember
+} from "../../features/staff/activity-roster-actions";
+import {
   AttendanceBatchActionBar,
   type AttendanceActionKey
 } from "../../features/staff/components/AttendanceBatchActionBar";
@@ -19,58 +23,11 @@ import { AppTextLink } from "../../shared/ui/AppTextLink";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 
-type AttendanceActionPayload = {
-  patch: {
-    checked_in: boolean;
-    checked_out: boolean;
-  };
-  reason: string;
-};
-
 function resolveErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
     return error.message;
   }
   return "参会名单加载失败，请稍后重试。";
-}
-
-function resolveActionPayload(action: AttendanceActionKey): AttendanceActionPayload {
-  // 这里把“按钮语义 -> patch + 默认 reason”钉死，
-  // 页面和列表组件都只传动作枚举，不再在多个组件里复制布尔组合。
-  switch (action) {
-    case "set_checked_in":
-      return {
-        patch: {
-          checked_in: true,
-          checked_out: false
-        },
-        reason: "设为已签到"
-      };
-    case "clear_checked_in":
-      return {
-        patch: {
-          checked_in: false,
-          checked_out: false
-        },
-        reason: "设为未签到"
-      };
-    case "set_checked_out":
-      return {
-        patch: {
-          checked_in: true,
-          checked_out: true
-        },
-        reason: "设为已签退"
-      };
-    case "clear_checked_out":
-      return {
-        patch: {
-          checked_in: true,
-          checked_out: false
-        },
-        reason: "设为未签退"
-      };
-  }
 }
 
 /**
@@ -147,7 +104,7 @@ export function ActivityRosterPage() {
       return;
     }
 
-    const payload = resolveActionPayload(action);
+    const payload = resolveAttendanceActionPayload(action);
     setAdjusting(true);
     setErrorMessage("");
     setResultMessage("");
@@ -173,12 +130,7 @@ export function ActivityRosterPage() {
   }
 
   function handleToggleSelection(userId: number, checked: boolean) {
-    setSelectedIds((current) => {
-      if (checked) {
-        return current.includes(userId) ? current : [...current, userId];
-      }
-      return current.filter((value) => value !== userId);
-    });
+    setSelectedIds((current) => toggleSelectedRosterMember(current, userId, checked));
   }
 
   return (

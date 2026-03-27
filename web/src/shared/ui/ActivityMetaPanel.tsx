@@ -1,6 +1,6 @@
 import { ElementType, ReactNode } from "react";
-import { Cell, CellGroup } from "tdesign-mobile-react";
 import type { VisualTone } from "./visual-tone";
+import { ActivityMetaContentGroups, type ActivityMetaDetailRow } from "./ActivityMetaContentGroups";
 
 /**
  * 活动信息块在列表、详情、输入页重复度最高，因此单独抽成公共面板。
@@ -32,11 +32,6 @@ type ActivityMetaPanelProps = {
   titleAs?: "h3" | "p";
 };
 
-type ActivityDetailRow = {
-  label: string;
-  value: string;
-};
-
 function resolveRows({
   checkinTimeText,
   checkoutTimeText,
@@ -47,7 +42,7 @@ function resolveRows({
   timeText
 }: Omit<ActivityMetaPanelProps, "as" | "counts" | "footer" | "statusSlot" | "subtitle" | "title">): {
   description?: string;
-  rows: ActivityDetailRow[];
+  rows: ActivityMetaDetailRow[];
 } {
   /**
    * 这些字段统一在这里按固定顺序输出，而不是在页面里自由穿插。
@@ -64,7 +59,7 @@ function resolveRows({
    * - 因此“累计已签到”= `checkin_count + checkout_count`。
    */
   // `expected` 用于管理端展示“应到人数”，它与签到/签退是不同维度的统计。
-  const rows: ActivityDetailRow[] = [];
+  const rows: ActivityMetaDetailRow[] = [];
 
   if (timeText) {
     rows.push({
@@ -107,45 +102,6 @@ function resolveRows({
     description,
     rows
   };
-}
-
-function renderMetrics(counts?: ActivityMetaPanelProps["counts"]) {
-  if (!counts) {
-    return null;
-  }
-
-  const expectedCount = counts.expected;
-  const checkinCount = counts.checkin ?? 0;
-  const checkoutCount = counts.checkout ?? 0;
-  const totalCheckedIn = checkinCount + checkoutCount;
-  const metrics = [
-    expectedCount != null
-      ? {
-          label: "应到",
-          value: `${expectedCount}`
-        }
-      : null,
-    {
-      label: "累计签到",
-      value: `${totalCheckedIn}`
-    },
-    {
-      label: "已签退",
-      value: `${checkoutCount}`
-    },
-    {
-      label: "未签退",
-      value: `${checkinCount}`
-    }
-  ].filter(Boolean) as Array<{ label: string; value: string }>;
-
-  return (
-    <CellGroup theme="card" title="统计">
-      {metrics.map((metric) => (
-        <Cell key={metric.label} title={metric.label} note={metric.value} />
-      ))}
-    </CellGroup>
-  );
 }
 
 export function ActivityMetaPanel({
@@ -194,14 +150,7 @@ export function ActivityMetaPanel({
           {statusSlot ? <div className="activity-meta-panel__status">{statusSlot}</div> : null}
         </div>
         {descriptionText ? <p className="activity-meta-panel__description">{descriptionText}</p> : null}
-        {rows.length > 0 ? (
-          <CellGroup theme="card" title="活动信息">
-            {rows.map((row) => (
-              <Cell key={row.label} title={row.label} note={row.value} align="top" />
-            ))}
-          </CellGroup>
-        ) : null}
-        {renderMetrics(counts)}
+        <ActivityMetaContentGroups counts={counts} rows={rows} />
         {/* footer 常用于“查看详情”这类补充动作，避免动作和元信息混在同一组文本里。 */}
         {footer ? (
           <div className="activity-meta-panel__footer">

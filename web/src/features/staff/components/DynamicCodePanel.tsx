@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
-import { Badge, Cell, CellGroup, CountDown, Skeleton, TabPanel, Tabs } from "tdesign-mobile-react";
+import { Cell, CellGroup, TabPanel, Tabs } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 import type { CodeSessionResponse } from "../api";
 import { AppButton } from "../../../shared/ui/AppButton";
+import { DynamicCodeHero } from "./DynamicCodeHero";
 
 type DynamicCodePanelProps = {
   activityId: string;
@@ -12,10 +13,6 @@ type DynamicCodePanelProps = {
   onActionChange: (value: ActivityActionType) => void;
   onRefresh: () => void;
 };
-
-function resolveActionBadgeColor(actionType: ActivityActionType) {
-  return actionType === "checkout" ? "rgba(217, 119, 6, 0.92)" : "rgba(15, 159, 140, 0.92)";
-}
 
 /**
  * 页面切换签到/签退页签时，`actionType` 会先更新，再等待对应动态码请求返回。
@@ -56,16 +53,6 @@ function resolveAttendanceCounts(codeSession: CodeSessionResponse | null) {
   };
 }
 
-type DynamicCodeHeroProps = {
-  actionLabel: string;
-  actionType: ActivityActionType;
-  countdownTimeMs: number;
-  codeText: string;
-  loadingMetaText?: string;
-  onCountdownFinish: () => void;
-  showSkeleton: boolean;
-};
-
 function resolveCountdownTimeMs(codeSession: CodeSessionResponse | null) {
   if (!codeSession) {
     return 0;
@@ -75,85 +62,6 @@ function resolveCountdownTimeMs(codeSession: CodeSessionResponse | null) {
   const serverTimeMs = codeSession.server_time_ms ?? receivedAtMs;
   const serverOffsetMs = serverTimeMs - receivedAtMs;
   return Math.max(0, codeSession.expires_at - (Date.now() + serverOffsetMs));
-}
-
-/**
- * 大码展示区继续保留“业务大字 + 倒计时”的重点，但状态组件尽量回到组件库能力。
- *
- * 这样做的边界很明确：
- * 1. `Badge` 负责动作语义，不再手写漂浮标签；
- * 2. `CellGroup` 负责卡片 surface；
- * 3. `CountDown` 负责倒计时渲染，不再手写定时器和秒数字符串；
- * 4. `Skeleton` 只在真实 loading 时接管展示，避免旧码和新码切换时闪旧内容。
- */
-function DynamicCodeHero({
-  actionLabel,
-  actionType,
-  countdownTimeMs,
-  codeText,
-  loadingMetaText,
-  onCountdownFinish,
-  showSkeleton
-}: DynamicCodeHeroProps) {
-  return (
-    <section className="staff-code-panel__surface">
-      <Badge
-        className="staff-code-panel__badge"
-        color={resolveActionBadgeColor(actionType)}
-        count={actionLabel}
-        shape="ribbon-left"
-        size="large"
-      >
-        <section className="staff-code-panel__body">
-          <span className="staff-code-panel__value-shell">
-            <span className="staff-code-panel__value">{codeText}</span>
-            {showSkeleton ? (
-              <Skeleton
-                animation="gradient"
-                className="staff-code-panel__value-skeleton"
-                rowCol={[
-                  [
-                    {
-                      height: "3.6rem",
-                      margin: "0 auto",
-                      type: "text",
-                      width: "12rem"
-                    }
-                  ],
-                  [
-                    {
-                      height: "1rem",
-                      margin: "0.75rem auto 0",
-                      type: "text",
-                      width: "7rem"
-                    }
-                  ]
-                ]}
-              />
-            ) : null}
-          </span>
-          <div className="staff-code-panel__meta">
-            {showSkeleton || loadingMetaText ? (
-              loadingMetaText
-            ) : (
-              <>
-                <span>剩余时间：</span>
-                <span className="staff-code-panel__countdown">
-                  <CountDown
-                    format="ss"
-                    key={`${actionType}:${countdownTimeMs}`}
-                    onFinish={onCountdownFinish}
-                    splitWithUnit
-                    time={countdownTimeMs}
-                  />
-                </span>
-              </>
-            )}
-          </div>
-        </section>
-      </Badge>
-    </section>
-  );
 }
 
 /**
