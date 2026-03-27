@@ -43,58 +43,17 @@
 }
 
 /* =========================================================
- * 活动信息面板
+ * 活动信息动作区
  * ---------------------------------------------------------
- * 标题和 footer 是组件库没有直接给出的组合结构，因此只补最小布局。
+ * 面板主体已经回收给组件库，只保留动作区横向排布。
  * ========================================================= */
 
-.activity-meta-panel {
-  display: grid;
-  gap: 12px;
-}
-
-.activity-meta-panel__heading,
-.activity-meta-panel__title-block,
-.activity-meta-panel__status,
-.activity-meta-panel__footer {
+.activity-meta-actions {
   min-width: 0;
-}
-
-.activity-meta-panel__heading {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.activity-meta-panel__title-block {
-  display: grid;
-  gap: 4px;
-}
-
-.activity-meta-panel__title {
-  margin: 0;
-  font-size: 1.125rem;
-  line-height: 1.35;
-  color: var(--app-text-strong);
-  overflow-wrap: anywhere;
-}
-
-.activity-meta-panel__subtitle,
-.activity-meta-panel__description {
-  margin: 0;
-  color: var(--app-text-muted);
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-
-.activity-meta-panel__status,
-.activity-meta-panel__footer {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* 状态标签本体仍是组件库 Tag，这里只保留收缩行为。 */

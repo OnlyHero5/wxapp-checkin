@@ -86,7 +86,6 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         timeText={detail.start_time}
         tone={detailTone}
         title={detail.activity_title}
-        titleAs="p"
       />
       <section className="stack-form detail-actions">
         {isStaff ? (

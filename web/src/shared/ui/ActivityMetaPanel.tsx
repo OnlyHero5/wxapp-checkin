@@ -1,4 +1,5 @@
 import { ElementType, ReactNode } from "react";
+import { Cell, CellGroup } from "tdesign-mobile-react";
 import type { VisualTone } from "./visual-tone";
 import { ActivityMetaContentGroups, type ActivityMetaDetailRow } from "./ActivityMetaContentGroups";
 
@@ -6,8 +7,8 @@ import { ActivityMetaContentGroups, type ActivityMetaDetailRow } from "./Activit
  * 活动信息块仍然保留公共组合层，但现在只负责“信息编排”，不再自带项目级卡面外壳。
  *
  * 这样做的目的有两点：
- * 1. 标题、状态位和 footer 的组合仍然集中维护；
- * 2. 具体卡片形态完全交给 TDesign `CellGroup`，避免这里继续长成第二套面板组件。
+ * 1. 字段编排仍然集中维护；
+ * 2. 标题、正文和统计尽量直接落到 TDesign `CellGroup/Cell`，避免这里继续长成第二套面板组件。
  */
 type ActivityMetaPanelProps = {
   as?: ElementType;
@@ -28,27 +29,27 @@ type ActivityMetaPanelProps = {
   timeText?: string;
   tone?: VisualTone;
   title: string;
-  titleAs?: "h3" | "p";
 };
 
-function resolveRows({
+type ActivityMetaSummaryRow = {
+  align?: "top";
+  label: string;
+  value: ReactNode;
+};
+
+function resolveDetailRows({
   checkinTimeText,
   checkoutTimeText,
-  description,
   joinStatusText,
   locationText,
-  progressText,
   timeText
-}: Omit<ActivityMetaPanelProps, "as" | "counts" | "footer" | "statusSlot" | "subtitle" | "title">): {
-  description?: string;
-  rows: ActivityMetaDetailRow[];
-} {
+}: Pick<ActivityMetaPanelProps, "checkinTimeText" | "checkoutTimeText" | "joinStatusText" | "locationText" | "timeText">) {
   /**
-   * 字段顺序仍然固定在这里，避免列表、详情和动作页各自漂移。
+   * “活动信息”里的基础行继续统一在这里排序，
+   * 避免列表、详情和 staff 页面各自发明一套字段顺序。
    *
-   * 这层只输出“要展示哪些行”：
-   * - 具体单元格布局交给 `ActivityMetaContentGroups`
-   * - 标题区只保留少量页面真正缺失的结构胶水
+   * 这里刻意只保留组件库已经很好承载的“标签 -> 值”行，
+   * 不再额外拼项目自有标题区结构。
    */
   const rows: ActivityMetaDetailRow[] = [];
 
@@ -62,12 +63,6 @@ function resolveRows({
     rows.push({
       label: "地点",
       value: locationText
-    });
-  }
-  if (progressText) {
-    rows.push({
-      label: "当前状态",
-      value: progressText
     });
   }
   if (joinStatusText) {
@@ -89,10 +84,49 @@ function resolveRows({
     });
   }
 
-  return {
-    description,
-    rows
-  };
+  return rows;
+}
+
+function resolveSummaryRows({
+  description,
+  progressText,
+  statusSlot,
+  subtitle
+}: Pick<ActivityMetaPanelProps, "description" | "progressText" | "statusSlot" | "subtitle">) {
+  /**
+   * 标题组现在同样直接投影成 TDesign `Cell`：
+   * - 标题本身交给 `CellGroup.title`
+   * - 副标题、说明、状态位继续用组件库行结构表达
+   * - 这样页面不再维护额外的 heading / footer / badge 自定义壳层。
+   */
+  const rows: ActivityMetaSummaryRow[] = [];
+
+  if (subtitle) {
+    rows.push({
+      label: "类型",
+      value: subtitle
+    });
+  }
+  if (description) {
+    rows.push({
+      align: "top",
+      label: "说明",
+      value: description
+    });
+  }
+  if (statusSlot) {
+    rows.push({
+      label: "状态",
+      value: statusSlot
+    });
+  } else if (progressText) {
+    rows.push({
+      label: "状态",
+      value: progressText
+    });
+  }
+
+  return rows;
 }
 
 export function ActivityMetaPanel({
@@ -109,37 +143,41 @@ export function ActivityMetaPanel({
   subtitle,
   timeText,
   tone = "default",
-  title,
-  titleAs = "h3"
+  title
 }: ActivityMetaPanelProps) {
   /**
-   * `titleAs` 继续只承接语义层级，不承接视觉层级。
+   * 组件现在只保留“数据整理 + 组件库组装”职责。
    *
-   * 这样详情页可以安全降级标题标签，同时不用重新发明一套 heading 组件。
+   * 页面仍可通过 `as` 决定容器语义，但不再在这里维护独立的标题壳与文本样式系统。
    */
-  const TitleTag = titleAs;
-  const { description: descriptionText, rows } = resolveRows({
+  const summaryRows = resolveSummaryRows({
+    description,
+    progressText,
+    statusSlot,
+    subtitle
+  });
+  const detailRows = resolveDetailRows({
     checkinTimeText,
     checkoutTimeText,
-    description,
     joinStatusText,
     locationText,
-    progressText,
     timeText
   });
 
   return (
-    <Container className="activity-meta-panel" data-panel-tone={tone}>
-      <div className="activity-meta-panel__heading">
-        <div className="activity-meta-panel__title-block">
-          <TitleTag className="activity-meta-panel__title">{title}</TitleTag>
-          {subtitle ? <p className="activity-meta-panel__subtitle">{subtitle}</p> : null}
-          {descriptionText ? <p className="activity-meta-panel__description">{descriptionText}</p> : null}
-        </div>
-        {statusSlot ? <div className="activity-meta-panel__status">{statusSlot}</div> : null}
-      </div>
-      <ActivityMetaContentGroups counts={counts} rows={rows} />
-      {footer ? <div className="activity-meta-panel__footer">{footer}</div> : null}
+    <Container data-panel-tone={tone}>
+      <CellGroup theme="card" title={title}>
+        {summaryRows.map((row) => (
+          <Cell
+            key={`${title}:${row.label}`}
+            align={row.align}
+            note={row.value}
+            title={row.label}
+          />
+        ))}
+      </CellGroup>
+      <ActivityMetaContentGroups counts={counts} rows={detailRows} />
+      {footer ? <section className="activity-meta-actions">{footer}</section> : null}
     </Container>
   );
 }

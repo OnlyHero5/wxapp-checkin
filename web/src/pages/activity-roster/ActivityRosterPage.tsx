@@ -58,7 +58,6 @@ export function ActivityRosterPage() {
             timeText={roster.start_time}
             tone="staff"
             title={roster.activity_title}
-            titleAs="p"
           />
           <div data-panel-tone="staff">
             <AttendanceBatchActionBar

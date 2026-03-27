@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ActivityMetaPanel } from "./ActivityMetaPanel";
 
 describe("ActivityMetaPanel", () => {
-  it("renders detail rows through TDesign cell groups without the legacy app-surface shell", () => {
+  it("renders detail rows through direct TDesign groups without a project-specific panel shell", () => {
     const { container } = render(
       <ActivityMetaPanel
         description="负责现场秩序维护"
@@ -17,7 +17,7 @@ describe("ActivityMetaPanel", () => {
 
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
     expect(container.querySelector(".app-surface")).toBeNull();
-    expect(container.querySelector(".activity-meta-panel__heading")).not.toBeNull();
+    expect(container.querySelector(".activity-meta-panel")).toBeNull();
     expect(container.querySelectorAll(".t-cell").length).toBeGreaterThan(0);
   });
 

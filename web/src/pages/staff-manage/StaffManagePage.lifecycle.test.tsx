@@ -1,0 +1,203 @@
+import { act, screen } from "@testing-library/react";
+import { flushSync } from "react-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clearSession, saveAuthSession } from "../../shared/session/session-store";
+import {
+  buildActivityDetail,
+  renderStaffManagePage,
+  renderStaffManagePageWithControlledRoute
+} from "./staff-manage-test-helpers";
+
+const activitiesApiMocks = vi.hoisted(() => ({
+  getActivityDetail: vi.fn()
+}));
+
+const staffApiMocks = vi.hoisted(() => ({
+  bulkCheckout: vi.fn(),
+  getCodeSession: vi.fn()
+}));
+
+vi.mock("tdesign-mobile-react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("tdesign-mobile-react")>();
+
+  return {
+    ...actual,
+    CountDown: ({ onFinish }: { onFinish?: () => void }) => (
+      <button className="t-count-down" onClick={onFinish} type="button">
+        触发动态码过期
+      </button>
+    )
+  };
+});
+
+vi.mock("../../features/activities/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../features/activities/api")>();
+  return {
+    ...actual,
+    getActivityDetail: activitiesApiMocks.getActivityDetail
+  };
+});
+
+vi.mock("../../features/staff/api", () => ({
+  bulkCheckout: staffApiMocks.bulkCheckout,
+  getCodeSession: staffApiMocks.getCodeSession
+}));
+
+describe("StaffManagePage lifecycle", () => {
+  beforeEach(() => {
+    saveAuthSession({
+      permissions: ["activity:manage"],
+      role: "staff",
+      session_token: "sess_staff_manage_123"
+    });
+    activitiesApiMocks.getActivityDetail.mockImplementation(async (activityId: string) => buildActivityDetail(activityId));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.resetAllMocks();
+    clearSession();
+  });
+
+  it("does not keep the previous activity title, code, or stats while switching routes on the same action tab", async () => {
+    let resolveNextActivityDetail: ((value: unknown) => void) | undefined;
+    let resolveNextActivityCode: ((value: unknown) => void) | undefined;
+    const nextActivityDetailPromise = new Promise((resolve) => {
+      resolveNextActivityDetail = resolve;
+    });
+    const nextActivityCodePromise = new Promise((resolve) => {
+      resolveNextActivityCode = resolve;
+    });
+
+    activitiesApiMocks.getActivityDetail.mockImplementation(async (activityId: string) => {
+      if (activityId === "act_101") {
+        return {
+          ...buildActivityDetail(activityId),
+          activity_title: "旧活动标题 act_101",
+          location: "旧活动场地",
+          registered_count: 1200
+        };
+      }
+
+      return nextActivityDetailPromise;
+    });
+
+    staffApiMocks.getCodeSession.mockImplementation(async (activityId: string) => {
+      if (activityId === "act_101") {
+        return {
+          action_type: "checkin",
+          activity_id: "act_101",
+          checkin_count: 900,
+          checkout_count: 101,
+          code: "483920",
+          expires_at: 1760000007500,
+          expires_in_ms: 4200,
+          server_time_ms: 1760000003300,
+          status: "success"
+        };
+      }
+
+      return nextActivityCodePromise;
+    });
+
+    const routeDriver = renderStaffManagePageWithControlledRoute();
+
+    expect(await screen.findByText("旧活动标题 act_101")).toBeInTheDocument();
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+    expect(screen.getAllByText("1001")).toHaveLength(2);
+
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      flushSync(() => {
+        routeDriver.switchToNextActivity();
+      });
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+
+    expect(screen.getByText("当前签到码")).toBeInTheDocument();
+    expect(screen.queryByText("旧活动标题 act_101")).not.toBeInTheDocument();
+    expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.queryByText("483920")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("1001")).toHaveLength(0);
+    expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_202");
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_202", "checkin");
+
+    resolveNextActivityCode?.({
+      action_type: "checkin",
+      activity_id: "act_202",
+      checkin_count: 9,
+      checkout_count: 1,
+      code: "202202",
+      expires_at: 1760000021000,
+      expires_in_ms: 4500,
+      server_time_ms: 1760000016500,
+      status: "success"
+    });
+    resolveNextActivityDetail?.({
+      ...buildActivityDetail("act_202"),
+      activity_title: "新活动标题 act_202",
+      location: "新活动场地",
+      registered_count: 66
+    });
+
+    expect(await screen.findByText("202202")).toBeInTheDocument();
+    expect(await screen.findByText("新活动标题 act_202")).toBeInTheDocument();
+  });
+
+  it("refreshes the current code session when the page becomes visible again", async () => {
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible"
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a wake lock hint when the browser cannot keep the screen awake", async () => {
+    Object.defineProperty(navigator, "wakeLock", {
+      configurable: true,
+      value: undefined
+    });
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByText("当前浏览器不支持自动保持屏幕常亮，请手动关闭自动锁屏或保持屏幕常亮。")).toBeInTheDocument();
+  });
+});
