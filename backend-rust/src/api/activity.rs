@@ -3,11 +3,14 @@ use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::activity_service;
 use crate::service::attendance_service;
+pub use super::activity_contracts::{
+  ActivityDetailResponse, ActivityListQuery, ActivityListResponse, ActivitySummaryItem,
+  CodeConsumeRequest, CodeConsumeResponse, CodeSessionQuery, CodeSessionResponse,
+};
 use axum::Json;
 use axum::Router;
 use axum::extract::{Path, Query, State};
 use axum::routing::{get, post};
-use serde::{Deserialize, Serialize};
 
 pub fn router() -> Router<AppState> {
   Router::new()
@@ -15,115 +18,6 @@ pub fn router() -> Router<AppState> {
     .route("/{activity_id}", get(get_activity_detail))
     .route("/{activity_id}/code-session", get(get_code_session))
     .route("/{activity_id}/code-consume", post(consume_code))
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct ActivityListQuery {
-  pub page: Option<i64>,
-  pub page_size: Option<i64>,
-  pub keyword: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct CodeSessionQuery {
-  pub action_type: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct CodeConsumeRequest {
-  pub action_type: String,
-  pub code: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct ActivitySummaryItem {
-  pub activity_id: String,
-  pub activity_title: String,
-  pub activity_type: String,
-  pub start_time: String,
-  pub location: String,
-  pub description: String,
-  pub progress_status: String,
-  pub support_checkout: bool,
-  pub support_checkin: bool,
-  pub registered_count: i64,
-  pub checkin_count: i64,
-  pub checkout_count: i64,
-  pub my_registered: bool,
-  pub my_checked_in: bool,
-  pub my_checked_out: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct ActivityListResponse {
-  pub status: String,
-  pub message: String,
-  pub activities: Vec<ActivitySummaryItem>,
-  pub page: i64,
-  pub page_size: i64,
-  pub has_more: bool,
-  pub server_time_ms: u64,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct ActivityDetailResponse {
-  pub status: String,
-  pub message: String,
-  pub activity_id: String,
-  pub activity_title: String,
-  pub activity_type: String,
-  pub start_time: String,
-  pub location: String,
-  pub description: String,
-  pub progress_status: String,
-  pub support_checkout: bool,
-  pub support_checkin: bool,
-  pub has_detail: bool,
-  pub registered_count: i64,
-  pub checkin_count: i64,
-  pub checkout_count: i64,
-  pub my_registered: bool,
-  pub my_checked_in: bool,
-  pub my_checked_out: bool,
-  pub my_checkin_time: String,
-  pub my_checkout_time: String,
-  pub can_checkin: bool,
-  pub can_checkout: bool,
-  pub server_time_ms: u64,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct CodeSessionResponse {
-  pub status: String,
-  pub message: String,
-  pub activity_id: String,
-  pub action_type: String,
-  pub code: String,
-  pub expires_at: u64,
-  pub expires_in_ms: u64,
-  pub server_time_ms: u64,
-  pub registered_count: i64,
-  pub checkin_count: i64,
-  pub checkout_count: i64,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct CodeConsumeResponse {
-  pub status: String,
-  pub message: String,
-  pub action_type: String,
-  pub activity_id: String,
-  pub activity_title: String,
-  pub record_id: String,
-  pub server_time_ms: u64,
 }
 
 async fn list_activities(
@@ -173,7 +67,7 @@ async fn consume_code(
     &state,
     &current_user,
     &activity_id,
-    &request.action_type,
+    request.action_type,
     &request.code,
   )
   .await?;

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { Cell, CellGroup, TabPanel, Tabs } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 import type { CodeSessionResponse } from "../api";
@@ -77,44 +77,33 @@ export function DynamicCodePanel({
   onRefresh
 }: DynamicCodePanelProps) {
   const displayedCodeSession = resolveDisplayedCodeSession(activityId, actionType, codeSession);
-  const lastAutoRefreshKeyRef = useRef("");
-  const onRefreshRef = useRef(onRefresh);
+  const lastFinishedRefreshKeyRef = useRef("");
   const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
   // 动作标签和当前 tab 绑定，确保首屏还没拿到码时也能给管理员稳定的语义提示。
   const actionLabel = actionType === "checkout" ? "当前签退码" : "当前签到码";
   const heroMetaLoading = loading || (!!codeSession && !displayedCodeSession);
   const heroDisplayCode = displayedCodeSession?.code ?? "------";
   const countdownTimeMs = heroMetaLoading ? 0 : resolveCountdownTimeMs(displayedCodeSession);
+  const refreshKey = displayedCodeSession
+    ? `${displayedCodeSession.activity_id}:${displayedCodeSession.action_type}:${displayedCodeSession.expires_at}`
+    : "";
 
-  useEffect(() => {
-    onRefreshRef.current = onRefresh;
-  }, [onRefresh]);
-
-  useEffect(() => {
+  function handleCountdownFinish() {
     /**
-     * `CountDown` 只负责显示，不直接承担“业务自动刷新”职责。
-     *
-     * 到期后重拉新码属于页面级行为，因此仍然由这一层统一控制：
-     * - 测试与真实页面可以共用同一套时序；
-     * - 未来替换倒计时组件时，不需要重写刷新策略。
+     * 这里改成直接吃 TDesign `CountDown.onFinish`：
+     * 1. 刷新时机与组件库显示生命周期保持一致；
+     * 2. 不再在父层再手写一套 `setTimeout`；
+     * 3. 仍保留 refreshKey 去重，避免同一轮动态码被重复刷新。
      */
     if (!displayedCodeSession || heroMetaLoading) {
       return;
     }
-
-    const refreshKey = `${displayedCodeSession.activity_id}:${displayedCodeSession.action_type}:${displayedCodeSession.expires_at}`;
-    const refreshTimer = window.setTimeout(() => {
-      if (lastAutoRefreshKeyRef.current === refreshKey) {
-        return;
-      }
-      lastAutoRefreshKeyRef.current = refreshKey;
-      onRefreshRef.current();
-    }, countdownTimeMs + 50);
-
-    return () => {
-      window.clearTimeout(refreshTimer);
+    if (lastFinishedRefreshKeyRef.current === refreshKey) {
+      return;
     };
-  }, [countdownTimeMs, displayedCodeSession, heroMetaLoading]);
+    lastFinishedRefreshKeyRef.current = refreshKey;
+    onRefresh();
+  }
 
   return (
     <section className="staff-panel" data-panel-tone="staff">
@@ -131,7 +120,7 @@ export function DynamicCodePanel({
           countdownTimeMs={countdownTimeMs}
           codeText={heroDisplayCode}
           loadingMetaText={heroMetaLoading ? "动态码加载中..." : undefined}
-          onCountdownFinish={() => undefined}
+          onCountdownFinish={handleCountdownFinish}
           showSkeleton={loading}
         />
       </div>

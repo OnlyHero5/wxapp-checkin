@@ -48,20 +48,13 @@
 
 ### 3.4 鉴权传递
 
-推荐口径：
-
-- `Authorization: Bearer <session_token>`
-
-兼容口径：
-
-- `X-Session-Token: <session_token>`
-- 查询参数 `session_token`
-- 请求体字段 `session_token`
+- 当前正式口径只支持：
+  - `Authorization: Bearer <session_token>`
 
 说明：
 
-- 新 Web 前端应优先使用 `Authorization: Bearer`。
-- 服务端鉴权只依赖 `session_token`。
+- 新 Web 前端必须使用 `Authorization: Bearer`。
+- 当前 Rust 后端不会再兼容 `X-Session-Token`、查询参数或请求体透传会话。
 
 ### 3.5 通用响应
 
@@ -85,9 +78,24 @@
 - `forbidden`
 - `duplicate`
 - `expired`
-- `failed`
+- `error`
 
-### 3.6 会话失效信号
+### 3.6 HTTP 状态语义
+
+- 成功响应返回 `HTTP 200`。
+- 失败响应继续返回统一 JSON envelope，但同时返回对应 HTTP 状态码。
+
+当前正式映射口径：
+
+- `invalid_param` -> `400`
+- `forbidden` -> `403`
+- `duplicate` -> `409`
+- `expired` -> `410`
+- `rate_limited` -> `429`
+- `invalid_activity` -> `404`
+- `error` -> `500`
+
+### 3.7 会话失效信号
 
 所有需要登录态的接口，若会话失效，统一返回：
 
@@ -99,7 +107,7 @@
 }
 ```
 
-### 3.7 时间字段
+### 3.8 时间字段
 
 - 统一使用毫秒级 Unix 时间戳；
 - 字段名统一为 `*_at` 或 `*_time_ms`；
@@ -471,7 +479,7 @@
 
 - 当前正式端点总数固定为 8 个。
 - JSON 字段继续使用 `snake_case`。
-- 业务失败继续保持 `HTTP 200 + JSON envelope` 口径。
+- 业务失败继续保持统一 JSON envelope，并返回真实 HTTP 状态码。
 - 运行期写库边界只允许命中：
   - `suda_activity_apply`
   - `suda_log`

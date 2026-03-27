@@ -1,9 +1,11 @@
 pub mod activity;
+mod activity_contracts;
 pub mod auth;
 pub mod auth_extractor;
 pub mod error_response;
 pub mod health;
 pub mod staff;
+mod staff_contracts;
 
 use crate::app_state::AppState;
 use axum::Router;

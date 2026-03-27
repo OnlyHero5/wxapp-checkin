@@ -61,14 +61,25 @@ export function CodeInput({
           <FormItem help="请在当前活动下输入 6 位动态验证码" name="dynamic_code" rules={dynamicCodeRules}>
             <Input
               align="center"
+              autocomplete="one-time-code"
               clearable={!pending}
               enterkeyhint="done"
-              maxlength={6}
+              name="dynamic_code"
               onChange={(nextValue) => onChange(normalizeCode(`${nextValue ?? ""}`))}
-              placeholder="输入6位码"
+              placeholder="输入 6 位码…"
+              spellcheck={false}
               status={errorMessage ? "error" : "default"}
               tips={errorMessage || undefined}
-              type="number"
+              /**
+               * 动态码允许前导 0，不能用 number。
+               * 这里改成 tel：
+               * 1. 继续调起移动端数字键盘；
+               * 2. 不会让浏览器把 001234 当成数字重新格式化；
+               * 3. 仍然由上面的 normalize 统一裁成 6 位。
+               * 4. 不再叠加原生 maxlength，避免“噪音字符先占位、有效数字进不来”。
+               */
+              type="tel"
+              value={normalizedValue}
             />
           </FormItem>
           <AppButton disabled={!canSubmit} loading={pending} type="submit">

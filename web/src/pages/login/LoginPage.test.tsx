@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getSession } from "../../shared/session/session-store";
 import { LoginPage } from "./LoginPage";
 
+const STUDENT_ID_PLACEHOLDER = "请输入学号…";
+const PASSWORD_PLACEHOLDER = "请输入密码…";
+
 const authApiMocks = vi.hoisted(() => ({
   login: vi.fn()
 }));
@@ -49,15 +52,15 @@ describe("LoginPage", () => {
     expect(screen.getByRole("button", { name: "登录" }).className).toContain("t-button");
     expect(screen.getByRole("button", { name: "登录" })).not.toHaveClass("app-button");
     expect(screen.getByRole("button", { name: "登录" })).toHaveAttribute("type", "submit");
-    expect(screen.getByPlaceholderText("请输入学号").closest(".t-input")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("请输入密码").closest(".t-input")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("请输入学号").closest(".t-form")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest(".t-input")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(PASSWORD_PLACEHOLDER).closest(".t-input")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest(".t-form")).toBeInTheDocument();
 
-    const form = screen.getByPlaceholderText("请输入学号").closest("form");
+    const form = screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest("form");
     expect(form).not.toBeNull();
 
-    await user.type(screen.getByPlaceholderText("请输入学号"), " 2025000011 ");
-    await user.type(screen.getByPlaceholderText("请输入密码"), " 123 ");
+    await user.type(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER), " 2025000011 ");
+    await user.type(screen.getByPlaceholderText(PASSWORD_PLACEHOLDER), " 123 ");
     fireEvent.submit(form!);
 
     await waitFor(() => {
@@ -76,9 +79,9 @@ describe("LoginPage", () => {
 
     renderLoginPage();
 
-    await user.type(screen.getByPlaceholderText("请输入学号"), "2025000011");
-    await user.type(screen.getByPlaceholderText("请输入密码"), "wrong");
-    fireEvent.submit(screen.getByPlaceholderText("请输入学号").closest("form")!);
+    await user.type(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER), "2025000011");
+    await user.type(screen.getByPlaceholderText(PASSWORD_PLACEHOLDER), "wrong");
+    fireEvent.submit(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest("form")!);
 
     expect(await screen.findByText("密码错误")).toBeInTheDocument();
     expect(getSession()).toBe("");

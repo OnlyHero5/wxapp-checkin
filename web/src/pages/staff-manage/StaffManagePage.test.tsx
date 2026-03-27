@@ -16,6 +16,19 @@ const staffApiMocks = vi.hoisted(() => ({
   getCodeSession: vi.fn()
 }));
 
+vi.mock("tdesign-mobile-react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("tdesign-mobile-react")>();
+
+  return {
+    ...actual,
+    CountDown: ({ onFinish }: { onFinish?: () => void }) => (
+      <button className="t-count-down" onClick={onFinish} type="button">
+        触发动态码过期
+      </button>
+    )
+  };
+});
+
 vi.mock("../../features/activities/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../features/activities/api")>();
   return {
@@ -391,8 +404,7 @@ describe("StaffManagePage", () => {
   });
 
   it("updates the countdown and refreshes the code when it expires", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-03-10T03:00:03.300Z"));
+    const user = userEvent.setup();
 
     staffApiMocks.getCodeSession
       .mockResolvedValueOnce({
@@ -421,21 +433,16 @@ describe("StaffManagePage", () => {
     renderStaffManagePage();
 
     await act(async () => {
-      vi.advanceTimersByTime(16);
       await Promise.resolve();
     });
 
     expect(document.querySelector(".staff-code-panel__meta")).toHaveTextContent("剩余时间：");
     expect(document.querySelector(".staff-code-panel__countdown")).toBeInTheDocument();
 
+    // 这里直接触发组件库 `CountDown` 的 finish 回调，
+    // 锁定“过期后刷新动态码”已经跟真实组件边界对齐，而不是依赖手写定时器。
+    await user.click(screen.getByRole("button", { name: "触发动态码过期" }));
     await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    expect(document.querySelector(".staff-code-panel__countdown")).toBeInTheDocument();
-
-    await act(async () => {
-      vi.advanceTimersByTime(1200);
       await Promise.resolve();
       await Promise.resolve();
     });

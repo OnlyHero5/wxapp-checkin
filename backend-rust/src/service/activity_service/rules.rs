@@ -1,6 +1,7 @@
 use crate::api::auth_extractor::CurrentUser;
 use crate::db::activity_repo::ActivityRow;
 use crate::db::activity_repo::UserActivityRow;
+use crate::domain::AttendanceActionType;
 use crate::domain::WebRole;
 use crate::domain::progress_status_from_legacy;
 use crate::error::AppError;
@@ -58,19 +59,12 @@ pub(super) fn ensure_activity_time_valid(activity: &ActivityRow) -> Result<(u64,
 
 pub(super) fn ensure_activity_action_allowed(
   activity: &ActivityRow,
-  action_type: &str,
+  _action_type: AttendanceActionType,
 ) -> Result<(), AppError> {
   if progress_status_from_legacy(activity.legacy_state) == "completed" {
     return Err(AppError::business(
       "forbidden",
       "活动已结束，无法生成动态码",
-      None,
-    ));
-  }
-  if action_type != "checkin" && action_type != "checkout" {
-    return Err(AppError::business(
-      "invalid_param",
-      "action_type 仅支持 checkin/checkout",
       None,
     ));
   }

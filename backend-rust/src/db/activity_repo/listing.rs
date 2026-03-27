@@ -186,20 +186,5 @@ fn build_keyword_pattern(value: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-  use super::build_keyword_pattern;
-  use super::escape_like_keyword;
-
-  #[test]
-  fn escape_like_keyword_should_escape_percent_and_underscore() {
-    assert_eq!(escape_like_keyword("奖学金_补录%"), "奖学金\\_补录\\%");
-  }
-
-  #[test]
-  fn build_keyword_pattern_should_keep_legacy_activity_prefix_literal() {
-    assert_eq!(
-      build_keyword_pattern("legacy_act_123"),
-      "%legacy\\_act\\_123%"
-    );
-  }
-}
+#[path = "listing_tests.rs"]
+mod tests;

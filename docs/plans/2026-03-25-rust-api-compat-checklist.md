@@ -13,7 +13,7 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 
 - 正式端点总数固定为 8 个。
 - JSON 字段继续使用 `snake_case`。
-- 业务失败继续保持 `HTTP 200 + JSON envelope` 口径。
+- 业务失败继续保持统一 JSON envelope，并返回真实 HTTP 状态码。
 - 鉴权继续使用 `Authorization: Bearer <session_token>`。
 - 运行期写库只允许命中：
   - `suda_activity_apply`

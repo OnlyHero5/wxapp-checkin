@@ -4,11 +4,11 @@ use super::audit::StaffAuditActionKind;
 use super::audit::StaffLogContext;
 use super::audit::insert_staff_log;
 use super::audit::now_millis;
+use crate::api::staff::AttendanceAdjustmentInput;
 use crate::api::auth_extractor::CurrentUser;
 use crate::api::staff::AttendanceAdjustmentResponse;
 use crate::app_state::AppState;
 use crate::db::attendance_repo;
-use crate::db::attendance_repo::ManagedAttendanceRow;
 use crate::domain::format_activity_id;
 use crate::error::AppError;
 
@@ -18,16 +18,16 @@ pub async fn adjust_attendance(
   state: &AppState,
   current_user: &CurrentUser,
   activity_id: &str,
-  user_ids: &[i64],
-  checked_in: Option<bool>,
-  checked_out: Option<bool>,
-  reason: &str,
+  input: AttendanceAdjustmentInput,
 ) -> Result<AttendanceAdjustmentResponse, AppError> {
   require_staff(current_user)?;
-  validate_patch(checked_in, checked_out)?;
   let legacy_activity_id = crate::domain::parse_activity_id(activity_id)?;
   require_activity(state, legacy_activity_id).await?;
-  let normalized_user_ids = normalize_user_ids(user_ids)?;
+  let AttendanceAdjustmentInput {
+    user_ids,
+    patch,
+    reason,
+  } = input;
   let batch_id = format!("adj_{}", now_millis()?);
   let server_time_ms = now_millis()?;
   let mut tx = state
@@ -41,12 +41,11 @@ pub async fn adjust_attendance(
     action_kind: StaffAuditActionKind::AttendanceAdjustment,
     batch_id: &batch_id,
     server_time_ms,
-    reason,
+    reason: &reason,
   };
   let rows =
-    attendance_repo::list_by_user_ids_for_update(&mut tx, legacy_activity_id, &normalized_user_ids)
-      .await?;
-  if rows.len() != normalized_user_ids.len() {
+    attendance_repo::list_by_user_ids_for_update(&mut tx, legacy_activity_id, &user_ids).await?;
+  if rows.len() != user_ids.len() {
     return Err(AppError::business(
       "invalid_param",
       "目标成员不存在、未报名或不属于当前活动",
@@ -55,7 +54,7 @@ pub async fn adjust_attendance(
   }
   let mut affected_count = 0_i64;
   for row in rows {
-    let (check_in, check_out) = resolve_patch(&row, checked_in, checked_out)?;
+    let (check_in, check_out) = patch.apply(row.check_in_flag, row.check_out_flag);
     if check_in == row.check_in_flag && check_out == row.check_out_flag {
       continue;
     }
@@ -79,85 +78,4 @@ pub async fn adjust_attendance(
     batch_id,
     server_time_ms,
   })
-}
-
-fn normalize_user_ids(user_ids: &[i64]) -> Result<Vec<i64>, AppError> {
-  if user_ids.is_empty() {
-    return Err(AppError::business(
-      "invalid_param",
-      "user_ids 不能为空",
-      None,
-    ));
-  }
-  let mut normalized = user_ids
-    .iter()
-    .copied()
-    .filter(|user_id| *user_id > 0)
-    .collect::<Vec<_>>();
-  normalized.sort_unstable();
-  normalized.dedup();
-  Ok(normalized)
-}
-
-fn validate_patch(checked_in: Option<bool>, checked_out: Option<bool>) -> Result<(), AppError> {
-  if checked_in.is_none() && checked_out.is_none() {
-    return Err(AppError::business(
-      "invalid_param",
-      "patch 至少要包含一个状态位",
-      None,
-    ));
-  }
-  Ok(())
-}
-
-fn resolve_patch(
-  row: &ManagedAttendanceRow,
-  checked_in: Option<bool>,
-  checked_out: Option<bool>,
-) -> Result<(i64, i64), AppError> {
-  if checked_in == Some(false) {
-    return Ok((0, 0));
-  }
-  if checked_out == Some(true) {
-    return Ok((1, 1));
-  }
-  if checked_in == Some(true) {
-    return Ok((1, 0));
-  }
-  if checked_out == Some(false) {
-    if row.check_in_flag == 0 && row.check_out_flag == 0 {
-      return Ok((0, 0));
-    }
-    return Ok((1, 0));
-  }
-  Err(AppError::business("invalid_param", "patch 组合非法", None))
-}
-
-#[cfg(test)]
-mod tests {
-  use super::resolve_patch;
-  use super::validate_patch;
-  use crate::db::attendance_repo::ManagedAttendanceRow;
-
-  #[test]
-  fn patch_should_clear_both_flags_when_checked_in_false() {
-    let row = ManagedAttendanceRow {
-      record_id: 1,
-      user_id: 11,
-      student_id: "2025000011".to_string(),
-      name: "测试用户".to_string(),
-      state: 0,
-      check_in_flag: 1,
-      check_out_flag: 1,
-    };
-    assert_eq!(
-      resolve_patch(&row, Some(false), Some(false)).expect("patch"),
-      (0, 0)
-    );
-  }
-
-  #[test]
-  fn patch_should_require_at_least_one_flag() {
-    assert!(validate_patch(None, None).is_err());
-  }
 }

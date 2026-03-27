@@ -6,7 +6,7 @@ use crate::api::activity::CodeSessionResponse;
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::db::activity_repo;
-use crate::domain::{WebRole, format_activity_id, parse_activity_id};
+use crate::domain::{AttendanceActionType, WebRole, format_activity_id, parse_activity_id};
 use crate::error::AppError;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -22,7 +22,7 @@ pub async fn issue_code_session(
   state: &AppState,
   current_user: &CurrentUser,
   activity_id: &str,
-  action_type: &str,
+  action_type: &AttendanceActionType,
 ) -> Result<CodeSessionResponse, AppError> {
   if role_from_user(current_user) != WebRole::Staff {
     return Err(AppError::business(
@@ -31,7 +31,6 @@ pub async fn issue_code_session(
       None,
     ));
   }
-  let normalized_action_type = normalize_action_type(action_type)?;
   let legacy_activity_id = parse_activity_id(activity_id)?;
   let activity = activity_repo::find_activity_by_id(state.pool(), legacy_activity_id)
     .await?
@@ -43,7 +42,7 @@ pub async fn issue_code_session(
       )
     })?;
   ensure_activity_time_valid(&activity)?;
-  ensure_activity_action_allowed(&activity, normalized_action_type)?;
+  ensure_activity_action_allowed(&activity, *action_type)?;
   ensure_within_issue_window(&activity, SystemTime::now())?;
 
   let server_time_ms = now_millis()?;
@@ -54,7 +53,7 @@ pub async fn issue_code_session(
   let code = generate_code(
     &state.config().qr_signing_key,
     &format_activity_id(activity.legacy_activity_id),
-    normalized_action_type,
+    action_type.as_str(),
     slot,
   )?;
 
@@ -62,7 +61,7 @@ pub async fn issue_code_session(
     status: "success".to_string(),
     message: "动态码获取成功".to_string(),
     activity_id: format_activity_id(activity.legacy_activity_id),
-    action_type: normalized_action_type.to_string(),
+    action_type: *action_type,
     code,
     expires_at,
     expires_in_ms,
@@ -78,11 +77,10 @@ pub async fn issue_code_session(
 pub fn validate_dynamic_code(
   signing_key: &str,
   activity_id: &str,
-  action_type: &str,
+  action_type: AttendanceActionType,
   code: &str,
   now_ms: u64,
 ) -> Result<u64, AppError> {
-  let normalized_action_type = normalize_action_type(action_type)?;
   let normalized_code = code.trim();
   if normalized_code.is_empty() {
     return Err(AppError::business(
@@ -97,7 +95,7 @@ pub fn validate_dynamic_code(
   let current_code = generate_code(
     signing_key,
     activity_id,
-    normalized_action_type,
+    action_type.as_str(),
     current_slot,
   )?;
   if current_code == normalized_code {
@@ -107,7 +105,7 @@ pub fn validate_dynamic_code(
     let previous_code = generate_code(
       signing_key,
       activity_id,
-      normalized_action_type,
+      action_type.as_str(),
       current_slot - 1,
     )?;
     if previous_code == normalized_code {
@@ -124,18 +122,6 @@ pub fn validate_dynamic_code(
     "动态码错误，请重新确认",
     Some("invalid_code"),
   ))
-}
-
-fn normalize_action_type(value: &str) -> Result<&str, AppError> {
-  match value.trim() {
-    "checkin" => Ok("checkin"),
-    "checkout" => Ok("checkout"),
-    _ => Err(AppError::business(
-      "invalid_param",
-      "action_type 仅支持 checkin/checkout",
-      None,
-    )),
-  }
 }
 
 fn generate_code(
@@ -165,6 +151,7 @@ fn now_millis() -> Result<u64, AppError> {
 mod tests {
   use super::generate_code;
   use super::validate_dynamic_code;
+  use crate::domain::AttendanceActionType;
 
   #[test]
   fn activity_code_should_be_stable_for_same_slot() {
@@ -180,7 +167,7 @@ mod tests {
     let error = validate_dynamic_code(
       "test-secret",
       "legacy_act_101",
-      "checkin",
+      AttendanceActionType::Checkin,
       &previous_code,
       12 * 10 * 1000,
     )

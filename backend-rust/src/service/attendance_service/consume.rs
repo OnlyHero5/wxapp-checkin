@@ -7,6 +7,7 @@ use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::db::activity_repo;
 use crate::db::attendance_repo;
+use crate::domain::AttendanceActionType;
 use crate::domain::WebRole;
 use crate::domain::format_activity_id;
 use crate::error::AppError;
@@ -22,7 +23,7 @@ pub async fn consume_code(
   state: &AppState,
   current_user: &CurrentUser,
   activity_id: &str,
-  action_type: &str,
+  action_type: AttendanceActionType,
   code: &str,
 ) -> Result<CodeConsumeResponse, AppError> {
   if role_from_user(current_user) != WebRole::Normal {
@@ -80,7 +81,7 @@ pub async fn consume_code(
       "{}:{}:{}:{}",
       current_user.student_id,
       legacy_activity_id,
-      action_type.trim(),
+      action_type.as_str(),
       slot
     ),
     server_time_ms,
@@ -112,14 +113,14 @@ pub async fn consume_code(
     "rec_{}_{}_{}_{}",
     current_user.student_id,
     legacy_activity_id,
-    action_type.trim(),
+    action_type.as_str(),
     server_time_ms
   );
   insert_action_log(
     tx.as_mut(),
     current_user,
     legacy_activity_id,
-    action_type.trim(),
+    action_type,
     &record_id,
     server_time_ms,
   )
@@ -131,7 +132,7 @@ pub async fn consume_code(
   Ok(CodeConsumeResponse {
     status: "success".to_string(),
     message: "提交成功".to_string(),
-    action_type: action_type.trim().to_string(),
+    action_type,
     activity_id: format_activity_id(legacy_activity_id),
     activity_title: activity.activity_title,
     record_id,

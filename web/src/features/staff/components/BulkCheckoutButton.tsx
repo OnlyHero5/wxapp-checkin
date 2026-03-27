@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Dialog } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
 
@@ -19,28 +18,25 @@ export function BulkCheckoutButton({
   loading = false,
   onConfirm
 }: BulkCheckoutButtonProps) {
-  const [dialogVisible, setDialogVisible] = useState(false);
-
-  async function handleConfirm() {
-    await onConfirm(DEFAULT_REASON);
-    setDialogVisible(false);
+  async function handleOpenConfirm() {
+    /**
+     * 这里直接复用组件库 confirm 插件：
+     * 1. 不再自己维护 `visible` 状态；
+     * 2. 业务层只保留“确认后执行什么”；
+     * 3. 页面不会再挂一层长期存在的受控弹窗外壳。
+     */
+    await Dialog.confirm?.({
+      cancelBtn: "取消",
+      confirmBtn: "确认全部签退",
+      content: "该操作会把当前活动下所有“已签到未签退”成员统一签退。",
+      onConfirm: () => onConfirm(DEFAULT_REASON),
+      title: "确认批量签退"
+    });
   }
 
   return (
-    <>
-      <AppButton disabled={disabled} loading={loading} onClick={() => setDialogVisible(true)} tone="secondary">
-        一键全部签退
-      </AppButton>
-      <Dialog
-        cancelBtn="取消"
-        confirmBtn="确认全部签退"
-        content="该操作会把当前活动下所有“已签到未签退”成员统一签退。"
-        onCancel={() => setDialogVisible(false)}
-        onClose={() => setDialogVisible(false)}
-        onConfirm={() => void handleConfirm()}
-        title="确认批量签退"
-        visible={dialogVisible}
-      />
-    </>
+    <AppButton disabled={disabled} loading={loading} onClick={() => void handleOpenConfirm()} tone="secondary">
+      一键全部签退
+    </AppButton>
   );
 }

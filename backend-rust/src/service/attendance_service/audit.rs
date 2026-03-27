@@ -1,6 +1,6 @@
 use crate::api::auth_extractor::CurrentUser;
 use crate::db::log_repo;
-use crate::domain::format_activity_id;
+use crate::domain::{AttendanceActionType, format_activity_id};
 use crate::error::AppError;
 use serde_json::json;
 use sqlx::Executor;
@@ -13,14 +13,14 @@ pub async fn insert_action_log<'e, E>(
   executor: E,
   current_user: &CurrentUser,
   legacy_activity_id: i64,
-  action_type: &str,
+  action_type: AttendanceActionType,
   record_id: &str,
   server_time_ms: u64,
 ) -> Result<(), AppError>
 where
   E: Executor<'e, Database = sqlx::MySql>,
 {
-  let path = if action_type == "checkin" {
+  let path = if action_type == AttendanceActionType::Checkin {
     "/api/web/attendance/checkin"
   } else {
     "/api/web/attendance/checkout"
@@ -30,7 +30,7 @@ where
     "legacy_activity_numeric_id": legacy_activity_id,
     "student_id": current_user.student_id,
     "user_id": current_user.user_id,
-    "action_type": action_type,
+    "action_type": action_type.as_str(),
     "server_time_ms": server_time_ms,
     "record_id": record_id,
     "source": "wxapp-checkin-rust"

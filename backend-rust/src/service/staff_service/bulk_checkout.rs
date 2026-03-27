@@ -5,6 +5,7 @@ use super::audit::StaffLogContext;
 use super::audit::insert_batch_summary_log;
 use super::audit::insert_staff_log;
 use super::audit::now_millis;
+use crate::api::staff::BulkCheckoutInput;
 use crate::api::auth_extractor::CurrentUser;
 use crate::api::staff::BulkCheckoutResponse;
 use crate::app_state::AppState;
@@ -20,19 +21,12 @@ pub async fn bulk_checkout(
   state: &AppState,
   current_user: &CurrentUser,
   activity_id: &str,
-  confirm: bool,
-  reason: &str,
+  input: BulkCheckoutInput,
 ) -> Result<BulkCheckoutResponse, AppError> {
   require_staff(current_user)?;
-  if !confirm {
-    return Err(AppError::business(
-      "invalid_param",
-      "批量签退必须显式确认",
-      None,
-    ));
-  }
   let legacy_activity_id = crate::domain::parse_activity_id(activity_id)?;
   require_activity(state, legacy_activity_id).await?;
+  let BulkCheckoutInput { reason } = input;
   let batch_id = format!("batch_{}", now_millis()?);
   let server_time_ms = now_millis()?;
   let mut tx = state
@@ -46,7 +40,7 @@ pub async fn bulk_checkout(
     action_kind: StaffAuditActionKind::BulkCheckout,
     batch_id: &batch_id,
     server_time_ms,
-    reason,
+    reason: &reason,
   };
   let rows = attendance_repo::list_checked_in_for_update(&mut tx, legacy_activity_id).await?;
   let mut affected_count = 0_i64;

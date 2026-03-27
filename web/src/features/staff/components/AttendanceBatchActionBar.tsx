@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ActionSheet, Cell, CellGroup, Dialog } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
 
@@ -52,28 +51,41 @@ export function AttendanceBatchActionBar({
   onConfirm,
   selectedCount
 }: AttendanceBatchActionBarProps) {
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const [dialogVisible, setDialogVisible] = useState(false);
-  const [pendingAction, setPendingAction] = useState<AttendanceActionKey | null>(null);
-  const activeAction = ACTIONS.find((action) => action.value === pendingAction) ?? null;
-
   function handleActionSelect(index: number) {
     const nextAction = ACTIONS[index];
     if (!nextAction) {
       return;
     }
-    setPendingAction(nextAction.value);
-    setSheetVisible(false);
-    setDialogVisible(true);
+
+    /**
+     * 选中动作后直接进入组件库 confirm 插件，避免 action sheet / dialog
+     * 两层都由业务组件自己保一份可见状态。
+     */
+    Dialog.confirm?.({
+      cancelBtn: "取消",
+      confirmBtn: "确认批量修正",
+      content: nextAction.content,
+      onConfirm: () => onConfirm(nextAction.value),
+      title: nextAction.label
+    });
   }
 
-  async function handleConfirm() {
-    if (!pendingAction) {
-      return;
-    }
-    await onConfirm(pendingAction);
-    setDialogVisible(false);
-    setPendingAction(null);
+  function handleOpenActionSheet() {
+    /**
+     * 动作选择层改走 `ActionSheet.show`：
+     * 1. 交互仍由 TDesign 负责；
+     * 2. 组件只维护动作配置；
+     * 3. 不再因为单次使用而额外挂载受控弹层节点。
+     */
+    ActionSheet.show?.({
+      cancelText: "取消",
+      description: "请选择要批量修正的签到状态。",
+      items: ACTIONS.map((action) => ({
+        description: action.content,
+        label: action.label
+      })),
+      onSelected: (_, index) => handleActionSelect(index)
+    });
   }
 
   return (
@@ -83,38 +95,11 @@ export function AttendanceBatchActionBar({
       </CellGroup>
       <AppButton
         disabled={disabled || selectedCount === 0}
-        onClick={() => setSheetVisible(true)}
+        onClick={handleOpenActionSheet}
         tone="secondary"
       >
         批量操作
       </AppButton>
-      <ActionSheet
-        cancelText="取消"
-        description="请选择要批量修正的签到状态。"
-        items={ACTIONS.map((action) => ({
-          description: action.content,
-          label: action.label
-        }))}
-        onClose={() => setSheetVisible(false)}
-        onSelected={(_, index) => handleActionSelect(index)}
-        visible={sheetVisible}
-      />
-      <Dialog
-        cancelBtn="取消"
-        confirmBtn="确认批量修正"
-        content={activeAction?.content ?? ""}
-        onCancel={() => {
-          setDialogVisible(false);
-          setPendingAction(null);
-        }}
-        onClose={() => {
-          setDialogVisible(false);
-          setPendingAction(null);
-        }}
-        onConfirm={() => void handleConfirm()}
-        title={activeAction?.label ?? "确认批量修正"}
-        visible={dialogVisible}
-      />
     </section>
   );
 }

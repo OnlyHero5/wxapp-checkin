@@ -71,6 +71,13 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
     await handleSubmit();
   }
 
+  /**
+   * 登录输入同样保持“浏览器语义 + 组件库外观”双成立：
+   * - state 里继续保留原始输入，提交时再统一 trim；
+   * - DOM 上补齐 name / autocomplete，方便密码管理器与自动填充识别；
+   * - placeholder 按页面文案规范补成省略号。
+   */
+
   return (
     <div className="stack-form">
       <Form labelAlign="top" onSubmit={(context) => void handleFormSubmit(context)} scrollToFirstError="auto">
@@ -79,19 +86,23 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
             autocomplete="username"
             clearable
             maxlength={20}
+            name="student_id"
             onChange={(value) => setStudentId(`${value ?? ""}`)}
-            placeholder="请输入学号"
+            placeholder="请输入学号…"
             spellcheck={false}
             type="tel"
+            value={studentId}
           />
         </FormItem>
         <FormItem label="密码" name="password" rules={loginRules.password}>
           <Input
             autocomplete="current-password"
+            name="password"
             onChange={(value) => setPassword(`${value ?? ""}`)}
-            placeholder="请输入密码"
+            placeholder="请输入密码…"
             spellcheck={false}
             type="password"
+            value={password}
           />
         </FormItem>
         <AppButton disabled={!canSubmit} loading={pending} type="submit">
