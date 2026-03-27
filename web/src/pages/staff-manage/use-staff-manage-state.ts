@@ -1,24 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  getActivityDetail,
-  type ActivityActionType,
-  type ActivityDetail
-} from "../../features/activities/api";
-import { bulkCheckout, getCodeSession, type CodeSessionResponse } from "../../features/staff/api";
+import { type ActivityActionType } from "../../features/activities/api";
+import { bulkCheckout } from "../../features/staff/api";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { SessionExpiredError } from "../../shared/http/errors";
+import { resolvePageErrorMessage } from "../../shared/page-state/page-error";
 import { useScreenWakeLock } from "./use-screen-wake-lock";
-
-function resolveErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-  return "活动管理信息加载失败，请稍后重试。";
-}
+import { useStaffCodeSessionState } from "./use-staff-code-session-state";
+import { useStaffManageDetailState } from "./use-staff-manage-detail-state";
 
 type RefreshOptions = {
-  reloadDetail: boolean; resetDetail: boolean; resetCodeSession: boolean;
+  reloadDetail: boolean;
+  resetDetail: boolean;
+  resetCodeSession: boolean;
 };
 
 /**
@@ -32,98 +26,26 @@ type RefreshOptions = {
 export function useStaffManageState(activityId: string) {
   const navigate = useNavigate();
   const [actionType, setActionType] = useState<ActivityActionType>("checkin");
-  const [detail, setDetail] = useState<ActivityDetail | null>(null);
-  const [codeSession, setCodeSession] = useState<CodeSessionResponse | null>(null);
-  const [detailLoading, setDetailLoading] = useState(true);
-  const [codeSessionLoading, setCodeSessionLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [resultMessage, setResultMessage] = useState("");
   const [bulkPending, setBulkPending] = useState(false);
-  const detailRequestVersionRef = useRef(0);
-  const codeSessionRequestVersionRef = useRef(0);
   // keyed remount 后，这个 ref 只用来区分“首屏加载”和“同活动内切签到/签退 tab”。
   const previousActivityIdRef = useRef("");
   const { requestWakeLock, wakeLockMessage } = useScreenWakeLock();
+  const handleSessionExpired = useCallback(() => {
+    navigate("/login");
+  }, [navigate]);
+  const { detail, detailLoading, loadDetail } = useStaffManageDetailState({
+    activityId,
+    onErrorMessage: setErrorMessage,
+    onSessionExpired: handleSessionExpired
+  });
+  const { codeSession, codeSessionLoading, loadCodeSession } = useStaffCodeSessionState({
+    activityId,
+    onErrorMessage: setErrorMessage,
+    onSessionExpired: handleSessionExpired
+  });
   const loading = detailLoading || codeSessionLoading;
-
-  const loadDetail = useCallback(async (resetBeforeLoad: boolean) => {
-    const requestVersion = detailRequestVersionRef.current + 1;
-    detailRequestVersionRef.current = requestVersion;
-
-    if (!activityId) {
-      if (detailRequestVersionRef.current === requestVersion) {
-        setDetail(null);
-        setDetailLoading(false);
-        setErrorMessage("活动不存在");
-      }
-      return;
-    }
-
-    setDetailLoading(true);
-    if (resetBeforeLoad) {
-      setDetail(null);
-    }
-
-    try {
-      const detailResult = await getActivityDetail(activityId);
-      if (detailRequestVersionRef.current === requestVersion) {
-        setDetail(detailResult);
-      }
-    } catch (error) {
-      if (error instanceof SessionExpiredError) {
-        navigate("/login");
-        return;
-      }
-      if (detailRequestVersionRef.current === requestVersion) {
-        setErrorMessage(resolveErrorMessage(error));
-      }
-    } finally {
-      if (detailRequestVersionRef.current === requestVersion) {
-        setDetailLoading(false);
-      }
-    }
-  }, [activityId, navigate]);
-
-  const loadCodeSession = useCallback(async (
-    nextActionType: ActivityActionType,
-    resetBeforeLoad: boolean
-  ) => {
-    const requestVersion = codeSessionRequestVersionRef.current + 1;
-    codeSessionRequestVersionRef.current = requestVersion;
-
-    if (!activityId) {
-      if (codeSessionRequestVersionRef.current === requestVersion) {
-        setCodeSession(null);
-        setCodeSessionLoading(false);
-        setErrorMessage("活动不存在");
-      }
-      return;
-    }
-
-    setCodeSessionLoading(true);
-    if (resetBeforeLoad) {
-      setCodeSession(null);
-    }
-
-    try {
-      const sessionResult = await getCodeSession(activityId, nextActionType);
-      if (codeSessionRequestVersionRef.current === requestVersion) {
-        setCodeSession(sessionResult);
-      }
-    } catch (error) {
-      if (error instanceof SessionExpiredError) {
-        navigate("/login");
-        return;
-      }
-      if (codeSessionRequestVersionRef.current === requestVersion) {
-        setErrorMessage(resolveErrorMessage(error));
-      }
-    } finally {
-      if (codeSessionRequestVersionRef.current === requestVersion) {
-        setCodeSessionLoading(false);
-      }
-    }
-  }, [activityId, navigate]);
 
   const refreshPage = useCallback(async (options: RefreshOptions) => {
     setErrorMessage("");
@@ -177,7 +99,7 @@ export function useStaffManageState(activityId: string) {
         navigate("/login");
         return;
       }
-      setErrorMessage(resolveErrorMessage(error));
+      setErrorMessage(resolvePageErrorMessage(error, "活动管理信息加载失败，请稍后重试。"));
     } finally {
       setBulkPending(false);
     }

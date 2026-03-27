@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getActivities, type ActivitySummary } from "../../features/activities/api";
 import { SessionExpiredError } from "../../shared/http/errors";
+import { createRequestGuard } from "../../shared/page-state/request-guard";
 import { isStaffSession } from "../../shared/session/session-store";
 import {
   buildVisibleSections,
@@ -32,7 +33,7 @@ export function useActivitiesPageState() {
   const [hasMore, setHasMore] = useState(false);
   const [activeSectionKey, setActiveSectionKey] = useState("ongoing");
   // 只认最后一次请求结果，避免手动重试时旧响应反写新状态。
-  const requestVersionRef = useRef(0);
+  const requestGuardRef = useRef(createRequestGuard());
 
   const pageSize = 50;
   const { description, eyebrow, pageTone } = resolveActivitiesPageCopy(isStaff);
@@ -52,8 +53,7 @@ export function useActivitiesPageState() {
    */
   const loadFirstPage = useCallback(async (activeKeyword: string) => {
     // 每次发起新请求都推进一个版本号，后返回的旧请求会被自动丢弃。
-    const requestVersion = requestVersionRef.current + 1;
-    requestVersionRef.current = requestVersion;
+    const requestVersion = requestGuardRef.current.beginRequest();
     // 每次重新加载都把页面切回“加载中 + 无错误”的干净状态。
     setLoading(true);
     setLoadingMore(false);
@@ -63,7 +63,7 @@ export function useActivitiesPageState() {
 
     try {
       const result = await getActivities(buildActivityListInput(1, activeKeyword));
-      if (requestVersionRef.current === requestVersion) {
+      if (requestGuardRef.current.isCurrent(requestVersion)) {
         setActivities(result.activities ?? []);
         setPage(result.page ?? 1);
         setHasMore(result.has_more ?? false);
@@ -74,11 +74,11 @@ export function useActivitiesPageState() {
         navigate("/login");
         return;
       }
-      if (requestVersionRef.current === requestVersion) {
+      if (requestGuardRef.current.isCurrent(requestVersion)) {
         setErrorMessage(resolveActivitiesErrorMessage(error));
       }
     } finally {
-      if (requestVersionRef.current === requestVersion) {
+      if (requestGuardRef.current.isCurrent(requestVersion)) {
         setLoading(false);
       }
     }
@@ -90,14 +90,13 @@ export function useActivitiesPageState() {
     }
 
     const targetPage = page + 1;
-    const requestVersion = requestVersionRef.current + 1;
-    requestVersionRef.current = requestVersion;
+    const requestVersion = requestGuardRef.current.beginRequest();
     setLoadingMore(true);
     setErrorMessage("");
 
     try {
       const result = await getActivities(buildActivityListInput(targetPage, keyword));
-      if (requestVersionRef.current === requestVersion) {
+      if (requestGuardRef.current.isCurrent(requestVersion)) {
         setActivities((previous) => mergeActivitiesById(previous, result.activities ?? []));
         setPage(result.page ?? targetPage);
         setHasMore(result.has_more ?? false);
@@ -107,11 +106,11 @@ export function useActivitiesPageState() {
         navigate("/login");
         return;
       }
-      if (requestVersionRef.current === requestVersion) {
+      if (requestGuardRef.current.isCurrent(requestVersion)) {
         setErrorMessage(resolveActivitiesErrorMessage(error));
       }
     } finally {
-      if (requestVersionRef.current === requestVersion) {
+      if (requestGuardRef.current.isCurrent(requestVersion)) {
         setLoadingMore(false);
       }
     }

@@ -1,34 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { buildActivityDetailPath } from "../../features/activities/api";
 import {
-  adjustAttendanceStates,
-  getActivityRoster,
-  type ActivityRosterResponse
-} from "../../features/staff/api";
-import {
-  resolveAttendanceActionPayload,
-  toggleSelectedRosterMember
-} from "../../features/staff/activity-roster-actions";
-import {
-  AttendanceBatchActionBar,
-  type AttendanceActionKey
+  AttendanceBatchActionBar
 } from "../../features/staff/components/AttendanceBatchActionBar";
 import { AttendanceRosterList } from "../../features/staff/components/AttendanceRosterList";
-import { subscribePageVisible } from "../../shared/device/page-lifecycle";
-import { SessionExpiredError } from "../../shared/http/errors";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { AppTextLink } from "../../shared/ui/AppTextLink";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
-
-function resolveErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-  return "参会名单加载失败，请稍后重试。";
-}
+import { useActivityRosterPageState } from "./use-activity-roster-page-state";
 
 /**
  * 参会名单页承接 staff 的“看成员 + 修签到签退状态”链路。
@@ -40,98 +21,16 @@ function resolveErrorMessage(error: unknown) {
  */
 export function ActivityRosterPage() {
   const { activityId = "" } = useParams();
-  const navigate = useNavigate();
-  const [roster, setRoster] = useState<ActivityRosterResponse | null>(null);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [adjusting, setAdjusting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [resultMessage, setResultMessage] = useState("");
-  const requestVersionRef = useRef(0);
-
-  const loadRoster = useCallback(async (resetBeforeLoad: boolean) => {
-    const requestVersion = requestVersionRef.current + 1;
-    requestVersionRef.current = requestVersion;
-
-    if (!activityId) {
-      if (requestVersionRef.current === requestVersion) {
-        setLoading(false);
-        setRoster(null);
-        setErrorMessage("活动不存在");
-      }
-      return;
-    }
-
-    setLoading(true);
-    setErrorMessage("");
-    if (resetBeforeLoad) {
-      setRoster(null);
-    }
-
-    try {
-      const result = await getActivityRoster(activityId);
-      if (requestVersionRef.current !== requestVersion) {
-        return;
-      }
-      setRoster(result);
-      // 每次刷新后只保留仍然存在于列表里的勾选项，避免并发修正后保留脏选择。
-      setSelectedIds((current) => current.filter((userId) => result.items.some((item) => item.user_id === userId)));
-    } catch (error) {
-      if (error instanceof SessionExpiredError) {
-        navigate("/login");
-        return;
-      }
-      if (requestVersionRef.current === requestVersion) {
-        setErrorMessage(resolveErrorMessage(error));
-      }
-    } finally {
-      if (requestVersionRef.current === requestVersion) {
-        setLoading(false);
-      }
-    }
-  }, [activityId, navigate]);
-
-  useEffect(() => {
-    void loadRoster(true);
-
-    return subscribePageVisible(() => {
-      void loadRoster(false);
-    });
-  }, [loadRoster]);
-
-  async function runAdjustment(userIds: number[], action: AttendanceActionKey, reasonPrefix: "单人" | "批量") {
-    if (!activityId || userIds.length === 0) {
-      return;
-    }
-
-    const payload = resolveAttendanceActionPayload(action);
-    setAdjusting(true);
-    setErrorMessage("");
-    setResultMessage("");
-
-    try {
-      const response = await adjustAttendanceStates(activityId, {
-        patch: payload.patch,
-        reason: `${reasonPrefix}${payload.reason}`,
-        user_ids: userIds
-      });
-      setResultMessage(response.message ?? "名单修正完成");
-      setSelectedIds([]);
-      await loadRoster(false);
-    } catch (error) {
-      if (error instanceof SessionExpiredError) {
-        navigate("/login");
-        return;
-      }
-      setErrorMessage(resolveErrorMessage(error));
-    } finally {
-      setAdjusting(false);
-    }
-  }
-
-  function handleToggleSelection(userId: number, checked: boolean) {
-    setSelectedIds((current) => toggleSelectedRosterMember(current, userId, checked));
-  }
+  const {
+    adjusting,
+    errorMessage,
+    handleToggleSelection,
+    loading,
+    resultMessage,
+    roster,
+    runAdjustment,
+    selectedIds
+  } = useActivityRosterPageState(activityId);
 
   return (
     <MobilePage

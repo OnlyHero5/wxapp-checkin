@@ -1,64 +1,93 @@
-# 进度记录
+# Progress Log
 
-- 2026-03-27：用户确认活动列表搜索要覆盖普通用户和工作人员，且搜索范围包括标题、地点、描述和活动 ID。
-- 2026-03-27：已完成活动列表搜索设计文档并提交 `0f6dad1 docs: 补充活动列表搜索设计`。
-- 2026-03-27：已读取 `writing-plans` 与 `planning-with-files` 技能说明，开始把搜索设计收口成实现计划并准备 inline 落地。
-- 2026-03-27：已新增实现计划 `docs/superpowers/plans/2026-03-27-activities-search-implementation.md`，执行策略为“测试先行 + 组件库优先 + 前后端一起收口”。
-- 2026-03-27：已按 TDD 补齐前端搜索分页测试、活动 API query string 测试，以及后端关键字归一化 / LIKE 转义 / 批量状态映射测试。
-- 2026-03-27：已完成活动列表搜索实现：
-  - 前端 `ActivitiesPage` 接入 TDesign `Search`
-  - 前端分页请求支持 `keyword`
-  - 后端 `GET /api/web/activities` 支持 `keyword`
-  - 后端活动列表读路径改为批量读取当前页用户状态
-- 2026-03-27：已完成 fresh 验证：
-  - `cd web && npm test`
-  - `cd web && npm run lint`
-  - `cd web && npm run build`
-  - `cd backend-rust && cargo test`
+## Session: 2026-03-27
 
-- 2026-03-26：接受新的“前后端代码 + 文档规范审计与优化”任务，已按要求优先加载 `brainstorming`、`software-architecture`、`senior-pm`、`planning-with-files`、`clean-code`、`verification-before-completion` 等 skills。
-- 2026-03-26：已确认 `wxapp-checkin/` 当前在 `web` 分支且工作区干净，可以在不影响其他子仓库的前提下开展整改。
-- 2026-03-26：已重新对齐 `task_plan.md`，将本次工作目标切换为“审计现有 Web/Rust/文档基线并按规范收口”。
-- 2026-03-26：已读取 `README.md`、`docs/REQUIREMENTS.md`、`docs/API_SPEC.md`、`docs/DEPLOYMENT.md` 及前后端包配置，开始建立文档口径与实现边界的核对清单。
-- 2026-03-26：已跑出当前前端基线验证：
-  - `cd web && npm test`：19 个文件、65 个测试全部通过
-  - `cd web && npm run lint`：通过
-- 2026-03-26：尝试执行 `cd backend-rust && cargo test` 时发现当前环境 `rustup` 没有默认 toolchain，导致文档中的 Rust 验证命令在现环境不可直接复现。
-- 2026-03-26：已确认文档与代码之间存在系统性漂移，尤其是“改密链路已被代码删除，但需求/API/功能文档仍保留旧承诺”的问题，正在收敛整改策略。
-- 2026-03-26：已按“以当前代码为准”的策略完成整改：
-  - 新增 `backend-rust/rust-toolchain.toml`
-  - 删除 `backend-rust/src/db/user_repo.rs` 中未使用的 `update_password`
-  - 删除 `web/src/features/auth/components/ChangePasswordForm.tsx`
-  - 回写 README、需求、功能、接口、部署与兼容清单到当前 8 端点基线
-- 2026-03-26：已完成最终验证：
-  - `cd web && npm test`
-  - `cd web && npm run lint`
-  - `cd web && npm run build`
-  - `bash -n scripts/bootstrap.sh scripts/dev.sh scripts/stop.sh scripts/prod-backend.sh`
-  - `cd backend-rust && cargo test`
-  - `cd backend-rust && cargo build --release`
-- 2026-03-25：确认本次执行目标是 `/home/psx/app/docs/plans/2026-03-25-wxapp-checkin-rust-suda-union-implementation.md`，不再是 2026-03-23 的 Docker/配置计划。
-- 2026-03-25：已读取 3.25 Rust 设计稿、实施计划，以及根目录 `findings.md / progress.md / task_plan.md`，承接前序调研结论。
-- 2026-03-25：已确认当前 `wxapp-checkin/` 子仓库工作区干净，并在 `.worktrees/rust-suda-union` 建立隔离 worktree。
-- 2026-03-25：已安装工作区本地 Rust 工具链，并完成现有 `backend/scripts/test-docker-preflight.sh` 基线验证。
-- 2026-03-25：已提取前端实际依赖的 9 个 `/api/web/**` 端点及 Java 控制器映射，准备进入 Rust 骨架与兼容清单实现。
-- 2026-03-25：已新增 `docs/plans/2026-03-25-rust-api-compat-checklist.md`，把 9 个正式端点、关键错误码和数据库写入白名单固化为执行清单。
-- 2026-03-25：已创建 `backend-rust/`，落地 `Cargo.toml`、配置读取、共享状态、统一错误 envelope、健康检查与基础单测。
-- 2026-03-25：已实现 Rust 版无状态 HMAC `session_token`，并补齐 round-trip / 过期 / 篡改测试。
-- 2026-03-25：已实现基于 `suda_union` 的数据库访问层：
-  - `suda_user` 认证读取与改密
-  - `suda_activity` 列表/详情查询
-  - `suda_activity_apply` 签到签退与名单修正读写
-  - `suda_log` 事件/审计写入与时间回查
-- 2026-03-25：已实现 9 个正式 `/api/web/**` 端点的 Rust 路由与服务层，包括 auth、activities、attendance、staff 三条主链路。
-- 2026-03-25：已实现进程内 replay guard 与 invalid-code limiter，保持“无 Redis 正式基线”的低内存路线。
-- 2026-03-25：已完成 `backend-rust` 验证：
-  - `cargo test`
-  - `cargo build --release`
-- 2026-03-25：已完成仓库级切换收口：
-  - `README.md`、`docs/DEPLOYMENT.md`、`docs/REQUIREMENTS.md` 已更新为 Rust + 纯 `suda_union` 正式基线
-  - `scripts/bootstrap.sh`、`scripts/dev.sh`、`scripts/stop.sh`、`scripts/prod-backend.sh` 已切到 `backend-rust`
-  - 旧 Java `backend/`、旧 Docker 入口、旧 Java/双库计划与测试报告已清理
-- 2026-03-25：已补充验证：
-  - `bash -n scripts/bootstrap.sh scripts/dev.sh scripts/stop.sh scripts/prod-backend.sh`
-  - `./scripts/bootstrap.sh`
+### Phase 1: 结构与依赖摸底
+- **Status:** in_progress
+- **Started:** 2026-03-27 00:00
+- Actions taken:
+  - 读取技能说明并建立审查流程
+  - 校准 `wxapp-checkin` 当前真实前端路径
+  - 确认 UI 依赖为 `tdesign-mobile-react`
+  - 确认当前分支为 `web`
+  - 枚举 `src` 文件列表
+  - 扫描运行时代码与样式文件行数
+  - 扫描 `tdesign-mobile-react` 引用分布
+- Files created/modified:
+  - `task_plan.md`（created）
+  - `findings.md`（created）
+  - `progress.md`（created）
+
+### Phase 2: 代码规模与热点定位
+- **Status:** in_progress
+- Actions taken:
+  - 根据行数与组件库引用分布收敛高风险候选文件
+  - 深读 `CheckinPage`、`ActivityDetailPage`、`ActivityRosterPage`、`use-staff-manage-state`、`ActivityMetaPanel`、`DynamicCodePanel` 等热点文件
+- Files created/modified:
+  - `findings.md`（updated）
+
+### Phase 3: 组件库能力对照
+- **Status:** complete
+- Actions taken:
+  - 访问 TDesign 官方站点与组件目录
+  - 对照 `Cell`、`Tabs`、`Navbar`、`NoticeBar`、`Message`、`Layout`、`Grid`、`Footer` 的公开能力
+  - 判断哪些自定义壳层有官方等价原语，哪些只是业务组合层
+- Files created/modified:
+  - `findings.md`（updated）
+
+### Phase 4: 审查结论整理
+- **Status:** complete
+- Actions taken:
+  - 归纳“真实问题”与“看起来手写但实际合理”的边界
+  - 生成文件级 findings 与整改方向
+- Files created/modified:
+  - `findings.md`（updated）
+
+### Phase 5: 整改执行与交付
+- **Status:** complete
+- Actions taken:
+  - 新增共享请求保护工具 `request-guard`
+  - 新增共享页面错误文案工具 `page-error`
+  - 新建签到页、详情页、名单页页面状态 hook，压缩页面控制器文件
+  - 将 staff 管理页状态拆成“详情资源”和“动态码资源”两个子 hook
+  - 将活动列表页改为复用共享请求保护工具
+  - 运行新增共享单测、相关页面测试、全量测试、lint、build
+- Files created/modified:
+  - `web/src/shared/page-state/request-guard.ts`（created）
+  - `web/src/shared/page-state/request-guard.test.ts`（created）
+  - `web/src/shared/page-state/page-error.ts`（created）
+  - `web/src/shared/page-state/page-error.test.ts`（created）
+  - `web/src/pages/checkin/use-attendance-action-page-state.ts`（created）
+  - `web/src/pages/activity-detail/use-activity-detail-page-state.ts`（created）
+  - `web/src/pages/activity-roster/use-activity-roster-page-state.ts`（created）
+  - `web/src/pages/staff-manage/use-staff-manage-detail-state.ts`（created）
+  - `web/src/pages/staff-manage/use-staff-code-session-state.ts`（created）
+  - `web/src/pages/checkin/CheckinPage.tsx`（updated）
+  - `web/src/pages/activity-detail/ActivityDetailPage.tsx`（updated）
+  - `web/src/pages/activity-roster/ActivityRosterPage.tsx`（updated）
+  - `web/src/pages/staff-manage/use-staff-manage-state.ts`（updated）
+  - `web/src/pages/activities/use-activities-page-state.ts`（updated）
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| 前端路径校准 | `find /home/psx/app -maxdepth 3 -name package.json` | 找到实际前端目录 | 找到 `wxapp-checkin/web/package.json` | ✓ |
+| 静态检查 | `npm run lint` | lint 通过 | 通过 | ✓ |
+| 构建验证 | `npm run build` | build 通过 | 通过，产出 `dist/assets/index-CTkNbyC6.js` 等文件 | ✓ |
+| 共享请求保护单测 | `npx vitest run src/shared/page-state/request-guard.test.ts` | 通过 | 通过 | ✓ |
+| 页面错误文案单测 | `npx vitest run src/shared/page-state/page-error.test.ts` | 通过 | 通过 | ✓ |
+| 全量前端测试 | `npm test` | 通过 | 32 个文件、106 个测试全部通过 | ✓ |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-03-27 00:00 | 仓库指南中的前端路径不存在 | 1 | 改为审查 `wxapp-checkin/web` |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 5 已完成 |
+| Where am I going? | 提交改动并向用户交付结果 |
+| What's the goal? | 识别 `web/` 中组件库复用不足与可维护性风险 |
+| What have I learned? | 真正的高优先级问题是页面控制逻辑和请求保护重复堆积，而不是大面积绕开组件库 |
+| What have I done? | 已完成共享请求保护抽取、页面状态拆分和全量验证 |

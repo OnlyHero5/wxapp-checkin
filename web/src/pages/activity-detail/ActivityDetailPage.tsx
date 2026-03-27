@@ -1,11 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   buildActivityActionPath,
   buildActivityManagePath,
-  buildActivityRosterPath,
-  getActivityDetail,
-  type ActivityDetail
+  buildActivityRosterPath
 } from "../../features/activities/api";
 import {
   resolveCanCheckin,
@@ -13,8 +10,6 @@ import {
   resolveJoinStatus,
   resolveProgressStatus
 } from "../../features/activities/view-model";
-import { SessionExpiredError } from "../../shared/http/errors";
-import { isStaffSession } from "../../shared/session/session-store";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppButton } from "../../shared/ui/AppButton";
 import { AppEmptyState } from "../../shared/ui/AppEmptyState";
@@ -23,31 +18,11 @@ import { AppTextLink } from "../../shared/ui/AppTextLink";
 import { InlineNotice } from "../../shared/ui/InlineNotice";
 import { MobilePage } from "../../shared/ui/MobilePage";
 import { StatusTag } from "../../shared/ui/StatusTag";
-import type { VisualTone } from "../../shared/ui/visual-tone";
-
-/**
- * 详情页是普通用户动作决策的“闸门页”。
- *
- * 列表页不直接暴露签到/签退按钮，
- * 就是为了把最终是否能执行动作的判断集中在这里。
- */
-function resolveErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-  return "活动详情加载失败，请稍后重试。";
-}
+import { useActivityDetailPageState } from "./use-activity-detail-page-state";
 
 function resolveActionAccentTone(actionType: "checkin" | "checkout") {
   // 详情页按钮只按动作语义映射 accent，避免把 tone 判断散在 JSX 分支里。
   return actionType === "checkout" ? "checkout" : "checkin";
-}
-
-function resolveDetailTone(isStaff: boolean): Extract<VisualTone, "brand" | "staff"> {
-  // 详情页承担“列表 -> 动作页”的过渡职责：
-  // - 普通用户沿用品牌态，承接活动列表
-  // - 工作人员沿用 staff 态，承接管理链路
-  return isStaff ? "staff" : "brand";
 }
 
 export function ActivityDetailPage() {
@@ -63,51 +38,12 @@ type ActivityDetailPageContentProps = {
 
 function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProps) {
   const navigate = useNavigate();
-  const isStaff = isStaffSession();
-  const detailTone = resolveDetailTone(isStaff);
-  const [detail, setDetail] = useState<ActivityDetail | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  // 详情页可能因为快速切路由或重试出现响应乱序，因此只接收最新版本。
-  const requestVersionRef = useRef(0);
-
-  useEffect(() => {
-    // 用 active 标记避免组件卸载后异步请求仍然回写 state。
-    let active = true;
-    // 版本号和 active 配合使用：前者防乱序，后者防卸载后回写。
-    const requestVersion = requestVersionRef.current + 1;
-    requestVersionRef.current = requestVersion;
-
-    /**
-     * 详情加载没有抽到共享 hook，是因为当前阶段它只服务这个页面，
-     * 且错误处理与跳转策略仍然高度贴近页面语义。
-     * 如果后续 staff 管理页也要复用，再抽共享 hook 更合适。
-     */
-    async function loadDetail() {
-      setErrorMessage("");
-      setDetail(null);
-
-      try {
-        const result = await getActivityDetail(activityId);
-        if (active && requestVersionRef.current === requestVersion) {
-          setDetail(result);
-        }
-      } catch (error) {
-        if (error instanceof SessionExpiredError) {
-          navigate("/login");
-          return;
-        }
-        if (active && requestVersionRef.current === requestVersion) {
-          setErrorMessage(resolveErrorMessage(error));
-        }
-      }
-    }
-
-    void loadDetail();
-
-    return () => {
-      active = false;
-    };
-  }, [activityId, navigate]);
+  const {
+    detail,
+    detailTone,
+    errorMessage,
+    isStaff
+  } = useActivityDetailPageState(activityId);
 
   // 详情未加载完成前，也要保证页面结构稳定，并给用户一个返回入口。
   if (!detail) {

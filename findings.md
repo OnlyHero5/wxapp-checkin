@@ -1,94 +1,53 @@
-# 发现记录
+# Findings & Decisions
 
-- `2026-03-27` 活动列表搜索需求已确认：
-  - 普通用户和工作人员都要有搜索框
-  - 搜索范围覆盖标题、地点、描述、数据库活动 ID、前端活动 ID
-  - 搜索必须与服务端分页联动，不能前端全量拉取
-- `2026-03-27` 当前活动列表主链路入口为：
-  - 前端页面：`web/src/pages/activities/ActivitiesPage.tsx`
-  - 前端接口封装：`web/src/features/activities/api.ts`
-  - 后端 API：`backend-rust/src/api/activity.rs`
-  - 后端 service：`backend-rust/src/service/activity_service.rs`
-  - 后端仓储：`backend-rust/src/db/activity_repo.rs`
-- `2026-03-27` 当前活动列表后端虽然已支持分页，但仍存在明显 N+1：
-  - 先查分页活动列表
-  - 再对每条活动逐条调用 `find_user_activity`
-  - 这会在搜索启用后继续放大数据库读取次数
-- `2026-03-27` 当前前端已安装 `tdesign-mobile-react`，且本地类型声明确认导出了 `Search` 组件；本轮搜索框应直接使用组件库 `Search`，不能再手写输入框壳。
-- `2026-03-27` 当前 `ActivitiesPage` 已有组件库化空态/加载态和 Tabs 分组；本轮搜索接入应复用这些出口，不应重新造搜索结果壳层或手写空态组件。
-- `2026-03-27` 已完成的实现收口：
-  - 前端直接接入 `tdesign-mobile-react` 的 `Search` 组件，没有新增手写搜索壳层
-  - `web/src/features/activities/api.ts` 继续统一用 `URLSearchParams` 组装 `keyword/page/page_size`
-  - Rust 后端 `GET /api/web/activities` 新增可选 `keyword`
-  - Rust 仓储新增关键字过滤与 `find_user_activities` 批量读取，替换列表页逐条 `find_user_activity`
-- `2026-03-27` 最新验证结果：
-  - `cd web && npm test`：30 个测试文件、102 个测试全部通过
-  - `cd web && npm run lint`：通过
-  - `cd web && npm run build`：通过
-  - `cd backend-rust && cargo test`：24 个单测、26 个集成测试全部通过
+## Requirements
+- 审查是否存在过长的手写 HTML / CSS / JavaScript
+- 审查是否违反“能用组件库就用组件库”的原则
+- 联网学习组件库文档，判断现有手写实现能否由组件库替代
+- 审查是否存在“看似用了组件库，实则只是套壳手写”的实现
+- 审查是否存在单文件过长、失去可维护性的情况
 
-- `2026-03-26` 当前 `wxapp-checkin/` 子仓库位于 `web` 分支，`git status --short --branch` 显示工作区干净，可安全开展一次完整整改并在结束时直接提交。
-- `2026-03-26` 当前正式形态已不是历史 `frontend/ + backend/` 小程序/Java 双端，而是：
-  - `web/`：手机浏览器 Web 前端
-  - `backend-rust/`：Rust 后端
-  - `docs/`：当前正式需求、接口、部署文档
-- `2026-03-26` 顶层 `README.md`、`docs/REQUIREMENTS.md`、`docs/DEPLOYMENT.md` 已切到 Rust + `suda_union` 基线，但仍需继续核对是否与当前实现、接口文档、验证命令完全一致。
-- `2026-03-26` `docs/API_SPEC.md` 的更新时间仍是 `2026-03-10`，早于 3 月 25 日的 Rust 基线收口，存在文档版本与仓库状态可能不同步的风险，需要重点复核。
-- `2026-03-26` `README.md` 当前仍残留 `.worktrees/rust-suda-union` 绝对路径链接，这些链接只在历史 worktree 下有效，不是当前子仓库主路径，属于正式文档硬伤。
-- `2026-03-26` `docs/API_SPEC.md` 当前缺少正式存在的两个 staff 接口：
-  - `GET /api/web/staff/activities/{activity_id}/roster`
-  - `POST /api/web/staff/activities/{activity_id}/attendance-adjustments`
-- `2026-03-26` `docs/API_SPEC.md` 末尾仍引用不存在的 `docs/plans/2026-03-10-http-password-auth-implementation-plan.md` 与多份已清理的 Web 设计文档，当前已不能作为完整联调基线。
-- `2026-03-26` `docs/FUNCTIONAL_SPEC.md` 仍描述 `/change-password` 独立页面与“首次登录强制改密”流程，但当前前端路由 `web/src/app/router.tsx` 不存在 `/change-password`，后端 `backend-rust/src/api/auth.rs` 也只保留 `/login`。
-- `2026-03-26` 当前代码库已经有“移除改密链路”的硬约束证据：
-  - 最近提交为 `266378b fix(auth): 移除改密链路`
-  - `backend-rust/tests/contract_source_guards.rs` 明确断言 auth router 不再暴露 `/change-password`
-  - 因此需求/API/功能文档与代码实现存在系统性漂移，需要先决定“文档回写当前代码”还是“代码补回旧需求”。
-- `2026-03-26` `backend-rust` 当前缺少可直接约束工具链的仓库级声明；在当前环境里直接执行 `cargo test` 会因 `rustup` 没有默认 toolchain 而失败，这和 README / REQUIREMENTS 中“直接运行 cargo 命令即可验证”的口径不一致。
-- `2026-03-26` 本轮收口后，当前正式基线已统一为：
-  - 正式端点数：8 个
-  - 正式认证链路：只保留 `POST /api/web/auth/login`
-  - 运行期写库边界：`suda_activity_apply`、`suda_log`
-- `2026-03-26` 已完成的代码侧收口：
-  - 新增 `backend-rust/rust-toolchain.toml` 固定 `stable`
-  - 删除 `backend-rust/src/db/user_repo.rs` 中未使用的 `update_password`
-  - 删除 `web/src/features/auth/components/ChangePasswordForm.tsx`
-- `2026-03-26` 已完成的文档侧收口：
-  - `README.md` 修复 `.worktrees` 绝对路径链接
-  - `docs/REQUIREMENTS.md`、`docs/FUNCTIONAL_SPEC.md`、`docs/API_SPEC.md`、`docs/DEPLOYMENT.md` 已回写到当前无改密链路基线
-  - 两份 `docs/plans/*checklist.md` 已同步改为当前 8 端点兼容口径
-- `2026-03-25` 的正式设计与实施计划文件位于工作区根目录 `/home/psx/app/docs/plans/`，不是 `wxapp-checkin/docs/plans/`。
-- 当前前端正式兼容面仅 9 个 `/api/web/**` 端点：
-  - `POST /api/web/auth/login`
-  - `POST /api/web/auth/change-password`
-  - `GET /api/web/activities`
-  - `GET /api/web/activities/{activityId}`
-  - `GET /api/web/activities/{activityId}/code-session`
-  - `POST /api/web/activities/{activityId}/code-consume`
-  - `GET /api/web/staff/activities/{activityId}/roster`
-  - `POST /api/web/staff/activities/{activityId}/bulk-checkout`
-  - `POST /api/web/staff/activities/{activityId}/attendance-adjustments`
-- 当前 worktree 已建于 `/home/psx/app/wxapp-checkin/.worktrees/rust-suda-union`。
-- Rust 工具链原本不存在，现已安装到工作区本地目录：
-  - `CARGO_HOME=/home/psx/app/.cargo`
-  - `RUSTUP_HOME=/home/psx/app/.rustup`
-- 现阶段最关键的实现边界仍是：
-  - 对外保持 `snake_case` JSON
-  - 会话继续以 `session_token` + `Authorization: Bearer` 暴露
-  - 数据库写入只命中 `suda_activity_apply`、`suda_log`、`suda_user.password`
-- `backend-rust/` 现已实现 9 个正式 `/api/web/**` 端点对应的 Rust 路由与服务层：
-  - auth：`login`、`change-password`
-  - activities：`list`、`detail`、`code-session`、`code-consume`
-  - staff：`roster`、`attendance-adjustments`、`bulk-checkout`
-- 当前 Rust 方案明确采用：
-  - `axum + tokio + sqlx(MySQL)`
-  - 无状态 HMAC `session_token`
-  - 进程内 replay guard / invalid-code limiter
-  - `suda_log` 作为签到、签退和 staff 审计的统一日志落点
-- `backend-rust` 已通过：
-  - `cargo test`
-  - `cargo build --release`
-- 仓库级切换收口已完成：
-  - 顶层 `README.md`、`docs/DEPLOYMENT.md`、`docs/REQUIREMENTS.md` 已切到 Rust 单库基线
-  - `scripts/bootstrap.sh`、`scripts/dev.sh`、`scripts/stop.sh`、`scripts/prod-backend.sh` 已切到 `backend-rust`
-  - 旧 Java `backend/`、旧 Docker 入口与过时计划/报告文档已从仓库移除
+## Research Findings
+- `wxapp-checkin` 当前前端目录为 `web/`
+- `web/package.json` 显示当前 UI 依赖为 `tdesign-mobile-react`
+- 当前工作分支为 `wxapp-checkin/web`
+- `src` 规模约 7893 行（含测试），运行时代码中长度较高的文件集中在 `pages/`、`shared/ui/` 和 `features/staff/components/`
+- 运行时代码里较长的文件包括 `src/pages/checkin/CheckinPage.tsx`（197 行）、`src/pages/activity-detail/ActivityDetailPage.tsx`（193 行）、`src/pages/activity-roster/ActivityRosterPage.tsx`（182 行）、`src/shared/ui/ActivityMetaPanel.tsx`（163 行）、`src/features/staff/components/DynamicCodePanel.tsx`（156 行）
+- 全局样式集中在 `src/app/styles/*.css`，其中 `staff-page.css`（162 行）、`layouts.css`（130 行）、`page-shell.css`（99 行）较长，存在页面级样式持续膨胀风险
+- 当前已直接引用 `tdesign-mobile-react` 的文件约 20 个，说明项目不是完全未用组件库，但需要检查是否只用了基础壳层组件（`Cell`、`Form`、`Button`、`Tabs` 等）后仍在业务侧重复手写
+- 静态扫描未发现覆盖 `.t-*` 内部类名的样式；项目主要通过公开组件 API 和 CSS 变量使用 TDesign，这一点是健康的
+- `npm run lint` 与 `npm run build` 均通过，说明审查基于当前可构建基线
+- 官方文档确认 `Tabs` 支持 `sticky`、`theme`、`TabPanel` 等能力，项目已正确复用这些公开能力
+- 官方文档确认 `CellGroup` 只有 `theme="card"`、`title` 等基础卡片能力，并不提供当前项目 `ActivityMetaPanel` 所需的标题区状态位、描述区与 footer slot 组合
+- 官方文档确认 `Navbar` 主要提供 `left/right/title`、`leftArrow`、`safeAreaInsetTop` 等导航栏能力，不提供当前 `MobilePage` 这种整页 surface 壳层
+- 官方文档确认 `NoticeBar` 用于页面或模块顶部的持续提示，`Message` / `Toast` 则偏轻量反馈；当前项目把页内错误和成功提示都统一到 `NoticeBar`
+
+## Technical Decisions
+| Decision | Rationale |
+|----------|-----------|
+| 以 `tdesign-mobile-react` 为组件库对照基线 | 这是当前项目已安装且实际依赖的 UI 库 |
+| 审查结论按“组件库替代空间 + 代码可维护性”双轴整理 | 这与用户提出的 5 项要求直接对应 |
+| 把 `ActivityMetaPanel` / `MobilePage` 视为“项目层自建壳层”而非直接违规 | 官方组件库没有等价的完整页面壳和信息卡片原语，但这些壳层已经开始形成第二套设计系统，需要单独管控 |
+
+## Issues Encountered
+| Issue | Resolution |
+|-------|------------|
+| 仓库指南与当前前端目录不一致 | 使用真实目录 `web/` 继续审查 |
+
+## Resources
+- `/home/psx/app/wxapp-checkin/web/package.json`
+- `/home/psx/app/wxapp-checkin/web/src`
+- `/home/psx/app/wxapp-checkin/task_plan.md`
+- https://tdesign.tencent.com/mobile-react/components/cell?tab=api
+- https://tdesign.tencent.com/mobile-react/components/tabs?tab=api
+- https://tdesign.tencent.com/mobile-react/components/navbar?tab=api
+- https://tdesign.tencent.com/mobile-react/components/notice-bar?tab=api
+- https://tdesign.tencent.com/mobile-react/components/message?tab=api
+- https://tdesign.tencent.com/mobile-react/components/layout?tab=api
+- https://tdesign.tencent.com/mobile-react/components/grid?tab=api
+- https://tdesign.tencent.com/mobile-react/components/footer?tab=api
+
+## Visual/Browser Findings
+- 官方站点组件目录确认 `tdesign-mobile-react` 具备 `Layout`、`Navbar`、`TabBar`、`Tabs`、`Cell`、`Grid`、`Footer`、`Message`、`NoticeBar`、`SwipeCell` 等原语
+- `NoticeBar` 设计说明强调“在导航栏下方，用于给用户显示提示消息”，并支持错误/成功/警告主题，适合持续停留的顶部提示
+- `Message` / `Toast` 设计说明强调“轻量级反馈或提示，不会打断用户操作”，更适合短时反馈
