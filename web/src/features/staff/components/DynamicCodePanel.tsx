@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Cell, CellGroup, TabPanel, Tabs } from "tdesign-mobile-react";
+import { Cell, CellGroup, Col, Row, TabPanel, Tabs } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 import type { CodeSessionResponse } from "../api";
 import { AppButton } from "../../../shared/ui/AppButton";
@@ -107,35 +107,45 @@ export function DynamicCodePanel({
 
   return (
     <section className="staff-panel" data-panel-tone="staff">
-      <div className="staff-panel__controls" data-display-zone="controls">
-        <Tabs onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
-          <TabPanel label="签到码" value="checkin" />
-          <TabPanel label="签退码" value="checkout" />
-        </Tabs>
-      </div>
-      <div className="staff-code-panel" data-display-zone="hero">
-        <DynamicCodeHero
-          actionLabel={actionLabel}
-          actionType={actionType}
-          countdownTimeMs={countdownTimeMs}
-          codeText={heroDisplayCode}
-          loadingMetaText={heroMetaLoading ? "动态码加载中..." : undefined}
-          onCountdownFinish={handleCountdownFinish}
-          showSkeleton={loading}
-        />
-      </div>
-      <div className="staff-panel__stats" data-display-zone="stats">
-        <CellGroup theme="card" title="实时统计">
-          <Cell note={`${totalCheckedIn}`} title="签到人数" />
-          <Cell note={`${checkoutCount}`} title="签退人数" />
-          <Cell note={`${checkinCount}`} title="未签退人数" />
-        </CellGroup>
-      </div>
-      <div className="staff-panel__actions" data-display-zone="actions">
-        <AppButton onClick={onRefresh} tone="secondary">
-          立即刷新
-        </AppButton>
-      </div>
+      <Row className="staff-panel__layout" gutter={16}>
+        <Col className="staff-panel__col staff-panel__controls-col" span={12}>
+          <section className="staff-panel__controls" data-display-zone="controls">
+            <Tabs onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
+              <TabPanel label="签到码" value="checkin" />
+              <TabPanel label="签退码" value="checkout" />
+            </Tabs>
+          </section>
+        </Col>
+        <Col className="staff-panel__col staff-code-panel__col" span={12}>
+          <section className="staff-code-panel" data-display-zone="hero">
+            <DynamicCodeHero
+              actionLabel={actionLabel}
+              actionType={actionType}
+              countdownTimeMs={countdownTimeMs}
+              codeText={heroDisplayCode}
+              loadingMetaText={heroMetaLoading ? "动态码加载中..." : undefined}
+              onCountdownFinish={handleCountdownFinish}
+              showSkeleton={loading}
+            />
+          </section>
+        </Col>
+        <Col className="staff-panel__col staff-panel__stats-col" span={12}>
+          <section className="staff-panel__stats" data-display-zone="stats">
+            <CellGroup theme="card" title="实时统计">
+              <Cell note={`${totalCheckedIn}`} title="签到人数" />
+              <Cell note={`${checkoutCount}`} title="签退人数" />
+              <Cell note={`${checkinCount}`} title="未签退人数" />
+            </CellGroup>
+          </section>
+        </Col>
+        <Col className="staff-panel__col staff-panel__actions-col" span={12}>
+          <section className="staff-panel__actions" data-display-zone="actions">
+            <AppButton onClick={onRefresh} tone="secondary">
+              立即刷新
+            </AppButton>
+          </section>
+        </Col>
+      </Row>
     </section>
   );
 }

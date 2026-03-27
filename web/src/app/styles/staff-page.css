@@ -5,11 +5,29 @@
  * ========================================================= */
 
 .staff-panel,
+.staff-panel__layout,
+.staff-panel__col,
 .staff-panel__controls,
 .staff-code-panel,
 .staff-panel__stats,
 .staff-panel__actions {
   min-width: 0;
+}
+
+.staff-panel__controls,
+.staff-code-panel,
+.staff-panel__stats,
+.staff-panel__actions {
+  width: 100%;
+}
+
+.staff-panel__controls {
+  display: grid;
+}
+
+.staff-panel__controls > * {
+  width: min(100%, 360px);
+  justify-self: center;
 }
 
 .staff-code-panel__card {
@@ -104,23 +122,14 @@
     width: min(100%, 1120px);
   }
 
-  .mobile-page[data-page-layout="showcase-auto"] .staff-panel {
-    grid-template-columns: minmax(0, 1fr) 280px;
-    grid-template-areas:
-      "tabs tabs"
-      "hero hero"
-      "stats actions";
-    gap: 18px;
+  .mobile-page[data-page-layout="showcase-auto"] .staff-panel__stats-col,
+  .mobile-page[data-page-layout="showcase-auto"] .staff-panel__actions-col {
+    flex: 0 0 50%;
+    max-width: 50%;
   }
 
-  .mobile-page[data-page-layout="showcase-auto"] .staff-panel__controls {
-    grid-area: tabs;
-    justify-self: center;
-    width: min(100%, 360px);
-  }
-
-  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel {
-    grid-area: hero;
+  .mobile-page[data-page-layout="showcase-auto"] .staff-panel__controls-col {
+    margin-bottom: 2px;
   }
 
   .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__card {
@@ -137,12 +146,7 @@
     font-size: 1rem;
   }
 
-  .mobile-page[data-page-layout="showcase-auto"] .staff-panel__stats {
-    grid-area: stats;
-  }
-
   .mobile-page[data-page-layout="showcase-auto"] .staff-panel__actions {
-    grid-area: actions;
     align-self: start;
   }
 }

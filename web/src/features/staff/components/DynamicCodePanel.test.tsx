@@ -202,7 +202,36 @@ describe("DynamicCodePanel", () => {
     const panel = screen.getByText("签到码").closest(".staff-panel");
     expect(panel).not.toBeNull();
     expect(
-      Array.from(panel?.children ?? []).map((child) => child.getAttribute("data-display-zone"))
+      Array.from(panel?.querySelectorAll("[data-display-zone]") ?? []).map((child) => child.getAttribute("data-display-zone"))
     ).toEqual(["controls", "hero", "stats", "actions"]);
+  });
+
+  it("renders the panel through TDesign row and col layout primitives instead of a project-owned desktop grid shell", () => {
+    const onActionChange = vi.fn();
+    const onRefresh = vi.fn();
+
+    const { container } = render(
+      <DynamicCodePanel
+        activityId="act_101"
+        actionType="checkin"
+        codeSession={{
+          action_type: "checkin",
+          activity_id: "act_101",
+          checkin_count: 18,
+          checkout_count: 3,
+          code: "483920",
+          expires_at: Date.now() + 4000,
+          expires_in_ms: 4000,
+          server_time_ms: Date.now(),
+          status: "success"
+        }}
+        onActionChange={onActionChange}
+        onRefresh={onRefresh}
+      />
+    );
+
+    expect(container.querySelector(".t-row")).not.toBeNull();
+    expect(container.querySelectorAll(".t-col").length).toBeGreaterThanOrEqual(4);
+    expect(container.querySelector(".staff-panel__layout")).not.toBeNull();
   });
 });
