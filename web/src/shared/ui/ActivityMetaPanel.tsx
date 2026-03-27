@@ -1,5 +1,6 @@
 import { ElementType, ReactNode } from "react";
 import type { VisualTone } from "./visual-tone";
+import { AppSurface } from "./AppSurface";
 import { ActivityMetaContentGroups, type ActivityMetaDetailRow } from "./ActivityMetaContentGroups";
 
 /**
@@ -140,9 +141,9 @@ export function ActivityMetaPanel({
 
   return (
     <Container className="activity-meta-panel" data-panel-tone={tone}>
-      <div className="activity-meta-panel__surface">
+      <AppSurface className="activity-meta-panel__surface" tone={tone} variant="activity-meta">
         <div className="activity-meta-panel__header">
-          <div className="activity-meta-panel__title-block activity-meta-panel__title-stack">
+          <div className="activity-meta-panel__title-block">
             <TitleTag className="activity-meta-panel__title">{title}</TitleTag>
             {subtitle ? <p className="activity-meta-panel__subtitle">{subtitle}</p> : null}
           </div>
@@ -157,7 +158,7 @@ export function ActivityMetaPanel({
             <div className="activity-meta-panel__footer-actions">{footer}</div>
           </div>
         ) : null}
-      </div>
+      </AppSurface>
     </Container>
   );
 }

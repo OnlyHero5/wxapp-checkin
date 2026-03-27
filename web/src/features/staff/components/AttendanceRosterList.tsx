@@ -59,7 +59,7 @@ export function AttendanceRosterList({
   }
 
   return (
-    <List className="roster-list">
+    <List>
       {items.map((item) => {
         const checked = selectedIds.includes(item.user_id);
         return (

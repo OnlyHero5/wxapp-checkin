@@ -1,5 +1,6 @@
 import { Badge, CountDown, Skeleton } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
+import { AppSurface } from "../../../shared/ui/AppSurface";
 
 export type DynamicCodeHeroProps = {
   actionLabel: string;
@@ -25,7 +26,7 @@ export function DynamicCodeHero({
   showSkeleton
 }: DynamicCodeHeroProps) {
   return (
-    <section className="staff-code-panel__surface">
+    <AppSurface as="section" className="staff-code-panel__surface" tone="staff" variant="staff-code">
       <Badge
         className="staff-code-panel__badge"
         color={resolveActionBadgeColor(actionType)}
@@ -81,6 +82,6 @@ export function DynamicCodeHero({
           </div>
         </section>
       </Badge>
-    </section>
+    </AppSurface>
   );
 }

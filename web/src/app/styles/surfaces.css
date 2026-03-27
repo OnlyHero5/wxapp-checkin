@@ -6,10 +6,7 @@
  * ========================================================= */
 
 /* 这里统一定义项目自己的卡面，而不是借组件库内部盒子来充当页面壳层。 */
-.mobile-page__hero-surface,
-.mobile-page__content-surface,
-.activity-meta-panel__surface,
-.staff-code-panel__surface {
+.app-surface {
   position: relative;
   display: grid;
   gap: 12px;
@@ -24,10 +21,7 @@
 }
 
 /* 高光层只挂在项目自有 surface 上，避免再去覆盖组件库卡片本身。 */
-.mobile-page__hero-surface::before,
-.mobile-page__content-surface::before,
-.activity-meta-panel__surface::before,
-.staff-code-panel__surface::before {
+.app-surface::before {
   content: "";
   position: absolute;
   inset: 1px;
@@ -36,40 +30,40 @@
   pointer-events: none;
 }
 
-/* 页面 tone 只作用在我们自己的 surface 上，组件库控件仍由库自己负责。 */
-.mobile-page[data-page-tone="brand"] .mobile-page__hero-surface {
+/* tone 走统一 data contract，减少“这个页面一个类、那个面板一个类”的重复分支。 */
+.app-surface[data-surface-variant="page-hero"][data-surface-tone="brand"] {
   border-color: rgba(22, 119, 255, 0.18);
   background: linear-gradient(180deg, rgba(22, 119, 255, 0.14), rgba(255, 255, 255, 0.82));
 }
 
-.mobile-page[data-page-tone="checkin"] .mobile-page__hero-surface {
+.app-surface[data-surface-variant="page-hero"][data-surface-tone="checkin"] {
   border-color: rgba(15, 159, 140, 0.18);
   background: linear-gradient(180deg, rgba(15, 159, 140, 0.14), rgba(255, 255, 255, 0.82));
 }
 
-.mobile-page[data-page-tone="checkout"] .mobile-page__hero-surface {
+.app-surface[data-surface-variant="page-hero"][data-surface-tone="checkout"] {
   border-color: rgba(217, 119, 6, 0.18);
   background: linear-gradient(180deg, rgba(217, 119, 6, 0.14), rgba(255, 255, 255, 0.82));
 }
 
-.mobile-page[data-page-tone="staff"] .mobile-page__hero-surface,
-.activity-meta-panel[data-panel-tone="staff"] .activity-meta-panel__surface,
-.staff-panel[data-panel-tone="staff"] .staff-code-panel__surface {
+.app-surface[data-surface-variant="page-hero"][data-surface-tone="staff"],
+.app-surface[data-surface-variant="activity-meta"][data-surface-tone="staff"],
+.app-surface[data-surface-variant="staff-code"][data-surface-tone="staff"] {
   border-color: rgba(91, 91, 214, 0.2);
   background: linear-gradient(180deg, rgba(91, 91, 214, 0.12), rgba(255, 255, 255, 0.9));
 }
 
-.activity-meta-panel[data-panel-tone="brand"] .activity-meta-panel__surface {
+.app-surface[data-surface-variant="activity-meta"][data-surface-tone="brand"] {
   border-color: rgba(22, 119, 255, 0.18);
   background: linear-gradient(180deg, rgba(22, 119, 255, 0.08), rgba(255, 255, 255, 0.96));
 }
 
-.activity-meta-panel[data-panel-tone="checkin"] .activity-meta-panel__surface {
+.app-surface[data-surface-variant="activity-meta"][data-surface-tone="checkin"] {
   border-color: rgba(15, 159, 140, 0.18);
   background: linear-gradient(180deg, rgba(15, 159, 140, 0.08), rgba(255, 255, 255, 0.96));
 }
 
-.activity-meta-panel[data-panel-tone="checkout"] .activity-meta-panel__surface {
+.app-surface[data-surface-variant="activity-meta"][data-surface-tone="checkout"] {
   border-color: rgba(217, 119, 6, 0.18);
   background: linear-gradient(180deg, rgba(217, 119, 6, 0.08), rgba(255, 255, 255, 0.96));
 }

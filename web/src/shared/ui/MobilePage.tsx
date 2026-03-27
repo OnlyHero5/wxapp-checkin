@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Navbar } from "tdesign-mobile-react";
+import { AppSurface } from "./AppSurface";
 import type { VisualTone } from "./visual-tone";
 
 export type MobilePageLayout = "compact" | "showcase-auto";
@@ -36,7 +37,7 @@ export function MobilePage({
   return (
     <main className="mobile-page" data-page-layout={layout} data-page-tone={tone}>
       <div className="mobile-page__shell">
-        <header className="mobile-page__hero-surface">
+        <AppSurface as="header" className="mobile-page__hero-surface" tone={tone} variant="page-hero">
           {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
           <section className="mobile-page__hero">
             {/* 标题和右侧动作都交给 Navbar 公共槽位，避免页面头部继续长成自定义壳层。 */}
@@ -50,10 +51,10 @@ export function MobilePage({
             />
             {description ? <p className="mobile-page__description">{description}</p> : null}
           </section>
-        </header>
-        <section className="mobile-page__content-surface">
+        </AppSurface>
+        <AppSurface as="section" className="mobile-page__content-surface" tone="default" variant="page-content">
           <div className="mobile-page__content">{children}</div>
-        </section>
+        </AppSurface>
       </div>
     </main>
   );

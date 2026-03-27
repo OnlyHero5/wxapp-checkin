@@ -1,8 +1,8 @@
 # 手机 Web 动态验证码签到系统需求文档
 
-文档版本：v2.1  
+文档版本：v2.2  
 状态：正式基线  
-更新日期：2026-03-26  
+更新日期：2026-03-27  
 项目：`wxapp-checkin`
 
 ## 1. 文档目的
@@ -21,15 +21,7 @@
 - 正式后端：`backend-rust/`
 - 正式数据库：`suda_union`
 
-正式链路不再保留：
-
-- 微信小程序 `frontend/`
-- Java `backend/`
-- `wxcheckin_ext`
-- `wx_*` 逻辑表
-- `/api/web/auth/change-password`
-- 双库同步
-- outbox relay
+本文档只描述当前正式链路；历史方案、历史目录和一次性迁移路径不再作为当前事实来源。
 
 ## 3. 建设目标
 

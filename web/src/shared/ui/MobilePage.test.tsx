@@ -23,6 +23,8 @@ describe("MobilePage", () => {
       </MobilePage>
     );
 
+    expect(document.querySelector('.app-surface[data-surface-variant="page-hero"]')).toBeInTheDocument();
+    expect(document.querySelector('.app-surface[data-surface-variant="page-content"]')).toBeInTheDocument();
     expect(document.querySelector(".mobile-page__hero-surface")).toBeInTheDocument();
     expect(document.querySelector(".mobile-page__content-surface")).toBeInTheDocument();
     expect(screen.getByText("活动管理").closest(".mobile-page__eyebrow")).toBeInTheDocument();

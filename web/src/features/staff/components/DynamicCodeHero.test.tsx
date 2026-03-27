@@ -15,6 +15,7 @@ describe("DynamicCodeHero", () => {
       />
     );
 
+    expect(document.querySelector('.app-surface[data-surface-variant="staff-code"]')).toBeInTheDocument();
     expect(document.querySelector(".staff-code-panel__surface")).toBeInTheDocument();
     expect(screen.getByText("当前签到码").closest(".t-badge")).toBeInTheDocument();
     expect(screen.getByText("483920")).toBeInTheDocument();

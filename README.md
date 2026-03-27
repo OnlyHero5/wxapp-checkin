@@ -6,14 +6,6 @@
 - Rust 后端：`backend-rust/`
 - 唯一数据库：`suda_union`
 
-当前正式基线不再保留：
-
-- 微信小程序 `frontend/`
-- Java `backend/`
-- `wxcheckin_ext`
-- `wx_*` 逻辑表
-- `/api/web/auth/change-password`
-
 当前推荐发布入口：
 
 - 云服务器 Docker 一键部署：`./scripts/docker-prod.sh`
@@ -26,6 +18,7 @@
 | `backend-rust/` | 唯一正式后端 |
 | `docs/` | 正式需求、功能、接口、部署文档 |
 | `scripts/` | bootstrap、启动、停止脚本 |
+| `design-system/` | 设计资产与设计系统资料 |
 
 ## 当前正式能力
 

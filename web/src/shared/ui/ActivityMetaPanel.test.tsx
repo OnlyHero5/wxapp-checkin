@@ -16,6 +16,7 @@ describe("ActivityMetaPanel responsive layout", () => {
     );
 
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
+    expect(container.querySelector('.app-surface[data-surface-variant="activity-meta"]')).not.toBeNull();
     expect(container.querySelector(".activity-meta-panel__surface")).not.toBeNull();
     expect(container.querySelector(".activity-meta-panel__header")).not.toBeNull();
     expect(container.querySelectorAll(".t-cell").length).toBeGreaterThan(0);

@@ -1,6 +1,6 @@
 # wxapp-checkin 部署手册
 
-更新日期：2026-03-26  
+更新日期：2026-03-27  
 适用范围：`wxapp-checkin` 当前正式形态（`web/ + backend-rust/ + suda_union`）
 
 ## 1. 部署目标
@@ -13,12 +13,7 @@
 - 后端：`backend-rust/target/release/wxapp-checkin-backend-rust`
 - 数据库：`suda_union`
 
-不再作为正式口径：
-
-- 微信小程序 `frontend/`
-- Java `backend/`
-- `wxcheckin_ext`
-- 旧版“前后端 + 其它依赖一起塞进同一套 Compose 模板”的全栈发布口径
+本文件只描述当前正式部署口径；历史目录、历史运行链路和一次性迁移脚本不再作为当前事实来源。
 
 ## 3. 前置依赖
 
