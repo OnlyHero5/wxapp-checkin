@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DynamicCodeHero } from "./DynamicCodeHero";
 
 describe("DynamicCodeHero", () => {
-  it("renders the action ribbon, code display, and countdown inside the stable surface", async () => {
+  it("renders the action ribbon, code display, and countdown without the legacy surface wrapper", async () => {
     render(
       <DynamicCodeHero
         actionLabel="当前签到码"
@@ -15,8 +15,8 @@ describe("DynamicCodeHero", () => {
       />
     );
 
-    expect(document.querySelector('.app-surface[data-surface-variant="staff-code"]')).toBeInTheDocument();
-    expect(document.querySelector(".staff-code-panel__surface")).toBeInTheDocument();
+    expect(document.querySelector(".app-surface")).toBeNull();
+    expect(document.querySelector(".staff-code-panel__card")).toBeInTheDocument();
     expect(screen.getByText("当前签到码").closest(".t-badge")).toBeInTheDocument();
     expect(screen.getByText("483920")).toBeInTheDocument();
     await waitFor(() => {

@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ActivityMetaPanel } from "./ActivityMetaPanel";
 
-describe("ActivityMetaPanel responsive layout", () => {
-  it("renders detail rows through TDesign cell groups instead of custom row markup", () => {
+describe("ActivityMetaPanel", () => {
+  it("renders detail rows through TDesign cell groups without the legacy app-surface shell", () => {
     const { container } = render(
       <ActivityMetaPanel
         description="负责现场秩序维护"
@@ -16,13 +16,12 @@ describe("ActivityMetaPanel responsive layout", () => {
     );
 
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
-    expect(container.querySelector('.app-surface[data-surface-variant="activity-meta"]')).not.toBeNull();
-    expect(container.querySelector(".activity-meta-panel__surface")).not.toBeNull();
-    expect(container.querySelector(".activity-meta-panel__header")).not.toBeNull();
+    expect(container.querySelector(".app-surface")).toBeNull();
+    expect(container.querySelector(".activity-meta-panel__heading")).not.toBeNull();
     expect(container.querySelectorAll(".t-cell").length).toBeGreaterThan(0);
   });
 
-  it("allows long detail values to shrink and wrap inside narrow cards", () => {
+  it("allows long detail values to shrink and wrap inside narrow groups", () => {
     const { container } = render(
       <ActivityMetaPanel
         locationText="苏州大学独墅湖校区二期图书馆西侧报告厅外长廊集合点与备用签到处"

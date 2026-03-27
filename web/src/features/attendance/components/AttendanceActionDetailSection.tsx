@@ -4,8 +4,7 @@ import { AppEmptyState } from "../../../shared/ui/AppEmptyState";
 import {
   isActionAllowed,
   resolveInputLabel,
-  resolveSubmitText,
-  resolveActionTone
+  resolveSubmitText
 } from "../attendance-action-utils";
 import { CodeInput } from "./CodeInput";
 
@@ -46,7 +45,6 @@ export function AttendanceActionDetailSection({
           onSubmit={onSubmit}
           pending={pending}
           submitText={resolveSubmitText(actionType)}
-          tone={resolveActionTone(actionType)}
           value={code}
         />
       ) : (

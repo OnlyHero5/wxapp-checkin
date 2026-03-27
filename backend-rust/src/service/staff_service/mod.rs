@@ -1,8 +1,9 @@
 mod access;
+mod adjust;
 mod audit;
-mod mutations;
+mod bulk_checkout;
 mod roster;
 
-pub use mutations::adjust_attendance;
-pub use mutations::bulk_checkout;
+pub use adjust::adjust_attendance;
+pub use bulk_checkout::bulk_checkout;
 pub use roster::get_roster;

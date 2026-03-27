@@ -1,14 +1,11 @@
 import { CellGroup, Form, FormItem, Input } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
-import type { VisualTone } from "../../../shared/ui/visual-tone";
 
 /**
- * 动态码输入组件负责“输入体验”而不是“业务动作”：
- * 1. 限制只能保留 6 位数字
- * 2. 显示错误文案
- * 3. 在满足长度时开放提交按钮
- *
- * 签到页和签退页共用这套组件，避免两边校验逻辑漂移。
+ * 动态码输入组件只负责输入体验，不负责业务动作本身：
+ * 1. 统一把输入裁成 6 位数字；
+ * 2. 复用表单校验与错误展示；
+ * 3. 满足长度后开放提交按钮。
  */
 type CodeInputProps = {
   errorMessage?: string;
@@ -17,12 +14,11 @@ type CodeInputProps = {
   onSubmit: () => Promise<void> | void;
   pending?: boolean;
   submitText: string;
-  tone?: Extract<VisualTone, "checkin" | "checkout">;
   value: string;
 };
 
 function normalizeCode(value: string) {
-  // 所有非数字字符直接过滤，既兼容粘贴，也兼容输入法带来的噪音字符。
+  // 所有非数字字符直接过滤，既兼容粘贴，也兼容输入法噪音字符。
   return `${value}`.replace(/\D/g, "").slice(0, 6);
 }
 
@@ -44,7 +40,6 @@ export function CodeInput({
   onSubmit,
   pending = false,
   submitText,
-  tone = "checkin",
   value
 }: CodeInputProps) {
   const normalizedValue = normalizeCode(value);
@@ -76,7 +71,7 @@ export function CodeInput({
               type="number"
             />
           </FormItem>
-          <AppButton accentTone={tone} disabled={!canSubmit} loading={pending} type="submit">
+          <AppButton disabled={!canSubmit} loading={pending} type="submit">
             {submitText}
           </AppButton>
         </Form>

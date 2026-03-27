@@ -62,7 +62,7 @@ describe("DynamicCodePanel", () => {
     );
 
     expect(screen.getByText("当前签到码").closest(".t-badge")).toBeInTheDocument();
-    expect(document.querySelector(".staff-code-panel__surface")).toBeInTheDocument();
+    expect(document.querySelector(".staff-code-panel__card")).toBeInTheDocument();
     expect(document.querySelector(".staff-code-panel__hero-group")).toBeNull();
     expect(screen.getByText("483920")).toBeInTheDocument();
     await waitFor(() => {

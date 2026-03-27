@@ -8,11 +8,11 @@ use wxapp_checkin_backend_rust::config::Config;
 use wxapp_checkin_backend_rust::error::AppError;
 
 #[tokio::test]
-async fn api_error_response_should_keep_contract_fields() {
+async fn api_error_response_should_keep_contract_fields_and_http_status() {
   let response =
     AppError::business("forbidden", "权限不足", Some("permission_denied")).into_response();
 
-  assert_eq!(response.status(), StatusCode::OK);
+  assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
   let bytes = response
     .into_body()
@@ -25,6 +25,13 @@ async fn api_error_response_should_keep_contract_fields() {
   assert_eq!(body["status"], "forbidden");
   assert_eq!(body["message"], "权限不足");
   assert_eq!(body["error_code"], "permission_denied");
+}
+
+#[tokio::test]
+async fn duplicate_business_error_should_report_conflict_status() {
+  let response = AppError::business("duplicate", "重复提交", None).into_response();
+
+  assert_eq!(response.status(), StatusCode::CONFLICT);
 }
 
 #[tokio::test]

@@ -16,20 +16,17 @@ function readAppStyles() {
 const baseCss = readAppStyles();
 
 describe("MobilePage", () => {
-  it("renders hero and content through app-owned surfaces instead of TDesign card-group shells", () => {
+  it("renders a thin page shell around the component-library navbar instead of app-owned card surfaces", () => {
     render(
       <MobilePage description="请先确认当前页面操作，再继续执行。" eyebrow="活动管理" title="动态签到">
         <p>当前为签到展示模式</p>
       </MobilePage>
     );
 
-    expect(document.querySelector('.app-surface[data-surface-variant="page-hero"]')).toBeInTheDocument();
-    expect(document.querySelector('.app-surface[data-surface-variant="page-content"]')).toBeInTheDocument();
-    expect(document.querySelector(".mobile-page__hero-surface")).toBeInTheDocument();
-    expect(document.querySelector(".mobile-page__content-surface")).toBeInTheDocument();
+    expect(document.querySelector(".app-surface")).toBeNull();
+    expect(document.querySelector(".mobile-page__header")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__content")).toBeInTheDocument();
     expect(screen.getByText("活动管理").closest(".mobile-page__eyebrow")).toBeInTheDocument();
-    expect(document.querySelector(".mobile-page__hero-group")).toBeNull();
-    expect(document.querySelector(".mobile-page__content-group")).toBeNull();
   });
 
   it("defaults to compact layout while keeping the tone hook", () => {
@@ -67,10 +64,9 @@ describe("MobilePage", () => {
 
     expect(document.querySelector(".t-navbar")).not.toBeNull();
     expect(actionLink.closest(".t-navbar__right")).toBeInTheDocument();
-    expect(document.querySelector(".mobile-page__actions")).toBeNull();
   });
 
-  it("keeps the page shell top-aligned so short pages do not stretch into tall blank cards", () => {
+  it("keeps the page shell top-aligned so short pages do not stretch into tall blank panels", () => {
     render(
       <MobilePage eyebrow="动态验证码" title="活动签到">
         <p>请输入签到码</p>
@@ -83,7 +79,7 @@ describe("MobilePage", () => {
     expect(baseCss).toMatch(/\.mobile-page\s*\{[^}]*align-items:\s*flex-start;/);
     expect(shell).not.toBeNull();
     expect(baseCss).toMatch(/\.mobile-page__shell\s*\{[^}]*align-content:\s*start;/);
-    expect(baseCss).toMatch(/\.mobile-page__content-surface\s*\{/);
+    expect(baseCss).toMatch(/\.mobile-page__header\s*\{/);
   });
 
   it("pins the content grid to a shrinkable single column so form pages cannot overflow horizontally", () => {
@@ -96,7 +92,7 @@ describe("MobilePage", () => {
     expect(baseCss).toMatch(/\.mobile-page__content\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   });
 
-  it("keeps shared single-column containers shrinkable instead of relying on ad-hoc form wrappers", () => {
+  it("keeps shared single-column containers shrinkable instead of relying on ad-hoc shells", () => {
     render(
       <MobilePage eyebrow="动态验证码" title="活动签到">
         <p>请输入签到码</p>

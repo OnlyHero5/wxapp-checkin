@@ -1,15 +1,13 @@
 import { ElementType, ReactNode } from "react";
 import type { VisualTone } from "./visual-tone";
-import { AppSurface } from "./AppSurface";
 import { ActivityMetaContentGroups, type ActivityMetaDetailRow } from "./ActivityMetaContentGroups";
 
 /**
- * 活动信息块在列表、详情、输入页重复度最高，因此单独抽成公共面板。
+ * 活动信息块仍然保留公共组合层，但现在只负责“信息编排”，不再自带项目级卡面外壳。
  *
- * 这层只负责：
- * 1. 统一标题、副标题和状态位布局
- * 2. 统一时间 / 地点 / 我的状态 / 统计这些字段的渲染顺序
- * 3. 让页面层只关心“传什么信息”，而不是再手写一组 `<p>`
+ * 这样做的目的有两点：
+ * 1. 标题、状态位和 footer 的组合仍然集中维护；
+ * 2. 具体卡片形态完全交给 TDesign `CellGroup`，避免这里继续长成第二套面板组件。
  */
 type ActivityMetaPanelProps = {
   as?: ElementType;
@@ -46,20 +44,12 @@ function resolveRows({
   rows: ActivityMetaDetailRow[];
 } {
   /**
-   * 这些字段统一在这里按固定顺序输出，而不是在页面里自由穿插。
+   * 字段顺序仍然固定在这里，避免列表、详情和动作页各自漂移。
    *
-   * 原因是：
-   * - 同一类信息如果顺序不一致，用户会觉得页面像不同产品拼出来的
-   * - 后续补字段时，只需要改这一层，不需要同时扫 3 个页面
+   * 这层只输出“要展示哪些行”：
+   * - 具体单元格布局交给 `ActivityMetaContentGroups`
+   * - 标题区只保留少量页面真正缺失的结构胶水
    */
-  // 字段顺序固定下来以后，列表、详情和输入页就不会各自漂移。
-  /**
-   * 统计口径说明（非常重要，避免“签到人数为什么会变成 0”的误解）：
-   * - 后端 `checkin_count` 当前是“已签到未签退”（即仍在场）人数；
-   * - 后端 `checkout_count` 是“已签退”人数；
-   * - 因此“累计已签到”= `checkin_count + checkout_count`。
-   */
-  // `expected` 用于管理端展示“应到人数”，它与签到/签退是不同维度的统计。
   const rows: ActivityMetaDetailRow[] = [];
 
   if (timeText) {
@@ -123,10 +113,9 @@ export function ActivityMetaPanel({
   titleAs = "h3"
 }: ActivityMetaPanelProps) {
   /**
-   * `titleAs` 用来控制语义层级，而不是视觉层级。
+   * `titleAs` 继续只承接语义层级，不承接视觉层级。
    *
-   * 例如详情页已经有页面级 `h1`，这里就降成 `p`，
-   * 避免出现“双主标题”的可访问性噪音。
+   * 这样详情页可以安全降级标题标签，同时不用重新发明一套 heading 组件。
    */
   const TitleTag = titleAs;
   const { description: descriptionText, rows } = resolveRows({
@@ -141,24 +130,16 @@ export function ActivityMetaPanel({
 
   return (
     <Container className="activity-meta-panel" data-panel-tone={tone}>
-      <AppSurface className="activity-meta-panel__surface" tone={tone} variant="activity-meta">
-        <div className="activity-meta-panel__header">
-          <div className="activity-meta-panel__title-block">
-            <TitleTag className="activity-meta-panel__title">{title}</TitleTag>
-            {subtitle ? <p className="activity-meta-panel__subtitle">{subtitle}</p> : null}
-          </div>
-          {/* 状态位独立成 slot，是为了兼容列表卡片、详情页和未来管理员态的不同标签策略。 */}
-          {statusSlot ? <div className="activity-meta-panel__status">{statusSlot}</div> : null}
+      <div className="activity-meta-panel__heading">
+        <div className="activity-meta-panel__title-block">
+          <TitleTag className="activity-meta-panel__title">{title}</TitleTag>
+          {subtitle ? <p className="activity-meta-panel__subtitle">{subtitle}</p> : null}
+          {descriptionText ? <p className="activity-meta-panel__description">{descriptionText}</p> : null}
         </div>
-        {descriptionText ? <p className="activity-meta-panel__description">{descriptionText}</p> : null}
-        <ActivityMetaContentGroups counts={counts} rows={rows} />
-        {/* footer 常用于“查看详情”这类补充动作，避免动作和元信息混在同一组文本里。 */}
-        {footer ? (
-          <div className="activity-meta-panel__footer">
-            <div className="activity-meta-panel__footer-actions">{footer}</div>
-          </div>
-        ) : null}
-      </AppSurface>
+        {statusSlot ? <div className="activity-meta-panel__status">{statusSlot}</div> : null}
+      </div>
+      <ActivityMetaContentGroups counts={counts} rows={rows} />
+      {footer ? <div className="activity-meta-panel__footer">{footer}</div> : null}
     </Container>
   );
 }

@@ -6,10 +6,10 @@ import { InlineNotice } from "../../../shared/ui/InlineNotice";
 /**
  * Web 端账号密码登录表单。
  *
- * 组件职责刻意收敛为：
- * - 收集最小必要输入（学号 + 密码）
- * - 做轻量的“可提交性”判断（是否为空、是否正在提交）
- * - 把规范化后的数据交给页面层处理（请求/跳转/错误码翻译不在这里做）
+ * 组件职责继续收敛在“输入与提交”：
+ * 1. 采集最小必要字段；
+ * 2. 复用组件库校验能力；
+ * 3. 把规范化后的结果交给页面层，不在这里掺请求和跳转。
  */
 type AccountLoginFormProps = {
   errorMessage?: string;
@@ -94,7 +94,7 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
             type="password"
           />
         </FormItem>
-        <AppButton accentTone="brand" disabled={!canSubmit} loading={pending} type="submit">
+        <AppButton disabled={!canSubmit} loading={pending} type="submit">
           登录
         </AppButton>
       </Form>

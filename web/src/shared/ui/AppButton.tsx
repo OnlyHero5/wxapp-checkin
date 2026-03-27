@@ -1,16 +1,15 @@
 import { ReactNode } from "react";
 import { Button } from "tdesign-mobile-react";
-import type { VisualTone } from "./visual-tone";
 
 /**
- * 所有主次按钮统一走这一层，而不是让页面各自拼 TDesign 参数。
+ * 所有主次按钮仍然统一走这一层，但现在只保留“业务语义 -> 组件库参数”的薄映射。
  *
- * 这样做的收益有两点：
- * 1. 主次动作的视觉层级集中维护
- * 2. 后续如果要统一尺寸、圆角或 loading 口径，只改这一处
+ * 这里刻意不再输出项目自有 class：
+ * 1. 按钮形态、尺寸、禁用与 loading 交给 TDesign；
+ * 2. 页面不再维护第二套按钮视觉体系；
+ * 3. 这一层只负责防止业务页反复手写同一组 theme / variant 组合。
  */
 type AppButtonProps = {
-  accentTone?: VisualTone;
   children: ReactNode;
   disabled?: boolean;
   loading?: boolean;
@@ -20,7 +19,6 @@ type AppButtonProps = {
 };
 
 export function AppButton({
-  accentTone = "default",
   children,
   disabled = false,
   loading = false,
@@ -29,14 +27,13 @@ export function AppButton({
   type = "button"
 }: AppButtonProps) {
   /**
-   * 当前项目只暴露两种按钮语义：
-   * - `primary`：推进主流程
-   * - `secondary`：重试、补充动作、次级跳转
+   * 当前项目只保留两种稳定语义：
+   * - `primary`：推进当前主链路
+   * - `secondary`：返回、重试、补充动作
    *
-   * 不继续开放第三种/第四种视觉变体，
-   * 是为了防止业务页重新长回“每页一套按钮参数”的状态。
+   * 颜色、边框和按钮内部结构全部交回组件库，
+   * 避免业务代码继续通过自定义 class 拼出“伪组件库按钮”。
    */
-  // 这里刻意把“主按钮 / 次按钮”的映射钉死，避免页面自己发明 theme 组合。
   const buttonProps =
     tone === "primary"
       ? {
@@ -51,13 +48,9 @@ export function AppButton({
   return (
     <Button
       block
-      className={`app-button app-button--${tone} app-button--accent-${accentTone}`}
       disabled={disabled}
       loading={loading}
-      // Button 统一使用矩形，是为了和页面卡片、输入框的直角系语言对齐。
       onClick={onClick}
-      shape="rectangle"
-      // 大号按钮更适合当前“手机单列布局 + 单手点击”的主链路。
       size="large"
       type={type}
       {...buttonProps}

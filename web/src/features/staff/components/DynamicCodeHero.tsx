@@ -1,6 +1,5 @@
 import { Badge, CountDown, Skeleton } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
-import { AppSurface } from "../../../shared/ui/AppSurface";
 
 export type DynamicCodeHeroProps = {
   actionLabel: string;
@@ -25,8 +24,16 @@ export function DynamicCodeHero({
   onCountdownFinish,
   showSkeleton
 }: DynamicCodeHeroProps) {
+  /**
+   * 动态码大字展示是组件库没有直接提供的展示型能力。
+   *
+   * 这里保留最小必要的自定义结构：
+   * - 码值本体、骨架屏和倒计时文案；
+   * - 标签、倒计时组件本身仍然使用 TDesign；
+   * - 不再额外套一层项目级 surface 组件。
+   */
   return (
-    <AppSurface as="section" className="staff-code-panel__surface" tone="staff" variant="staff-code">
+    <section className="staff-code-panel__card">
       <Badge
         className="staff-code-panel__badge"
         color={resolveActionBadgeColor(actionType)}
@@ -82,6 +89,6 @@ export function DynamicCodeHero({
           </div>
         </section>
       </Badge>
-    </AppSurface>
+    </section>
   );
 }

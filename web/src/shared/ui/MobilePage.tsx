@@ -1,18 +1,17 @@
 import { ReactNode } from "react";
 import { Navbar } from "tdesign-mobile-react";
-import { AppSurface } from "./AppSurface";
 import type { VisualTone } from "./visual-tone";
 
 export type MobilePageLayout = "compact" | "showcase-auto";
 
 /**
- * 所有手机页统一使用的容器。
+ * 手机页公共容器现在只保留“页面结构”职责，不再包装项目自有卡面系统。
  *
- * 这个组件的价值主要在于：
- * 1. 标题区布局统一
- * 2. 宽度、留白、背景卡片统一
- * 3. 页面不用各自重复写壳层结构
- * 4. 通过 layout/tone 暴露稳定样式钩子，避免业务页各自拼接 data- 属性
+ * 这层负责：
+ * 1. 统一宽度、留白和安全区；
+ * 2. 统一复用 Navbar 作为页头；
+ * 3. 给页面保留稳定的 layout / tone 钩子；
+ * 4. 把视觉细节尽量留给组件库，而不是继续叠一层伪装 surface。
  */
 type MobilePageProps = {
   children: ReactNode;
@@ -33,28 +32,23 @@ export function MobilePage({
   title,
   tone = "default"
 }: MobilePageProps) {
-  // layout 先只承担页面壳层模式声明，后续桌面端重排继续复用同一契约。
+  // 页面级 tone 继续保留在根节点，方便业务页和测试稳定识别上下文语义。
   return (
     <main className="mobile-page" data-page-layout={layout} data-page-tone={tone}>
       <div className="mobile-page__shell">
-        <AppSurface as="header" className="mobile-page__hero-surface" tone={tone} variant="page-hero">
+        <header className="mobile-page__header">
           {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
-          <section className="mobile-page__hero">
-            {/* 标题和右侧动作都交给 Navbar 公共槽位，避免页面头部继续长成自定义壳层。 */}
-            <Navbar
-              animation={false}
-              className="mobile-page__navbar"
-              fixed={false}
-              right={headerActions}
-              safeAreaInsetTop={false}
-              title={<h1 className="mobile-page__navbar-title">{title}</h1>}
-            />
-            {description ? <p className="mobile-page__description">{description}</p> : null}
-          </section>
-        </AppSurface>
-        <AppSurface as="section" className="mobile-page__content-surface" tone="default" variant="page-content">
-          <div className="mobile-page__content">{children}</div>
-        </AppSurface>
+          <Navbar
+            animation={false}
+            className="mobile-page__navbar"
+            fixed={false}
+            right={headerActions}
+            safeAreaInsetTop={false}
+            title={<h1 className="mobile-page__navbar-title">{title}</h1>}
+          />
+          {description ? <p className="mobile-page__description">{description}</p> : null}
+        </header>
+        <section className="mobile-page__content">{children}</section>
       </div>
     </main>
   );

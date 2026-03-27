@@ -2,16 +2,16 @@ use super::access::require_activity;
 use super::access::require_staff;
 use super::audit::StaffAuditActionKind;
 use super::audit::StaffLogContext;
-use super::audit::insert_batch_summary_log;
 use super::audit::insert_staff_log;
 use super::audit::now_millis;
 use crate::api::auth_extractor::CurrentUser;
-use crate::api::staff::{AttendanceAdjustmentResponse, BulkCheckoutResponse};
+use crate::api::staff::AttendanceAdjustmentResponse;
 use crate::app_state::AppState;
 use crate::db::attendance_repo;
 use crate::db::attendance_repo::ManagedAttendanceRow;
 use crate::domain::format_activity_id;
 use crate::error::AppError;
+
 /// 名单修正只允许 staff 在事务内批量调整已有报名记录。
 /// 这里继续保留“只更新状态位，不改报名主体数据”的边界。
 pub async fn adjust_attendance(
@@ -80,67 +80,7 @@ pub async fn adjust_attendance(
     server_time_ms,
   })
 }
-/// 批量签退和名单修正共享同一审计上下文，但业务语义更单一：
-/// - 必须显式确认；
-/// - 只处理“已签到未签退”的记录；
-/// - 最后补一条批次汇总日志。
-pub async fn bulk_checkout(
-  state: &AppState,
-  current_user: &CurrentUser,
-  activity_id: &str,
-  confirm: bool,
-  reason: &str,
-) -> Result<BulkCheckoutResponse, AppError> {
-  require_staff(current_user)?;
-  if !confirm {
-    return Err(AppError::business(
-      "invalid_param",
-      "批量签退必须显式确认",
-      None,
-    ));
-  }
-  let legacy_activity_id = crate::domain::parse_activity_id(activity_id)?;
-  require_activity(state, legacy_activity_id).await?;
-  let batch_id = format!("batch_{}", now_millis()?);
-  let server_time_ms = now_millis()?;
-  let mut tx = state
-    .pool()
-    .begin()
-    .await
-    .map_err(|error| AppError::internal(format!("开启批量签退事务失败：{error}")))?;
-  let log_context = StaffLogContext {
-    current_user,
-    legacy_activity_id,
-    action_kind: StaffAuditActionKind::BulkCheckout,
-    batch_id: &batch_id,
-    server_time_ms,
-    reason,
-  };
-  let rows = attendance_repo::list_checked_in_for_update(&mut tx, legacy_activity_id).await?;
-  let mut affected_count = 0_i64;
-  for row in rows {
-    attendance_repo::update_attendance_flags(&mut tx, row.record_id, 1, 1).await?;
-    insert_staff_log(tx.as_mut(), &log_context, &row, 1, 1).await?;
-    affected_count += 1;
-  }
-  insert_batch_summary_log(tx.as_mut(), &log_context, affected_count).await?;
-  tx.commit()
-    .await
-    .map_err(|error| AppError::internal(format!("提交批量签退事务失败：{error}")))?;
 
-  Ok(BulkCheckoutResponse {
-    status: "success".to_string(),
-    message: if affected_count > 0 {
-      "批量签退完成".to_string()
-    } else {
-      "当前无需批量签退".to_string()
-    },
-    activity_id: format_activity_id(legacy_activity_id),
-    affected_count,
-    batch_id,
-    server_time_ms,
-  })
-}
 fn normalize_user_ids(user_ids: &[i64]) -> Result<Vec<i64>, AppError> {
   if user_ids.is_empty() {
     return Err(AppError::business(
@@ -158,6 +98,7 @@ fn normalize_user_ids(user_ids: &[i64]) -> Result<Vec<i64>, AppError> {
   normalized.dedup();
   Ok(normalized)
 }
+
 fn validate_patch(checked_in: Option<bool>, checked_out: Option<bool>) -> Result<(), AppError> {
   if checked_in.is_none() && checked_out.is_none() {
     return Err(AppError::business(
@@ -168,6 +109,7 @@ fn validate_patch(checked_in: Option<bool>, checked_out: Option<bool>) -> Result
   }
   Ok(())
 }
+
 fn resolve_patch(
   row: &ManagedAttendanceRow,
   checked_in: Option<bool>,
@@ -190,6 +132,7 @@ fn resolve_patch(
   }
   Err(AppError::business("invalid_param", "patch 组合非法", None))
 }
+
 #[cfg(test)]
 mod tests {
   use super::resolve_patch;
@@ -212,6 +155,7 @@ mod tests {
       (0, 0)
     );
   }
+
   #[test]
   fn patch_should_require_at_least_one_flag() {
     assert!(validate_patch(None, None).is_err());

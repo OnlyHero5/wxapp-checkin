@@ -20,11 +20,6 @@ import { MobilePage } from "../../shared/ui/MobilePage";
 import { StatusTag } from "../../shared/ui/StatusTag";
 import { useActivityDetailPageState } from "./use-activity-detail-page-state";
 
-function resolveActionAccentTone(actionType: "checkin" | "checkout") {
-  // 详情页按钮只按动作语义映射 accent，避免把 tone 判断散在 JSX 分支里。
-  return actionType === "checkout" ? "checkout" : "checkin";
-}
-
 export function ActivityDetailPage() {
   const { activityId = "" } = useParams();
 
@@ -105,16 +100,12 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         ) : null}
         {/* 签到和签退入口互相独立显示，避免用一个按钮切来切去造成误操作。 */}
         {!isStaff && canCheckin ? (
-          <AppButton
-            accentTone={resolveActionAccentTone("checkin")}
-            onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkin"))}
-          >
+          <AppButton onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkin"))}>
             去签到
           </AppButton>
         ) : null}
         {!isStaff && canCheckout ? (
           <AppButton
-            accentTone={resolveActionAccentTone("checkout")}
             onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkout"))}
             tone="secondary"
           >

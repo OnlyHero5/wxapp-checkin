@@ -1,19 +1,16 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { AppSurface } from "./AppSurface";
+import { MobilePage } from "./MobilePage";
 
-describe("AppSurface", () => {
-  it("writes a stable app-owned surface contract for shared page shells", () => {
+describe("shared page shell", () => {
+  it("does not render the legacy app-surface contract anymore", () => {
     render(
-      <AppSurface tone="staff" variant="staff-code">
-        动态码展示区
-      </AppSurface>
+      <MobilePage title="活动管理">
+        <p>动态码展示区</p>
+      </MobilePage>
     );
 
-    const surface = document.querySelector(".app-surface");
-
-    expect(surface).toHaveAttribute("data-surface-tone", "staff");
-    expect(surface).toHaveAttribute("data-surface-variant", "staff-code");
-    expect(surface).toHaveClass("app-surface--staff-code");
+    expect(screen.getByRole("main")).toBeInTheDocument();
+    expect(document.querySelector(".app-surface")).toBeNull();
   });
 });

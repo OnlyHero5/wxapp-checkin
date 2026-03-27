@@ -92,12 +92,11 @@ export function DynamicCodePanel({
 
   useEffect(() => {
     /**
-     * `CountDown` 现在只负责显示，不直接承担“业务自动刷新”职责。
+     * `CountDown` 只负责显示，不直接承担“业务自动刷新”职责。
      *
-     * 原因：
-     * 1. 到期后重拉新码是页面级业务行为，不能完全依赖组件内部时序；
-     * 2. 这样测试和真实页面都能以同一口径在到期后触发刷新；
-     * 3. 即使未来替换倒计时展示组件，也不需要重写刷新语义。
+     * 到期后重拉新码属于页面级行为，因此仍然由这一层统一控制：
+     * - 测试与真实页面可以共用同一套时序；
+     * - 未来替换倒计时组件时，不需要重写刷新策略。
      */
     if (!displayedCodeSession || heroMetaLoading) {
       return;
@@ -119,14 +118,12 @@ export function DynamicCodePanel({
 
   return (
     <section className="staff-panel" data-panel-tone="staff">
-      {/* 控制区单独包一层，给展示型壳层稳定的布局挂点，避免依赖 TDesign 内部 DOM。 */}
       <div className="staff-panel__controls" data-display-zone="controls">
         <Tabs onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
           <TabPanel label="签到码" value="checkin" />
           <TabPanel label="签退码" value="checkout" />
         </Tabs>
       </div>
-      {/* hero 区只关心“当前码”和倒计时，桌面大屏放大时不混入其它操作信息。 */}
       <div className="staff-code-panel" data-display-zone="hero">
         <DynamicCodeHero
           actionLabel={actionLabel}
@@ -138,7 +135,6 @@ export function DynamicCodePanel({
           showSkeleton={loading}
         />
       </div>
-      {/* 统计区与弱操作区拆开后，桌面态可以把“读数据”和“做刷新”分成不同视觉层级。 */}
       <div className="staff-panel__stats" data-display-zone="stats">
         <CellGroup theme="card" title="实时统计">
           <Cell note={`${totalCheckedIn}`} title="签到人数" />
@@ -147,7 +143,7 @@ export function DynamicCodePanel({
         </CellGroup>
       </div>
       <div className="staff-panel__actions" data-display-zone="actions">
-        <AppButton accentTone="staff" onClick={onRefresh} tone="secondary">
+        <AppButton onClick={onRefresh} tone="secondary">
           立即刷新
         </AppButton>
       </div>

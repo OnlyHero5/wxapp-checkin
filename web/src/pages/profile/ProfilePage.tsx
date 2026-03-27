@@ -65,7 +65,7 @@ export function ProfilePage() {
       </CellGroup>
       <section>
         {/* 当前个人中心只保留一个高频动作：退出登录。 */}
-        <AppButton accentTone="brand" onClick={handleLogout}>退出登录</AppButton>
+        <AppButton onClick={handleLogout}>退出登录</AppButton>
       </section>
     </MobilePage>
   );
