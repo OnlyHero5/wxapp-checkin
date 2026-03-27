@@ -21,6 +21,29 @@ function normalizeText(value: string) {
   return value.trim();
 }
 
+const loginRules = {
+  password: [
+    {
+      message: "请输入密码",
+      required: true
+    },
+    {
+      message: "请输入密码",
+      validator: (value: unknown) => normalizeText(`${value ?? ""}`).length > 0
+    }
+  ],
+  student_id: [
+    {
+      message: "请输入学号",
+      required: true
+    },
+    {
+      message: "请输入学号",
+      validator: (value: unknown) => normalizeText(`${value ?? ""}`).length > 0
+    }
+  ]
+};
+
 export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: AccountLoginFormProps) {
   const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
@@ -40,30 +63,38 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
     });
   }
 
+  async function handleFormSubmit(context: { validateResult: unknown }) {
+    if (context.validateResult !== true || !canSubmit) {
+      return;
+    }
+
+    await handleSubmit();
+  }
+
   return (
     <div className="stack-form">
-      <Form labelAlign="top">
-        <FormItem label="学号" name="student_id">
+      <Form labelAlign="top" onSubmit={(context) => void handleFormSubmit(context)} scrollToFirstError="auto">
+        <FormItem label="学号" name="student_id" rules={loginRules.student_id}>
           <Input
             autocomplete="username"
             clearable
             maxlength={20}
             onChange={(value) => setStudentId(`${value ?? ""}`)}
             placeholder="请输入学号"
+            spellcheck={false}
             type="tel"
-            value={studentId}
           />
         </FormItem>
-        <FormItem label="密码" name="password">
+        <FormItem label="密码" name="password" rules={loginRules.password}>
           <Input
             autocomplete="current-password"
             onChange={(value) => setPassword(`${value ?? ""}`)}
             placeholder="请输入密码"
+            spellcheck={false}
             type="password"
-            value={password}
           />
         </FormItem>
-        <AppButton accentTone="brand" disabled={!canSubmit} loading={pending} onClick={() => void handleSubmit()}>
+        <AppButton accentTone="brand" disabled={!canSubmit} loading={pending} type="submit">
           登录
         </AppButton>
       </Form>

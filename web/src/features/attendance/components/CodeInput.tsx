@@ -26,6 +26,17 @@ function normalizeCode(value: string) {
   return `${value}`.replace(/\D/g, "").slice(0, 6);
 }
 
+const dynamicCodeRules = [
+  {
+    message: "请输入 6 位动态验证码",
+    required: true
+  },
+  {
+    len: 6,
+    message: "请输入 6 位动态验证码"
+  }
+];
+
 export function CodeInput({
   errorMessage,
   label,
@@ -40,11 +51,19 @@ export function CodeInput({
   // 满 6 位才允许提交，减少无意义请求。
   const canSubmit = normalizedValue.length === 6 && !pending;
 
+  async function handleFormSubmit(context: { validateResult: unknown }) {
+    if (context.validateResult !== true || !canSubmit) {
+      return;
+    }
+
+    await onSubmit();
+  }
+
   return (
     <section className="stack-form">
       <CellGroup theme="card" title={label}>
-        <Form className="stack-form" labelAlign="top">
-          <FormItem name="dynamic_code">
+        <Form className="stack-form" labelAlign="top" onSubmit={(context) => void handleFormSubmit(context)} scrollToFirstError="auto">
+          <FormItem help="请在当前活动下输入 6 位动态验证码" name="dynamic_code" rules={dynamicCodeRules}>
             <Input
               align="center"
               clearable={!pending}
@@ -53,12 +72,11 @@ export function CodeInput({
               onChange={(nextValue) => onChange(normalizeCode(`${nextValue ?? ""}`))}
               placeholder="输入6位码"
               status={errorMessage ? "error" : "default"}
-              tips={errorMessage || "请在当前活动下输入 6 位动态验证码"}
+              tips={errorMessage || undefined}
               type="number"
-              value={normalizedValue}
             />
           </FormItem>
-          <AppButton accentTone={tone} disabled={!canSubmit} loading={pending} onClick={() => void onSubmit()}>
+          <AppButton accentTone={tone} disabled={!canSubmit} loading={pending} type="submit">
             {submitText}
           </AppButton>
         </Form>

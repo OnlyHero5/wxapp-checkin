@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { CellGroup, Navbar } from "tdesign-mobile-react";
+import { Navbar } from "tdesign-mobile-react";
 import type { VisualTone } from "./visual-tone";
 
 export type MobilePageLayout = "compact" | "showcase-auto";
@@ -36,28 +36,25 @@ export function MobilePage({
   return (
     <main className="mobile-page" data-page-layout={layout} data-page-tone={tone}>
       <div className="mobile-page__shell">
-        {/* 玻璃卡面本身改交给 CellGroup 承担，避免继续维护“看起来像组件、实际上是 div”的壳层。 */}
-        <CellGroup className="mobile-page__hero-group" theme="card" title={eyebrow}>
+        <header className="mobile-page__hero-surface">
+          {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
           <section className="mobile-page__hero">
-            {/* 标题行优先交给组件库 Navbar，减少自定义头部布局对安全区、换行和左右动作位的重复处理。 */}
+            {/* 标题仍交给 Navbar 承担语义与交互基线，但页面动作位回到我们自己的稳定 slot，
+             * 避免后续样式继续绑死在 `.t-navbar__right` 这类内部 DOM 上。 */}
             <Navbar
               animation={false}
               className="mobile-page__navbar"
               fixed={false}
-              right={headerActions}
               safeAreaInsetTop={false}
               title={<h1 className="mobile-page__navbar-title">{title}</h1>}
             />
-            {/* description 仍然保留在标题语境里，但不再额外包一层手写卡片。 */}
+            {headerActions ? <div className="mobile-page__actions">{headerActions}</div> : null}
             {description ? <p className="mobile-page__description">{description}</p> : null}
           </section>
-        </CellGroup>
-        {/* content 区同样交给 CellGroup 提供 surface，业务页只关心内容本身。 */}
-        <CellGroup className="mobile-page__content-group" theme="card">
-          <section className="mobile-page__section">
-            <div className="mobile-page__content">{children}</div>
-          </section>
-        </CellGroup>
+        </header>
+        <section className="mobile-page__content-surface">
+          <div className="mobile-page__content">{children}</div>
+        </section>
       </div>
     </main>
   );

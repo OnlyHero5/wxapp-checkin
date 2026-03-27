@@ -10,16 +10,18 @@ const baseCss = fs.readFileSync(
 );
 
 describe("MobilePage", () => {
-  it("renders hero and content surfaces through TDesign card groups instead of raw section shells", () => {
+  it("renders hero and content through app-owned surfaces instead of TDesign card-group shells", () => {
     render(
       <MobilePage description="请先确认当前页面操作，再继续执行。" eyebrow="活动管理" title="动态签到">
         <p>当前为签到展示模式</p>
       </MobilePage>
     );
 
-    expect(document.querySelector(".mobile-page__hero-group .t-cell-group--card")).toBeInTheDocument();
-    expect(document.querySelector(".mobile-page__content-group .t-cell-group--card")).toBeInTheDocument();
-    expect(screen.getByText("活动管理").closest(".t-cell-group__title")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__hero-surface")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__content-surface")).toBeInTheDocument();
+    expect(screen.getByText("活动管理").closest(".mobile-page__eyebrow")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__hero-group")).toBeNull();
+    expect(document.querySelector(".mobile-page__content-group")).toBeNull();
   });
 
   it("defaults to compact layout while keeping the tone hook", () => {
@@ -43,7 +45,7 @@ describe("MobilePage", () => {
     expect(screen.getByRole("main")).toHaveAttribute("data-page-layout", "showcase-auto");
   });
 
-  it("wraps header actions in a dedicated slot for narrow-screen overflow control", () => {
+  it("renders header actions in an app-owned slot instead of depending on Navbar internal DOM", () => {
     render(
       <MobilePage
         headerActions={<a href="/activities/act_101">返回活动详情</a>}
@@ -56,7 +58,8 @@ describe("MobilePage", () => {
     const actionLink = screen.getByRole("link", { name: "返回活动详情" });
 
     expect(document.querySelector(".t-navbar")).not.toBeNull();
-    expect(actionLink.closest(".t-navbar__right")).toBeInTheDocument();
+    expect(actionLink.closest(".mobile-page__actions")).toBeInTheDocument();
+    expect(actionLink.closest(".t-navbar__right")).toBeNull();
   });
 
   it("keeps the page shell top-aligned so short pages do not stretch into tall blank cards", () => {
@@ -72,6 +75,7 @@ describe("MobilePage", () => {
     expect(baseCss).toMatch(/\.mobile-page\s*\{[^}]*align-items:\s*flex-start;/);
     expect(shell).not.toBeNull();
     expect(baseCss).toMatch(/\.mobile-page__shell\s*\{[^}]*align-content:\s*start;/);
+    expect(baseCss).toMatch(/\.mobile-page__content-surface\s*\{/);
   });
 
   it("pins the content grid to a shrinkable single column so form pages cannot overflow horizontally", () => {

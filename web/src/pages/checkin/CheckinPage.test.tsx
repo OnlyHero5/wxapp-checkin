@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -94,19 +94,22 @@ describe("CheckinPage", () => {
 
     const input = await screen.findByPlaceholderText("输入6位码");
     const submitButton = screen.getByRole("button", { name: "提交签到码" });
+    const form = input.closest("form");
 
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkin");
     expect(input.closest(".t-input")).toBeInTheDocument();
     expect(input.closest(".t-form")).toBeInTheDocument();
+    expect(form).not.toBeNull();
     expect(screen.getByText("请在当前活动下输入 6 位动态验证码")).toBeInTheDocument();
     expect(submitButton).toHaveClass("app-button--accent-checkin");
+    expect(submitButton).toHaveAttribute("type", "submit");
     expect(submitButton).toBeDisabled();
 
     await user.type(input, "12ab34 56");
     expect(input).toHaveValue(123456);
     expect(submitButton).toBeEnabled();
 
-    await user.click(submitButton);
+    fireEvent.submit(form!);
 
     await waitFor(() => {
       expect(activitiesApiMocks.consumeActivityCode).toHaveBeenCalledWith("act_101", {
@@ -134,7 +137,7 @@ describe("CheckinPage", () => {
     renderAttendancePage("/activities/act_101/checkin");
 
     await user.type(await screen.findByPlaceholderText("输入6位码"), "123456");
-    await user.click(screen.getByRole("button", { name: "提交签到码" }));
+    fireEvent.submit(screen.getByPlaceholderText("输入6位码").closest("form")!);
 
     expect(await screen.findByText("验证码已过期，请重新输入最新验证码")).toBeInTheDocument();
   });
@@ -158,8 +161,9 @@ describe("CheckinPage", () => {
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "返回活动详情" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "提交签退码" })).toHaveClass("app-button--accent-checkout");
+    expect(screen.getByRole("button", { name: "提交签退码" })).toHaveAttribute("type", "submit");
     await user.type(screen.getByPlaceholderText("输入6位码"), "654321");
-    await user.click(screen.getByRole("button", { name: "提交签退码" }));
+    fireEvent.submit(screen.getByPlaceholderText("输入6位码").closest("form")!);
 
     await waitFor(() => {
       expect(activitiesApiMocks.consumeActivityCode).toHaveBeenCalledWith("act_101", {
@@ -199,7 +203,7 @@ describe("CheckinPage", () => {
     const view = renderAttendancePage("/activities/act_101/checkin");
 
     await user.type(await screen.findByPlaceholderText("输入6位码"), "123456");
-    await user.click(screen.getByRole("button", { name: "提交签到码" }));
+    fireEvent.submit(screen.getByPlaceholderText("输入6位码").closest("form")!);
 
     expect(await screen.findByRole("heading", { name: "签到结果" })).toBeInTheDocument();
     expect(screen.getByText("提交成功")).toBeInTheDocument();

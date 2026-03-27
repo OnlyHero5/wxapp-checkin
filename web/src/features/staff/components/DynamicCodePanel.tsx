@@ -96,7 +96,7 @@ function DynamicCodeHero({
   showSkeleton
 }: DynamicCodeHeroProps) {
   return (
-    <CellGroup className="staff-code-panel__hero-group" theme="card">
+    <section className="staff-code-panel__surface">
       <Badge
         className="staff-code-panel__badge"
         color={resolveActionBadgeColor(actionType)}
@@ -152,7 +152,7 @@ function DynamicCodeHero({
           </div>
         </section>
       </Badge>
-    </CellGroup>
+    </section>
   );
 }
 

@@ -1,76 +1,66 @@
 /* =========================================================
  * 全局基线
  * ---------------------------------------------------------
- * 这一段负责：
- * 1. 统一颜色、字体、背景基调
- * 2. 让整个 Web 看起来像“手机优先”的单页应用
- * 3. 为所有页面共享相同的视觉语言
+ * 这份样式表只负责项目自己的 token、共享 surface 与布局骨架。
+ * 组件库控件的内部结构不再由这里接管，避免升级时被内部 DOM 牵着走。
  * ========================================================= */
-/* 维护建议：
- * - 如果后续要接品牌色，优先先从这里抽 CSS 变量；
- * - 如果只改单页观感，不要直接动这里的全局底色；
- * - 全局字体一旦切换，先验证动态码输入框的字距是否仍然可读。 */
+
+/* 维护原则：
+ * 1. 只写项目自有类，不直接命中组件库内部类名
+ * 2. 视觉差异优先通过 CSS 变量和外层 surface 表达
+ * 3. 组件库负责控件语义，项目负责页面层级和业务语气 */
+
 :root {
   color-scheme: light;
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  /* =========================================================
-   * App 视觉 Token（轻量版）
-   * ---------------------------------------------------------
-   * 目标：用一套固定变量把“卡片 / 表单 / 链接 / 组件库”观感收口，
-   * 避免页面各自发明颜色、圆角和阴影导致的“拼装感/模板感”。
-   *
-   * 约束（去 AI 味）：
-   * - 不靠渐变/光晕制造质感
-   * - 圆角不超过 12px
-   * - 阴影只做极轻的层级提示
-   * ========================================================= */
+
+  /* App token 只保留当前页面骨架真正需要的颜色与阴影。 */
   --app-bg: #eef2f8;
-  --app-bg-elevated: rgba(255, 255, 255, 0.78);
   --app-surface: rgba(255, 255, 255, 0.94);
-  --app-surface-muted: #f7f9fc;
-  --app-surface-secondary: rgba(246, 248, 252, 0.88);
-  --app-border: rgba(152, 168, 194, 0.38);
-  --app-border-strong: rgba(125, 145, 176, 0.46);
-  --app-border-subtle: rgba(152, 168, 194, 0.24);
+  --app-surface-strong: rgba(255, 255, 255, 0.98);
+  --app-surface-muted: rgba(246, 248, 252, 0.9);
+  --app-border: rgba(152, 168, 194, 0.34);
+  --app-border-strong: rgba(125, 145, 176, 0.42);
+  --app-border-subtle: rgba(152, 168, 194, 0.22);
   --app-text-strong: #101623;
   --app-text: #384152;
   --app-text-muted: #697487;
-  --app-text-placeholder: #96a0af;
-  --app-link: var(--td-brand-color-7, #1677ff);
-  --app-focus: rgba(22, 119, 255, 0.22);
-  --app-radius-xl: 28px;
-  --app-radius-lg: 24px;
-  --app-radius-md: 18px;
+  --app-shadow-soft: 0 8px 22px rgba(61, 77, 104, 0.08);
+  --app-shadow-card: 0 14px 36px rgba(61, 77, 104, 0.12);
+  --app-radius-xl: 24px;
+  --app-radius-lg: 20px;
+  --app-radius-md: 16px;
   --app-radius-sm: 12px;
-  --app-shadow-card: 0 12px 32px rgba(61, 77, 104, 0.12);
-  --app-shadow-soft: 0 6px 18px rgba(61, 77, 104, 0.08);
-  --app-backdrop-blur: blur(22px);
+  --app-backdrop-blur: blur(18px);
+
+  /* 业务 tone 保持页面级一致，不再让每个页面各自发明颜色。 */
   --app-tone-default-accent: #5f6c82;
   --app-tone-default-soft: rgba(132, 147, 173, 0.14);
   --app-tone-brand-accent: #1677ff;
-  --app-tone-brand-soft: rgba(22, 119, 255, 0.16);
+  --app-tone-brand-soft: rgba(22, 119, 255, 0.14);
   --app-tone-checkin-accent: #0f9f8c;
-  --app-tone-checkin-soft: rgba(15, 159, 140, 0.16);
+  --app-tone-checkin-soft: rgba(15, 159, 140, 0.14);
   --app-tone-checkout-accent: #d97706;
-  --app-tone-checkout-soft: rgba(217, 119, 6, 0.16);
+  --app-tone-checkout-soft: rgba(217, 119, 6, 0.14);
   --app-tone-staff-accent: #5b5bd6;
-  --app-tone-staff-soft: rgba(91, 91, 214, 0.16);
+  --app-tone-staff-soft: rgba(91, 91, 214, 0.14);
 
-  /* 组件库字体保持一致，避免 “TDesign 一套字、业务一套字”。 */
+  /* 只通过公开 token 对齐组件库字体和按钮基础尺寸。 */
   --td-font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --td-font-family-medium: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --td-button-border-radius: 18px;
+  --td-button-large-height: 52px;
 
   background: var(--app-bg);
   color: var(--app-text);
 }
 
-/* 所有元素默认走 border-box，避免宽度和 padding 叠加失控。 */
+/* 所有盒模型统一走 border-box，避免宽度与内边距累计失控。 */
 * {
   box-sizing: border-box;
 }
 
-/* 根节点统一吃满视口高度，给页面级居中布局提供基础。 */
+/* 页面根节点始终吃满视口高度，公共壳层才有可靠的纵向基线。 */
 html,
 body,
 #root {
@@ -78,15 +68,15 @@ body,
   margin: 0;
 }
 
-/* 背景保持浅色和克制，不再用大面积光晕去制造“伪质感”。 */
+/* 背景保持浅色与轻层次，不靠强烈光效制造“伪质感”。 */
 body {
   min-width: 320px;
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.92) 0, rgba(255, 255, 255, 0.4) 18%, transparent 44%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.92) 0, rgba(255, 255, 255, 0.42) 18%, transparent 44%),
     linear-gradient(180deg, #f7f9fd 0%, #eef2f8 42%, #e9eef5 100%);
 }
 
-/* 让按钮、输入框继承页面字体，避免原生控件风格割裂。 */
+/* 表单控件继承页面字体，避免原生控件和页面正文分裂。 */
 button,
 input,
 textarea,
@@ -94,32 +84,100 @@ select {
   font: inherit;
 }
 
-/* 根容器用 flex，是为了让 `MobilePage` 可以可靠地铺满可用宽度。 */
+/* 根容器保持 flex，页面组件才能稳定占满横向空间。 */
 #root {
   display: flex;
+  width: 100%;
 }
 
-/* 如果后续引入抽屉、全屏弹层或 toast root，
- * 也建议继续挂在 `#root` 内统一管理，避免多套定位上下文互相打架。 */
+/* =========================================================
+ * 共享 surface
+ * ---------------------------------------------------------
+ * 页面头部、正文卡、活动面板、动态码大卡共用同一套 surface 语言。
+ * ========================================================= */
+
+/* 这里统一定义项目自己的卡面，而不是借组件库内部盒子来充当页面壳层。 */
+.mobile-page__hero-surface,
+.mobile-page__content-surface,
+.activity-meta-panel__surface,
+.staff-code-panel__surface,
+.roster-batch-bar {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-xl);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-soft);
+  overflow: hidden;
+  backdrop-filter: var(--app-backdrop-blur);
+  -webkit-backdrop-filter: var(--app-backdrop-blur);
+}
+
+/* 高光层只挂在项目自有 surface 上，避免再去覆盖组件库卡片本身。 */
+.mobile-page__hero-surface::before,
+.mobile-page__content-surface::before,
+.activity-meta-panel__surface::before,
+.staff-code-panel__surface::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.08));
+  pointer-events: none;
+}
+
+/* 页面 tone 只作用在我们自己的 hero surface 上，保证组件库本体仍由库自己控制。 */
+.mobile-page[data-page-tone="brand"] .mobile-page__hero-surface {
+  border-color: rgba(22, 119, 255, 0.18);
+  background: linear-gradient(180deg, rgba(22, 119, 255, 0.14), rgba(255, 255, 255, 0.82));
+}
+
+.mobile-page[data-page-tone="checkin"] .mobile-page__hero-surface {
+  border-color: rgba(15, 159, 140, 0.18);
+  background: linear-gradient(180deg, rgba(15, 159, 140, 0.14), rgba(255, 255, 255, 0.82));
+}
+
+.mobile-page[data-page-tone="checkout"] .mobile-page__hero-surface {
+  border-color: rgba(217, 119, 6, 0.18);
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.14), rgba(255, 255, 255, 0.82));
+}
+
+.mobile-page[data-page-tone="staff"] .mobile-page__hero-surface,
+.activity-meta-panel[data-panel-tone="staff"] .activity-meta-panel__surface,
+.staff-panel[data-panel-tone="staff"] .staff-code-panel__surface,
+[data-panel-tone="staff"] .roster-batch-bar {
+  border-color: rgba(91, 91, 214, 0.2);
+  background: linear-gradient(180deg, rgba(91, 91, 214, 0.12), rgba(255, 255, 255, 0.9));
+}
+
+.activity-meta-panel[data-panel-tone="brand"] .activity-meta-panel__surface {
+  border-color: rgba(22, 119, 255, 0.18);
+  background: linear-gradient(180deg, rgba(22, 119, 255, 0.08), rgba(255, 255, 255, 0.96));
+}
+
+.activity-meta-panel[data-panel-tone="checkin"] .activity-meta-panel__surface {
+  border-color: rgba(15, 159, 140, 0.18);
+  background: linear-gradient(180deg, rgba(15, 159, 140, 0.08), rgba(255, 255, 255, 0.96));
+}
+
+.activity-meta-panel[data-panel-tone="checkout"] .activity-meta-panel__surface {
+  border-color: rgba(217, 119, 6, 0.18);
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.08), rgba(255, 255, 255, 0.96));
+}
 
 /* =========================================================
  * 页面壳层
  * ---------------------------------------------------------
- * `MobilePage` 组件依赖这些类完成：
- * - 整页顶部对齐（更适合列表/表单滚动）
- * - 卡片式内容区域
- * - 标题与正文分区
+ * `MobilePage` 只负责页面级宽度、标题区、正文区，不再伪装成组件库卡组。
  * ========================================================= */
-/* 这部分样式和 `MobilePage.tsx` 是一对一关系：
- * JSX 结构一旦调整，记得回头同步这里，不要只改其中一边。 */
+
 .mobile-page {
   width: 100%;
   min-height: 100vh;
-  /* 100dvh 能更好适配移动端地址栏伸缩；不支持的浏览器会回落到 100vh。 */
   min-height: 100dvh;
   display: flex;
-  /* 壳层必须按内容高度收口，不能把唯一子节点强行拉满整屏；
-   * 否则 grid 自动行会把多余高度摊给卡片，短内容页就会出现异常大留白。 */
   align-items: flex-start;
   justify-content: center;
   padding: 16px 14px 28px;
@@ -127,105 +185,50 @@ select {
   padding: calc(16px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));
 }
 
-/* 页面改为“玻璃头部 + 内容卡堆叠”的分层结构。 */
 .mobile-page__shell {
   width: min(100%, 480px);
   display: grid;
   gap: 14px;
-  /* 即使未来外层高度变化，内容也只允许从顶部堆叠，避免再次把空白分摊进卡片。 */
   align-self: start;
   align-content: start;
+  min-width: 0;
 }
 
-/* 业务态壳层负责给统一顶级导航留出固定空间，
- * 当前由组件库 TabBar 自带 placeholder 负责占位，这里只保留宽度语义。 */
+/* 顶级业务导航已由组件库底部导航处理占位，这里只保留宽度语义。 */
 .app-business-shell {
   width: 100%;
 }
 
-.mobile-page__hero-group .t-cell-group--card,
-.mobile-page__content-group .t-cell-group--card {
-  position: relative;
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-xl);
-  background: var(--app-bg-elevated);
-  box-shadow: var(--app-shadow-soft);
-  /* 玻璃滤镜和高光伪元素都挂在卡片内部；
-   * 这里显式裁剪，避免 Chromium 截图时出现半透明层向右外溢。 */
-  overflow: hidden;
-  backdrop-filter: var(--app-backdrop-blur);
-  -webkit-backdrop-filter: var(--app-backdrop-blur);
+/* 页面头部只保留项目自己的结构槽位。 */
+.mobile-page__hero-surface,
+.mobile-page__content-surface,
+.mobile-page__hero,
+.mobile-page__content,
+.mobile-page__actions {
+  min-width: 0;
 }
 
 .mobile-page__hero {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 10px;
-  padding: 12px 14px 14px;
 }
 
-/* 页面 tone 目前只先作用到 hero 壳层，
- * 这样能先建立全站业务态识别，而不把正文卡片一起染色。 */
-.mobile-page[data-page-tone="brand"] .mobile-page__hero-group .t-cell-group--card {
-  border-color: rgba(22, 119, 255, 0.2);
-  background: linear-gradient(180deg, rgba(22, 119, 255, 0.14), rgba(255, 255, 255, 0.78));
+.mobile-page__eyebrow {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--app-text-muted);
 }
 
-.mobile-page[data-page-tone="checkin"] .mobile-page__hero-group .t-cell-group--card {
-  border-color: rgba(15, 159, 140, 0.2);
-  background: linear-gradient(180deg, rgba(15, 159, 140, 0.14), rgba(255, 255, 255, 0.78));
-}
-
-.mobile-page[data-page-tone="checkout"] .mobile-page__hero-group .t-cell-group--card {
-  border-color: rgba(217, 119, 6, 0.2);
-  background: linear-gradient(180deg, rgba(217, 119, 6, 0.14), rgba(255, 255, 255, 0.78));
-}
-
-.mobile-page[data-page-tone="staff"] .mobile-page__hero-group .t-cell-group--card {
-  border-color: rgba(91, 91, 214, 0.2);
-  background: linear-gradient(180deg, rgba(91, 91, 214, 0.14), rgba(255, 255, 255, 0.78));
-}
-
-.mobile-page__hero-group .t-cell-group--card::before,
-.mobile-page__content-group .t-cell-group--card::before,
-.staff-code-panel__hero-group .t-cell-group--card::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.08));
-  pointer-events: none;
-}
-
+/* Navbar 仍由组件库承担可访问性与布局基线，但页面视觉只通过根 class 调整。 */
 .mobile-page__navbar {
   position: relative;
   z-index: 1;
-}
-
-.mobile-page__shell,
-.mobile-page__hero-group,
-.mobile-page__content-group,
-.mobile-page__hero,
-.mobile-page__navbar,
-.mobile-page__section,
-.mobile-page__content {
-  min-width: 0;
-}
-
-.mobile-page__navbar .t-navbar__content,
-.mobile-page__navbar .t-navbar__center,
-.mobile-page__navbar .t-navbar__right {
-  min-width: 0;
-}
-
-.mobile-page__hero-group .t-cell-group__title {
-  position: relative;
-  z-index: 1;
-  padding: 0 2px 8px;
-}
-
-.mobile-page__navbar .t-navbar__center-title,
-.mobile-page__navbar .t-navbar__right {
-  overflow-wrap: anywhere;
+  background: transparent;
 }
 
 .mobile-page__navbar-title {
@@ -234,32 +237,40 @@ select {
   line-height: 1.12;
   letter-spacing: -0.04em;
   color: var(--app-text-strong);
+  overflow-wrap: anywhere;
 }
 
-.mobile-page__navbar .t-navbar__left {
-  display: none;
+/* 返回链接等动作位回到项目自有 slot，不再依赖组件库右槽内部结构。 */
+.mobile-page__actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.mobile-page__navbar.t-navbar {
-  background: transparent;
+.mobile-page__description {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--app-text);
+  line-height: 1.55;
 }
 
-.mobile-page__section {
-  padding: 18px 16px 20px;
-}
-
-/* 所有页面正文统一用 grid 垂直堆叠，减少每页自己处理间距。 */
+/* 正文区固定为可收缩单列，减少页面自己发明布局。 */
 .mobile-page__content {
   position: relative;
   z-index: 1;
   display: grid;
-  /* 页面正文默认就是单列堆叠，必须显式写成可收缩轨道，
-   * 避免隐式列按内容最大宽度计算后把整页撑出手机视口。 */
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
-/* 正文字体颜色略浅，降低阅读压迫感。 */
+.mobile-page__content > * {
+  min-width: 0;
+}
+
 .mobile-page__content p {
   margin: 0;
   line-height: 1.6;
@@ -267,137 +278,64 @@ select {
 }
 
 /* =========================================================
- * 视觉辅助说明
+ * 页面内通用容器
  * ---------------------------------------------------------
- * 下面这些样式虽然看起来分散，但都在服务同一件事：
- * “让用户在手机上快速判断当前页面能做什么、该点哪里”
- *
- * 因此维护时的优先级建议：
- * 1. 不要轻易破坏主按钮和次按钮的层级差异
- * 2. 不要让活动卡片的信息密度超过一屏可扫读范围
- * 3. 动态码输入框一定要保持足够醒目
+ * 这里收口页面级纵向堆叠、列表区块和状态占位，不碰控件内部结构。
  * ========================================================= */
 
-/* 样式维护的基本策略：
- * - 先保结构一致，再谈视觉个性
- * - 能抽到共用类的，不要在单页里写局部补丁
- * - 如果未来需要深色模式，优先改颜色层，不要改布局层 */
-
-/* eyebrow 是页面辅助标签，例如“欢迎回来”“首次访问”“活动详情”。 */
-.mobile-page__description {
-  margin: 0;
-  color: var(--app-text);
-  line-height: 1.55;
-}
-
-/* =========================================================
- * 表单与内容区块
- * ---------------------------------------------------------
- * 统一处理表单、活动卡片、详情卡片等“纵向内容块”。
- * ========================================================= */
-
-/* 这些区块类在当前阶段属于“低风险复用件”：
- * 登录页、活动详情页、结果页都在依赖它们，
- * 改动前最好先跑一遍全量截图或至少全量单测。 */
 .stack-form {
   display: grid;
-  /* 表单页中的卡片、输入区和主按钮都依赖这一层同列堆叠；
-   * 不显式锁列宽时，移动端浏览器可能按 max-content 取宽导致右侧被切掉。 */
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
-/* 活动列表卡片区域采用一列堆叠，后续如需平板适配可在媒体查询里扩成多列。 */
 .activity-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
-/* 页面级状态块统一承接 Loading / Empty，避免各页继续手写一段灰字段落。 */
-.app-state {
+.activity-section,
+.roster-list {
   display: grid;
-  justify-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
-/* 每个活动分组自身也是一个独立区块。 */
-.activity-section {
+.app-state,
+.detail-actions,
+.staff-panel {
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
 }
 
-/* 信息面板是当前阶段最稳定的重复结构，列表/详情/输入页都在复用。 */
-.activity-meta-panel,
-.detail-panel {
-  position: relative;
+.staff-panel__stats,
+.staff-panel__actions,
+.roster-item__actions,
+.roster-batch-bar__actions {
   display: grid;
-  gap: 12px;
-  border-radius: 22px;
-  background: transparent;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
 }
 
-.activity-meta-panel__surface,
-.detail-panel {
-  position: relative;
+/* NoticeBar 仍用组件库，只补圆角和容器契合度。 */
+.inline-notice {
+  border-radius: var(--app-radius-sm);
+}
+
+/* =========================================================
+ * 活动面板
+ * ---------------------------------------------------------
+ * 活动元信息仍由项目层负责组合，细项信息继续交给 Cell 系列组件。
+ * ========================================================= */
+
+.activity-meta-panel {
   display: grid;
-  gap: 12px;
-  padding: 18px;
-  border: 1px solid var(--app-border);
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 252, 0.98));
-  box-shadow: var(--app-shadow-soft);
-  /* 摘要卡同样会叠加一层高光伪元素，
-   * 裁剪后可避免在窄屏和截图环境里出现边界拖影。 */
-  overflow: hidden;
 }
 
-/* ActivityMetaPanel 在 Task 2 只先收口普通列表和 staff 列表两种语境，
- * 让列表卡片、摘要卡和未来详情卡都能通过同一稳定钩子接色彩。 */
-.activity-meta-panel[data-panel-tone="brand"] .activity-meta-panel__surface {
-  border-color: rgba(22, 119, 255, 0.18);
-  background: linear-gradient(180deg, rgba(22, 119, 255, 0.06), rgba(255, 255, 255, 0.98));
-}
-
-.activity-meta-panel[data-panel-tone="staff"] .activity-meta-panel__surface {
-  border-color: rgba(91, 91, 214, 0.18);
-  background: linear-gradient(180deg, rgba(91, 91, 214, 0.07), rgba(255, 255, 255, 0.98));
-}
-
-.activity-meta-panel[data-panel-tone="checkin"] .activity-meta-panel__surface,
-.detail-panel--tone-checkin {
-  border-color: rgba(15, 159, 140, 0.18);
-  background: linear-gradient(180deg, rgba(15, 159, 140, 0.07), rgba(255, 255, 255, 0.98));
-}
-
-.activity-meta-panel[data-panel-tone="checkout"] .activity-meta-panel__surface,
-.detail-panel--tone-checkout {
-  border-color: rgba(217, 119, 6, 0.18);
-  background: linear-gradient(180deg, rgba(217, 119, 6, 0.08), rgba(255, 255, 255, 0.98));
-}
-
-.activity-meta-panel__surface::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08));
-  pointer-events: none;
-}
-
-/* 标题块和状态位左右分栏，优先保证标题区能自然换行。 */
-.activity-meta-panel__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/* 标题区保持一套结构，避免列表和详情自己发明字号层级。 */
-.activity-meta-panel__title-block {
-  display: grid;
-  gap: 4px;
+.activity-meta-panel__surface {
+  gap: 14px;
 }
 
 .activity-meta-panel__header,
@@ -408,17 +346,26 @@ select {
   min-width: 0;
 }
 
-.activity-meta-panel__title-stack,
-.activity-meta-panel__description,
-.activity-meta-panel__footer-actions {
+.activity-meta-panel__header {
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.activity-meta-panel__title-block {
+  display: grid;
+  gap: 4px;
 }
 
 .activity-meta-panel__title {
   margin: 0;
   font-size: 1.125rem;
   line-height: 1.35;
+  color: var(--app-text-strong);
   overflow-wrap: anywhere;
 }
 
@@ -434,14 +381,12 @@ select {
 }
 
 .activity-meta-panel__description {
+  position: relative;
+  z-index: 1;
   margin: 0;
   color: var(--app-text);
   line-height: 1.65;
   overflow-wrap: anywhere;
-}
-
-.detail-panel p {
-  margin: 0;
 }
 
 .activity-meta-panel__footer {
@@ -460,44 +405,37 @@ select {
   gap: 14px;
 }
 
-/* Tag 已由组件库提供样式，这里只补布局，不再自己画胶囊。 */
+/* 状态标签已由组件库负责形态，这里只补项目内的布局语义。 */
 .status-tag {
   flex-shrink: 0;
 }
 
-.status-tag--ongoing {
-  box-shadow: inset 0 0 0 1px rgba(15, 159, 140, 0.12);
-}
-
-.status-tag--completed {
-  box-shadow: inset 0 0 0 1px rgba(95, 108, 130, 0.1);
-}
-
-/* 单个字段统一采用 label + input 的垂直排列。 */
 /* =========================================================
- * 组件库拼接层
+ * 按钮与状态组件
  * ---------------------------------------------------------
- * 组件库负责交互控件，这里只补项目特定的间距和文本链接。
+ * `AppButton` 只做项目内语气映射，不重复实现按钮结构。
  * ========================================================= */
 
 .app-button {
-  /* 组件库按钮负责皮肤，
-   * 这里仅保留项目级约束：
-   * - 宽度始终占满单列容器
-   * - 不再给页面额外加局部宽度补丁
-   */
   width: 100%;
   min-height: 52px;
-  border-radius: 18px;
   font-weight: 700;
   transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
 }
 
+/* 主按钮维持明显推进感，次按钮保持克制。 */
 .app-button--primary {
   box-shadow: 0 10px 20px rgba(22, 119, 255, 0.18);
 }
 
+.app-button--secondary {
+  box-shadow: var(--app-shadow-soft);
+}
+
+/* accent tone 只通过外层 class 改颜色，不干预按钮内部节点。 */
 .app-button--primary.app-button--accent-default {
+  background: var(--app-tone-default-accent);
+  border-color: var(--app-tone-default-accent);
   box-shadow: 0 10px 20px rgba(95, 108, 130, 0.16);
 }
 
@@ -521,12 +459,6 @@ select {
   background: var(--app-tone-staff-accent);
   border-color: var(--app-tone-staff-accent);
   box-shadow: 0 10px 20px rgba(91, 91, 214, 0.22);
-}
-
-.app-button--secondary {
-  background: rgba(255, 255, 255, 0.72);
-  border-color: var(--app-border-strong);
-  box-shadow: var(--app-shadow-soft);
 }
 
 .app-button--secondary.app-button--accent-brand {
@@ -553,69 +485,24 @@ select {
   color: var(--app-tone-staff-accent);
 }
 
-.inline-notice {
-  /* NoticeBar 默认是窄条信息条，
-   * 这里补圆角是为了和页面卡片的 12/14/16px 体系对齐，
-   * 不是重新发明错误样式。
-   */
-  border-radius: 12px;
-}
-
-.detail-actions {
-  gap: 10px;
-}
-
 /* =========================================================
- * staff / review 页面扩展
+ * Staff 页面
  * ---------------------------------------------------------
- * 新增页面继续复用同一套浅色卡片语言，
- * 这里只补管理员态特有的“动态码大字”、“审核动作排布”等局部样式。
+ * 动态码区是少数需要大号展示的地方，因此单独保留展示型样式。
  * ========================================================= */
 
 .staff-panel,
-.review-list {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-}
-
-/* 管理员动态码在桌面态会被拆成四个展示分区，
- * 这些分区都可能落在 CSS Grid 子项里，因此统一收口 min-width 防止内容挤爆。 */
-.staff-panel,
 .staff-panel__controls,
+.staff-code-panel,
 .staff-panel__stats,
-.staff-panel__actions,
-.staff-code-panel {
+.staff-panel__actions {
   min-width: 0;
 }
 
-.staff-panel[data-panel-tone="staff"] .staff-code-panel__hero-group .t-cell-group--card,
-[data-panel-tone="staff"] .roster-batch-bar {
-  border-color: rgba(91, 91, 214, 0.2);
-  background: linear-gradient(180deg, rgba(91, 91, 214, 0.08), rgba(255, 255, 255, 0.92));
-}
-
-.staff-panel[data-panel-tone="staff"] .t-cell-group--card {
-  border-color: rgba(91, 91, 214, 0.18);
-  background: rgba(245, 246, 255, 0.84);
-}
-
-.staff-code-panel {
-  position: relative;
-}
-
-.staff-code-panel__hero-group .t-cell-group--card {
-  position: relative;
+.staff-code-panel__surface {
+  gap: 10px;
   padding: 22px 18px 18px;
-  border: 1px solid var(--app-border);
-  border-radius: 26px;
-  background: rgba(255, 255, 255, 0.76);
-  box-shadow: 0 14px 36px rgba(61, 77, 104, 0.12);
-  /* 动态码玻璃卡会同时使用 backdrop-filter 和 ::before 高光，
-   * 不裁剪时截图里容易出现右侧透明拖尾。 */
-  overflow: hidden;
-  backdrop-filter: var(--app-backdrop-blur);
-  -webkit-backdrop-filter: var(--app-backdrop-blur);
+  box-shadow: var(--app-shadow-card);
 }
 
 .staff-code-panel__badge {
@@ -671,110 +558,34 @@ select {
   display: inline-flex;
 }
 
-.staff-panel__stats,
-.staff-panel__actions {
-  display: grid;
-}
-
-.review-list__actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  padding: 12px 16px 16px;
-  border-top: 1px solid var(--app-border-subtle);
-}
-
-.roster-batch-bar {
-  display: grid;
-  gap: 12px;
-  padding: 14px 16px 16px;
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.9);
-}
-
 .roster-batch-bar__summary {
   margin: 0;
   color: var(--app-text-muted);
   font-size: 0.9375rem;
 }
 
-.roster-batch-bar__actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-}
-
-.roster-list {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-}
-
-.roster-item {
-  display: grid;
-  gap: 10px;
-}
-
-.roster-item__actions {
-  display: grid;
-  gap: 10px;
-}
-
 /* =========================================================
- * TDesign 组件观感对齐
+ * 响应式收口
  * ---------------------------------------------------------
- * 这里不改组件交互，只做“边距/字体/圆角”收口，
- * 让它们看起来像同一个产品里出来的。
+ * 小屏只做防溢出，大屏 staff 页面做展示优先布局。
  * ========================================================= */
 
-/* CellGroup 的 card 模式默认左右有 margin，会破坏我们卡片内的对齐。 */
-.t-cell-group--card {
-  margin: 0;
-  border-radius: 22px;
-  border: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.82);
-  overflow: hidden;
-}
-
-/* CellGroup title 默认带灰底条和固定字体，这里改成更接近“分组标题”。 */
-.t-cell-group__title {
-  font-family: inherit;
-  background: transparent;
-  padding: 0 0 10px;
-  line-height: 1.4;
-  font-size: 0.875rem;
-  color: var(--app-text-muted);
-}
-
-/* Cell 的分割线颜色稍微收敛一点，避免和业务面板的边框抢层级。 */
-.t-cell::after {
-  border-bottom-color: var(--app-border-subtle);
-}
-
-/* 359px 以下已经接近旧小屏设备极限，这里只做防溢出收口，不改页面结构。 */
 @media (max-width: 359px) {
   .mobile-page {
     padding-left: 10px;
     padding-right: 10px;
   }
 
-  .mobile-page__hero {
-    gap: 12px;
-    padding: 16px 14px 14px;
-  }
-
-  .mobile-page__section {
-    padding: 16px 14px 18px;
+  .mobile-page__hero-surface,
+  .mobile-page__content-surface,
+  .activity-meta-panel__surface,
+  .staff-code-panel__surface,
+  .roster-batch-bar {
+    padding: 16px 14px;
   }
 
   .mobile-page__navbar-title {
     font-size: 1.56rem;
-  }
-
-  .code-input {
-    font-size: 1.5rem;
-    letter-spacing: 0.22em;
   }
 
   .staff-code-panel__value {
@@ -783,8 +594,7 @@ select {
   }
 }
 
-/* showcase-auto 仍由公共壳层负责页面级宽度，
- * 管理员大屏的“控制区 / hero / 统计区 / 操作区”在这里接上局部排版。 */
+/* 管理页桌面态优先突出 tabs、动态码大屏和统计区。 */
 @media (min-width: 768px) {
   .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
     width: min(100%, 560px);
@@ -796,16 +606,11 @@ select {
     width: min(100%, 1120px);
   }
 
-  /* 桌面态稍微放宽 hero 与正文内边距，让大码展示有更稳定的留白。 */
-  .mobile-page[data-page-layout="showcase-auto"][data-page-tone="staff"] .mobile-page__hero {
-    padding: 22px 24px 18px;
+  .mobile-page[data-page-layout="showcase-auto"][data-page-tone="staff"] .mobile-page__hero-surface,
+  .mobile-page[data-page-layout="showcase-auto"][data-page-tone="staff"] .mobile-page__content-surface {
+    padding: 24px;
   }
 
-  .mobile-page[data-page-layout="showcase-auto"][data-page-tone="staff"] .mobile-page__section {
-    padding: 24px 24px 28px;
-  }
-
-  /* 展示优先布局：先给 controls 与 hero 全宽，再把统计和弱操作分栏。 */
   .mobile-page[data-page-layout="showcase-auto"] .staff-panel {
     grid-template-columns: minmax(0, 1fr) 280px;
     grid-template-areas:
@@ -825,7 +630,7 @@ select {
     grid-area: hero;
   }
 
-  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__hero-group .t-cell-group--card {
+  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__surface {
     min-height: 360px;
     padding: 42px 32px 36px;
   }
@@ -849,9 +654,9 @@ select {
   }
 }
 
+/* 用户偏好减少动效时，不再额外施加项目级过渡。 */
 @media (prefers-reduced-motion: reduce) {
-  .t-input__control,
-  .t-link {
+  .app-button {
     transition: none;
   }
 }
