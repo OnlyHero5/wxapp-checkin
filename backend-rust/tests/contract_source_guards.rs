@@ -240,6 +240,56 @@ fn roster_service_should_not_do_per_user_log_n_plus_one_queries() {
 }
 
 #[test]
+fn attendance_repo_should_share_one_roster_row_shape() {
+  let source = fs::read_to_string(manifest_file("src/db/attendance_repo.rs"))
+    .expect("read attendance_repo.rs");
+
+  assert!(
+    source.contains("pub struct AttendanceRosterRow"),
+    "attendance repo should define one shared roster row model"
+  );
+  assert!(
+    source.contains("pub type RosterRow = AttendanceRosterRow;"),
+    "roster read path should reuse the shared roster row alias"
+  );
+  assert!(
+    source.contains("pub type ManagedAttendanceRow = AttendanceRosterRow;"),
+    "managed attendance read path should reuse the shared roster row alias"
+  );
+  assert!(
+    !source.contains("pub struct ManagedAttendanceRow"),
+    "attendance repo should not keep a second handwritten managed row struct"
+  );
+}
+
+#[test]
+fn attendance_consume_flow_should_delegate_validation_steps_to_helpers() {
+  let source = fs::read_to_string(manifest_file("src/service/attendance_service/consume.rs"))
+    .expect("read consume.rs");
+
+  assert!(
+    source.contains("fn ensure_normal_user_can_consume"),
+    "consume flow should extract role validation into a dedicated helper"
+  );
+  assert!(
+    source.contains("fn load_activity_or_throw"),
+    "consume flow should extract activity loading into a dedicated helper"
+  );
+  assert!(
+    source.contains("fn validate_code_slot"),
+    "consume flow should extract dynamic-code validation into a dedicated helper"
+  );
+  assert!(
+    source.contains("fn build_replay_guard_key"),
+    "consume flow should extract replay-key assembly into a dedicated helper"
+  );
+  assert!(
+    source.contains("fn build_record_id"),
+    "consume flow should extract record-id assembly into a dedicated helper"
+  );
+}
+
+#[test]
 fn backend_source_files_should_stay_under_220_lines() {
   let mut files = Vec::new();
   collect_rs_files(&manifest_file("src"), &mut files);

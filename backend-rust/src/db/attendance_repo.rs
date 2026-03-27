@@ -28,7 +28,7 @@ pub struct AttendanceRecord {
 }
 
 #[derive(Debug, Clone, FromRow)]
-pub struct RosterRow {
+pub struct AttendanceRosterRow {
   pub record_id: i64,
   pub user_id: i64,
   pub student_id: String,
@@ -38,16 +38,10 @@ pub struct RosterRow {
   pub check_out_flag: i64,
 }
 
-#[derive(Debug, Clone, FromRow)]
-pub struct ManagedAttendanceRow {
-  pub record_id: i64,
-  pub user_id: i64,
-  pub student_id: String,
-  pub name: String,
-  pub state: i32,
-  pub check_in_flag: i64,
-  pub check_out_flag: i64,
-}
+/// 普通名单读取与 staff 事务内名单读取共用同一组列形状。
+/// 这里显式保留两个语义别名，方便调用层继续表达“读路径”与“锁定写路径”的区别。
+pub type RosterRow = AttendanceRosterRow;
+pub type ManagedAttendanceRow = AttendanceRosterRow;
 
 fn build_attendance_roster_base_sql(where_clause: &str) -> String {
   format!("{ATTENDANCE_ROSTER_SELECT_SQL}{where_clause}")

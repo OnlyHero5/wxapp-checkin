@@ -13,7 +13,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 bcrypt = "0.17"
-tower-http = { version = "0.6", features = ["trace"] }
+tower-http = { version = "0.6", features = ["request-id", "trace"] }
 headers = "0.4"
 governor = "0.10"
 hmac = "0.12"

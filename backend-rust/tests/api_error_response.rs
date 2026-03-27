@@ -66,3 +66,66 @@ async fn health_route_should_match_existing_probe_shape() {
 
   assert_eq!(body["status"], "UP");
 }
+
+#[tokio::test]
+async fn health_route_should_generate_x_request_id_when_client_does_not_send_one() {
+  let config = Config {
+    database_url: "mysql://root:root@127.0.0.1:3306/suda_union".to_string(),
+    server_port: 8080,
+    session_ttl_seconds: 7_200,
+    qr_signing_key: "test-secret".to_string(),
+    tokio_worker_threads: 2,
+    mysql_max_connections: 4,
+  };
+  let response = build_router(AppState::new(config).expect("app state"))
+    .oneshot(
+      Request::builder()
+        .uri("/health")
+        .body(axum::body::Body::empty())
+        .expect("health request"),
+    )
+    .await
+    .expect("health response");
+
+  let request_id = response.headers().get("x-request-id");
+
+  assert!(request_id.is_some(), "router should propagate a generated x-request-id header");
+  assert!(
+    !request_id
+      .and_then(|value| value.to_str().ok())
+      .unwrap_or("")
+      .trim()
+      .is_empty(),
+    "generated x-request-id should not be blank"
+  );
+}
+
+#[tokio::test]
+async fn health_route_should_preserve_incoming_x_request_id() {
+  let config = Config {
+    database_url: "mysql://root:root@127.0.0.1:3306/suda_union".to_string(),
+    server_port: 8080,
+    session_ttl_seconds: 7_200,
+    qr_signing_key: "test-secret".to_string(),
+    tokio_worker_threads: 2,
+    mysql_max_connections: 4,
+  };
+  let response = build_router(AppState::new(config).expect("app state"))
+    .oneshot(
+      Request::builder()
+        .uri("/health")
+        .header("x-request-id", "manual-request-id")
+        .body(axum::body::Body::empty())
+        .expect("health request"),
+    )
+    .await
+    .expect("health response");
+
+  assert_eq!(
+    response
+      .headers()
+      .get("x-request-id")
+      .and_then(|value| value.to_str().ok()),
+    Some("manual-request-id")
+  );
+}
