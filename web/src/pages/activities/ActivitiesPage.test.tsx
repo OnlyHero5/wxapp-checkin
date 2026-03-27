@@ -136,6 +136,7 @@ describe("ActivitiesPage", () => {
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
     expect(screen.getByText("查看你当前可见的活动，并进入详情页继续签到或签退。")).toBeInTheDocument();
     expect(document.querySelector(".t-tabs")).toBeInTheDocument();
+    expect(document.querySelector(".t-list")).toBeInTheDocument();
     expect(screen.getByText("正在进行")).toBeInTheDocument();
     expect(screen.getByText("历史活动")).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
@@ -282,7 +283,7 @@ describe("ActivitiesPage", () => {
     });
     expect(await screen.findByText("奖学金补录专场")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "加载更多" }));
+    await user.click(screen.getByText("加载更多"));
 
     await waitFor(() => {
       expect(activitiesApiMocks.getActivities).toHaveBeenNthCalledWith(3, {

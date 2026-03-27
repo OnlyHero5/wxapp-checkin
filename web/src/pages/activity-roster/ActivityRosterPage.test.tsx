@@ -91,8 +91,11 @@ describe("ActivityRosterPage", () => {
     expect(screen.getByText("补签成员")).toBeInTheDocument();
     expect(document.querySelectorAll(".t-checkbox").length).toBeGreaterThan(0);
     expect(document.querySelectorAll(".t-cell-group--card").length).toBeGreaterThan(1);
-    expect(screen.getByText("已选 0 人").closest("[data-panel-tone]")).toHaveAttribute("data-panel-tone", "staff");
-    expect(screen.getByRole("button", { name: "批量设为已签退" })).toBeInTheDocument();
+    expect(document.querySelector(".t-list")).toBeInTheDocument();
+    expect(document.querySelectorAll(".t-swipe-cell").length).toBeGreaterThan(0);
+    expect(screen.getByText("0 人").closest("[data-panel-tone]")).toHaveAttribute("data-panel-tone", "staff");
+    expect(screen.getByRole("button", { name: "批量操作" })).toBeInTheDocument();
+    expect(document.querySelector(".roster-item__actions")).toBeNull();
   });
 
   it("refreshes roster when the page becomes visible again", async () => {
@@ -120,7 +123,7 @@ describe("ActivityRosterPage", () => {
 
     expect(await screen.findByText("补签成员")).toBeInTheDocument();
     // 单人动作直接走统一修正接口，页面不再为“单个 / 批量”维护两套写口径。
-    await user.click(screen.getByRole("button", { name: "设为已签到" }));
+    await user.click(screen.getByText("设为已签到"));
 
     await waitFor(() => {
       expect(staffApiMocks.adjustAttendanceStates).toHaveBeenCalledWith("act_101", {
@@ -142,9 +145,11 @@ describe("ActivityRosterPage", () => {
     const checkboxes = document.querySelectorAll(".t-checkbox");
     await user.click(checkboxes[0] as HTMLElement);
     await user.click(checkboxes[1] as HTMLElement);
-    await user.click(screen.getByRole("button", { name: "批量设为已签退" }));
+    await user.click(screen.getByRole("button", { name: "批量操作" }));
+    await user.click(await screen.findByText("批量设为已签退"));
 
-    expect(await screen.findByText("设为已签退会自动补成已签到。")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "确认批量修正" })).toBeInTheDocument();
+    expect(screen.getAllByText("设为已签退会自动补成已签到。").length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "确认批量修正" }));
 
     await waitFor(() => {

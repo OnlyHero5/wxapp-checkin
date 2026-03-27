@@ -1,0 +1,162 @@
+/* =========================================================
+ * Staff 页面
+ * ---------------------------------------------------------
+ * 动态码区是少数需要大号展示的地方，因此单独保留展示型样式。
+ * 这里也收口管理页的大屏重排，避免响应式规则继续混在基础样式里。
+ * ========================================================= */
+
+.staff-panel,
+.staff-panel__controls,
+.staff-code-panel,
+.staff-panel__stats,
+.staff-panel__actions {
+  min-width: 0;
+}
+
+.staff-code-panel__surface {
+  gap: 10px;
+  padding: 22px 18px 18px;
+  box-shadow: var(--app-shadow-card);
+}
+
+.staff-code-panel__badge {
+  position: relative;
+  display: block;
+}
+
+.staff-code-panel__body {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+}
+
+.staff-code-panel__value-shell {
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+
+.staff-code-panel__value-skeleton {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.staff-code-panel__value {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--app-text-strong);
+  font-size: clamp(2rem, 9vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: clamp(0.16em, 1vw, 0.28em);
+}
+
+.staff-code-panel__meta {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  color: var(--app-text-muted);
+}
+
+.staff-code-panel__countdown {
+  display: inline-flex;
+}
+
+/* =========================================================
+ * 响应式收口
+ * ---------------------------------------------------------
+ * 小屏只做防溢出，大屏 staff 页面做展示优先布局。
+ * ========================================================= */
+
+@media (max-width: 359px) {
+  .mobile-page {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mobile-page__hero-surface,
+  .mobile-page__content-surface,
+  .activity-meta-panel__surface,
+  .staff-code-panel__surface {
+    padding: 16px 14px;
+  }
+
+  .mobile-page__navbar-title {
+    font-size: 1.56rem;
+  }
+
+  .staff-code-panel__value {
+    font-size: 2rem;
+    letter-spacing: 0.18em;
+  }
+}
+
+/* 管理页桌面态优先突出 tabs、动态码大屏和统计区。 */
+@media (min-width: 768px) {
+  .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
+    width: min(100%, 560px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
+    width: min(100%, 1120px);
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"][data-page-tone="staff"] .mobile-page__hero-surface,
+  .mobile-page[data-page-layout="showcase-auto"][data-page-tone="staff"] .mobile-page__content-surface {
+    padding: 24px;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-panel {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-areas:
+      "tabs tabs"
+      "hero hero"
+      "stats actions";
+    gap: 18px;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-panel__controls {
+    grid-area: tabs;
+    justify-self: center;
+    width: min(100%, 360px);
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel {
+    grid-area: hero;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__surface {
+    min-height: 360px;
+    padding: 42px 32px 36px;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__value {
+    font-size: clamp(4.8rem, 9vw, 7rem);
+    letter-spacing: 0.34em;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-code-panel__meta {
+    font-size: 1rem;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-panel__stats {
+    grid-area: stats;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-panel__actions {
+    grid-area: actions;
+    align-self: start;
+  }
+}

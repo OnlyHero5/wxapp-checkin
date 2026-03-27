@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog } from "tdesign-mobile-react";
+import { ActionSheet, Cell, CellGroup, Dialog } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
 
 export type AttendanceActionKey =
@@ -15,7 +15,6 @@ type AttendanceBatchActionBarProps = {
 };
 
 type ActionConfig = {
-  confirmText?: string;
   content: string;
   label: string;
   value: AttendanceActionKey;
@@ -53,9 +52,20 @@ export function AttendanceBatchActionBar({
   onConfirm,
   selectedCount
 }: AttendanceBatchActionBarProps) {
+  const [sheetVisible, setSheetVisible] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<AttendanceActionKey | null>(null);
   const activeAction = ACTIONS.find((action) => action.value === pendingAction) ?? null;
+
+  function handleActionSelect(index: number) {
+    const nextAction = ACTIONS[index];
+    if (!nextAction) {
+      return;
+    }
+    setPendingAction(nextAction.value);
+    setSheetVisible(false);
+    setDialogVisible(true);
+  }
 
   async function handleConfirm() {
     if (!pendingAction) {
@@ -67,23 +77,28 @@ export function AttendanceBatchActionBar({
   }
 
   return (
-    <section className="roster-batch-bar">
-      <p className="roster-batch-bar__summary">已选 {selectedCount} 人</p>
-      <div className="roster-batch-bar__actions">
-        {ACTIONS.map((action) => (
-          <AppButton
-            disabled={disabled || selectedCount === 0}
-            key={action.value}
-            onClick={() => {
-              setPendingAction(action.value);
-              setDialogVisible(true);
-            }}
-            tone={action.value === "clear_checked_in" ? "secondary" : "primary"}
-          >
-            {action.label}
-          </AppButton>
-        ))}
-      </div>
+    <section className="stack-form">
+      <CellGroup theme="card" title="批量修正">
+        <Cell note={`${selectedCount} 人`} title="已选成员" />
+      </CellGroup>
+      <AppButton
+        disabled={disabled || selectedCount === 0}
+        onClick={() => setSheetVisible(true)}
+        tone="secondary"
+      >
+        批量操作
+      </AppButton>
+      <ActionSheet
+        cancelText="取消"
+        description="请选择要批量修正的签到状态。"
+        items={ACTIONS.map((action) => ({
+          description: action.content,
+          label: action.label
+        }))}
+        onClose={() => setSheetVisible(false)}
+        onSelected={(_, index) => handleActionSelect(index)}
+        visible={sheetVisible}
+      />
       <Dialog
         cancelBtn="取消"
         confirmBtn="确认批量修正"

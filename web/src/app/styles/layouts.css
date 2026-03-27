@@ -1,0 +1,130 @@
+/* =========================================================
+ * 页面内通用容器
+ * ---------------------------------------------------------
+ * 这里只收口单列布局、状态占位和活动信息面板。
+ * 组件库自己的 `List`、`CellGroup`、`NoticeBar` 不再被页面类重复伪装。
+ * ========================================================= */
+
+.stack-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.activity-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.activity-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.app-state,
+.detail-actions,
+.staff-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.staff-panel__stats,
+.staff-panel__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+/* NoticeBar 仍用组件库，只补圆角和容器契合度。 */
+.inline-notice {
+  border-radius: var(--app-radius-sm);
+}
+
+/* =========================================================
+ * 活动面板
+ * ---------------------------------------------------------
+ * 活动元信息由项目层负责组合，细项仍交给 Cell 系列组件。
+ * ========================================================= */
+
+.activity-meta-panel {
+  display: grid;
+}
+
+.activity-meta-panel__surface {
+  gap: 14px;
+}
+
+.activity-meta-panel__header,
+.activity-meta-panel__title-block,
+.activity-meta-panel__status,
+.activity-meta-panel__footer,
+.activity-meta-panel__footer-actions {
+  min-width: 0;
+}
+
+.activity-meta-panel__header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.activity-meta-panel__title-block {
+  display: grid;
+  gap: 4px;
+}
+
+.activity-meta-panel__title {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.35;
+  color: var(--app-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.activity-meta-panel__subtitle {
+  margin: 0;
+  color: var(--app-text-muted);
+  line-height: 1.6;
+}
+
+.activity-meta-panel__status {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.activity-meta-panel__description {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--app-text);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.activity-meta-panel__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-border-subtle);
+}
+
+.activity-meta-panel__footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+/* 状态标签已由组件库负责形态，这里只补项目内的布局语义。 */
+.status-tag {
+  flex-shrink: 0;
+}

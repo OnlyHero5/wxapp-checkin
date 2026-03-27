@@ -1,0 +1,99 @@
+/* =========================================================
+ * 页面壳层
+ * ---------------------------------------------------------
+ * `MobilePage` 负责页面级宽度、标题区和正文区。
+ * 顶部交互继续复用组件库 Navbar 自带的 left/right 槽位。
+ * ========================================================= */
+
+.mobile-page {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px 14px 28px;
+  padding: calc(16px + constant(safe-area-inset-top)) 14px calc(28px + constant(safe-area-inset-bottom));
+  padding: calc(16px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));
+}
+
+.mobile-page__shell {
+  width: min(100%, 480px);
+  display: grid;
+  gap: 14px;
+  align-self: start;
+  align-content: start;
+  min-width: 0;
+}
+
+/* 顶级业务导航已由组件库底部导航处理占位，这里只保留宽度语义。 */
+.app-business-shell {
+  width: 100%;
+}
+
+/* 页面头部只保留项目自己的结构槽位。 */
+.mobile-page__hero-surface,
+.mobile-page__content-surface,
+.mobile-page__hero,
+.mobile-page__content {
+  min-width: 0;
+}
+
+.mobile-page__hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+}
+
+.mobile-page__eyebrow {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--app-text-muted);
+}
+
+/* Navbar 仍由组件库承担可访问性与布局基线，但页面视觉只通过根 class 调整。 */
+.mobile-page__navbar {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+.mobile-page__navbar-title {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+  color: var(--app-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.mobile-page__description {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--app-text);
+  line-height: 1.55;
+}
+
+/* 正文区固定为可收缩单列，减少页面自己发明布局。 */
+.mobile-page__content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.mobile-page__content > * {
+  min-width: 0;
+}
+
+.mobile-page__content p {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--app-text);
+}

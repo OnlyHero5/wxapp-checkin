@@ -4,10 +4,16 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { MobilePage } from "./MobilePage";
 
-const baseCss = fs.readFileSync(
-  path.resolve(import.meta.dirname, "../../app/styles/base.css"),
-  "utf8"
-);
+function readAppStyles() {
+  const stylesDir = path.resolve(import.meta.dirname, "../../app/styles");
+  return fs.readdirSync(stylesDir)
+    .filter((fileName) => fileName.endsWith(".css"))
+    .sort()
+    .map((fileName) => fs.readFileSync(path.join(stylesDir, fileName), "utf8"))
+    .join("\n");
+}
+
+const baseCss = readAppStyles();
 
 describe("MobilePage", () => {
   it("renders hero and content through app-owned surfaces instead of TDesign card-group shells", () => {
@@ -45,7 +51,7 @@ describe("MobilePage", () => {
     expect(screen.getByRole("main")).toHaveAttribute("data-page-layout", "showcase-auto");
   });
 
-  it("renders header actions in an app-owned slot instead of depending on Navbar internal DOM", () => {
+  it("renders header actions through the component-library navbar right slot", () => {
     render(
       <MobilePage
         headerActions={<a href="/activities/act_101">返回活动详情</a>}
@@ -58,8 +64,8 @@ describe("MobilePage", () => {
     const actionLink = screen.getByRole("link", { name: "返回活动详情" });
 
     expect(document.querySelector(".t-navbar")).not.toBeNull();
-    expect(actionLink.closest(".mobile-page__actions")).toBeInTheDocument();
-    expect(actionLink.closest(".t-navbar__right")).toBeNull();
+    expect(actionLink.closest(".t-navbar__right")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__actions")).toBeNull();
   });
 
   it("keeps the page shell top-aligned so short pages do not stretch into tall blank cards", () => {

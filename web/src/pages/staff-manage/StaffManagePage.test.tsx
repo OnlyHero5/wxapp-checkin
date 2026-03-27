@@ -141,7 +141,7 @@ describe("StaffManagePage", () => {
     expect(screen.getByRole("button", { name: "立即刷新" })).toHaveClass("app-button--accent-staff");
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_101");
-    expect(screen.getByRole("link", { name: "返回活动详情" }).closest(".mobile-page__actions")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回活动详情" }).closest(".t-navbar__right")).toBeInTheDocument();
 
     await user.click(screen.getByText("签退码"));
 

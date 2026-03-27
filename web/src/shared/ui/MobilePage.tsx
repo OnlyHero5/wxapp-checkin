@@ -39,16 +39,15 @@ export function MobilePage({
         <header className="mobile-page__hero-surface">
           {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
           <section className="mobile-page__hero">
-            {/* 标题仍交给 Navbar 承担语义与交互基线，但页面动作位回到我们自己的稳定 slot，
-             * 避免后续样式继续绑死在 `.t-navbar__right` 这类内部 DOM 上。 */}
+            {/* 标题和右侧动作都交给 Navbar 公共槽位，避免页面头部继续长成自定义壳层。 */}
             <Navbar
               animation={false}
               className="mobile-page__navbar"
               fixed={false}
+              right={headerActions}
               safeAreaInsetTop={false}
               title={<h1 className="mobile-page__navbar-title">{title}</h1>}
             />
-            {headerActions ? <div className="mobile-page__actions">{headerActions}</div> : null}
             {description ? <p className="mobile-page__description">{description}</p> : null}
           </section>
         </header>

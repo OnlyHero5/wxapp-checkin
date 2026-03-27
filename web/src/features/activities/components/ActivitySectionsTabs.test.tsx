@@ -20,7 +20,7 @@ const baseActivity: ActivitySummary = {
 };
 
 describe("ActivitySectionsTabs", () => {
-  it("renders sticky tabs and delegates activity card rendering per section", () => {
+  it("renders sticky tabs with a component-library list per section", () => {
     const renderActivity = vi.fn((activity: ActivitySummary) => <article>{activity.activity_title}</article>);
 
     render(
@@ -44,6 +44,7 @@ describe("ActivitySectionsTabs", () => {
     );
 
     expect(document.querySelector(".t-sticky")).toBeInTheDocument();
+    expect(document.querySelector(".t-list")).toBeInTheDocument();
     expect(screen.getByText("正在进行")).toBeInTheDocument();
     expect(screen.getByText("历史活动")).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
