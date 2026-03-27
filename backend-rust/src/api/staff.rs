@@ -1,12 +1,12 @@
+pub use super::staff_contracts::{
+  ActivityRosterItem, ActivityRosterResponse, AttendanceAdjustmentInput, AttendanceAdjustmentPatch,
+  AttendanceAdjustmentRequest, AttendanceAdjustmentResponse, BulkCheckoutInput,
+  BulkCheckoutRequest, BulkCheckoutResponse,
+};
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::staff_service;
-pub use super::staff_contracts::{
-  ActivityRosterItem, ActivityRosterResponse, AttendanceAdjustmentInput,
-  AttendanceAdjustmentPatch, AttendanceAdjustmentRequest, AttendanceAdjustmentResponse,
-  BulkCheckoutInput, BulkCheckoutRequest, BulkCheckoutResponse,
-};
 use axum::Json;
 use axum::Router;
 use axum::extract::{Path, State};

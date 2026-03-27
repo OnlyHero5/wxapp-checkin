@@ -76,8 +76,7 @@ mod tests {
       check_out_flag: 0,
     };
 
-    let error =
-      next_flags(&record, AttendanceActionType::Checkout).expect_err("should reject");
+    let error = next_flags(&record, AttendanceActionType::Checkout).expect_err("should reject");
     assert_eq!(error.status(), "forbidden");
   }
 }

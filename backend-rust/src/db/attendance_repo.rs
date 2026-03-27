@@ -130,10 +130,10 @@ pub async fn list_roster(
   );
 
   sqlx::query_as::<_, RosterRow>(&sql)
-  .bind(legacy_activity_id)
-  .fetch_all(pool)
-  .await
-  .map_err(|error| AppError::internal(format!("读取 roster 失败：{error}")))
+    .bind(legacy_activity_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|error| AppError::internal(format!("读取 roster 失败：{error}")))
 }
 
 pub async fn list_checked_in_for_update(
@@ -150,10 +150,10 @@ pub async fn list_checked_in_for_update(
   );
 
   sqlx::query_as::<_, ManagedAttendanceRow>(&sql)
-  .bind(legacy_activity_id)
-  .fetch_all(&mut **tx)
-  .await
-  .map_err(|error| AppError::internal(format!("锁定批量签退名单失败：{error}")))
+    .bind(legacy_activity_id)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(|error| AppError::internal(format!("锁定批量签退名单失败：{error}")))
 }
 
 pub async fn list_by_user_ids_for_update(

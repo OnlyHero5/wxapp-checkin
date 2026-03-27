@@ -165,11 +165,7 @@ fn normalize_user_ids(user_ids: &[i64]) -> Result<Vec<i64>, AppError> {
 fn normalize_reason(reason: &str) -> Result<String, AppError> {
   let normalized = reason.trim();
   if normalized.is_empty() {
-    return Err(AppError::business(
-      "invalid_param",
-      "reason 不能为空",
-      None,
-    ));
+    return Err(AppError::business("invalid_param", "reason 不能为空", None));
   }
   Ok(normalized.to_string())
 }

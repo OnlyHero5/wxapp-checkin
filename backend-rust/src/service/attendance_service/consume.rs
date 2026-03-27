@@ -1,6 +1,4 @@
 use super::audit::insert_action_log;
-use super::now_millis;
-use super::role_from_user;
 use super::state_rules::next_flags;
 use crate::api::activity::CodeConsumeResponse;
 use crate::api::auth_extractor::CurrentUser;
@@ -12,6 +10,7 @@ use crate::domain::WebRole;
 use crate::domain::format_activity_id;
 use crate::error::AppError;
 use crate::service::activity_service;
+use crate::service::shared_helpers::{now_millis, role_from_user};
 use std::time::SystemTime;
 
 /// 消费动态码是当前普通用户签到/签退的主流程。

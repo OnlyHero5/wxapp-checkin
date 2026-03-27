@@ -147,10 +147,9 @@ mod tests {
   // 合法值仍要保持当前 JSON 线协议不变，避免前端 DTO 跟着漂移。
   #[test]
   fn code_consume_request_should_keep_known_action_type_as_typed_value() {
-    let request = serde_json::from_str::<CodeConsumeRequest>(
-      r#"{"action_type":"checkin","code":"123456"}"#,
-    )
-    .expect("request");
+    let request =
+      serde_json::from_str::<CodeConsumeRequest>(r#"{"action_type":"checkin","code":"123456"}"#)
+        .expect("request");
 
     assert_eq!(request.action_type, AttendanceActionType::Checkin);
   }

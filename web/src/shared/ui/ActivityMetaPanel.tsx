@@ -1,7 +1,6 @@
-import { ElementType, ReactNode } from "react";
+import { ComponentProps, ElementType, ReactNode } from "react";
 import { Cell, CellGroup } from "tdesign-mobile-react";
 import type { VisualTone } from "./visual-tone";
-import { ActivityMetaContentGroups, type ActivityMetaDetailRow } from "./ActivityMetaContentGroups";
 
 /**
  * 活动信息块仍然保留公共组合层，但现在只负责“信息编排”，不再自带项目级卡面外壳。
@@ -31,11 +30,7 @@ type ActivityMetaPanelProps = {
   title: string;
 };
 
-type ActivityMetaSummaryRow = {
-  align?: "top";
-  label: string;
-  value: ReactNode;
-};
+type ActivityMetaCellProps = Pick<ComponentProps<typeof Cell>, "align" | "description" | "note" | "title">;
 
 function resolveDetailRows({
   checkinTimeText,
@@ -45,42 +40,43 @@ function resolveDetailRows({
   timeText
 }: Pick<ActivityMetaPanelProps, "checkinTimeText" | "checkoutTimeText" | "joinStatusText" | "locationText" | "timeText">) {
   /**
-   * “活动信息”里的基础行继续统一在这里排序，
-   * 避免列表、详情和 staff 页面各自发明一套字段顺序。
+   * 基础字段行继续统一在这里排序，避免列表、详情和 staff 页面各自发明一套顺序。
    *
-   * 这里刻意只保留组件库已经很好承载的“标签 -> 值”行，
-   * 不再额外拼项目自有标题区结构。
+   * 这里不再维护项目自有的“label/value 协议”，而是直接返回 TDesign `Cell` 原生 props：
+   * 1. 组件库负责决定 `note` / `description` 的语义与结构；
+   * 2. 业务层只保留字段有无与顺序编排；
+   * 3. 避免公共层再次长成第二套面板 DSL。
    */
-  const rows: ActivityMetaDetailRow[] = [];
+  const rows: ActivityMetaCellProps[] = [];
 
   if (timeText) {
     rows.push({
-      label: "时间",
-      value: timeText
+      note: timeText,
+      title: "时间"
     });
   }
   if (locationText) {
     rows.push({
-      label: "地点",
-      value: locationText
+      note: locationText,
+      title: "地点"
     });
   }
   if (joinStatusText) {
     rows.push({
-      label: "我的状态",
-      value: joinStatusText
+      note: joinStatusText,
+      title: "我的状态"
     });
   }
   if (checkinTimeText) {
     rows.push({
-      label: "签到时间",
-      value: checkinTimeText
+      note: checkinTimeText,
+      title: "签到时间"
     });
   }
   if (checkoutTimeText) {
     rows.push({
-      label: "签退时间",
-      value: checkoutTimeText
+      note: checkoutTimeText,
+      title: "签退时间"
     });
   }
 
@@ -94,39 +90,77 @@ function resolveSummaryRows({
   subtitle
 }: Pick<ActivityMetaPanelProps, "description" | "progressText" | "statusSlot" | "subtitle">) {
   /**
-   * 标题组现在同样直接投影成 TDesign `Cell`：
+   * 标题摘要组继续只做字段编排，但直接投影成 TDesign `Cell` props：
    * - 标题本身交给 `CellGroup.title`
-   * - 副标题、说明、状态位继续用组件库行结构表达
-   * - 这样页面不再维护额外的 heading / footer / badge 自定义壳层。
+   * - 说明改回组件库原生 `description`
+   * - 状态与副标题继续使用 `note`
+   *
+   * 这样可以避免公共层把组件库的原生表达能力再次压扁成同一种“右侧 note”。
    */
-  const rows: ActivityMetaSummaryRow[] = [];
+  const rows: ActivityMetaCellProps[] = [];
 
   if (subtitle) {
     rows.push({
-      label: "类型",
-      value: subtitle
+      note: subtitle,
+      title: "类型"
     });
   }
   if (description) {
     rows.push({
       align: "top",
-      label: "说明",
-      value: description
+      description,
+      title: "说明"
     });
   }
   if (statusSlot) {
     rows.push({
-      label: "状态",
-      value: statusSlot
+      note: statusSlot,
+      title: "状态"
     });
   } else if (progressText) {
     rows.push({
-      label: "状态",
-      value: progressText
+      note: progressText,
+      title: "状态"
     });
   }
 
   return rows;
+}
+
+function resolveMetricRows(counts?: ActivityMetaPanelProps["counts"]) {
+  /**
+   * 统计口径同样直接使用 `Cell` 原生结构。
+   * 这里保留的只是业务口径换算，不再额外挂一层中转组件。
+   */
+  if (!counts) {
+    return [];
+  }
+
+  const expectedCount = counts.expected;
+  const checkinCount = counts.checkin ?? 0;
+  const checkoutCount = counts.checkout ?? 0;
+  const totalCheckedIn = checkinCount + checkoutCount;
+
+  return [
+    expectedCount != null
+      ? {
+          note: `${expectedCount}`,
+          title: "应到"
+        }
+      : null,
+    {
+      note: `${totalCheckedIn}`,
+      title: "累计签到"
+    },
+    {
+      note: `${checkoutCount}`,
+      title: "已签退"
+    },
+    {
+      note: `${checkinCount}`,
+      title: "未签退"
+    }
+  ].filter(Boolean) as ActivityMetaCellProps[];
 }
 
 export function ActivityMetaPanel({
@@ -156,6 +190,7 @@ export function ActivityMetaPanel({
     statusSlot,
     subtitle
   });
+  const metricRows = resolveMetricRows(counts);
   const detailRows = resolveDetailRows({
     checkinTimeText,
     checkoutTimeText,
@@ -169,14 +204,31 @@ export function ActivityMetaPanel({
       <CellGroup theme="card" title={title}>
         {summaryRows.map((row) => (
           <Cell
-            key={`${title}:${row.label}`}
-            align={row.align}
-            note={row.value}
-            title={row.label}
+            {...row}
+            key={`${title}:${row.title}`}
           />
         ))}
       </CellGroup>
-      <ActivityMetaContentGroups counts={counts} rows={detailRows} />
+      {detailRows.length > 0 ? (
+        <CellGroup theme="card" title="活动信息">
+          {detailRows.map((row) => (
+            <Cell
+              {...row}
+              key={`detail:${title}:${row.title}`}
+            />
+          ))}
+        </CellGroup>
+      ) : null}
+      {metricRows.length > 0 ? (
+        <CellGroup theme="card" title="统计">
+          {metricRows.map((row) => (
+            <Cell
+              {...row}
+              key={`metric:${title}:${row.title}`}
+            />
+          ))}
+        </CellGroup>
+      ) : null}
       {footer ? <section className="activity-meta-actions">{footer}</section> : null}
     </Container>
   );

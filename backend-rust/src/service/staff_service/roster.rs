@@ -1,6 +1,5 @@
 use super::access::require_activity;
 use super::access::require_staff;
-use super::audit::now_millis;
 use crate::api::auth_extractor::CurrentUser;
 use crate::api::staff::{ActivityRosterItem, ActivityRosterResponse};
 use crate::app_state::AppState;
@@ -9,6 +8,7 @@ use crate::db::log_repo;
 use crate::domain::format_activity_id;
 use crate::error::AppError;
 use crate::service::activity_service;
+use crate::service::shared_helpers::now_millis;
 
 /// 名单读取只负责三件事：
 /// - 校验 staff 权限；

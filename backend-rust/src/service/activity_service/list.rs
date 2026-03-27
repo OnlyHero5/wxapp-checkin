@@ -2,7 +2,6 @@ use super::rules::format_display_time;
 use super::rules::is_checked_in;
 use super::rules::is_checked_out;
 use super::rules::is_registered_apply_state;
-use super::rules::role_from_user;
 use crate::api::activity::{ActivityListResponse, ActivitySummaryItem};
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
@@ -11,8 +10,9 @@ use crate::domain::{
   WebRole, activity_type_from_legacy, format_activity_id, progress_status_from_legacy,
 };
 use crate::error::AppError;
+use crate::service::shared_helpers::{now_millis, role_from_user};
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
+
 const DEFAULT_PAGE: i64 = 1;
 const DEFAULT_PAGE_SIZE: i64 = 50;
 const MAX_PAGE_SIZE: i64 = 200;
@@ -165,12 +165,7 @@ fn build_user_activity_map(
   }
   map
 }
-fn now_millis() -> Result<u64, AppError> {
-  SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .map(|duration| duration.as_millis() as u64)
-    .map_err(|_| AppError::internal("系统时间早于 UNIX_EPOCH"))
-}
+
 #[cfg(test)]
 #[path = "list_tests.rs"]
 mod tests;

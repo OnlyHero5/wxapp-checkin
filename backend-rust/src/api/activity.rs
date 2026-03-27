@@ -1,12 +1,12 @@
+pub use super::activity_contracts::{
+  ActivityDetailResponse, ActivityListQuery, ActivityListResponse, ActivitySummaryItem,
+  CodeConsumeRequest, CodeConsumeResponse, CodeSessionQuery, CodeSessionResponse,
+};
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::activity_service;
 use crate::service::attendance_service;
-pub use super::activity_contracts::{
-  ActivityDetailResponse, ActivityListQuery, ActivityListResponse, ActivitySummaryItem,
-  CodeConsumeRequest, CodeConsumeResponse, CodeSessionQuery, CodeSessionResponse,
-};
 use axum::Json;
 use axum::Router;
 use axum::extract::{Path, Query, State};

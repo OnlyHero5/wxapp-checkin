@@ -3,14 +3,14 @@ use super::access::require_staff;
 use super::audit::StaffAuditActionKind;
 use super::audit::StaffLogContext;
 use super::audit::insert_staff_log;
-use super::audit::now_millis;
-use crate::api::staff::AttendanceAdjustmentInput;
 use crate::api::auth_extractor::CurrentUser;
+use crate::api::staff::AttendanceAdjustmentInput;
 use crate::api::staff::AttendanceAdjustmentResponse;
 use crate::app_state::AppState;
 use crate::db::attendance_repo;
 use crate::domain::format_activity_id;
 use crate::error::AppError;
+use crate::service::shared_helpers::now_millis;
 
 /// 名单修正只允许 staff 在事务内批量调整已有报名记录。
 /// 这里继续保留“只更新状态位，不改报名主体数据”的边界。

@@ -21,6 +21,21 @@ describe("ActivityMetaPanel", () => {
     expect(container.querySelectorAll(".t-cell").length).toBeGreaterThan(0);
   });
 
+  it("renders long description text through the native TDesign description slot instead of downgrading it into note text", () => {
+    const { container } = render(
+      <ActivityMetaPanel
+        description="负责现场秩序维护与物资分发，说明文案应继续走组件库原生 description 区域。"
+        subtitle="志愿"
+        title="校园志愿活动"
+      />
+    );
+
+    const descriptionNode = container.querySelector(".t-cell__description");
+
+    expect(descriptionNode).not.toBeNull();
+    expect(descriptionNode?.textContent).toContain("说明文案应继续走组件库原生 description 区域");
+  });
+
   it("allows long detail values to shrink and wrap inside narrow groups", () => {
     const { container } = render(
       <ActivityMetaPanel

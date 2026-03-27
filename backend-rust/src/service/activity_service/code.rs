@@ -1,16 +1,16 @@
 use super::rules::ensure_activity_action_allowed;
 use super::rules::ensure_activity_time_valid;
 use super::rules::ensure_within_issue_window;
-use super::rules::role_from_user;
 use crate::api::activity::CodeSessionResponse;
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
 use crate::db::activity_repo;
 use crate::domain::{AttendanceActionType, WebRole, format_activity_id, parse_activity_id};
 use crate::error::AppError;
+use crate::service::shared_helpers::{now_millis, role_from_user};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 
 const ROTATE_SECONDS: u64 = 10;
 
@@ -92,12 +92,7 @@ pub fn validate_dynamic_code(
 
   let slot_window_ms = ROTATE_SECONDS * 1000;
   let current_slot = now_ms / slot_window_ms;
-  let current_code = generate_code(
-    signing_key,
-    activity_id,
-    action_type.as_str(),
-    current_slot,
-  )?;
+  let current_code = generate_code(signing_key, activity_id, action_type.as_str(), current_slot)?;
   if current_code == normalized_code {
     return Ok(current_slot);
   }
@@ -138,13 +133,6 @@ fn generate_code(
     as u32
     % 1_000_000;
   Ok(format!("{value:06}"))
-}
-
-fn now_millis() -> Result<u64, AppError> {
-  SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .map(|duration| duration.as_millis() as u64)
-    .map_err(|_| AppError::internal("系统时间早于 UNIX_EPOCH"))
 }
 
 #[cfg(test)]

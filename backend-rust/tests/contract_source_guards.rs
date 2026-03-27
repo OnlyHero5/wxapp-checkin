@@ -189,6 +189,44 @@ fn dynamic_in_queries_should_use_sqlx_query_builder() {
 }
 
 #[test]
+fn service_helper_logic_should_be_centralized_in_shared_module() {
+  let activity_list = fs::read_to_string(manifest_file("src/service/activity_service/list.rs"))
+    .expect("read activity_service/list.rs");
+  let activity_detail = fs::read_to_string(manifest_file("src/service/activity_service/detail.rs"))
+    .expect("read activity_service/detail.rs");
+  let activity_code = fs::read_to_string(manifest_file("src/service/activity_service/code.rs"))
+    .expect("read activity_service/code.rs");
+  let attendance_mod = fs::read_to_string(manifest_file("src/service/attendance_service/mod.rs"))
+    .expect("read attendance_service/mod.rs");
+  let shared_helpers = manifest_file("src/service/shared_helpers.rs");
+
+  assert!(
+    shared_helpers.exists(),
+    "shared service helpers module should exist for cross-service helper reuse"
+  );
+  assert!(
+    !activity_list.contains("fn now_millis("),
+    "activity list service should reuse a shared now_millis helper"
+  );
+  assert!(
+    !activity_detail.contains("fn now_millis("),
+    "activity detail service should reuse a shared now_millis helper"
+  );
+  assert!(
+    !activity_code.contains("fn now_millis("),
+    "activity code service should reuse a shared now_millis helper"
+  );
+  assert!(
+    !attendance_mod.contains("fn now_millis("),
+    "attendance service module should reuse a shared now_millis helper"
+  );
+  assert!(
+    !attendance_mod.contains("fn role_from_user("),
+    "attendance service module should reuse a shared role mapping helper"
+  );
+}
+
+#[test]
 fn roster_service_should_not_do_per_user_log_n_plus_one_queries() {
   let source = read_path_or_tree("src/service/staff_service");
   assert!(

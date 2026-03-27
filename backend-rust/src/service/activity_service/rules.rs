@@ -1,8 +1,6 @@
-use crate::api::auth_extractor::CurrentUser;
 use crate::db::activity_repo::ActivityRow;
 use crate::db::activity_repo::UserActivityRow;
 use crate::domain::AttendanceActionType;
-use crate::domain::WebRole;
 use crate::domain::progress_status_from_legacy;
 use crate::error::AppError;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -69,14 +67,6 @@ pub(super) fn ensure_activity_action_allowed(
     ));
   }
   Ok(())
-}
-
-pub(super) fn role_from_user(current_user: &CurrentUser) -> WebRole {
-  if current_user.role == "staff" {
-    WebRole::Staff
-  } else {
-    WebRole::Normal
-  }
 }
 
 fn invalid_activity_time_error() -> AppError {

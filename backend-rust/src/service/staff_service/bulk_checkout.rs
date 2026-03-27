@@ -4,14 +4,14 @@ use super::audit::StaffAuditActionKind;
 use super::audit::StaffLogContext;
 use super::audit::insert_batch_summary_log;
 use super::audit::insert_staff_log;
-use super::audit::now_millis;
-use crate::api::staff::BulkCheckoutInput;
 use crate::api::auth_extractor::CurrentUser;
+use crate::api::staff::BulkCheckoutInput;
 use crate::api::staff::BulkCheckoutResponse;
 use crate::app_state::AppState;
 use crate::db::attendance_repo;
 use crate::domain::format_activity_id;
 use crate::error::AppError;
+use crate::service::shared_helpers::now_millis;
 
 /// 批量签退和名单修正共享同一审计上下文，但业务语义更单一：
 /// - 必须显式确认；

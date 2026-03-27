@@ -4,7 +4,6 @@ use super::rules::is_checked_in;
 use super::rules::is_checked_out;
 use super::rules::is_registered_apply_state;
 use super::rules::is_within_issue_window;
-use super::rules::role_from_user;
 use crate::api::activity::ActivityDetailResponse;
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
@@ -15,7 +14,8 @@ use crate::domain::{
   progress_status_from_legacy,
 };
 use crate::error::AppError;
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::service::shared_helpers::{now_millis, role_from_user};
+use std::time::SystemTime;
 
 /// 活动详情服务负责把活动主信息、用户状态和展示字段拼成单个响应。
 /// 详情页和列表页共用同一套规则函数，但这里会额外补查个人签到/签退时间。
@@ -110,11 +110,4 @@ pub async fn get_activity_detail(
     can_checkout,
     server_time_ms: now_millis()?,
   })
-}
-
-fn now_millis() -> Result<u64, AppError> {
-  SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .map(|duration| duration.as_millis() as u64)
-    .map_err(|_| AppError::internal("系统时间早于 UNIX_EPOCH"))
 }

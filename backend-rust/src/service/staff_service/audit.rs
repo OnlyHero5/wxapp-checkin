@@ -5,7 +5,6 @@ use crate::domain::format_activity_id;
 use crate::error::AppError;
 use serde_json::json;
 use sqlx::Executor;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 /// staff 的两类写操作都要落 `suda_log`，但审计路径不同。
 /// 用枚举固定 path，可以避免 service 在多处手写 magic string。
@@ -38,15 +37,6 @@ pub(super) struct StaffLogContext<'a> {
   pub batch_id: &'a str,
   pub server_time_ms: u64,
   pub reason: &'a str,
-}
-
-/// 名单修正和批量签退都需要毫秒时间戳作为批次与日志字段。
-/// 统一收口后，时间异常时的错误语义只需要维护一处。
-pub(super) fn now_millis() -> Result<u64, AppError> {
-  SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .map(|duration| duration.as_millis() as u64)
-    .map_err(|_| AppError::internal("系统时间早于 UNIX_EPOCH"))
 }
 
 pub(super) async fn insert_staff_log<'e, E>(
