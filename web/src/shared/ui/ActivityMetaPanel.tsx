@@ -52,11 +52,12 @@ export function ActivityMetaPanel({
    * 这样 Task 4 接业务页时，只需要继续传业务文案，
    * 不需要重复维护分组数量和顺序。
    */
-  const { detail, hero, metrics } = buildActivityMetaSections({
+  const { actions, detail, hero, metrics } = buildActivityMetaSections({
     checkinTimeText,
     counts,
     checkoutTimeText,
     description,
+    footer,
     joinStatusText,
     locationText,
     progressText,
@@ -67,6 +68,7 @@ export function ActivityMetaPanel({
   });
   const hasDetailSection = detail.rows.length > 0;
   const hasMetricsSection = metrics.rows.length > 0;
+  const hasActionSection = actions.content != null;
   const isPlainStatusText = typeof hero.statusContent === "string" || typeof hero.statusContent === "number";
 
   return (
@@ -76,7 +78,8 @@ export function ActivityMetaPanel({
         <div className="activity-meta-panel__hero-copy">
           {hero.subtitle ? <p className="activity-meta-panel__subtitle">{hero.subtitle}</p> : null}
           <div className="activity-meta-panel__title-row">
-            <h2 className="activity-meta-panel__title">{hero.title}</h2>
+            {/* 页面 h1 已经由 `MobilePage` 提供，这里只保留视觉标题，避免下游出现重名 heading。 */}
+            <p className="activity-meta-panel__title">{hero.title}</p>
             {hero.statusContent ? (
               <div className="activity-meta-panel__status-slot">
                 {isPlainStatusText ? (
@@ -121,8 +124,8 @@ export function ActivityMetaPanel({
         </section>
       ) : null}
 
-      {/* 动作区继续挂在主卡内部，Task 4 接各业务页时就不会再多包一层卡面。 */}
-      {footer ? <footer className="activity-meta-panel__section activity-meta-panel__section--actions activity-meta-actions">{footer}</footer> : null}
+      {/* 动作区改为消费共享 section 数据，这样主卡本身只剩“渲染模型”职责。 */}
+      {hasActionSection ? <footer className="activity-meta-panel__section activity-meta-panel__section--actions activity-meta-actions">{actions.content}</footer> : null}
     </Container>
   );
 }

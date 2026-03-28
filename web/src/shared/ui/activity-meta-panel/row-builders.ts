@@ -40,11 +40,16 @@ export type ActivityMetaPanelSection = {
   rows: ActivityMetaSectionRow[];
 };
 
+export type ActivityMetaPanelActionSection = {
+  content?: ReactNode;
+};
+
 export type BuildActivityMetaSectionsInput = {
   checkinTimeText?: string;
   counts?: ActivityMetaCounts;
   checkoutTimeText?: string;
   description?: string;
+  footer?: ReactNode;
   joinStatusText?: string;
   locationText?: string;
   progressText?: string;
@@ -139,6 +144,7 @@ export const buildActivityMetaSections = ({
   counts,
   checkoutTimeText,
   description,
+  footer,
   joinStatusText,
   locationText,
   progressText,
@@ -166,5 +172,14 @@ export const buildActivityMetaSections = ({
   metrics: {
     rows: buildActivityMetaMetricRows(counts),
     title: "统计"
-  } satisfies ActivityMetaPanelSection
+  } satisfies ActivityMetaPanelSection,
+  /**
+   * 动作区也必须进入共享 section 模型。
+   *
+   * 这样主卡组件只负责渲染 section，不再额外维护一条“footer 特判”分支；
+   * Task 4 接业务页时也能稳定依赖这条分区边界。
+   */
+  actions: {
+    content: footer
+  } satisfies ActivityMetaPanelActionSection
 });

@@ -58,4 +58,30 @@ describe("ActivityMetaPanel", () => {
     expect(container.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.getByText("苏州大学独墅湖校区二期图书馆西侧报告厅外长廊集合点与备用签到处")).toBeInTheDocument();
   });
+
+  it("renders footer actions through the shared actions section model instead of stitching them outside the builder", () => {
+    const { container } = render(
+      <ActivityMetaPanel
+        footer={<button type="button">查看详情</button>}
+        subtitle="志愿"
+        title="校园志愿活动"
+      />
+    );
+
+    expect(container.querySelector(".activity-meta-panel__section--actions")).toBeInTheDocument();
+    expect(container.querySelectorAll(".activity-meta-panel__section")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "查看详情" })).toBeInTheDocument();
+  });
+
+  it("keeps the activity title visible without creating a second named heading under the page h1", () => {
+    render(
+      <ActivityMetaPanel
+        subtitle="志愿"
+        title="校园志愿活动"
+      />
+    );
+
+    expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "校园志愿活动" })).toBeNull();
+  });
 });

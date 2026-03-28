@@ -62,4 +62,16 @@ describe("activity meta row builders", () => {
       }
     ]);
   });
+
+  it("models footer actions as a dedicated shared actions section", () => {
+    const actionNode = "查看详情";
+    const sections = buildActivityMetaSections({
+      footer: actionNode,
+      title: "校园志愿活动"
+    });
+
+    expect(sections.actions).toEqual({
+      content: actionNode
+    });
+  });
 });
