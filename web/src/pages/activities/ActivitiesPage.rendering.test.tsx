@@ -79,6 +79,8 @@ describe("ActivitiesPage rendering", () => {
     expect(screen.queryByText("累计签到")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { hidden: true, name: "查看详情" })).toHaveLength(2);
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
+    expect(document.querySelectorAll(".activity-meta-panel")).toHaveLength(2);
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
 
   it("shows all activities and management entries for staff sessions", async () => {
@@ -120,6 +122,8 @@ describe("ActivitiesPage rendering", () => {
     expect(screen.getAllByRole("link", { hidden: true, name: "进入管理" })).toHaveLength(2);
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
     expect(screen.getByText("管理态活动 A").closest("article")).toHaveAttribute("data-panel-tone", "staff");
+    expect(document.querySelectorAll(".activity-meta-panel")).toHaveLength(2);
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
 
   it("uses a component-library loading state while the first page is still pending", () => {

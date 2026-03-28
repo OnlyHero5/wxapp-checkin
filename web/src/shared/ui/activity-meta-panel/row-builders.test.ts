@@ -74,4 +74,25 @@ describe("activity meta row builders", () => {
       content: actionNode
     });
   });
+
+  it("falls back to progress text when statusSlot is false", () => {
+    const sections = buildActivityMetaSections({
+      progressText: "进行中",
+      statusSlot: false,
+      title: "校园志愿活动"
+    });
+
+    expect(sections.hero.statusContent).toBe("进行中");
+  });
+
+  it("omits the actions section when footer is false", () => {
+    const sections = buildActivityMetaSections({
+      footer: false,
+      title: "校园志愿活动"
+    });
+
+    expect(sections.actions).toEqual({
+      content: undefined
+    });
+  });
 });

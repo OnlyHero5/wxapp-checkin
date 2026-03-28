@@ -31,7 +31,7 @@ describe("ActivityCard", () => {
   });
 
   it("uses the staff panel tone when management entries are shown", () => {
-    render(
+    const { container } = render(
       <MemoryRouter>
         <ActivityCard
           activity={{
@@ -52,5 +52,7 @@ describe("ActivityCard", () => {
 
     expect(screen.getByText("工作人员活动").closest("article")).toHaveAttribute("data-panel-tone", "staff");
     expect(screen.getByRole("link", { name: "进入管理" })).toBeInTheDocument();
+    expect(container.querySelectorAll(".activity-meta-panel")).toHaveLength(1);
+    expect(container.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
 });

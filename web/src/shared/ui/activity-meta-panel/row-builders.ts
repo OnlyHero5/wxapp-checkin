@@ -29,7 +29,7 @@ export type ActivityMetaSectionRow = {
 };
 
 export type ActivityMetaPanelHero = {
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   description?: string;
   statusContent?: ReactNode;
@@ -56,8 +56,17 @@ export type BuildActivityMetaSectionsInput = {
   statusSlot?: ReactNode;
   subtitle?: string;
   timeText?: string;
-  title: string;
+  title: ReactNode;
 };
+
+/**
+ * ReactNode 允许 `false / true`，但它们在共享 API 里通常代表“条件未命中”，
+ * 不是“要渲染一个空 section”。
+ *
+ * 这里统一收口成可复用判断，避免组件层和 builder 层各自写一套真假分支。
+ */
+const isRenderableNode = (value: ReactNode | undefined): value is Exclude<ReactNode, boolean | null | undefined> =>
+  value !== null && value !== undefined && typeof value !== "boolean";
 
 /**
  * 详情区阅读顺序继续沿用老口径。
@@ -155,7 +164,7 @@ export const buildActivityMetaSections = ({
 }: BuildActivityMetaSectionsInput) => ({
   hero: {
     description,
-    statusContent: statusSlot ?? progressText,
+    statusContent: isRenderableNode(statusSlot) ? statusSlot : progressText,
     subtitle,
     title
   } satisfies ActivityMetaPanelHero,
@@ -180,6 +189,6 @@ export const buildActivityMetaSections = ({
    * Task 4 接业务页时也能稳定依赖这条分区边界。
    */
   actions: {
-    content: footer
+    content: isRenderableNode(footer) ? footer : undefined
   } satisfies ActivityMetaPanelActionSection
 });

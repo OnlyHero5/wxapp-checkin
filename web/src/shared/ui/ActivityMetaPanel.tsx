@@ -26,7 +26,8 @@ type ActivityMetaPanelProps = {
   subtitle?: string;
   timeText?: string;
   tone?: VisualTone;
-  title: string;
+  title: ReactNode;
+  titleAs?: ElementType;
 };
 
 export function ActivityMetaPanel({
@@ -43,7 +44,8 @@ export function ActivityMetaPanel({
   subtitle,
   timeText,
   tone = "default",
-  title
+  title,
+  titleAs: TitleTag = "p"
 }: ActivityMetaPanelProps) {
   /**
    * 共享主卡只消费结构化 section 数据，
@@ -78,8 +80,8 @@ export function ActivityMetaPanel({
         <div className="activity-meta-panel__hero-copy">
           {hero.subtitle ? <p className="activity-meta-panel__subtitle">{hero.subtitle}</p> : null}
           <div className="activity-meta-panel__title-row">
-            {/* 页面 h1 已经由 `MobilePage` 提供，这里只保留视觉标题，避免下游出现重名 heading。 */}
-            <p className="activity-meta-panel__title">{hero.title}</p>
+            {/* 默认继续输出纯视觉标题；只有调用方显式选择时才提升为 heading 语义。 */}
+            <TitleTag className="activity-meta-panel__title">{hero.title}</TitleTag>
             {hero.statusContent ? (
               <div className="activity-meta-panel__status-slot">
                 {isPlainStatusText ? (
@@ -99,8 +101,8 @@ export function ActivityMetaPanel({
           {/* 详情区继续沿用共享字段顺序，让列表、详情和 staff 阅读路径一致。 */}
           <p className="activity-meta-panel__section-label">{detail.title}</p>
           <div className="activity-meta-panel__detail-list">
-            {detail.rows.map((row) => (
-              <div className="activity-meta-panel__detail-row" key={`${title}:${detail.title}:${row.label}`}>
+            {detail.rows.map((row, index) => (
+              <div className="activity-meta-panel__detail-row" key={`${detail.title}:${row.label}:${index}`}>
                 <span className="activity-meta-panel__detail-label">{row.label}</span>
                 <span className="activity-meta-panel__detail-value">{row.value}</span>
               </div>
@@ -114,8 +116,8 @@ export function ActivityMetaPanel({
           {/* 统计区只展示共享口径，避免业务页自己拼累计签到等衍生数字。 */}
           <p className="activity-meta-panel__section-label">{metrics.title}</p>
           <div className="activity-meta-panel__metric-grid">
-            {metrics.rows.map((row) => (
-              <section className="activity-meta-panel__metric-card" key={`${title}:${metrics.title}:${row.label}`}>
+            {metrics.rows.map((row, index) => (
+              <section className="activity-meta-panel__metric-card" key={`${metrics.title}:${row.label}:${index}`}>
                 <p className="activity-meta-panel__metric-label">{row.label}</p>
                 <p className="activity-meta-panel__metric-value">{row.value}</p>
               </section>

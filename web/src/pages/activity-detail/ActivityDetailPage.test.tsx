@@ -85,6 +85,8 @@ describe("ActivityDetailPage", () => {
     expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
     expect(screen.getByText("负责现场秩序维护").closest("[data-panel-tone]")).toHaveAttribute("data-panel-tone", "staff");
+    expect(document.querySelectorAll(".activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.getByRole("button", { name: "进入管理" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "去签到" })).not.toBeInTheDocument();
   });
@@ -112,6 +114,8 @@ describe("ActivityDetailPage", () => {
     renderActivityDetailPage();
 
     expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
+    expect(document.querySelectorAll(".activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.getByRole("button", { name: "去签到" }).className).toContain("t-button");
     expect(screen.getByRole("button", { name: "去签到" })).toHaveClass("app-button");
     expect(screen.getByRole("button", { name: "去签退" }).className).toContain("t-button");
@@ -147,6 +151,8 @@ describe("ActivityDetailPage", () => {
     renderActivityDetailPage();
 
     expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
+    expect(document.querySelectorAll(".activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     await user.click(screen.getByRole("button", { name: "参会名单" }));
 
     await waitFor(() => {

@@ -84,4 +84,30 @@ describe("ActivityMetaPanel", () => {
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "校园志愿活动" })).toBeNull();
   });
+
+  it("falls back to progressText when statusSlot is false and omits the actions section when footer is false", () => {
+    const { container } = render(
+      <ActivityMetaPanel
+        footer={false}
+        progressText="进行中"
+        statusSlot={false}
+        title="校园志愿活动"
+      />
+    );
+
+    expect(container.querySelector(".activity-meta-panel__status-slot")?.textContent).toContain("进行中");
+    expect(container.querySelector(".activity-meta-panel__section--actions")).toBeNull();
+  });
+
+  it("allows callers to opt into heading semantics for the title without changing the shared default", () => {
+    render(
+      <ActivityMetaPanel
+        subtitle="志愿"
+        title="校园志愿活动"
+        titleAs="h2"
+      />
+    );
+
+    expect(screen.getByRole("heading", { level: 2, name: "校园志愿活动" })).toBeInTheDocument();
+  });
 });
