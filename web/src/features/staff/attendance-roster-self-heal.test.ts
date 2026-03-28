@@ -43,6 +43,7 @@ describe("attendance-roster-self-heal", () => {
       getActivityRoster
     });
 
+    expect(getActivityRoster).toHaveBeenCalledTimes(2);
     expect(adjustAttendanceStates).toHaveBeenCalledWith("act_101", {
       user_ids: [9],
       patch: { checked_out: true },
@@ -92,6 +93,7 @@ describe("attendance-roster-self-heal", () => {
       getActivityRoster
     });
 
+    expect(getActivityRoster).toHaveBeenCalledTimes(1);
     expect(adjustAttendanceStates).not.toHaveBeenCalled();
     expect(result).toEqual({
       didHeal: false,

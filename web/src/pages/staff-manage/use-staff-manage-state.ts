@@ -30,8 +30,11 @@ export function useStaffManageState(activityId: string) {
   const [errorMessage, setErrorMessage] = useState("");
   const [resultMessage, setResultMessage] = useState("");
   const [bulkPending, setBulkPending] = useState(false);
+  const [riskActionsBlocked, setRiskActionsBlocked] = useState(false);
   // keyed remount 后，这个 ref 只用来区分“首屏加载”和“同活动内切签到/签退 tab”。
   const previousActivityIdRef = useRef("");
+  const previousActionTypeRef = useRef<ActivityActionType | null>(null);
+  const actionTypeRef = useRef<ActivityActionType>("checkin");
   const { requestWakeLock, wakeLockMessage } = useScreenWakeLock();
   const handleSessionExpired = useCallback(() => {
     navigate("/login");
@@ -48,6 +51,10 @@ export function useStaffManageState(activityId: string) {
   });
   const loading = detailLoading || codeSessionLoading;
 
+  useEffect(() => {
+    actionTypeRef.current = actionType;
+  }, [actionType]);
+
   const refreshPage = useCallback(async (options: RefreshOptions) => {
     setErrorMessage("");
     let didHealRoster = false;
@@ -60,26 +67,33 @@ export function useStaffManageState(activityId: string) {
       try {
         const healResult = await ensureRosterConsistency({ activityId });
         didHealRoster = healResult.didHeal;
+        setRiskActionsBlocked(false);
       } catch (error) {
         if (error instanceof SessionExpiredError) {
           handleSessionExpired();
           return;
         }
 
+        /**
+         * 需要自愈的重型刷新一旦失败，就不能继续刷新详情或动态码，
+         * 否则页面会把后续操作建立在“未确认安全”的旧状态上。
+         */
+        setRiskActionsBlocked(true);
         setErrorMessage(resolvePageErrorMessage(error, "活动管理信息加载失败，请稍后重试。"));
+        return;
       }
     }
 
     await Promise.all([
       options.reloadDetail ? loadDetail(options.resetDetail) : Promise.resolve(),
-      loadCodeSession(actionType, options.resetCodeSession)
+      loadCodeSession(actionTypeRef.current, options.resetCodeSession)
     ]);
 
     // 如果刚刚修正过异常成员，再补刷一次详情和动态码，确保统计与后续动作都基于新状态。
     if (didHealRoster) {
-      await Promise.all([loadDetail(false), loadCodeSession(actionType, true)]);
+      await Promise.all([loadDetail(false), loadCodeSession(actionTypeRef.current, true)]);
     }
-  }, [actionType, activityId, handleSessionExpired, loadCodeSession, loadDetail]);
+  }, [activityId, handleSessionExpired, loadCodeSession, loadDetail]);
 
   useEffect(() => {
     const activityChanged = previousActivityIdRef.current !== activityId;
@@ -90,9 +104,11 @@ export function useStaffManageState(activityId: string) {
       resetCodeSession: true,
       resetDetail: activityChanged
     });
+  }, [activityId, refreshPage]);
 
+  useEffect(() => {
     return subscribePageVisible(() => {
-      // staff 页回到前台时，以“当前动作页签”为准重拉最新动态码和统计。
+      // staff 页回到前台时，以“当前动作页签”为准做一次完整安全刷新。
       void requestWakeLock();
       void refreshPage({
         reloadDetail: true,
@@ -100,16 +116,39 @@ export function useStaffManageState(activityId: string) {
         resetDetail: false
       });
     });
-  }, [actionType, activityId, refreshPage, requestWakeLock]);
+  }, [refreshPage, requestWakeLock]);
 
-  const refreshCurrentPage = useCallback(async () => {
-    await refreshPage({
-      reloadDetail: true,
-      resetCodeSession: true,
-      resetDetail: false
-    });
-  }, [refreshPage]);
+  const refreshCurrentCodeSession = useCallback(async () => {
+    if (riskActionsBlocked) {
+      return;
+    }
+
+    /**
+     * 动态码倒计时刷新、手动刷新、tab 切换都属于轻量刷新，
+     * 这里只刷新 code-session，避免把 roster 自愈前置到每一次发码动作。
+     */
+    await loadCodeSession(actionType, true);
+  }, [actionType, loadCodeSession, riskActionsBlocked]);
+
+  useEffect(() => {
+    if (previousActionTypeRef.current === null) {
+      previousActionTypeRef.current = actionType;
+      return;
+    }
+
+    if (previousActionTypeRef.current === actionType) {
+      return;
+    }
+
+    previousActionTypeRef.current = actionType;
+    void refreshCurrentCodeSession();
+  }, [actionType, refreshCurrentCodeSession]);
+
   async function handleBulkCheckout(reason: string) {
+    if (riskActionsBlocked) {
+      return;
+    }
+
     setBulkPending(true);
     setResultMessage("");
 
@@ -119,7 +158,11 @@ export function useStaffManageState(activityId: string) {
         reason
       });
       setResultMessage(result.message ?? "批量签退完成");
-      await refreshCurrentPage();
+      await refreshPage({
+        reloadDetail: true,
+        resetCodeSession: true,
+        resetDetail: false
+      });
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
@@ -139,8 +182,9 @@ export function useStaffManageState(activityId: string) {
     detail,
     errorMessage,
     handleBulkCheckout,
+    riskActionsBlocked,
     loading,
-    refreshCurrentPage,
+    refreshCurrentCodeSession,
     resultMessage,
     setActionType,
     wakeLockMessage

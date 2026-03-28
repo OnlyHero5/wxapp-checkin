@@ -34,7 +34,8 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
     errorMessage,
     handleBulkCheckout,
     loading,
-    refreshCurrentPage,
+    refreshCurrentCodeSession,
+    riskActionsBlocked,
     resultMessage,
     setActionType,
     wakeLockMessage
@@ -74,10 +75,15 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
         actionType={actionType}
         codeSession={codeSession}
         loading={codeSessionLoading}
-        onActionChange={setActionType}
-        onRefresh={() => void refreshCurrentPage()}
+        // 自愈重检失败后，这里的高风险交互统一冻结，直到下一次完整安全刷新成功。
+        onActionChange={riskActionsBlocked ? () => {} : setActionType}
+        onRefresh={() => void (riskActionsBlocked ? Promise.resolve() : refreshCurrentCodeSession())}
       />
-      <BulkCheckoutButton disabled={loading || !detail} loading={bulkPending} onConfirm={handleBulkCheckout} />
+      <BulkCheckoutButton
+        disabled={loading || !detail || riskActionsBlocked}
+        loading={bulkPending}
+        onConfirm={handleBulkCheckout}
+      />
     </MobilePage>
   );
 }
