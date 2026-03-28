@@ -31,7 +31,7 @@ export function AttendanceActionDetailSection({
 
   return (
     <>
-      <CellGroup theme="card" title={detail.activity_title}>
+      <CellGroup className="attendance-action-detail__group" theme="card" title={detail.activity_title}>
         {detail.activity_type ? <Cell note={detail.activity_type} title="类型" /> : null}
         {detail.start_time ? <Cell note={detail.start_time} title="时间" /> : null}
         {detail.location ? <Cell note={detail.location} title="地点" /> : null}

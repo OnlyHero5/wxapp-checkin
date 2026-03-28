@@ -65,6 +65,8 @@ describe("ActivitiesPage rendering", () => {
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
     expect(screen.getByText("查看你当前可见的活动，并进入详情页继续签到或签退。")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__masthead")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__content-stack")).toBeInTheDocument();
     expect(document.querySelector(".t-tabs")).toBeInTheDocument();
     expect(document.querySelector(".t-list")).toBeInTheDocument();
     expect(screen.getByText("正在进行")).toBeInTheDocument();

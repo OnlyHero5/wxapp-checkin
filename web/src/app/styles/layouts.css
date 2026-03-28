@@ -13,13 +13,13 @@
 .activity-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .activity-section {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .app-state,
@@ -37,9 +37,12 @@
   gap: 10px;
 }
 
-/* NoticeBar 继续交给组件库，只补充一点容器级圆角约束。 */
+/* NoticeBar 继续交给组件库，但提示条本身也要进入统一卡面体系。 */
 .inline-notice {
-  border-radius: var(--app-radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-soft);
 }
 
 /* =========================================================
@@ -50,13 +53,261 @@
 
 .activity-meta-actions {
   min-width: 0;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
 }
 
 /* 状态标签本体仍是组件库 Tag，这里只保留收缩行为。 */
 .status-tag {
   flex-shrink: 0;
+}
+
+/* =========================================================
+ * 共享视觉骨架
+ * ---------------------------------------------------------
+ * 这些样式只认项目自有 class，不侵入组件库内部类名。
+ * ========================================================= */
+
+.activity-meta-panel {
+  display: grid;
+  gap: 14px;
+  --panel-accent: var(--app-tone-default-accent);
+  --panel-soft: var(--app-tone-default-soft);
+}
+
+.activity-meta-panel--brand {
+  --panel-accent: var(--app-tone-brand-accent);
+  --panel-soft: var(--app-tone-brand-soft);
+}
+
+.activity-meta-panel--staff {
+  --panel-accent: var(--app-tone-staff-accent);
+  --panel-soft: var(--app-tone-staff-soft);
+}
+
+.activity-meta-panel--checkin {
+  --panel-accent: var(--app-tone-checkin-accent);
+  --panel-soft: var(--app-tone-checkin-soft);
+}
+
+.activity-meta-panel--checkout {
+  --panel-accent: var(--app-tone-checkout-accent);
+  --panel-soft: var(--app-tone-checkout-soft);
+}
+
+.activity-meta-panel__group,
+.code-input__group,
+.attendance-action-detail__group,
+.attendance-action-result__group,
+.account-login-form__form,
+.attendance-batch-action-bar__group,
+.staff-panel__stats-group,
+.activities-page__search,
+.app-state,
+.app-business-nav__bar {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.app-state {
+  padding: 20px 18px;
+}
+
+.activity-meta-panel__group::before,
+.code-input__group::before,
+.attendance-action-detail__group::before,
+.attendance-action-result__group::before,
+.account-login-form__form::before,
+.attendance-batch-action-bar__group::before,
+.staff-panel__stats-group::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--panel-accent, var(--app-tone-brand-accent)), color-mix(in srgb, var(--panel-accent, var(--app-tone-brand-accent)) 55%, white));
+}
+
+.activity-meta-panel__group {
+  --panel-accent: inherit;
+}
+
+.activity-meta-panel__footer {
+  display: grid;
+  gap: 12px;
+}
+
+.activities-page__search,
+.account-login-form__form,
+.code-input__group {
+  padding: 4px;
+}
+
+.account-login-form,
+.code-input {
+  gap: 18px;
+}
+
+.activities-page__feedback {
+  gap: 12px;
+}
+
+.activities-page__search {
+  padding: 10px 12px;
+}
+
+.activities-page__search input,
+.account-login-form__form input,
+.code-input__form input {
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface-muted);
+}
+
+.activities-page__search button,
+.account-login-form__form button,
+.code-input__form button {
+  font-weight: 700;
+}
+
+.activity-sections-tabs {
+  display: grid;
+  gap: 14px;
+}
+
+.activity-sections-tabs [role="tablist"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-md);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--app-shadow-soft);
+  backdrop-filter: var(--app-backdrop-blur);
+}
+
+.activity-sections-tabs [role="tab"] {
+  min-height: 44px;
+  border-radius: var(--app-radius-sm);
+  font-weight: 700;
+  color: var(--app-text-muted);
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.activity-sections-tabs [role="tab"][aria-selected="true"] {
+  color: var(--app-tone-brand-accent);
+  background: var(--app-tone-brand-strong);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
+}
+
+.app-button {
+  border-radius: var(--app-radius-md);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+  box-shadow: none;
+}
+
+.mobile-page[data-page-tone="default"] .app-button--primary {
+  background: linear-gradient(135deg, #64748b, #54657d);
+  box-shadow: 0 14px 28px rgba(84, 101, 125, 0.22);
+}
+
+.mobile-page[data-page-tone="brand"] .app-button--primary {
+  background: linear-gradient(135deg, #2563eb, #4f7cff);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+}
+
+.mobile-page[data-page-tone="staff"] .app-button--primary {
+  background: linear-gradient(135deg, #6b4df6, #8e6bff);
+  box-shadow: 0 14px 28px rgba(107, 77, 246, 0.24);
+}
+
+.mobile-page[data-page-tone="checkin"] .app-button--primary {
+  background: linear-gradient(135deg, #0f9b84, #18b79b);
+  box-shadow: 0 14px 28px rgba(15, 155, 132, 0.22);
+}
+
+.mobile-page[data-page-tone="checkout"] .app-button--primary {
+  background: linear-gradient(135deg, #d97706, #ee9a2a);
+  box-shadow: 0 14px 28px rgba(217, 119, 6, 0.22);
+}
+
+.app-button--secondary {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--app-text-strong);
+}
+
+.status-tag {
+  font-weight: 700;
+}
+
+.status-tag--ongoing {
+  color: var(--app-tone-brand-accent);
+}
+
+.status-tag--completed {
+  color: var(--app-text-muted);
+}
+
+.app-business-nav {
+  padding-top: 8px;
+}
+
+.app-business-nav__bar {
+  padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+  border-radius: var(--app-radius-xl) var(--app-radius-xl) 0 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: var(--app-backdrop-blur);
+  box-shadow: 0 -10px 28px rgba(31, 52, 95, 0.08);
+}
+
+.app-business-nav [role="tab"] {
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text-muted);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.app-business-nav [role="tab"][aria-selected="true"] {
+  color: var(--app-tone-brand-accent);
+  background: var(--app-tone-brand-strong);
+}
+
+.attendance-action-result__result {
+  padding: 12px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.app-text-link,
+.activity-meta-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--app-text-strong);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.detail-actions {
+  gap: 12px;
+}
+
+/* 小屏上动作区仍按双列排列，但不强迫按钮挤成一行文本。 */
+@media (max-width: 359px) {
+  .activity-meta-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

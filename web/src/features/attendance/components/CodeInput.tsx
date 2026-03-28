@@ -55,10 +55,10 @@ export function CodeInput({
   }
 
   return (
-    <section className="stack-form">
-      <CellGroup theme="card" title={label}>
+    <section className="stack-form code-input">
+      <CellGroup className="code-input__group" theme="card" title={label}>
         <Form
-          className="stack-form"
+          className="stack-form code-input__form"
           labelAlign="top"
           onSubmit={(context) => void handleFormSubmit(context)}
           // 动态码页经常由移动端键盘完成提交，这里必须拦截原生 submit，避免污染当前路由。

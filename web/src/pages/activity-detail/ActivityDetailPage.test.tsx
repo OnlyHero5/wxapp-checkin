@@ -113,9 +113,9 @@ describe("ActivityDetailPage", () => {
 
     expect(await screen.findByRole("heading", { name: "校园志愿活动" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "去签到" }).className).toContain("t-button");
-    expect(screen.getByRole("button", { name: "去签到" })).not.toHaveClass("app-button");
+    expect(screen.getByRole("button", { name: "去签到" })).toHaveClass("app-button");
     expect(screen.getByRole("button", { name: "去签退" }).className).toContain("t-button");
-    expect(screen.getByRole("button", { name: "去签退" })).not.toHaveClass("app-button");
+    expect(screen.getByRole("button", { name: "去签退" })).toHaveClass("app-button");
   });
 
   it("shows the roster entry for staff sessions and navigates to roster page", async () => {

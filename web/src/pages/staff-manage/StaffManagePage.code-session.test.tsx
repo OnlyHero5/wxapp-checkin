@@ -91,7 +91,7 @@ describe("StaffManagePage code session", () => {
     expect(screen.getByText("483920").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
     expect(screen.getByText("实时统计")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "立即刷新" }).className).toContain("t-button");
-    expect(screen.getByRole("button", { name: "立即刷新" })).not.toHaveClass("app-button");
+    expect(screen.getByRole("button", { name: "立即刷新" })).toHaveClass("app-button");
     expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_101");
     expect(screen.getByRole("link", { name: "返回活动详情" }).closest(".t-navbar__right")).toBeInTheDocument();
 

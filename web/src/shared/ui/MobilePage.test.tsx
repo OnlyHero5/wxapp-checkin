@@ -89,7 +89,7 @@ describe("MobilePage", () => {
       </MobilePage>
     );
 
-    expect(baseCss).toMatch(/\.mobile-page__content\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+    expect(baseCss).toMatch(/\.mobile-page__content-stack\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   });
 
   it("keeps shared single-column containers shrinkable instead of relying on ad-hoc shells", () => {

@@ -44,7 +44,7 @@ export function AppTextLink({ children, to, target }: AppTextLinkProps) {
   }
 
   return (
-    <Link href={to} onClick={handleClick} target={target} theme="primary" underline>
+    <Link className="app-text-link" href={to} onClick={handleClick} target={target} theme="primary" underline>
       {children}
     </Link>
   );

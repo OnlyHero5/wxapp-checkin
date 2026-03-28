@@ -37,7 +37,7 @@ describe("DynamicCodePanel", () => {
     expect(screen.getByText("签到码").closest(".staff-panel__controls")).toHaveAttribute("data-display-zone", "controls");
   });
 
-  it("renders the hero through TDesign badge and count-down plus an app-owned stable surface", async () => {
+  it("renders the hero through project-owned header structure and component-library count-down", async () => {
     const onActionChange = vi.fn();
     const onRefresh = vi.fn();
 
@@ -61,9 +61,8 @@ describe("DynamicCodePanel", () => {
       />
     );
 
-    expect(screen.getByText("当前签到码").closest(".t-badge")).toBeInTheDocument();
+    expect(document.querySelector(".staff-code-hero__header")).toBeInTheDocument();
     expect(document.querySelector(".staff-code-panel__card")).toBeInTheDocument();
-    expect(document.querySelector(".staff-code-panel__hero-group")).toBeNull();
     expect(screen.getByText("483920")).toBeInTheDocument();
     await waitFor(() => {
       expect(document.querySelector(".staff-code-panel__meta .t-count-down")).toBeInTheDocument();

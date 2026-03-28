@@ -79,9 +79,10 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
    */
 
   return (
-    <div className="stack-form">
+    <div className="stack-form account-login-form">
       {/* 必须阻止浏览器原生 submit，避免移动端把学号和密码直接拼进 URL。 */}
       <Form
+        className="account-login-form__form"
         labelAlign="top"
         onSubmit={(context) => void handleFormSubmit(context)}
         preventSubmitDefault

@@ -26,11 +26,12 @@ export function AttendanceActionResultView({
       title={resolveResultTitle(actionType)}
     >
       <Result
+        className="attendance-action-result__result"
         description={result.server_time_ms ? `服务器时间：${formatServerTime(result.server_time_ms)}` : undefined}
         theme="success"
         title={result.message ?? "提交成功"}
       />
-      <CellGroup theme="card" title="活动信息">
+      <CellGroup className="attendance-action-result__group" theme="card" title="活动信息">
         <Cell note={result.activity_title} title="活动" />
       </CellGroup>
       <AppButton onClick={onBack} tone="secondary">

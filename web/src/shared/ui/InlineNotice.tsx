@@ -23,6 +23,7 @@ export function InlineNotice({ message, theme = "error" }: InlineNoticeProps) {
     <NoticeBar
       className="inline-notice"
       content={message}
+      data-notice-theme={theme}
       // 禁用 marquee，保证错误文案稳定停留在原位，不做跑马灯。
       marquee={false}
       theme={theme}

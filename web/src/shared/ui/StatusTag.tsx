@@ -24,6 +24,7 @@ export function StatusTag({ status }: StatusTagProps) {
     <Tag
       className={`status-tag status-tag--${status}`}
       shape="round"
+      size="large"
       theme={isOngoing ? "primary" : "default"}
       variant={isOngoing ? "light" : "light-outline"}
     >

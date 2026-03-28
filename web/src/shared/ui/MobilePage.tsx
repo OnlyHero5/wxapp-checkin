@@ -36,19 +36,25 @@ export function MobilePage({
   return (
     <main className="mobile-page" data-page-layout={layout} data-page-tone={tone}>
       <div className="mobile-page__shell">
-        <header className="mobile-page__header">
+        {/* 页头改成独立 masthead，后续各页只需要传 tone 和文案，不必重复手写首屏容器。 */}
+        <header className="mobile-page__masthead">
           {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
-          <Navbar
-            animation={false}
-            className="mobile-page__navbar"
-            fixed={false}
-            right={headerActions}
-            safeAreaInsetTop={false}
-            title={<h1 className="mobile-page__navbar-title">{title}</h1>}
-          />
-          {description ? <p className="mobile-page__description">{description}</p> : null}
+          <section className="mobile-page__header">
+            <Navbar
+              animation={false}
+              className="mobile-page__navbar"
+              fixed={false}
+              right={headerActions}
+              safeAreaInsetTop={false}
+              title={<h1 className="mobile-page__navbar-title">{title}</h1>}
+            />
+            {description ? <p className="mobile-page__description">{description}</p> : null}
+          </section>
         </header>
-        <section className="mobile-page__content">{children}</section>
+        <section className="mobile-page__content">
+          {/* 正文统一落到 content stack，避免各页再自己补一层“伪 page body”。 */}
+          <div className="mobile-page__content-stack">{children}</div>
+        </section>
       </div>
     </main>
   );

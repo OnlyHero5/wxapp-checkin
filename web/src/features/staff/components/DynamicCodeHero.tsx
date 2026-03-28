@@ -1,4 +1,4 @@
-import { Badge, CountDown, Skeleton } from "tdesign-mobile-react";
+import { CountDown, Skeleton, Tag } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 
 export type DynamicCodeHeroProps = {
@@ -11,8 +11,8 @@ export type DynamicCodeHeroProps = {
   showSkeleton: boolean;
 };
 
-function resolveActionBadgeColor(actionType: ActivityActionType) {
-  return actionType === "checkout" ? "rgba(217, 119, 6, 0.92)" : "rgba(15, 159, 140, 0.92)";
+function resolveActionTagTheme(actionType: ActivityActionType) {
+  return actionType === "checkout" ? "warning" : "success";
 }
 
 export function DynamicCodeHero({
@@ -33,62 +33,72 @@ export function DynamicCodeHero({
    * - 不再额外套一层项目级 surface 组件。
    */
   return (
-    <section className="staff-code-panel__card">
-      <Badge
-        className="staff-code-panel__badge"
-        color={resolveActionBadgeColor(actionType)}
-        count={actionLabel}
-        shape="ribbon-left"
-        size="large"
-      >
-        <section className="staff-code-panel__body">
-          <span className="staff-code-panel__value-shell">
-            <span className="staff-code-panel__value">{codeText}</span>
-            {showSkeleton ? (
-              <Skeleton
-                animation="gradient"
-                className="staff-code-panel__value-skeleton"
-                rowCol={[
-                  [
-                    {
-                      height: "3.6rem",
-                      margin: "0 auto",
-                      type: "text",
-                      width: "12rem"
-                    }
-                  ],
-                  [
-                    {
-                      height: "1rem",
-                      margin: "0.75rem auto 0",
-                      type: "text",
-                      width: "7rem"
-                    }
-                  ]
-                ]}
-              />
-            ) : null}
-          </span>
-          <div className="staff-code-panel__meta">
-            {showSkeleton || loadingMetaText ? (
-              loadingMetaText
-            ) : (
-              <>
-                <span>剩余时间：</span>
-                <span className="staff-code-panel__countdown">
-                  <CountDown
-                    format="ss"
-                    key={`${actionType}:${countdownTimeMs}`}
-                    onFinish={onCountdownFinish}
-                    splitWithUnit
-                    time={countdownTimeMs}
-                  />
-                </span>
-              </>
-            )}
-          </div>
-        </section>
-      </Badge>
+    <section className="staff-code-panel__card staff-code-hero">
+      {/* 这里不再使用 Badge ribbon：
+       * 1. 截图已证明 ribbon 方案存在错图/错位风险；
+       * 2. 当前需求真正需要的是“标题条 + 大号动态码”的双层结构；
+       * 3. 标签仍继续复用组件库 Tag，而不是退回纯手写装饰。 */}
+      <header className="staff-code-hero__header">
+        <div className="staff-code-hero__title-block">
+          <p className="staff-code-hero__eyebrow">动态验证码</p>
+          <h2 className="staff-code-hero__title">{actionLabel}</h2>
+        </div>
+        <Tag
+          className={`staff-code-hero__tag staff-code-hero__tag--${actionType}`}
+          shape="round"
+          theme={resolveActionTagTheme(actionType)}
+          variant="light"
+        >
+          {actionType === "checkout" ? "签退" : "签到"}
+        </Tag>
+      </header>
+      <section className="staff-code-panel__body">
+        <span className="staff-code-panel__value-shell">
+          <span className="staff-code-panel__value">{codeText}</span>
+          {showSkeleton ? (
+            <Skeleton
+              animation="gradient"
+              className="staff-code-panel__value-skeleton"
+              rowCol={[
+                [
+                  {
+                    height: "3.6rem",
+                    margin: "0 auto",
+                    type: "text",
+                    width: "12rem"
+                  }
+                ],
+                [
+                  {
+                    height: "1rem",
+                    margin: "0.75rem auto 0",
+                    type: "text",
+                    width: "7rem"
+                  }
+                ]
+              ]}
+            />
+          ) : null}
+        </span>
+        <div className="staff-code-panel__meta">
+          {showSkeleton || loadingMetaText ? (
+            loadingMetaText
+          ) : (
+            <>
+              <span>剩余时间</span>
+              <span className="staff-code-panel__countdown">
+                <CountDown
+                  format="ss"
+                  key={`${actionType}:${countdownTimeMs}`}
+                  onFinish={onCountdownFinish}
+                  splitWithUnit
+                  time={countdownTimeMs}
+                />
+              </span>
+            </>
+          )}
+        </div>
+      </section>
     </section>
   );
 }

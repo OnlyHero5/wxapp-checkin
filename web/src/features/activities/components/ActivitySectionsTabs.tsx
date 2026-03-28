@@ -30,6 +30,7 @@ export function ActivitySectionsTabs({
 }: ActivitySectionsTabsProps) {
   return (
     <Tabs
+      className="activity-sections-tabs"
       onChange={(value) => onSectionChange(`${value}`)}
       spaceEvenly
       sticky
@@ -42,9 +43,10 @@ export function ActivitySectionsTabs({
     >
       {sections.map((section) => (
         <TabPanel destroyOnHide={false} key={section.key} label={section.title} value={section.key}>
-          <section className="activity-section" data-section-key={section.key}>
+          <section className="activity-section activity-sections-tabs__panel" data-section-key={section.key}>
             <List
               asyncLoading={section.key === activeSectionKey && hasMore ? (loadingMore ? "loading" : "load-more") : undefined}
+              className="activity-sections-tabs__list"
               onLoadMore={section.key === activeSectionKey ? onLoadMore : undefined}
             >
               {section.items.length > 0 ? (

@@ -47,6 +47,7 @@ export function AppButton({
 
   return (
     <Button
+      className={`app-button app-button--${tone}`}
       block
       disabled={disabled}
       loading={loading}

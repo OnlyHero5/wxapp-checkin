@@ -104,7 +104,7 @@ describe("CheckinPage", () => {
     expect(form).not.toBeNull();
     expect(screen.getByText("请在当前活动下输入 6 位动态验证码")).toBeInTheDocument();
     expect(submitButton.className).toContain("t-button");
-    expect(submitButton).not.toHaveClass("app-button");
+    expect(submitButton).toHaveClass("app-button");
     expect(submitButton).toHaveAttribute("type", "submit");
     expect(submitButton).toBeDisabled();
 
@@ -163,7 +163,7 @@ describe("CheckinPage", () => {
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "返回活动详情" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "提交签退码" }).className).toContain("t-button");
-    expect(screen.getByRole("button", { name: "提交签退码" })).not.toHaveClass("app-button");
+    expect(screen.getByRole("button", { name: "提交签退码" })).toHaveClass("app-button");
     expect(screen.getByRole("button", { name: "提交签退码" })).toHaveAttribute("type", "submit");
     await user.type(screen.getByPlaceholderText(CODE_PLACEHOLDER), "654321");
     fireEvent.submit(screen.getByPlaceholderText(CODE_PLACEHOLDER).closest("form")!);

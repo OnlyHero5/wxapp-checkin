@@ -50,7 +50,7 @@ describe("LoginPage", () => {
     expect(screen.getByText("账号为学号，请输入当前可用密码。")).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
     expect(screen.getByRole("button", { name: "登录" }).className).toContain("t-button");
-    expect(screen.getByRole("button", { name: "登录" })).not.toHaveClass("app-button");
+    expect(screen.getByRole("button", { name: "登录" })).toHaveClass("app-button");
     expect(screen.getByRole("button", { name: "登录" })).toHaveAttribute("type", "submit");
     expect(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest(".t-input")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(PASSWORD_PLACEHOLDER).closest(".t-input")).toBeInTheDocument();

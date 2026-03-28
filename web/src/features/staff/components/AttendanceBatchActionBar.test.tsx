@@ -47,6 +47,9 @@ describe("AttendanceBatchActionBar", () => {
 
     render(<AttendanceBatchActionBar onConfirm={vi.fn()} selectedCount={3} />);
 
+    expect(document.querySelector(".attendance-batch-action-bar__summary")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-batch-action-bar__action")).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "批量操作" }));
 
     expect(overlayMocks.actionSheetShow).toHaveBeenCalledTimes(1);

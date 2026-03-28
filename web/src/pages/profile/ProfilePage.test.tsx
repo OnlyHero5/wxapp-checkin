@@ -52,7 +52,7 @@ describe("ProfilePage", () => {
     expect(document.querySelector(".t-cell-group--card")).not.toBeNull();
     expect(document.querySelectorAll(".t-cell").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "退出登录" }).className).toContain("t-button");
-    expect(screen.getByRole("button", { name: "退出登录" })).not.toHaveClass("app-button");
+    expect(screen.getByRole("button", { name: "退出登录" })).toHaveClass("app-button");
   });
 
   it("clears the session and goes back to login after logout", async () => {

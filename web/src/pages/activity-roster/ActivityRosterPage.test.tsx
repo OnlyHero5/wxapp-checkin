@@ -106,7 +106,8 @@ describe("ActivityRosterPage", () => {
     expect(await screen.findByText("测试用户")).toBeInTheDocument();
     expect(document.querySelector(".attendance-roster-list")).toBeInTheDocument();
     expect(document.querySelector(".attendance-roster-list__item")).toBeInTheDocument();
-    expect(document.querySelector(".attendance-roster-list__group")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-roster-card")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-roster-card__header")).toBeInTheDocument();
     expect(document.querySelector(".attendance-roster-list__action")).toBeInTheDocument();
   });
 

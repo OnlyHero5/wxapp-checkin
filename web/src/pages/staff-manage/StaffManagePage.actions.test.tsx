@@ -88,7 +88,7 @@ describe("StaffManagePage actions", () => {
       await Promise.resolve();
     });
 
-    expect(document.querySelector(".staff-code-panel__meta")).toHaveTextContent("剩余时间：");
+    expect(document.querySelector(".staff-code-panel__meta")).toHaveTextContent("剩余时间");
     expect(document.querySelector(".staff-code-panel__countdown")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "触发动态码过期" }));

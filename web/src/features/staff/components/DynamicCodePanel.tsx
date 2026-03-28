@@ -111,7 +111,7 @@ export function DynamicCodePanel({
         {/* 管理页首先面向手机值班场景，默认先全部走单列，桌面再由 CSS 做增强重排。 */}
         <Col className="staff-panel__col staff-panel__controls-col" span={24}>
           <section className="staff-panel__controls" data-display-zone="controls">
-            <Tabs onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
+            <Tabs className="staff-panel__tabs" onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
               <TabPanel label="签到码" value="checkin" />
               <TabPanel label="签退码" value="checkout" />
             </Tabs>
@@ -132,7 +132,7 @@ export function DynamicCodePanel({
         </Col>
         <Col className="staff-panel__col staff-panel__stats-col" span={24}>
           <section className="staff-panel__stats" data-display-zone="stats">
-            <CellGroup theme="card" title="实时统计">
+            <CellGroup className="staff-panel__stats-group" theme="card" title="实时统计">
               <Cell note={`${totalCheckedIn}`} title="签到人数" />
               <Cell note={`${checkoutCount}`} title="签退人数" />
               <Cell note={`${checkinCount}`} title="未签退人数" />

@@ -97,16 +97,20 @@ export function AttendanceBatchActionBar({
 
   return (
     <section className="attendance-batch-action-bar stack-form">
-      <CellGroup theme="card" title="批量修正">
-        <Cell note={`${selectedCount} 人`} title="已选成员" />
-      </CellGroup>
-      <AppButton
-        disabled={disabled || selectedCount === 0}
-        onClick={handleOpenActionSheet}
-        tone="secondary"
-      >
-        批量操作
-      </AppButton>
+      <div className="attendance-batch-action-bar__summary">
+        <CellGroup className="attendance-batch-action-bar__group" theme="card" title="批量修正">
+          <Cell note={`${selectedCount} 人`} title="已选成员" />
+        </CellGroup>
+      </div>
+      <div className="attendance-batch-action-bar__action">
+        <AppButton
+          disabled={disabled || selectedCount === 0}
+          onClick={handleOpenActionSheet}
+          tone="secondary"
+        >
+          批量操作
+        </AppButton>
+      </div>
     </section>
   );
 }

@@ -41,9 +41,10 @@ export function AppBusinessNav() {
   }
 
   return (
-    <nav aria-label="业务导航">
+    <nav aria-label="业务导航" className="app-business-nav">
       <TabBar
         bordered
+        className="app-business-nav__bar"
         fixed
         placeholder
         safeAreaInsetBottom

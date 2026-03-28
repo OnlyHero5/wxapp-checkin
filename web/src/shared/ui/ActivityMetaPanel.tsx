@@ -70,8 +70,8 @@ export function ActivityMetaPanel({
   });
 
   return (
-    <Container data-panel-tone={tone}>
-      <CellGroup theme="card" title={title}>
+    <Container className={`activity-meta-panel activity-meta-panel--${tone}`} data-panel-tone={tone}>
+      <CellGroup className="activity-meta-panel__group activity-meta-panel__group--summary" theme="card" title={title}>
         {summaryRows.map((row) => (
           <Cell
             {...row}
@@ -80,7 +80,7 @@ export function ActivityMetaPanel({
         ))}
       </CellGroup>
       {detailRows.length > 0 ? (
-        <CellGroup theme="card" title="活动信息">
+        <CellGroup className="activity-meta-panel__group activity-meta-panel__group--detail" theme="card" title="活动信息">
           {detailRows.map((row) => (
             <Cell
               {...row}
@@ -90,7 +90,7 @@ export function ActivityMetaPanel({
         </CellGroup>
       ) : null}
       {metricRows.length > 0 ? (
-        <CellGroup theme="card" title="统计">
+        <CellGroup className="activity-meta-panel__group activity-meta-panel__group--metric" theme="card" title="统计">
           {metricRows.map((row) => (
             <Cell
               {...row}
@@ -99,7 +99,7 @@ export function ActivityMetaPanel({
           ))}
         </CellGroup>
       ) : null}
-      {footer ? <section className="activity-meta-actions">{footer}</section> : null}
+      {footer ? <section className="activity-meta-panel__footer activity-meta-actions">{footer}</section> : null}
     </Container>
   );
 }

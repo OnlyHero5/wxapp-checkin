@@ -41,6 +41,7 @@ export function ActivitiesPage() {
         {/* 搜索框直接复用 TDesign `Search`，避免为了“多一个输入框”又回到手写壳层。 */}
         <Search
           action="搜索"
+          className="activities-page__search"
           onActionClick={() => applySearchKeyword(draftKeyword)}
           onChange={(value) => setDraftKeyword(value)}
           onClear={() => applySearchKeyword("")}
@@ -50,7 +51,7 @@ export function ActivitiesPage() {
         />
       </section>
       {errorMessage ? (
-        <section className="stack-form">
+        <section className="stack-form activities-page__feedback">
           <InlineNotice message={errorMessage} />
           <AppButton onClick={() => void reloadPage()} tone="secondary">
             重新加载

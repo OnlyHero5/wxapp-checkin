@@ -11,46 +11,113 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 16px 14px 28px;
-  padding: calc(16px + constant(safe-area-inset-top)) 14px calc(28px + constant(safe-area-inset-bottom));
-  padding: calc(16px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));
+  padding: 18px 14px 32px;
+  padding: calc(18px + constant(safe-area-inset-top)) 14px calc(32px + constant(safe-area-inset-bottom));
+  padding: calc(18px + env(safe-area-inset-top)) 14px calc(32px + env(safe-area-inset-bottom));
 }
 
 .mobile-page__shell {
-  width: min(100%, 480px);
+  width: min(100%, 520px);
   display: grid;
-  gap: 14px;
+  gap: 18px;
   align-self: start;
   align-content: start;
   min-width: 0;
 }
 
 /* 头部只保留弱容器语义，真实导航结构交给 TDesign Navbar。 */
+.mobile-page__masthead,
 .mobile-page__header,
 .mobile-page__content {
   min-width: 0;
 }
 
-.mobile-page__header {
+.mobile-page__masthead {
+  position: relative;
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  padding: 18px 18px 20px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-xl);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.94));
+  box-shadow: var(--app-shadow-card);
+  overflow: hidden;
+}
+
+.mobile-page__masthead::after {
+  content: "";
+  position: absolute;
+  inset: auto -16% -40% auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: var(--page-accent-soft, var(--app-tone-default-soft));
+  pointer-events: none;
+}
+
+.mobile-page__header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+}
+
+.mobile-page[data-page-tone="brand"] .mobile-page__masthead {
+  --page-accent-soft: rgba(37, 99, 235, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(233, 241, 255, 0.96));
+}
+
+.mobile-page[data-page-tone="staff"] .mobile-page__masthead {
+  --page-accent-soft: rgba(107, 77, 246, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(240, 236, 255, 0.96));
+}
+
+.mobile-page[data-page-tone="checkin"] .mobile-page__masthead {
+  --page-accent-soft: rgba(15, 155, 132, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(234, 251, 246, 0.96));
+}
+
+.mobile-page[data-page-tone="checkout"] .mobile-page__masthead {
+  --page-accent-soft: rgba(217, 119, 6, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(255, 245, 231, 0.96));
 }
 
 .mobile-page__eyebrow {
   margin: 0;
-  font-size: 0.875rem;
+  position: relative;
+  z-index: 1;
+  font-size: 0.9rem;
   line-height: 1.4;
-  color: var(--app-text-muted);
+  font-weight: 700;
+  color: var(--page-accent-color, var(--app-tone-default-accent));
+}
+
+.mobile-page[data-page-tone="brand"] .mobile-page__eyebrow {
+  --page-accent-color: var(--app-tone-brand-accent);
+}
+
+.mobile-page[data-page-tone="staff"] .mobile-page__eyebrow {
+  --page-accent-color: var(--app-tone-staff-accent);
+}
+
+.mobile-page[data-page-tone="checkin"] .mobile-page__eyebrow {
+  --page-accent-color: var(--app-tone-checkin-accent);
+}
+
+.mobile-page[data-page-tone="checkout"] .mobile-page__eyebrow {
+  --page-accent-color: var(--app-tone-checkout-accent);
 }
 
 .mobile-page__navbar {
   background: transparent;
+  padding: 0;
+  min-width: 0;
 }
 
 .mobile-page__navbar-title {
   margin: 0;
-  font-size: 1.8rem;
-  line-height: 1.12;
+  font-size: clamp(1.92rem, 6vw, 2.42rem);
+  line-height: 1.04;
   letter-spacing: -0.04em;
   color: var(--app-text-strong);
   overflow-wrap: anywhere;
@@ -59,22 +126,35 @@
 .mobile-page__description {
   margin: 0;
   color: var(--app-text);
-  line-height: 1.55;
+  line-height: 1.6;
+  max-width: 28rem;
 }
 
 /* 正文区保持可收缩单列，防止页面内容在窄屏里被固定宽度撑爆。 */
 .mobile-page__content {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-}
-
-.mobile-page__content > * {
   min-width: 0;
 }
 
-.mobile-page__content p {
+.mobile-page__content-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.mobile-page__content-stack > * {
+  min-width: 0;
+}
+
+.mobile-page__content-stack p {
   margin: 0;
   line-height: 1.6;
   color: var(--app-text);
+}
+
+/* 路由壳统一采用“内容 + 底部导航”两段式，避免 fixed nav 遮挡正文。 */
+.app-business-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
 }
