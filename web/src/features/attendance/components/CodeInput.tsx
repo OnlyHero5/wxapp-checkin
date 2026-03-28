@@ -57,7 +57,14 @@ export function CodeInput({
   return (
     <section className="stack-form">
       <CellGroup theme="card" title={label}>
-        <Form className="stack-form" labelAlign="top" onSubmit={(context) => void handleFormSubmit(context)} scrollToFirstError="auto">
+        <Form
+          className="stack-form"
+          labelAlign="top"
+          onSubmit={(context) => void handleFormSubmit(context)}
+          // 动态码页经常由移动端键盘完成提交，这里必须拦截原生 submit，避免污染当前路由。
+          preventSubmitDefault
+          scrollToFirstError="auto"
+        >
           <FormItem help="请在当前活动下输入 6 位动态验证码" name="dynamic_code" rules={dynamicCodeRules}>
             <Input
               align="center"

@@ -80,7 +80,13 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
 
   return (
     <div className="stack-form">
-      <Form labelAlign="top" onSubmit={(context) => void handleFormSubmit(context)} scrollToFirstError="auto">
+      {/* 必须阻止浏览器原生 submit，避免移动端把学号和密码直接拼进 URL。 */}
+      <Form
+        labelAlign="top"
+        onSubmit={(context) => void handleFormSubmit(context)}
+        preventSubmitDefault
+        scrollToFirstError="auto"
+      >
         <FormItem label="学号" name="student_id" rules={loginRules.student_id}>
           <Input
             autocomplete="username"
