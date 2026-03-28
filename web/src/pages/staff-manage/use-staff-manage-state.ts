@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { type ActivityActionType } from "../../features/activities/api";
 import { bulkCheckout } from "../../features/staff/api";
+import { ensureRosterConsistency } from "../../features/staff/attendance-roster-self-heal";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { SessionExpiredError } from "../../shared/http/errors";
 import { resolvePageErrorMessage } from "../../shared/page-state/page-error";
@@ -49,11 +50,36 @@ export function useStaffManageState(activityId: string) {
 
   const refreshPage = useCallback(async (options: RefreshOptions) => {
     setErrorMessage("");
+    let didHealRoster = false;
+
+    /**
+     * staff 管理页虽然不直接展示名单，
+     * 但动态码和批量动作都不能继续建立在“已签退但未签到”的脏状态上。
+     */
+    if (activityId) {
+      try {
+        const healResult = await ensureRosterConsistency({ activityId });
+        didHealRoster = healResult.didHeal;
+      } catch (error) {
+        if (error instanceof SessionExpiredError) {
+          handleSessionExpired();
+          return;
+        }
+
+        setErrorMessage(resolvePageErrorMessage(error, "活动管理信息加载失败，请稍后重试。"));
+      }
+    }
+
     await Promise.all([
       options.reloadDetail ? loadDetail(options.resetDetail) : Promise.resolve(),
       loadCodeSession(actionType, options.resetCodeSession)
     ]);
-  }, [actionType, loadCodeSession, loadDetail]);
+
+    // 如果刚刚修正过异常成员，再补刷一次详情和动态码，确保统计与后续动作都基于新状态。
+    if (didHealRoster) {
+      await Promise.all([loadDetail(false), loadCodeSession(actionType, true)]);
+    }
+  }, [actionType, activityId, handleSessionExpired, loadCodeSession, loadDetail]);
 
   useEffect(() => {
     const activityChanged = previousActivityIdRef.current !== activityId;

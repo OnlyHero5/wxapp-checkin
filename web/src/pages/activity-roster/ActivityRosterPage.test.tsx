@@ -130,6 +130,72 @@ describe("ActivityRosterPage", () => {
     });
   });
 
+  it("self-heals dirty checkout members and renders the normalized roster state", async () => {
+    staffApiMocks.getActivityRoster
+      .mockResolvedValueOnce({
+        activity_id: "act_101",
+        activity_title: "校园志愿活动",
+        activity_type: "志愿",
+        start_time: "2026-03-10 09:00:00",
+        location: "本部操场",
+        description: "负责现场秩序维护",
+        registered_count: 1,
+        checkin_count: 0,
+        checkout_count: 1,
+        items: [
+          {
+            user_id: 12,
+            student_id: "2025000012",
+            name: "异常成员",
+            checked_in: false,
+            checked_out: true,
+            checkin_time: "",
+            checkout_time: "2026-03-10 10:10"
+          }
+        ],
+        server_time_ms: 1760000003300,
+        status: "success"
+      })
+      .mockResolvedValueOnce({
+        activity_id: "act_101",
+        activity_title: "校园志愿活动",
+        activity_type: "志愿",
+        start_time: "2026-03-10 09:00:00",
+        location: "本部操场",
+        description: "负责现场秩序维护",
+        registered_count: 1,
+        checkin_count: 0,
+        checkout_count: 1,
+        items: [
+          {
+            user_id: 12,
+            student_id: "2025000012",
+            name: "异常成员",
+            checked_in: false,
+            checked_out: true,
+            checkin_time: "",
+            checkout_time: "2026-03-10 10:10"
+          }
+        ],
+        server_time_ms: 1760000003300,
+        status: "success"
+      });
+
+    renderActivityRosterPage();
+
+    await waitFor(() => {
+      expect(staffApiMocks.adjustAttendanceStates).toHaveBeenCalledWith("act_101", {
+        user_ids: [12],
+        patch: { checked_out: true },
+        reason: "自动修复异常签退状态"
+      });
+    });
+    expect(await screen.findByText("异常成员")).toBeInTheDocument();
+    expect(screen.getByText("已签到")).toBeInTheDocument();
+    expect(screen.getAllByText("已签退").length).toBeGreaterThan(0);
+    expect(screen.queryByText("未签到")).not.toBeInTheDocument();
+  });
+
   it("supports single member adjustment", async () => {
     const user = userEvent.setup();
     renderActivityRosterPage();

@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import { flushSync } from "react-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearSession, saveAuthSession } from "../../shared/session/session-store";
@@ -13,6 +13,8 @@ const activitiesApiMocks = vi.hoisted(() => ({
 }));
 
 const staffApiMocks = vi.hoisted(() => ({
+  adjustAttendanceStates: vi.fn(),
+  getActivityRoster: vi.fn(),
   bulkCheckout: vi.fn(),
   getCodeSession: vi.fn()
 }));
@@ -39,6 +41,8 @@ vi.mock("../../features/activities/api", async (importOriginal) => {
 });
 
 vi.mock("../../features/staff/api", () => ({
+  adjustAttendanceStates: staffApiMocks.adjustAttendanceStates,
+  getActivityRoster: staffApiMocks.getActivityRoster,
   bulkCheckout: staffApiMocks.bulkCheckout,
   getCodeSession: staffApiMocks.getCodeSession
 }));
@@ -51,6 +55,16 @@ describe("StaffManagePage lifecycle", () => {
       session_token: "sess_staff_manage_123"
     });
     activitiesApiMocks.getActivityDetail.mockImplementation(async (activityId: string) => buildActivityDetail(activityId));
+    staffApiMocks.getActivityRoster.mockResolvedValue({
+      activity_id: "act_101",
+      activity_title: "校园志愿活动",
+      items: []
+    });
+    staffApiMocks.adjustAttendanceStates.mockResolvedValue({
+      activity_id: "act_101",
+      affected_count: 1,
+      status: "success"
+    });
   });
 
   afterEach(() => {
@@ -177,6 +191,66 @@ describe("StaffManagePage lifecycle", () => {
     });
 
     expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("self-heals dirty checkout members and refreshes detail plus code session again", async () => {
+    staffApiMocks.getActivityRoster
+      .mockResolvedValueOnce({
+        activity_id: "act_101",
+        activity_title: "校园志愿活动",
+        items: [
+          {
+            user_id: 12,
+            student_id: "2025000012",
+            name: "异常成员",
+            checked_in: false,
+            checked_out: true,
+            checkin_time: "",
+            checkout_time: "2026-03-10 10:10"
+          }
+        ]
+      })
+      .mockResolvedValueOnce({
+        activity_id: "act_101",
+        activity_title: "校园志愿活动",
+        items: [
+          {
+            user_id: 12,
+            student_id: "2025000012",
+            name: "异常成员",
+            checked_in: true,
+            checked_out: true,
+            checkin_time: "2026-03-10 09:05",
+            checkout_time: "2026-03-10 10:10"
+          }
+        ]
+      });
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(staffApiMocks.adjustAttendanceStates).toHaveBeenCalledWith("act_101", {
+        user_ids: [12],
+        patch: { checked_out: true },
+        reason: "自动修复异常签退状态"
+      });
+    });
+    await waitFor(() => {
+      expect(activitiesApiMocks.getActivityDetail).toHaveBeenCalledTimes(2);
+      expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("shows a wake lock hint when the browser cannot keep the screen awake", async () => {

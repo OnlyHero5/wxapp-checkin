@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   adjustAttendanceStates,
-  getActivityRoster,
   type ActivityRosterResponse
 } from "../../features/staff/api";
 import {
   resolveAttendanceActionPayload,
   toggleSelectedRosterMember
 } from "../../features/staff/activity-roster-actions";
+import { ensureRosterConsistency } from "../../features/staff/attendance-roster-self-heal";
+import { normalizeRosterItem } from "../../features/staff/attendance-roster-state";
 import type { AttendanceActionKey } from "../../features/staff/components/AttendanceBatchActionBar";
 import { subscribePageVisible } from "../../shared/device/page-lifecycle";
 import { SessionExpiredError } from "../../shared/http/errors";
@@ -53,14 +54,25 @@ export function useActivityRosterPageState(activityId: string) {
     }
 
     try {
-      const result = await getActivityRoster(activityId);
+      const result = await ensureRosterConsistency({ activityId });
       if (!requestGuardRef.current.isCurrent(requestVersion)) {
         return;
       }
 
-      setRoster(result);
+      /**
+       * 自愈后的回读结果仍然可能暂时带着旧布尔组合，
+       * 页面展示态必须继续走规范化，避免名单动作区再次暴露非法状态。
+       */
+      const normalizedRoster: ActivityRosterResponse = {
+        ...result.roster,
+        items: result.roster.items.map(normalizeRosterItem)
+      };
+
+      setRoster(normalizedRoster);
       // 刷新后只保留仍然存在于名单中的勾选项，避免页面留着脏选择。
-      setSelectedIds((current) => current.filter((userId) => result.items.some((item) => item.user_id === userId)));
+      setSelectedIds((current) =>
+        current.filter((userId) => normalizedRoster.items.some((item) => item.user_id === userId))
+      );
     } catch (error) {
       if (error instanceof SessionExpiredError) {
         navigate("/login");
