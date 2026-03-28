@@ -373,6 +373,8 @@ describe("StaffManagePage lifecycle", () => {
     expect(activitiesApiMocks.getActivityDetail).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("483920")).not.toBeInTheDocument();
     expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.getAllByText("--")).toHaveLength(3);
+    expect(screen.queryByText(/^0$/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "一键全部签退" })).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "立即刷新" }));

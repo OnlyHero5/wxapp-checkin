@@ -44,6 +44,18 @@ function resolveDisplayedCodeSession(
  * 这样展示可以避免“签退后签到人数变成 0”的误解，同时保留一键签退需要的“未签退人数”。
  */
 function resolveAttendanceCounts(codeSession: CodeSessionResponse | null) {
+  if (!codeSession) {
+    /**
+     * 当动态码会话被主动掩掉或尚未可用时，
+     * 这里必须明确展示“不可用”，不能伪造 0/0/0 这种看似精确的假统计。
+     */
+    return {
+      checkinCount: "--",
+      checkoutCount: "--",
+      totalCheckedIn: "--"
+    };
+  }
+
   const checkinCount = codeSession?.checkin_count ?? 0;
   const checkoutCount = codeSession?.checkout_count ?? 0;
   return {
