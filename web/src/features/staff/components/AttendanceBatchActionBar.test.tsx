@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 const overlayMocks = vi.hoisted(() => ({
+  actionSheetClose: vi.fn(),
   actionSheetShow: vi.fn(),
   dialogConfirm: vi.fn()
 }));
@@ -18,8 +19,8 @@ vi.mock("tdesign-mobile-react", async (importOriginal) => {
   const ActionSheet = Object.assign(
     () => null,
     {
+      close: overlayMocks.actionSheetClose,
       show: overlayMocks.actionSheetShow,
-      close: vi.fn()
     }
   );
 
@@ -34,6 +35,7 @@ import { AttendanceBatchActionBar } from "./AttendanceBatchActionBar";
 
 describe("AttendanceBatchActionBar", () => {
   beforeEach(() => {
+    overlayMocks.actionSheetClose.mockReset();
     overlayMocks.actionSheetShow.mockReset();
     overlayMocks.dialogConfirm.mockReset();
   });
@@ -64,5 +66,20 @@ describe("AttendanceBatchActionBar", () => {
     config.onSelected?.({ label: "批量设为已签退" }, 2);
 
     expect(overlayMocks.dialogConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  // `取消` 必须真的把动作层收掉，否则 staff 在批量修正里会被卡住。
+  it("closes the component-library action-sheet plugin when the cancel action is triggered", async () => {
+    const user = userEvent.setup();
+
+    render(<AttendanceBatchActionBar onConfirm={vi.fn()} selectedCount={3} />);
+
+    await user.click(screen.getByRole("button", { name: "批量操作" }));
+    const [config] = overlayMocks.actionSheetShow.mock.calls[0] ?? [];
+    expect(config).toBeDefined();
+
+    config.onCancel?.();
+
+    expect(overlayMocks.actionSheetClose).toHaveBeenCalledTimes(1);
   });
 });

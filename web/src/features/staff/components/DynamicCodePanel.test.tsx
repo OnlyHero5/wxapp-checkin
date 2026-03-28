@@ -234,4 +234,33 @@ describe("DynamicCodePanel", () => {
     expect(container.querySelectorAll(".t-col").length).toBeGreaterThanOrEqual(4);
     expect(container.querySelector(".staff-panel__layout")).not.toBeNull();
   });
+
+  // staff 页首先服务手机值班场景，所以默认栅格必须先保证单列阅读顺序。
+  it("uses full-width columns as the mobile-first baseline before desktop breakpoints intervene", () => {
+    const onActionChange = vi.fn();
+    const onRefresh = vi.fn();
+
+    const { container } = render(
+      <DynamicCodePanel
+        activityId="act_101"
+        actionType="checkin"
+        codeSession={{
+          action_type: "checkin",
+          activity_id: "act_101",
+          checkin_count: 18,
+          checkout_count: 3,
+          code: "483920",
+          expires_at: Date.now() + 4000,
+          expires_in_ms: 4000,
+          server_time_ms: Date.now(),
+          status: "success"
+        }}
+        onActionChange={onActionChange}
+        onRefresh={onRefresh}
+      />
+    );
+
+    expect(container.querySelectorAll(".t-col--24").length).toBeGreaterThanOrEqual(4);
+    expect(container.querySelector(".t-col--12")).toBeNull();
+  });
 });

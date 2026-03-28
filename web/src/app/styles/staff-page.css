@@ -90,6 +90,67 @@
   display: inline-flex;
 }
 
+.attendance-batch-action-bar {
+  gap: 14px;
+}
+
+.attendance-roster-list {
+  display: grid;
+  gap: 14px;
+}
+
+.attendance-roster-list__item {
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.attendance-roster-list__group {
+  border: 1px solid var(--app-border-subtle);
+  box-shadow: none;
+}
+
+.attendance-roster-list__action {
+  min-width: 96px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.attendance-roster-list__action--checkin {
+  background: linear-gradient(180deg, rgba(15, 159, 140, 0.18), rgba(15, 159, 140, 0.26));
+  color: var(--app-tone-checkin-accent);
+}
+
+.attendance-roster-list__action--checkout {
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.18), rgba(217, 119, 6, 0.28));
+  color: var(--app-tone-checkout-accent);
+}
+
+.attendance-roster-list__action--reset {
+  background: linear-gradient(180deg, rgba(91, 91, 214, 0.14), rgba(91, 91, 214, 0.22));
+  color: var(--app-tone-staff-accent);
+}
+
+.mobile-page[data-page-tone="staff"] .mobile-page__header,
+.mobile-page[data-page-tone="staff"] .staff-code-panel__card,
+.mobile-page[data-page-tone="staff"] .inline-notice,
+.mobile-page[data-page-tone="staff"] .app-state {
+  box-shadow: 0 18px 38px rgba(45, 56, 85, 0.11);
+}
+
+.mobile-page[data-page-layout="showcase-auto"] .staff-panel__layout {
+  width: 100%;
+}
+
+.mobile-page[data-page-layout="showcase-auto"] .staff-panel__controls,
+.mobile-page[data-page-layout="showcase-auto"] .staff-code-panel,
+.mobile-page[data-page-layout="showcase-auto"] .staff-panel__stats,
+.mobile-page[data-page-layout="showcase-auto"] .staff-panel__actions {
+  width: 100%;
+}
+
 /* 小屏只做防溢出，大屏 staff 页面再做结构重排。 */
 @media (max-width: 359px) {
   .mobile-page {
@@ -115,17 +176,17 @@
   .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
     width: min(100%, 560px);
   }
-}
-
-@media (min-width: 1024px) {
-  .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
-    width: min(100%, 1120px);
-  }
 
   .mobile-page[data-page-layout="showcase-auto"] .staff-panel__stats-col,
   .mobile-page[data-page-layout="showcase-auto"] .staff-panel__actions-col {
     flex: 0 0 50%;
     max-width: 50%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
+    width: min(100%, 1120px);
   }
 
   .mobile-page[data-page-layout="showcase-auto"] .staff-panel__controls-col {

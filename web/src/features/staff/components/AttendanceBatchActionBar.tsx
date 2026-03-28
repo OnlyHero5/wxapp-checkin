@@ -76,6 +76,10 @@ export function AttendanceBatchActionBar({
      * 1. 交互仍由 TDesign 负责；
      * 2. 组件只维护动作配置；
      * 3. 不再因为单次使用而额外挂载受控弹层节点。
+     *
+     * `取消` 这里必须显式回调 `ActionSheet.close`：
+     * - 运行态已经证明仅传 `cancelText` 时，底部按钮会显示但不会自动收层；
+     * - staff 连续修名单时，卡住一次就会直接打断整条业务链路。
      */
     ActionSheet.show?.({
       cancelText: "取消",
@@ -84,12 +88,15 @@ export function AttendanceBatchActionBar({
         description: action.content,
         label: action.label
       })),
+      onCancel: () => {
+        ActionSheet.close?.();
+      },
       onSelected: (_, index) => handleActionSelect(index)
     });
   }
 
   return (
-    <section className="stack-form">
+    <section className="attendance-batch-action-bar stack-form">
       <CellGroup theme="card" title="批量修正">
         <Cell note={`${selectedCount} 人`} title="已选成员" />
       </CellGroup>

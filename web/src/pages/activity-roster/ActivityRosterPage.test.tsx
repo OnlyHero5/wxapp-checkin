@@ -98,6 +98,18 @@ describe("ActivityRosterPage", () => {
     expect(document.querySelector(".roster-item__actions")).toBeNull();
   });
 
+  // 名单页的视觉增强必须挂在业务自有 class 上，
+  // 否则后续一旦组件库升级，样式会再次直接失控。
+  it("renders roster rows and swipe actions through project-owned styling hooks", async () => {
+    renderActivityRosterPage();
+
+    expect(await screen.findByText("测试用户")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-roster-list")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-roster-list__item")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-roster-list__group")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-roster-list__action")).toBeInTheDocument();
+  });
+
   it("refreshes roster when the page becomes visible again", async () => {
     renderActivityRosterPage();
 

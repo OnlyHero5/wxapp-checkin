@@ -108,7 +108,8 @@ export function DynamicCodePanel({
   return (
     <section className="staff-panel" data-panel-tone="staff">
       <Row className="staff-panel__layout" gutter={16}>
-        <Col className="staff-panel__col staff-panel__controls-col" span={12}>
+        {/* 管理页首先面向手机值班场景，默认先全部走单列，桌面再由 CSS 做增强重排。 */}
+        <Col className="staff-panel__col staff-panel__controls-col" span={24}>
           <section className="staff-panel__controls" data-display-zone="controls">
             <Tabs onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
               <TabPanel label="签到码" value="checkin" />
@@ -116,7 +117,7 @@ export function DynamicCodePanel({
             </Tabs>
           </section>
         </Col>
-        <Col className="staff-panel__col staff-code-panel__col" span={12}>
+        <Col className="staff-panel__col staff-code-panel__col" span={24}>
           <section className="staff-code-panel" data-display-zone="hero">
             <DynamicCodeHero
               actionLabel={actionLabel}
@@ -129,7 +130,7 @@ export function DynamicCodePanel({
             />
           </section>
         </Col>
-        <Col className="staff-panel__col staff-panel__stats-col" span={12}>
+        <Col className="staff-panel__col staff-panel__stats-col" span={24}>
           <section className="staff-panel__stats" data-display-zone="stats">
             <CellGroup theme="card" title="实时统计">
               <Cell note={`${totalCheckedIn}`} title="签到人数" />
@@ -138,7 +139,7 @@ export function DynamicCodePanel({
             </CellGroup>
           </section>
         </Col>
-        <Col className="staff-panel__col staff-panel__actions-col" span={12}>
+        <Col className="staff-panel__col staff-panel__actions-col" span={24}>
           <section className="staff-panel__actions" data-display-zone="actions">
             <AppButton onClick={onRefresh} tone="secondary">
               立即刷新
