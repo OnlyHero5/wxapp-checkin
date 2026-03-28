@@ -1,7 +1,11 @@
 import type { AttendanceAdjustmentInput, ActivityRosterItem } from "./api";
-import type { AttendanceActionKey } from "./components/AttendanceBatchActionBar";
 
 export type NormalizedRosterState = "not_checked" | "checked_in" | "checked_out";
+export type AttendanceAdjustmentAction =
+  | "set_checked_in"
+  | "clear_checked_in"
+  | "set_checked_out"
+  | "clear_checked_out";
 
 export type NormalizedRosterItem = ActivityRosterItem & {
   is_data_anomalous: boolean;
@@ -44,7 +48,7 @@ export function collectAnomalousRosterUserIds(items: ActivityRosterItem[]) {
  * 因此前端不能再传双字段组合，避免误触接口校验或覆盖额外状态。
  */
 export function buildAttendanceAdjustmentPatch(
-  action: AttendanceActionKey
+  action: AttendanceAdjustmentAction
 ): AttendanceAdjustmentInput["patch"] {
   switch (action) {
     case "set_checked_in":

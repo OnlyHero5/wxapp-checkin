@@ -65,12 +65,23 @@ export type ActivityRosterResponse = {
   status?: string;
 };
 
+/**
+ * 名单修正接口只接受“单字段命令式 patch”：
+ * 一次请求只能表达一个动作，避免前端把多个布尔位打包后让后端误判为状态覆盖。
+ */
+export type AttendanceAdjustmentPatch =
+  | {
+      checked_in: boolean;
+      checked_out?: never;
+    }
+  | {
+      checked_out: boolean;
+      checked_in?: never;
+    };
+
 export type AttendanceAdjustmentInput = {
   user_ids: number[];
-  patch: {
-    checked_in?: boolean;
-    checked_out?: boolean;
-  };
+  patch: AttendanceAdjustmentPatch;
   reason: string;
 };
 

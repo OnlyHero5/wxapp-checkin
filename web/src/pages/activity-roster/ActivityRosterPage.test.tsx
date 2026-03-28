@@ -141,8 +141,7 @@ describe("ActivityRosterPage", () => {
     await waitFor(() => {
       expect(staffApiMocks.adjustAttendanceStates).toHaveBeenCalledWith("act_101", {
         patch: {
-          checked_in: true,
-          checked_out: false
+          checked_in: true
         },
         reason: "单人设为已签到",
         user_ids: [12]
@@ -168,7 +167,6 @@ describe("ActivityRosterPage", () => {
     await waitFor(() => {
       expect(staffApiMocks.adjustAttendanceStates).toHaveBeenCalledWith("act_101", {
         patch: {
-          checked_in: true,
           checked_out: true
         },
         reason: "批量设为已签退",
