@@ -31,6 +31,13 @@
   --app-radius-sm: 12px;
   --app-radius-xs: 10px;
   --app-backdrop-blur: blur(18px);
+  --app-bento-shell-max-width: 520px;
+  --app-bento-shell-gap: 18px;
+  --app-bento-rail-gap: 16px;
+  --app-bento-panel-padding: 18px;
+  --app-bento-panel-section-gap: 14px;
+  --app-bento-panel-shadow: 0 18px 42px rgba(31, 52, 95, 0.12);
+  --app-bento-metric-gap: 10px;
 
   /* 颜色必须服务业务语义，因此每个 tone 都提供 accent / soft / strong 三层。 */
   --app-tone-default-accent: #66758f;

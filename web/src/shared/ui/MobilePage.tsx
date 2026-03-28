@@ -32,9 +32,16 @@ export function MobilePage({
   title,
   tone = "default"
 }: MobilePageProps) {
-  // 页面级 tone 继续保留在根节点，方便业务页和测试稳定识别上下文语义。
+  /**
+   * `MobilePage` 继续只承担页面壳层职责。
+   *
+   * 这一轮新增的 `mobile-page__bento-rail` 不是新的视觉组件，
+   * 而是给所有业务页一个统一的单列轨道钩子，
+   * 让 Task 4 以后接入主卡、次卡和动作带时不必再各写一套外层 grid。
+   */
   return (
     <main className="mobile-page" data-page-layout={layout} data-page-tone={tone}>
+      {/* `shell` 统一控制最大宽度和纵向节奏，避免业务页自己复制壳层尺寸。 */}
       <div className="mobile-page__shell">
         {/* 页头改成独立 masthead，后续各页只需要传 tone 和文案，不必重复手写首屏容器。 */}
         <header className="mobile-page__masthead">
@@ -52,8 +59,8 @@ export function MobilePage({
           </section>
         </header>
         <section className="mobile-page__content">
-          {/* 正文统一落到 content stack，避免各页再自己补一层“伪 page body”。 */}
-          <div className="mobile-page__content-stack">{children}</div>
+          {/* 正文统一进入单列便当轨道，后续主卡/次卡/动作带都按同一列向下堆叠。 */}
+          <div className="mobile-page__content-stack mobile-page__bento-rail">{children}</div>
         </section>
       </div>
     </main>

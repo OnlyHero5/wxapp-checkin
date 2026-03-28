@@ -17,9 +17,9 @@
 }
 
 .mobile-page__shell {
-  width: min(100%, 520px);
+  width: min(100%, var(--app-bento-shell-max-width));
   display: grid;
-  gap: 18px;
+  gap: var(--app-bento-shell-gap);
   align-self: start;
   align-content: start;
   min-width: 0;
@@ -36,11 +36,11 @@
   position: relative;
   display: grid;
   gap: 12px;
-  padding: 18px 18px 20px;
+  padding: var(--app-bento-panel-padding) var(--app-bento-panel-padding) calc(var(--app-bento-panel-padding) + 2px);
   border: 1px solid var(--app-border-subtle);
   border-radius: var(--app-radius-xl);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.94));
-  box-shadow: var(--app-shadow-card);
+  box-shadow: var(--app-bento-panel-shadow);
   overflow: hidden;
 }
 
@@ -138,7 +138,14 @@
 .mobile-page__content-stack {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--app-bento-rail-gap);
+}
+
+/* 单列便当轨道是所有正式页面共享的外层节奏，避免业务页重复发明壳层。 */
+.mobile-page__bento-rail {
+  display: grid;
+  gap: var(--app-bento-rail-gap);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .mobile-page__content-stack > * {
@@ -157,4 +164,191 @@
   min-height: 100dvh;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
+}
+
+/* =========================================================
+ * 活动主卡
+ * ---------------------------------------------------------
+ * 这里把旧的三卡分组收口成一张外卡 + 多个内部分区。
+ * ========================================================= */
+
+.activity-meta-panel {
+  position: relative;
+  display: grid;
+  gap: var(--app-bento-panel-section-gap);
+  padding: var(--app-bento-panel-padding);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-xl);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 249, 255, 0.96));
+  box-shadow: var(--app-bento-panel-shadow);
+  overflow: hidden;
+}
+
+.activity-meta-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--panel-accent, var(--app-tone-default-accent)), color-mix(in srgb, var(--panel-accent, var(--app-tone-default-accent)) 58%, white));
+}
+
+.activity-meta-panel__section {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.activity-meta-panel__section + .activity-meta-panel__section {
+  padding-top: var(--app-bento-panel-section-gap);
+  border-top: 1px solid var(--app-border-subtle);
+}
+
+.activity-meta-panel__section--hero {
+  display: grid;
+  gap: 12px;
+}
+
+.activity-meta-panel__hero-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.activity-meta-panel__subtitle,
+.activity-meta-panel__title,
+.activity-meta-panel__description,
+.activity-meta-panel__section-label,
+.activity-meta-panel__metric-label,
+.activity-meta-panel__metric-value {
+  margin: 0;
+}
+
+.activity-meta-panel__subtitle {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--panel-accent, var(--app-tone-default-accent));
+}
+
+.activity-meta-panel__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.activity-meta-panel__title {
+  font-size: clamp(1.24rem, 4vw, 1.56rem);
+  line-height: 1.18;
+  color: var(--app-text-strong);
+}
+
+.activity-meta-panel__description {
+  color: var(--app-text);
+  line-height: 1.6;
+}
+
+.activity-meta-panel__status-slot {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  min-width: fit-content;
+}
+
+.activity-meta-panel__status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--panel-soft, var(--app-tone-default-soft));
+  color: var(--panel-accent, var(--app-tone-default-accent));
+  font-weight: 700;
+}
+
+.activity-meta-panel__section--detail,
+.activity-meta-panel__section--metrics,
+.activity-meta-panel__section--actions {
+  display: grid;
+  gap: 12px;
+}
+
+.activity-meta-panel__section-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--app-text-muted);
+}
+
+.activity-meta-panel__detail-list {
+  display: grid;
+  gap: 10px;
+}
+
+.activity-meta-panel__detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 88px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface-muted);
+}
+
+.activity-meta-panel__detail-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--app-text-muted);
+}
+
+.activity-meta-panel__detail-value {
+  min-width: 0;
+  color: var(--app-text-strong);
+  line-height: 1.5;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.activity-meta-panel__metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-bento-metric-gap);
+}
+
+.activity-meta-panel__metric-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--panel-accent, var(--app-tone-default-accent)) 16%, white);
+  border-radius: var(--app-radius-md);
+  background: color-mix(in srgb, var(--panel-soft, var(--app-tone-default-soft)) 58%, white);
+}
+
+.activity-meta-panel__metric-label {
+  font-size: 0.82rem;
+  color: var(--app-text-muted);
+}
+
+.activity-meta-panel__metric-value {
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: var(--app-text-strong);
+}
+
+@media (max-width: 359px) {
+  .activity-meta-panel__title-row {
+    flex-direction: column;
+  }
+
+  .activity-meta-panel__status-slot {
+    justify-content: flex-start;
+  }
+
+  .activity-meta-panel__detail-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .activity-meta-panel__detail-value {
+    text-align: left;
+  }
 }

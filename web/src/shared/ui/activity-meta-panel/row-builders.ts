@@ -1,19 +1,12 @@
-import { ComponentProps, ReactNode } from "react";
-import { Cell } from "tdesign-mobile-react";
+import { ReactNode } from "react";
 
 /**
- * `ActivityMetaPanel` 继续直接吃 TDesign `Cell` 原生 props。
+ * 统计口径继续复用共享面板，不允许页面层各自再算一遍。
  *
- * 这里把可复用的“字段到行”的投影逻辑独立出来，目的不是再造 DSL，
- * 而是把“业务字段排序”与“面板渲染”拆开，避免主组件继续膨胀。
- */
-export type ActivityMetaCellProps = Pick<ComponentProps<typeof Cell>, "align" | "description" | "note" | "title">;
-
-/**
- * 统计口径仍然只保留页面真正会用到的三项。
- *
- * 后续如果产品再补“缺勤 / 已取消”等衍生指标，也应先在这里统一口径，
- * 不要让页面层各自拼一份累计逻辑。
+ * 这里仍然只暴露当前产品真正稳定的三项：
+ * 1. 应到人数；
+ * 2. 累计签到人数；
+ * 3. 已签退 / 未签退拆分。
  */
 export type ActivityMetaCounts = {
   expected?: number;
@@ -21,122 +14,89 @@ export type ActivityMetaCounts = {
   checkout?: number;
 };
 
-type DetailRowInput = {
-  checkinTimeText?: string;
-  checkoutTimeText?: string;
-  joinStatusText?: string;
-  locationText?: string;
-  timeText?: string;
+/**
+ * 新版单卡面板不再直接暴露 `Cell` props，
+ * 而是先把字段投影成项目自有 section 数据。
+ *
+ * 这样后续页面可以稳定依赖：
+ * - hero 只放标题摘要；
+ * - detail 只放活动与个人信息；
+ * - metrics 只放统计数字。
+ */
+export type ActivityMetaSectionRow = {
+  label: string;
+  value: ReactNode;
 };
 
-type SummaryRowInput = {
+export type ActivityMetaPanelHero = {
+  title: string;
+  subtitle?: string;
   description?: string;
+  statusContent?: ReactNode;
+};
+
+export type ActivityMetaPanelSection = {
+  title: string;
+  rows: ActivityMetaSectionRow[];
+};
+
+export type BuildActivityMetaSectionsInput = {
+  checkinTimeText?: string;
+  counts?: ActivityMetaCounts;
+  checkoutTimeText?: string;
+  description?: string;
+  joinStatusText?: string;
+  locationText?: string;
   progressText?: string;
   statusSlot?: ReactNode;
   subtitle?: string;
+  timeText?: string;
+  title: string;
 };
 
 /**
- * 详情区的排序必须稳定，因为列表页、详情页和 staff 页都共享这套阅读顺序。
+ * 详情区阅读顺序继续沿用老口径。
  *
- * 顺序约束如下：
- * 1. 先给活动的公共元信息；
- * 2. 再给“我与活动”的关系信息；
- * 3. 最后给动作结果产生的签到/签退时间。
+ * 这部分是共享业务语义，不是视觉偏好：
+ * 1. 先看活动公共信息；
+ * 2. 再看“我与活动”的关系；
+ * 3. 最后看签到/签退结果时间。
  */
-export function buildActivityMetaDetailRows({
+const buildActivityMetaDetailRows = ({
   checkinTimeText,
   checkoutTimeText,
   joinStatusText,
   locationText,
   timeText
-}: DetailRowInput) {
-  const rows: ActivityMetaCellProps[] = [];
+}: Omit<BuildActivityMetaSectionsInput, "counts" | "description" | "progressText" | "statusSlot" | "subtitle" | "title">) => {
+  const rows: ActivityMetaSectionRow[] = [];
 
   if (timeText) {
-    rows.push({
-      note: timeText,
-      title: "时间"
-    });
+    rows.push({ label: "时间", value: timeText });
   }
   if (locationText) {
-    rows.push({
-      note: locationText,
-      title: "地点"
-    });
+    rows.push({ label: "地点", value: locationText });
   }
   if (joinStatusText) {
-    rows.push({
-      note: joinStatusText,
-      title: "我的状态"
-    });
+    rows.push({ label: "我的状态", value: joinStatusText });
   }
   if (checkinTimeText) {
-    rows.push({
-      note: checkinTimeText,
-      title: "签到时间"
-    });
+    rows.push({ label: "签到时间", value: checkinTimeText });
   }
   if (checkoutTimeText) {
-    rows.push({
-      note: checkoutTimeText,
-      title: "签退时间"
-    });
+    rows.push({ label: "签退时间", value: checkoutTimeText });
   }
 
   return rows;
-}
+};
 
 /**
- * 摘要区仍然优先复用组件库原生语义：
- * - 长说明走 `description`
- * - 状态与副标题走 `note`
+ * 统计区最重要的规则仍是“累计签到 = 已签到且未签退 + 已签退”。
  *
- * 这样页面不会再把所有字段都粗暴塞成同一种“右侧文本”。
+ * 这条规则已经被 Task 1 / Task 2 的名单口径依赖，
+ * 因此这里只允许换视觉结构，不允许偷偷改语义。
  */
-export function buildActivityMetaSummaryRows({
-  description,
-  progressText,
-  statusSlot,
-  subtitle
-}: SummaryRowInput) {
-  const rows: ActivityMetaCellProps[] = [];
-
-  if (subtitle) {
-    rows.push({
-      note: subtitle,
-      title: "类型"
-    });
-  }
-  if (description) {
-    rows.push({
-      align: "top",
-      description,
-      title: "说明"
-    });
-  }
-  if (statusSlot) {
-    rows.push({
-      note: statusSlot,
-      title: "状态"
-    });
-  } else if (progressText) {
-    rows.push({
-      note: progressText,
-      title: "状态"
-    });
-  }
-
-  return rows;
-}
-
-/**
- * 统计区只保留当前产品已经稳定下来的口径换算。
- *
- * 这里明确把“累计签到”定义为 `checkin + checkout`，
- * 避免页面层以后再次把“仍在场人数”误当成累计签到人数。
- */
-export function buildActivityMetaMetricRows(counts?: ActivityMetaCounts) {
+const buildActivityMetaMetricRows = (counts?: ActivityMetaCounts) => {
   if (!counts) {
     return [];
   }
@@ -149,21 +109,62 @@ export function buildActivityMetaMetricRows(counts?: ActivityMetaCounts) {
   return [
     expectedCount != null
       ? {
-          note: `${expectedCount}`,
-          title: "应到"
+          label: "应到",
+          value: `${expectedCount}`
         }
       : null,
     {
-      note: `${totalCheckedIn}`,
-      title: "累计签到"
+      label: "累计签到",
+      value: `${totalCheckedIn}`
     },
     {
-      note: `${checkoutCount}`,
-      title: "已签退"
+      label: "已签退",
+      value: `${checkoutCount}`
     },
     {
-      note: `${checkinCount}`,
-      title: "未签退"
+      label: "未签退",
+      value: `${checkinCount}`
     }
-  ].filter(Boolean) as ActivityMetaCellProps[];
-}
+  ].filter(Boolean) as ActivityMetaSectionRow[];
+};
+
+/**
+ * 单卡面板的外层结构由这里一次性产出。
+ *
+ * 组件层只负责把 section 渲染出来，
+ * 这样 Task 4 改各个业务页时，不需要再碰统计与字段顺序规则。
+ */
+export const buildActivityMetaSections = ({
+  checkinTimeText,
+  counts,
+  checkoutTimeText,
+  description,
+  joinStatusText,
+  locationText,
+  progressText,
+  statusSlot,
+  subtitle,
+  timeText,
+  title
+}: BuildActivityMetaSectionsInput) => ({
+  hero: {
+    description,
+    statusContent: statusSlot ?? progressText,
+    subtitle,
+    title
+  } satisfies ActivityMetaPanelHero,
+  detail: {
+    rows: buildActivityMetaDetailRows({
+      checkinTimeText,
+      checkoutTimeText,
+      joinStatusText,
+      locationText,
+      timeText
+    }),
+    title: "活动信息"
+  } satisfies ActivityMetaPanelSection,
+  metrics: {
+    rows: buildActivityMetaMetricRows(counts),
+    title: "统计"
+  } satisfies ActivityMetaPanelSection
+});

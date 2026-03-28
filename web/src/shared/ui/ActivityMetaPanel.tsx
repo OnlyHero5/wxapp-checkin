@@ -1,19 +1,16 @@
 import { ElementType, ReactNode } from "react";
-import { Cell, CellGroup } from "tdesign-mobile-react";
 import {
   type ActivityMetaCounts,
-  buildActivityMetaDetailRows,
-  buildActivityMetaMetricRows,
-  buildActivityMetaSummaryRows
+  buildActivityMetaSections
 } from "./activity-meta-panel/row-builders";
 import type { VisualTone } from "./visual-tone";
 
 /**
- * 活动信息块仍然保留公共组合层，但现在只负责“信息编排”，不再自带项目级卡面外壳。
+ * 活动主卡现在回收到项目自有单卡骨架。
  *
- * 这样做的目的有两点：
- * 1. 字段编排仍然集中维护；
- * 2. 标题、正文和统计尽量直接落到 TDesign `CellGroup/Cell`，避免这里继续长成第二套面板组件。
+ * 这一层负责两件事：
+ * 1. 复用共享 section 数据，避免页面散落字段顺序；
+ * 2. 把摘要、详情、统计和动作稳定收口到一张外卡内。
  */
 type ActivityMetaPanelProps = {
   as?: ElementType;
@@ -49,57 +46,83 @@ export function ActivityMetaPanel({
   title
 }: ActivityMetaPanelProps) {
   /**
-   * 组件现在只保留“数据整理 + 组件库组装”职责。
+   * 共享主卡只消费结构化 section 数据，
+   * 不再感知“哪几组 `CellGroup` 应该出现”。
    *
-   * 页面仍可通过 `as` 决定容器语义，
-   * 而具体的“字段排序 / 统计换算”已经下沉到独立模块，避免这一层再次长回大文件。
+   * 这样 Task 4 接业务页时，只需要继续传业务文案，
+   * 不需要重复维护分组数量和顺序。
    */
-  const summaryRows = buildActivityMetaSummaryRows({
-    description,
-    progressText,
-    statusSlot,
-    subtitle
-  });
-  const metricRows = buildActivityMetaMetricRows(counts);
-  const detailRows = buildActivityMetaDetailRows({
+  const { detail, hero, metrics } = buildActivityMetaSections({
     checkinTimeText,
+    counts,
     checkoutTimeText,
+    description,
     joinStatusText,
     locationText,
-    timeText
+    progressText,
+    statusSlot,
+    subtitle,
+    timeText,
+    title
   });
+  const hasDetailSection = detail.rows.length > 0;
+  const hasMetricsSection = metrics.rows.length > 0;
+  const isPlainStatusText = typeof hero.statusContent === "string" || typeof hero.statusContent === "number";
 
   return (
     <Container className={`activity-meta-panel activity-meta-panel--${tone}`} data-panel-tone={tone}>
-      <CellGroup className="activity-meta-panel__group activity-meta-panel__group--summary" theme="card" title={title}>
-        {summaryRows.map((row) => (
-          <Cell
-            {...row}
-            key={`${title}:${row.title}`}
-          />
-        ))}
-      </CellGroup>
-      {detailRows.length > 0 ? (
-        <CellGroup className="activity-meta-panel__group activity-meta-panel__group--detail" theme="card" title="活动信息">
-          {detailRows.map((row) => (
-            <Cell
-              {...row}
-              key={`detail:${title}:${row.title}`}
-            />
-          ))}
-        </CellGroup>
+      {/* hero 只保留标题摘要，避免把详情字段重新塞回头部造成主次混乱。 */}
+      <header className="activity-meta-panel__section activity-meta-panel__section--hero">
+        <div className="activity-meta-panel__hero-copy">
+          {hero.subtitle ? <p className="activity-meta-panel__subtitle">{hero.subtitle}</p> : null}
+          <div className="activity-meta-panel__title-row">
+            <h2 className="activity-meta-panel__title">{hero.title}</h2>
+            {hero.statusContent ? (
+              <div className="activity-meta-panel__status-slot">
+                {isPlainStatusText ? (
+                  <span className="activity-meta-panel__status-pill">{hero.statusContent}</span>
+                ) : (
+                  hero.statusContent
+                )}
+              </div>
+            ) : null}
+          </div>
+          {hero.description ? <p className="activity-meta-panel__description">{hero.description}</p> : null}
+        </div>
+      </header>
+
+      {hasDetailSection ? (
+        <section className="activity-meta-panel__section activity-meta-panel__section--detail">
+          {/* 详情区继续沿用共享字段顺序，让列表、详情和 staff 阅读路径一致。 */}
+          <p className="activity-meta-panel__section-label">{detail.title}</p>
+          <div className="activity-meta-panel__detail-list">
+            {detail.rows.map((row) => (
+              <div className="activity-meta-panel__detail-row" key={`${title}:${detail.title}:${row.label}`}>
+                <span className="activity-meta-panel__detail-label">{row.label}</span>
+                <span className="activity-meta-panel__detail-value">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       ) : null}
-      {metricRows.length > 0 ? (
-        <CellGroup className="activity-meta-panel__group activity-meta-panel__group--metric" theme="card" title="统计">
-          {metricRows.map((row) => (
-            <Cell
-              {...row}
-              key={`metric:${title}:${row.title}`}
-            />
-          ))}
-        </CellGroup>
+
+      {hasMetricsSection ? (
+        <section className="activity-meta-panel__section activity-meta-panel__section--metrics">
+          {/* 统计区只展示共享口径，避免业务页自己拼累计签到等衍生数字。 */}
+          <p className="activity-meta-panel__section-label">{metrics.title}</p>
+          <div className="activity-meta-panel__metric-grid">
+            {metrics.rows.map((row) => (
+              <section className="activity-meta-panel__metric-card" key={`${title}:${metrics.title}:${row.label}`}>
+                <p className="activity-meta-panel__metric-label">{row.label}</p>
+                <p className="activity-meta-panel__metric-value">{row.value}</p>
+              </section>
+            ))}
+          </div>
+        </section>
       ) : null}
-      {footer ? <section className="activity-meta-panel__footer activity-meta-actions">{footer}</section> : null}
+
+      {/* 动作区继续挂在主卡内部，Task 4 接各业务页时就不会再多包一层卡面。 */}
+      {footer ? <footer className="activity-meta-panel__section activity-meta-panel__section--actions activity-meta-actions">{footer}</footer> : null}
     </Container>
   );
 }

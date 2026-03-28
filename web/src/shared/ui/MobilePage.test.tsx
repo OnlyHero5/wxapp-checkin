@@ -16,7 +16,7 @@ function readAppStyles() {
 const baseCss = readAppStyles();
 
 describe("MobilePage", () => {
-  it("renders a thin page shell around the component-library navbar instead of app-owned card surfaces", () => {
+  it("renders a masthead and bento content rail without nested faux card shells", () => {
     render(
       <MobilePage description="请先确认当前页面操作，再继续执行。" eyebrow="活动管理" title="动态签到">
         <p>当前为签到展示模式</p>
@@ -24,8 +24,9 @@ describe("MobilePage", () => {
     );
 
     expect(document.querySelector(".app-surface")).toBeNull();
-    expect(document.querySelector(".mobile-page__header")).toBeInTheDocument();
-    expect(document.querySelector(".mobile-page__content")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__masthead")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__content-stack")).toBeInTheDocument();
+    expect(document.querySelector(".mobile-page__bento-rail")).toBeInTheDocument();
     expect(screen.getByText("活动管理").closest(".mobile-page__eyebrow")).toBeInTheDocument();
   });
 
@@ -79,17 +80,17 @@ describe("MobilePage", () => {
     expect(baseCss).toMatch(/\.mobile-page\s*\{[^}]*align-items:\s*flex-start;/);
     expect(shell).not.toBeNull();
     expect(baseCss).toMatch(/\.mobile-page__shell\s*\{[^}]*align-content:\s*start;/);
-    expect(baseCss).toMatch(/\.mobile-page__header\s*\{/);
+    expect(baseCss).toMatch(/\.mobile-page__bento-rail\s*\{/);
   });
 
-  it("pins the content grid to a shrinkable single column so form pages cannot overflow horizontally", () => {
+  it("pins the bento rail to a shrinkable single column so form pages cannot overflow horizontally", () => {
     render(
       <MobilePage eyebrow="动态验证码" title="活动签到">
         <p>请输入签到码</p>
       </MobilePage>
     );
 
-    expect(baseCss).toMatch(/\.mobile-page__content-stack\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+    expect(baseCss).toMatch(/\.mobile-page__bento-rail\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   });
 
   it("keeps shared single-column containers shrinkable instead of relying on ad-hoc shells", () => {
@@ -101,5 +102,17 @@ describe("MobilePage", () => {
 
     expect(baseCss).toMatch(/\.stack-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
     expect(baseCss).toMatch(/\.activity-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+  });
+
+  it("defines dedicated bento rail and single-card tokens in the shared styles", () => {
+    render(
+      <MobilePage eyebrow="动态验证码" title="活动签到">
+        <p>请输入签到码</p>
+      </MobilePage>
+    );
+
+    expect(baseCss).toMatch(/--app-bento-rail-gap:/);
+    expect(baseCss).toMatch(/--app-bento-panel-padding:/);
+    expect(baseCss).toMatch(/--app-bento-panel-shadow:/);
   });
 });
