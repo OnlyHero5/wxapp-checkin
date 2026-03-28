@@ -5,17 +5,27 @@ import {
 } from "./activity-roster-actions";
 
 describe("activity-roster-actions", () => {
-  it("maps batch action keys to stable patch payloads and audit reasons", () => {
+  it("maps batch action keys to single-command patch payloads and audit reasons", () => {
     expect(resolveAttendanceActionPayload("set_checked_in")).toEqual({
       patch: {
-        checked_in: true,
-        checked_out: false
+        checked_in: true
       },
       reason: "设为已签到"
     });
+    expect(resolveAttendanceActionPayload("clear_checked_in")).toEqual({
+      patch: {
+        checked_in: false
+      },
+      reason: "设为未签到"
+    });
+    expect(resolveAttendanceActionPayload("set_checked_out")).toEqual({
+      patch: {
+        checked_out: true
+      },
+      reason: "设为已签退"
+    });
     expect(resolveAttendanceActionPayload("clear_checked_out")).toEqual({
       patch: {
-        checked_in: true,
         checked_out: false
       },
       reason: "设为未签退"

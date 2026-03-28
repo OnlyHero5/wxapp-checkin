@@ -1,48 +1,36 @@
+import type { AttendanceAdjustmentInput } from "./api";
 import type { AttendanceActionKey } from "./components/AttendanceBatchActionBar";
+import { buildAttendanceAdjustmentPatch } from "./attendance-roster-state";
 
 export type AttendanceActionPayload = {
-  patch: {
-    checked_in: boolean;
-    checked_out: boolean;
-  };
+  patch: AttendanceAdjustmentInput["patch"];
   reason: string;
 };
 
 /**
- * 名单修正页只传动作枚举，不在页面里反复拼 checked_in / checked_out 的布尔组合。
+ * 名单修正页只传动作枚举，不在页面里反复拼 patch。
+ * patch 的具体字段选择收口到共享 helper，保证单个入口遵守后端“命令式 patch”约束。
  */
 export function resolveAttendanceActionPayload(action: AttendanceActionKey): AttendanceActionPayload {
   switch (action) {
     case "set_checked_in":
       return {
-        patch: {
-          checked_in: true,
-          checked_out: false
-        },
+        patch: buildAttendanceAdjustmentPatch(action),
         reason: "设为已签到"
       };
     case "clear_checked_in":
       return {
-        patch: {
-          checked_in: false,
-          checked_out: false
-        },
+        patch: buildAttendanceAdjustmentPatch(action),
         reason: "设为未签到"
       };
     case "set_checked_out":
       return {
-        patch: {
-          checked_in: true,
-          checked_out: true
-        },
+        patch: buildAttendanceAdjustmentPatch(action),
         reason: "设为已签退"
       };
     case "clear_checked_out":
       return {
-        patch: {
-          checked_in: true,
-          checked_out: false
-        },
+        patch: buildAttendanceAdjustmentPatch(action),
         reason: "设为未签退"
       };
   }
