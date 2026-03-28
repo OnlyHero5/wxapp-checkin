@@ -34,12 +34,14 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
     errorMessage,
     handleBulkCheckout,
     loading,
-    refreshCurrentCodeSession,
+    refreshFromUserIntent,
     riskActionsBlocked,
     resultMessage,
     setActionType,
     wakeLockMessage
   } = useStaffManageState(activityId);
+  // 阻断态下不能继续把旧动态码当成当前可用码展示，所以这里显式掩掉上一轮会话快照。
+  const visibleCodeSession = riskActionsBlocked ? null : codeSession;
 
   // staff 管理页先只声明“展示型壳层”，具体桌面重排由后续任务接管。
   return (
@@ -58,9 +60,9 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
       {detail ? (
         <ActivityMetaPanel
           counts={{
-            expected: codeSession?.registered_count ?? detail.registered_count,
-            checkin: codeSession?.checkin_count ?? detail.checkin_count,
-            checkout: codeSession?.checkout_count ?? detail.checkout_count
+            expected: visibleCodeSession?.registered_count ?? detail.registered_count,
+            checkin: visibleCodeSession?.checkin_count ?? detail.checkin_count,
+            checkout: visibleCodeSession?.checkout_count ?? detail.checkout_count
           }}
           description={detail.description}
           locationText={detail.location}
@@ -73,11 +75,11 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
       <DynamicCodePanel
         activityId={activityId}
         actionType={actionType}
-        codeSession={codeSession}
-        loading={codeSessionLoading}
+        codeSession={visibleCodeSession}
+        loading={codeSessionLoading && !riskActionsBlocked}
         // 自愈重检失败后，这里的高风险交互统一冻结，直到下一次完整安全刷新成功。
         onActionChange={riskActionsBlocked ? () => {} : setActionType}
-        onRefresh={() => void (riskActionsBlocked ? Promise.resolve() : refreshCurrentCodeSession())}
+        onRefresh={() => void refreshFromUserIntent()}
       />
       <BulkCheckoutButton
         disabled={loading || !detail || riskActionsBlocked}

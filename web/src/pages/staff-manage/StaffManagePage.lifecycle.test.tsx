@@ -316,24 +316,41 @@ describe("StaffManagePage lifecycle", () => {
   it("blocks risky staff actions when a required self-heal check fails", async () => {
     const user = userEvent.setup();
 
-    staffApiMocks.getCodeSession.mockResolvedValue({
-      action_type: "checkin",
-      activity_id: "act_101",
-      checkin_count: 18,
-      checkout_count: 3,
-      code: "483920",
-      expires_at: 1760000007500,
-      expires_in_ms: 4200,
-      server_time_ms: 1760000003300,
-      status: "success"
-    });
+    staffApiMocks.getCodeSession
+      .mockResolvedValueOnce({
+        action_type: "checkin",
+        activity_id: "act_101",
+        checkin_count: 18,
+        checkout_count: 3,
+        code: "483920",
+        expires_at: 1760000007500,
+        expires_in_ms: 4200,
+        server_time_ms: 1760000003300,
+        status: "success"
+      })
+      .mockResolvedValueOnce({
+        action_type: "checkin",
+        activity_id: "act_101",
+        checkin_count: 19,
+        checkout_count: 4,
+        code: "222333",
+        expires_at: 1760000017500,
+        expires_in_ms: 4200,
+        server_time_ms: 1760000013300,
+        status: "success"
+      });
     staffApiMocks.getActivityRoster
       .mockResolvedValueOnce({
         activity_id: "act_101",
         activity_title: "校园志愿活动",
         items: []
       })
-      .mockRejectedValueOnce(new Error("heal check failed"));
+      .mockRejectedValueOnce(new Error("heal check failed"))
+      .mockResolvedValueOnce({
+        activity_id: "act_101",
+        activity_title: "校园志愿活动",
+        items: []
+      });
 
     renderStaffManagePage();
 
@@ -354,13 +371,19 @@ describe("StaffManagePage lifecycle", () => {
     expect(staffApiMocks.getActivityRoster).toHaveBeenCalledTimes(2);
     expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(1);
     expect(activitiesApiMocks.getActivityDetail).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("483920")).not.toBeInTheDocument();
+    expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
     expect(screen.getByRole("button", { name: "一键全部签退" })).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "立即刷新" }));
-    await user.click(screen.getByText("签退码"));
 
-    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(1);
-    expect(staffApiMocks.getActivityRoster).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(staffApiMocks.getActivityRoster).toHaveBeenCalledTimes(3);
+      expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(2);
+      expect(activitiesApiMocks.getActivityDetail).toHaveBeenCalledTimes(2);
+    });
+    expect(await screen.findByText("222333")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "一键全部签退" })).not.toBeDisabled();
   });
 
   it("shows a wake lock hint when the browser cannot keep the screen awake", async () => {

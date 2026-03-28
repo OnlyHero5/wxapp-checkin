@@ -130,6 +130,24 @@ export function useStaffManageState(activityId: string) {
     await loadCodeSession(actionType, true);
   }, [actionType, loadCodeSession, riskActionsBlocked]);
 
+  /**
+   * “立即刷新”在不同风险态下承担两种职责：
+   * 1. 正常态只刷新动态码，避免把 roster 自愈前置到每次轻刷新；
+   * 2. 阻断态则必须走完整安全刷新，作为管理员主动恢复页面可用性的重试入口。
+   */
+  const refreshFromUserIntent = useCallback(async () => {
+    if (riskActionsBlocked) {
+      await refreshPage({
+        reloadDetail: true,
+        resetCodeSession: true,
+        resetDetail: false
+      });
+      return;
+    }
+
+    await refreshCurrentCodeSession();
+  }, [refreshCurrentCodeSession, refreshPage, riskActionsBlocked]);
+
   useEffect(() => {
     if (previousActionTypeRef.current === null) {
       previousActionTypeRef.current = actionType;
@@ -185,6 +203,7 @@ export function useStaffManageState(activityId: string) {
     riskActionsBlocked,
     loading,
     refreshCurrentCodeSession,
+    refreshFromUserIntent,
     resultMessage,
     setActionType,
     wakeLockMessage
