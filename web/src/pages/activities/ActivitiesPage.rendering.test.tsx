@@ -65,6 +65,9 @@ describe("ActivitiesPage rendering", () => {
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
     expect(screen.getByText("查看你当前可见的活动，并进入详情页继续签到或签退。")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { hidden: true, level: 2 }).map((heading) => heading.textContent)
+    ).toEqual(expect.arrayContaining(["校园志愿活动", "创新论坛"]));
     expect(document.querySelector(".mobile-page__masthead")).toBeInTheDocument();
     expect(document.querySelector(".mobile-page__content-stack")).toBeInTheDocument();
     expect(document.querySelector(".t-tabs")).toBeInTheDocument();
@@ -79,7 +82,7 @@ describe("ActivitiesPage rendering", () => {
     expect(screen.queryByText("累计签到")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { hidden: true, name: "查看详情" })).toHaveLength(2);
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
-    expect(document.querySelectorAll(".activity-meta-panel")).toHaveLength(2);
+    expect(document.querySelectorAll("article.activity-meta-panel")).toHaveLength(2);
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
 
@@ -117,12 +120,13 @@ describe("ActivitiesPage rendering", () => {
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
     expect(screen.getByText("查看活动并进入管理页展示动态码、处理批量签退。")).toBeInTheDocument();
-    expect(screen.getByText("管理态活动 A")).toBeInTheDocument();
-    expect(screen.getByText("管理态活动 B")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { hidden: true, level: 2 }).map((heading) => heading.textContent)
+    ).toEqual(expect.arrayContaining(["管理态活动 A", "管理态活动 B"]));
     expect(screen.getAllByRole("link", { hidden: true, name: "进入管理" })).toHaveLength(2);
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
-    expect(screen.getByText("管理态活动 A").closest("article")).toHaveAttribute("data-panel-tone", "staff");
-    expect(document.querySelectorAll(".activity-meta-panel")).toHaveLength(2);
+    expect(screen.getByRole("heading", { level: 2, name: "管理态活动 A" }).closest("article")).toHaveAttribute("data-panel-tone", "staff");
+    expect(document.querySelectorAll("article.activity-meta-panel")).toHaveLength(2);
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
 

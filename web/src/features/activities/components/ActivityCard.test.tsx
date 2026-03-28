@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ActivityCard } from "./ActivityCard";
 
 describe("ActivityCard", () => {
-  it("encodes special characters in activity detail links", () => {
+  it("encodes special characters in activity detail links and exposes the card title as a heading", () => {
     render(
       <MemoryRouter>
         <ActivityCard
@@ -23,7 +23,7 @@ describe("ActivityCard", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "校园志愿活动" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "查看详情" })).toHaveAttribute(
       "href",
       "/activities/act%2F%20101%3F%23"
@@ -51,8 +51,9 @@ describe("ActivityCard", () => {
     );
 
     expect(screen.getByText("工作人员活动").closest("article")).toHaveAttribute("data-panel-tone", "staff");
+    expect(screen.getByRole("heading", { level: 2, name: "工作人员活动" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "进入管理" })).toBeInTheDocument();
-    expect(container.querySelectorAll(".activity-meta-panel")).toHaveLength(1);
+    expect(container.querySelectorAll("article.activity-meta-panel")).toHaveLength(1);
     expect(container.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
 });

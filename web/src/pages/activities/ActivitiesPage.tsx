@@ -34,6 +34,11 @@ export function ActivitiesPage() {
     setActiveSectionKey,
     setDraftKeyword
   } = useActivitiesPageState();
+  // 列表页只负责把活动数据投影成“每行一张主卡”。
+  // 具体的单卡结构留给 `ActivityCard`，这里不要再额外包第二层视觉容器。
+  const renderActivityCard = (activity: Parameters<typeof ActivityCard>[0]["activity"]) => (
+    <ActivityCard activity={activity} key={activity.activity_id} showManageEntry={isStaff} />
+  );
 
   return (
     <MobilePage description={description} eyebrow={eyebrow} title="活动列表" tone={pageTone}>
@@ -66,9 +71,7 @@ export function ActivitiesPage() {
           loadingMore={loadingMore}
           onLoadMore={() => void loadMorePage()}
           onSectionChange={setActiveSectionKey}
-          renderActivity={(activity) => (
-            <ActivityCard activity={activity} key={activity.activity_id} showManageEntry={isStaff} />
-          )}
+          renderActivity={renderActivityCard}
           sections={sections}
         />
       ) : null}

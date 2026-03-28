@@ -71,6 +71,8 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
       title={detail.activity_title}
     >
       <ActivityMetaPanel
+        // 详情页头部已经用 `MobilePage` 输出页面级 h1，
+        // 主卡内部继续用 h2，保证“页面标题”和“主卡标题”语义分层清晰。
         checkinTimeText={!isStaff ? detail.my_checkin_time : undefined}
         counts={isStaff ? {
           checkin: detail.checkin_count,
@@ -78,6 +80,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         } : undefined}
         checkoutTimeText={!isStaff ? detail.my_checkout_time : undefined}
         description={detail.description}
+        footer={null}
         joinStatusText={resolveJoinStatus(detail)}
         locationText={detail.location}
         progressText={progressStatus === "completed" ? "已完成" : "进行中"}
@@ -86,33 +89,40 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         timeText={detail.start_time}
         tone={detailTone}
         title={detail.activity_title}
+        titleAs="h2"
       />
-      <section className="stack-form detail-actions">
-        {isStaff ? (
-          <>
-            {/* staff 先分流到“发码管理”和“名单修正”两个入口，避免在单页里混放两类高频操作。 */}
-            <AppButton onClick={() => navigate(buildActivityManagePath(detail.activity_id))}>进入管理</AppButton>
-            <AppButton onClick={() => navigate(buildActivityRosterPath(detail.activity_id))} tone="secondary">
-              参会名单
+      <section
+        aria-label={isStaff ? "活动管理操作" : "活动操作"}
+        className="stack-form detail-actions detail-actions--bento"
+      >
+        {/* 动作带从主卡独立出来后，后续若继续加入口，也不会重新挤回活动信息主卡。 */}
+        <div className="detail-actions__rail">
+          {isStaff ? (
+            <>
+              {/* staff 先分流到“发码管理”和“名单修正”两个入口，避免在单页里混放两类高频操作。 */}
+              <AppButton onClick={() => navigate(buildActivityManagePath(detail.activity_id))}>进入管理</AppButton>
+              <AppButton onClick={() => navigate(buildActivityRosterPath(detail.activity_id))} tone="secondary">
+                参会名单
+              </AppButton>
+            </>
+          ) : null}
+          {/* 签到和签退入口互相独立显示，避免用一个按钮切来切去造成误操作。 */}
+          {!isStaff && canCheckin ? (
+            <AppButton onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkin"))}>
+              去签到
             </AppButton>
-          </>
-        ) : null}
-        {/* 签到和签退入口互相独立显示，避免用一个按钮切来切去造成误操作。 */}
-        {!isStaff && canCheckin ? (
-          <AppButton onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkin"))}>
-            去签到
-          </AppButton>
-        ) : null}
-        {!isStaff && canCheckout ? (
-          <AppButton
-            onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkout"))}
-            tone="secondary"
-          >
-            去签退
-          </AppButton>
-        ) : null}
-        {/* 两个动作都不可用时，也明确告诉用户是“当前状态不允许”，而不是页面坏了。 */}
-        {!isStaff && !canCheckin && !canCheckout ? <AppEmptyState message="当前状态下暂无可执行动作。" /> : null}
+          ) : null}
+          {!isStaff && canCheckout ? (
+            <AppButton
+              onClick={() => navigate(buildActivityActionPath(detail.activity_id, "checkout"))}
+              tone="secondary"
+            >
+              去签退
+            </AppButton>
+          ) : null}
+          {/* 两个动作都不可用时，也明确告诉用户是“当前状态不允许”，而不是页面坏了。 */}
+          {!isStaff && !canCheckin && !canCheckout ? <AppEmptyState message="当前状态下暂无可执行动作。" /> : null}
+        </div>
       </section>
     </MobilePage>
   );

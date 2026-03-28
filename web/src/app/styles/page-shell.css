@@ -335,6 +335,32 @@
   color: var(--app-text-strong);
 }
 
+/* =========================================================
+ * 活动详情动作带
+ * ---------------------------------------------------------
+ * 详情页不再把按钮塞进活动主卡，而是独立成一条次卡动作带，
+ * 这样主信息与高频操作能保持稳定分区。
+ * ========================================================= */
+
+.detail-actions--bento {
+  padding: var(--app-bento-panel-padding);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-xl);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 251, 255, 0.95));
+  box-shadow: var(--app-bento-panel-shadow);
+}
+
+.detail-actions__rail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.detail-actions--bento .t-empty {
+  padding: 8px 0 0;
+  background: transparent;
+}
+
 @media (max-width: 359px) {
   .activity-meta-panel__title-row {
     flex-direction: column;
