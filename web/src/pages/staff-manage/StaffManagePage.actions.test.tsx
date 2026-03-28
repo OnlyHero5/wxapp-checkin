@@ -115,6 +115,33 @@ describe("StaffManagePage actions", () => {
     expect(screen.getByText("111222")).toBeInTheDocument();
   });
 
+  it("shows the code hero as the only primary card on the manage page", async () => {
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+    expect(document.querySelector(".staff-manage-workbench")).toBeInTheDocument();
+    expect(document.querySelector(".staff-manage-workbench__summary")).toHaveTextContent("校园志愿活动");
+    expect(document.querySelector(".staff-manage-workbench__hero")).toContainElement(screen.getByText("483920"));
+    expect(document.querySelector(".staff-manage-workbench__stats .staff-panel__stats-strip")).toHaveTextContent("累计签到");
+    expect(document.querySelector(".staff-manage-workbench__danger")).toContainElement(
+      screen.getByRole("button", { name: "一键全部签退" })
+    );
+    expect(document.querySelectorAll(".staff-code-panel__card")).toHaveLength(1);
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
+  });
+
   it("confirms bulk checkout and refreshes the page state", async () => {
     const user = userEvent.setup();
     staffApiMocks.getCodeSession.mockResolvedValue({

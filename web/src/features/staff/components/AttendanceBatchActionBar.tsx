@@ -1,4 +1,4 @@
-import { ActionSheet, Cell, CellGroup, Dialog } from "tdesign-mobile-react";
+import { ActionSheet, Dialog } from "tdesign-mobile-react";
 import { AppButton } from "../../../shared/ui/AppButton";
 
 export type AttendanceActionKey =
@@ -96,13 +96,20 @@ export function AttendanceBatchActionBar({
   }
 
   return (
-    <section className="attendance-batch-action-bar stack-form">
+    <section className="attendance-batch-action-bar attendance-batch-action-bar--bento stack-form" data-panel-tone="staff">
       <div className="attendance-batch-action-bar__summary">
-        <CellGroup className="attendance-batch-action-bar__group" theme="card" title="批量修正">
-          <Cell note={`${selectedCount} 人`} title="已选成员" />
-        </CellGroup>
+        {/* 批量条的左侧只承担“现在选了多少、这条工具带在做什么”两件事。 */}
+        <p className="attendance-batch-action-bar__eyebrow">批量修正</p>
+        <div className="attendance-batch-action-bar__summary-row">
+          <div className="attendance-batch-action-bar__summary-copy">
+            <p className="attendance-batch-action-bar__summary-label">已选成员</p>
+            <p className="attendance-batch-action-bar__summary-hint">先勾选成员，再统一修正签到或签退状态。</p>
+          </div>
+          <p className="attendance-batch-action-bar__summary-value">{selectedCount} 人</p>
+        </div>
       </div>
       <div className="attendance-batch-action-bar__action">
+        <p className="attendance-batch-action-bar__action-hint">动作选择与确认层仍统一走组件库插件，页面只负责给出上下文。</p>
         <AppButton
           disabled={disabled || selectedCount === 0}
           onClick={handleOpenActionSheet}

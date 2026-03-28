@@ -4,6 +4,7 @@ import {
   AttendanceBatchActionBar
 } from "../../features/staff/components/AttendanceBatchActionBar";
 import { AttendanceRosterList } from "../../features/staff/components/AttendanceRosterList";
+import type { NormalizedRosterItem } from "../../features/staff/attendance-roster-state";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { AppTextLink } from "../../shared/ui/AppTextLink";
@@ -45,34 +46,45 @@ export function ActivityRosterPage() {
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
       {resultMessage ? <InlineNotice message={resultMessage} theme="success" /> : null}
       {roster ? (
-        <>
-          <ActivityMetaPanel
-            counts={{
-              expected: roster.registered_count,
-              checkin: roster.checkin_count,
-              checkout: roster.checkout_count
-            }}
-            description={roster.description}
-            locationText={roster.location}
-            subtitle={roster.activity_type}
-            timeText={roster.start_time}
-            tone="staff"
-            title={roster.activity_title}
-          />
-          <div data-panel-tone="staff">
+        <div className="activity-roster-workbench">
+          <section className="activity-roster-workbench__summary">
+            {/* 名单页的摘要仍然复用共享主卡，保证和活动详情、管理页同口径。 */}
+            <ActivityMetaPanel
+              counts={{
+                expected: roster.registered_count,
+                checkin: roster.checkin_count,
+                checkout: roster.checkout_count
+              }}
+              description={roster.description}
+              locationText={roster.location}
+              subtitle={roster.activity_type}
+              timeText={roster.start_time}
+              tone="staff"
+              title={roster.activity_title}
+            />
+          </section>
+          <section className="activity-roster-workbench__batch">
             <AttendanceBatchActionBar
               disabled={adjusting}
               onConfirm={(action) => runAdjustment(selectedIds, action, "批量")}
               selectedCount={selectedIds.length}
             />
-          </div>
-          <AttendanceRosterList
-            items={roster.items}
-            onSingleAction={(userId, action) => runAdjustment([userId], action, "单人")}
-            onToggleSelection={handleToggleSelection}
-            selectedIds={selectedIds}
-          />
-        </>
+          </section>
+          <section className="activity-roster-workbench__rail" data-panel-tone="staff">
+            <header className="activity-roster-workbench__rail-header">
+              <p className="activity-roster-workbench__rail-eyebrow">名单信息带</p>
+              <p className="activity-roster-workbench__rail-description">
+                左滑可做单人修正；勾选成员后可从上方批量修正条发起统一动作。
+              </p>
+            </header>
+            <AttendanceRosterList
+              items={roster.items as NormalizedRosterItem[]}
+              onSingleAction={(userId, action) => runAdjustment([userId], action, "单人")}
+              onToggleSelection={handleToggleSelection}
+              selectedIds={selectedIds}
+            />
+          </section>
+        </div>
       ) : null}
       {!roster && loading ? <AppLoadingState message="参会名单加载中..." /> : null}
     </MobilePage>

@@ -90,7 +90,13 @@ describe("ActivityRosterPage", () => {
     expect(screen.getByText("2025000011")).toBeInTheDocument();
     expect(screen.getByText("补签成员")).toBeInTheDocument();
     expect(document.querySelectorAll(".t-checkbox").length).toBeGreaterThan(0);
-    expect(document.querySelectorAll(".t-cell-group--card").length).toBeGreaterThan(1);
+    expect(document.querySelector(".activity-roster-workbench")).toBeInTheDocument();
+    expect(document.querySelector(".activity-roster-workbench__summary")).toHaveTextContent("校园志愿活动");
+    expect(document.querySelector(".activity-roster-workbench__batch")).toContainElement(
+      screen.getByRole("button", { name: "批量操作" })
+    );
+    expect(document.querySelector(".activity-roster-workbench__rail")).toContainElement(screen.getByText("测试用户"));
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(document.querySelector(".t-list")).toBeInTheDocument();
     expect(document.querySelectorAll(".t-swipe-cell").length).toBeGreaterThan(0);
     expect(screen.getByText("0 人").closest("[data-panel-tone]")).toHaveAttribute("data-panel-tone", "staff");
@@ -194,6 +200,9 @@ describe("ActivityRosterPage", () => {
     expect(screen.getByText("已签到")).toBeInTheDocument();
     expect(screen.getAllByText("已签退").length).toBeGreaterThan(0);
     expect(screen.queryByText("未签到")).not.toBeInTheDocument();
+    expect(screen.getByText("设为未签到")).toBeInTheDocument();
+    expect(screen.getByText("设为未签退")).toBeInTheDocument();
+    expect(screen.queryByText("设为已签到")).not.toBeInTheDocument();
   });
 
   it("supports single member adjustment", async () => {

@@ -1,21 +1,21 @@
 import { Checkbox, List, SwipeCell, Tag } from "tdesign-mobile-react";
 import { AppEmptyState } from "../../../shared/ui/AppEmptyState";
-import type { ActivityRosterItem } from "../api";
+import type { NormalizedRosterItem } from "../attendance-roster-state";
 import type { AttendanceActionKey } from "./AttendanceBatchActionBar";
 
 type AttendanceRosterListProps = {
-  items: ActivityRosterItem[];
+  items: NormalizedRosterItem[];
   onSingleAction: (userId: number, action: AttendanceActionKey) => Promise<void> | void;
   onToggleSelection: (userId: number, checked: boolean) => void;
   selectedIds: number[];
 };
 
-function resolveCheckinText(item: ActivityRosterItem) {
-  return item.checked_in ? "已签到" : "未签到";
+function resolveCheckinText(item: NormalizedRosterItem) {
+  return item.normalized_state === "not_checked" ? "未签到" : "已签到";
 }
 
-function resolveCheckoutText(item: ActivityRosterItem) {
-  return item.checked_out ? "已签退" : "未签退";
+function resolveCheckoutText(item: NormalizedRosterItem) {
+  return item.normalized_state === "checked_out" ? "已签退" : "未签退";
 }
 
 function renderStatusTag(type: "checkin" | "checkout", active: boolean, text: string) {
@@ -33,11 +33,11 @@ function renderStatusTag(type: "checkin" | "checkout", active: boolean, text: st
 }
 
 function resolveSwipeActions(
-  item: ActivityRosterItem,
+  item: NormalizedRosterItem,
   onSingleAction: AttendanceRosterListProps["onSingleAction"]
 ) {
   return [
-    !item.checked_in
+    item.normalized_state === "not_checked"
       ? {
           className: "attendance-roster-list__action attendance-roster-list__action--checkin",
           onClick: () => void onSingleAction(item.user_id, "set_checked_in"),
@@ -48,16 +48,16 @@ function resolveSwipeActions(
           onClick: () => void onSingleAction(item.user_id, "clear_checked_in"),
           text: "设为未签到"
         },
-    !item.checked_out
+    item.normalized_state === "checked_out"
       ? {
-          className: "attendance-roster-list__action attendance-roster-list__action--checkout",
-          onClick: () => void onSingleAction(item.user_id, "set_checked_out"),
-          text: "设为已签退"
-        }
-      : {
           className: "attendance-roster-list__action attendance-roster-list__action--reset",
           onClick: () => void onSingleAction(item.user_id, "clear_checked_out"),
           text: "设为未签退"
+        }
+      : {
+          className: "attendance-roster-list__action attendance-roster-list__action--checkout",
+          onClick: () => void onSingleAction(item.user_id, "set_checked_out"),
+          text: "设为已签退"
         }
   ];
 }
@@ -108,8 +108,9 @@ export function AttendanceRosterList({
                     </div>
                   </header>
                   <div className="attendance-roster-card__status-row">
-                    {renderStatusTag("checkin", item.checked_in, resolveCheckinText(item))}
-                    {renderStatusTag("checkout", item.checked_out, resolveCheckoutText(item))}
+                    {/* 行内状态完全依赖规范态，避免脏布尔值把操作按钮和标签带偏。 */}
+                    {renderStatusTag("checkin", item.normalized_state !== "not_checked", resolveCheckinText(item))}
+                    {renderStatusTag("checkout", item.normalized_state === "checked_out", resolveCheckoutText(item))}
                   </div>
                   {item.checkin_time || item.checkout_time ? (
                     <dl className="attendance-roster-card__times">

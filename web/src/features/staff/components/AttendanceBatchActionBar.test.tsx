@@ -47,8 +47,12 @@ describe("AttendanceBatchActionBar", () => {
 
     render(<AttendanceBatchActionBar onConfirm={vi.fn()} selectedCount={3} />);
 
+    expect(document.querySelector(".attendance-batch-action-bar")).toHaveClass("attendance-batch-action-bar--bento");
     expect(document.querySelector(".attendance-batch-action-bar__summary")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-batch-action-bar__summary")).toHaveTextContent("已选成员");
+    expect(document.querySelector(".attendance-batch-action-bar__summary")).toHaveTextContent("3 人");
     expect(document.querySelector(".attendance-batch-action-bar__action")).toBeInTheDocument();
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
 
     await user.click(screen.getByRole("button", { name: "批量操作" }));
 

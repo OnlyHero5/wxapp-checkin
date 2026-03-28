@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Cell, CellGroup, Col, Row, TabPanel, Tabs } from "tdesign-mobile-react";
+import { TabPanel, Tabs } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 import type { CodeSessionResponse } from "../api";
 import { AppButton } from "../../../shared/ui/AppButton";
@@ -117,48 +117,64 @@ export function DynamicCodePanel({
     onRefresh();
   }
 
+  /**
+   * 动态码工作台改成项目自有 bento rail：
+   * - 控制区、主码区、统计区、刷新条按固定顺序下排；
+   * - 只把交互控件继续交给组件库；
+   * - 不再让 `Row / Col / CellGroup` 决定管理页结构。
+   */
   return (
     <section className="staff-panel" data-panel-tone="staff">
-      <Row className="staff-panel__layout" gutter={16}>
-        {/* 管理页首先面向手机值班场景，默认先全部走单列，桌面再由 CSS 做增强重排。 */}
-        <Col className="staff-panel__col staff-panel__controls-col" span={24}>
-          <section className="staff-panel__controls" data-display-zone="controls">
-            <Tabs className="staff-panel__tabs" onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
-              <TabPanel label="签到码" value="checkin" />
-              <TabPanel label="签退码" value="checkout" />
-            </Tabs>
-          </section>
-        </Col>
-        <Col className="staff-panel__col staff-code-panel__col" span={24}>
-          <section className="staff-code-panel" data-display-zone="hero">
-            <DynamicCodeHero
-              actionLabel={actionLabel}
-              actionType={actionType}
-              countdownTimeMs={countdownTimeMs}
-              codeText={heroDisplayCode}
-              loadingMetaText={heroMetaLoading ? "动态码加载中..." : undefined}
-              onCountdownFinish={handleCountdownFinish}
-              showSkeleton={loading}
-            />
-          </section>
-        </Col>
-        <Col className="staff-panel__col staff-panel__stats-col" span={24}>
-          <section className="staff-panel__stats" data-display-zone="stats">
-            <CellGroup className="staff-panel__stats-group" theme="card" title="实时统计">
-              <Cell note={`${totalCheckedIn}`} title="签到人数" />
-              <Cell note={`${checkoutCount}`} title="签退人数" />
-              <Cell note={`${checkinCount}`} title="未签退人数" />
-            </CellGroup>
-          </section>
-        </Col>
-        <Col className="staff-panel__col staff-panel__actions-col" span={24}>
-          <section className="staff-panel__actions" data-display-zone="actions">
-            <AppButton onClick={onRefresh} tone="secondary">
-              立即刷新
-            </AppButton>
-          </section>
-        </Col>
-      </Row>
+      <div className="staff-panel__rail">
+        {/* tab 继续放在最前面，值班老师切签到/签退时不需要先跨过大块统计。 */}
+        <section className="staff-panel__controls" data-display-zone="controls">
+          <Tabs className="staff-panel__tabs" onChange={(value) => onActionChange(value as ActivityActionType)} value={actionType}>
+            <TabPanel label="签到码" value="checkin" />
+            <TabPanel label="签退码" value="checkout" />
+          </Tabs>
+        </section>
+        <section className="staff-panel__hero" data-display-zone="hero">
+          <DynamicCodeHero
+            actionLabel={actionLabel}
+            actionType={actionType}
+            countdownTimeMs={countdownTimeMs}
+            codeText={heroDisplayCode}
+            loadingMetaText={heroMetaLoading ? "动态码加载中..." : undefined}
+            onCountdownFinish={handleCountdownFinish}
+            showSkeleton={loading}
+          />
+        </section>
+        <section className="staff-panel__stats-strip" data-display-zone="stats">
+          <header className="staff-panel__stats-header">
+            <p className="staff-panel__section-eyebrow">实时统计</p>
+            <p className="staff-panel__section-copy">发码、批量签退和回前台刷新都共享这一套统计口径。</p>
+          </header>
+          <div className="staff-panel__metric-grid">
+            {/* 这里明确展示累计签到，避免把“已签退成员”从签到统计里误剔除。 */}
+            <section className="staff-panel__metric-card">
+              <p className="staff-panel__metric-label">累计签到</p>
+              <p className="staff-panel__metric-value">{totalCheckedIn}</p>
+            </section>
+            <section className="staff-panel__metric-card">
+              <p className="staff-panel__metric-label">已签退</p>
+              <p className="staff-panel__metric-value">{checkoutCount}</p>
+            </section>
+            <section className="staff-panel__metric-card">
+              <p className="staff-panel__metric-label">未签退</p>
+              <p className="staff-panel__metric-value">{checkinCount}</p>
+            </section>
+          </div>
+        </section>
+        <section className="staff-panel__action-bar" data-display-zone="actions">
+          <div className="staff-panel__action-copy">
+            <p className="staff-panel__section-eyebrow">刷新工作台</p>
+            <p className="staff-panel__section-copy">正常态下只刷新当前动态码；阻断态会走完整安全刷新。</p>
+          </div>
+          <AppButton onClick={onRefresh} tone="secondary">
+            立即刷新
+          </AppButton>
+        </section>
+      </div>
     </section>
   );
 }

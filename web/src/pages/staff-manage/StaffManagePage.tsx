@@ -43,7 +43,6 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
   // 阻断态下不能继续把旧动态码当成当前可用码展示，所以这里显式掩掉上一轮会话快照。
   const visibleCodeSession = riskActionsBlocked ? null : codeSession;
 
-  // staff 管理页先只声明“展示型壳层”，具体桌面重排由后续任务接管。
   return (
     <MobilePage
       eyebrow="工作人员"
@@ -57,35 +56,54 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
       {wakeLockMessage ? <InlineNotice message={wakeLockMessage} theme="warning" /> : null}
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
       {resultMessage ? <InlineNotice message={resultMessage} theme="success" /> : null}
-      {detail ? (
-        <ActivityMetaPanel
-          counts={{
-            expected: visibleCodeSession?.registered_count ?? detail.registered_count,
-            checkin: visibleCodeSession?.checkin_count ?? detail.checkin_count,
-            checkout: visibleCodeSession?.checkout_count ?? detail.checkout_count
-          }}
-          description={detail.description}
-          locationText={detail.location}
-          subtitle={detail.activity_type}
-          timeText={detail.start_time}
-          tone="staff"
-          title={detail.activity_title}
-        />
-      ) : null}
-      <DynamicCodePanel
-        activityId={activityId}
-        actionType={actionType}
-        codeSession={visibleCodeSession}
-        loading={codeSessionLoading && !riskActionsBlocked}
-        // 自愈重检失败后，这里的高风险交互统一冻结，直到下一次完整安全刷新成功。
-        onActionChange={riskActionsBlocked ? () => {} : setActionType}
-        onRefresh={() => void refreshFromUserIntent()}
-      />
-      <BulkCheckoutButton
-        disabled={loading || !detail || riskActionsBlocked}
-        loading={bulkPending}
-        onConfirm={handleBulkCheckout}
-      />
+      <div className="staff-manage-workbench">
+        {detail ? (
+          <section className="staff-manage-workbench__summary">
+            {/* 摘要块复用共享 ActivityMetaPanel，避免 staff 页再造一份活动头部。 */}
+            <ActivityMetaPanel
+              counts={{
+                expected: visibleCodeSession?.registered_count ?? detail.registered_count,
+                checkin: visibleCodeSession?.checkin_count ?? detail.checkin_count,
+                checkout: visibleCodeSession?.checkout_count ?? detail.checkout_count
+              }}
+              description={detail.description}
+              locationText={detail.location}
+              subtitle={detail.activity_type}
+              timeText={detail.start_time}
+              title={detail.activity_title}
+              tone="staff"
+            />
+          </section>
+        ) : null}
+        <section className="staff-manage-workbench__hero">
+          {/* 动态码和它的统计、刷新条保持在同一工作台里，避免页面层再拆第二套逻辑。 */}
+          <div className="staff-manage-workbench__stats">
+            <DynamicCodePanel
+              activityId={activityId}
+              actionType={actionType}
+              codeSession={visibleCodeSession}
+              loading={codeSessionLoading && !riskActionsBlocked}
+              // 自愈重检失败后，这里的高风险交互统一冻结，直到下一次完整安全刷新成功。
+              onActionChange={riskActionsBlocked ? () => {} : setActionType}
+              onRefresh={() => void refreshFromUserIntent()}
+            />
+          </div>
+        </section>
+        <section className="staff-manage-workbench__danger" data-panel-tone="staff">
+          <div className="staff-manage-workbench__danger-copy">
+            <p className="staff-manage-workbench__danger-eyebrow">危险动作</p>
+            <h2 className="staff-manage-workbench__danger-title">活动结束统一签退</h2>
+            <p className="staff-manage-workbench__danger-description">
+              这里保留唯一的批量高风险入口，避免它和发码、刷新动作混在同一层里。
+            </p>
+          </div>
+          <BulkCheckoutButton
+            disabled={loading || !detail || riskActionsBlocked}
+            loading={bulkPending}
+            onConfirm={handleBulkCheckout}
+          />
+        </section>
+      </div>
     </MobilePage>
   );
 }

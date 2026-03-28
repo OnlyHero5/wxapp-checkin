@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DynamicCodePanel } from "./DynamicCodePanel";
 
 describe("DynamicCodePanel", () => {
-  it("exposes stable staff tone hooks for the manage page", () => {
+  it("exposes stable bento hooks for the manage page", () => {
     const onActionChange = vi.fn();
     const onRefresh = vi.fn();
 
@@ -28,13 +28,13 @@ describe("DynamicCodePanel", () => {
     );
 
     expect(screen.getByText("483920").closest(".staff-panel")).toHaveAttribute("data-panel-tone", "staff");
-    expect(screen.getByText("483920").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
-    expect(screen.getByText("实时统计").closest(".staff-panel__stats")).toHaveAttribute("data-display-zone", "stats");
-    expect(screen.getByRole("button", { name: "立即刷新" }).closest(".staff-panel__actions")).toHaveAttribute(
-      "data-display-zone",
-      "actions"
+    expect(document.querySelector(".staff-panel__rail")).toBeInTheDocument();
+    expect(document.querySelector(".staff-panel__hero")).toContainElement(screen.getByText("483920"));
+    expect(document.querySelector(".staff-panel__stats-strip")).toHaveTextContent("累计签到");
+    expect(document.querySelector(".staff-panel__action-bar")).toContainElement(
+      screen.getByRole("button", { name: "立即刷新" })
     );
-    expect(screen.getByText("签到码").closest(".staff-panel__controls")).toHaveAttribute("data-display-zone", "controls");
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
 
   it("renders the hero through project-owned header structure and component-library count-down", async () => {
@@ -113,7 +113,7 @@ describe("DynamicCodePanel", () => {
 
     expect(screen.getByText("当前签退码")).toBeInTheDocument();
     expect(screen.getByText("------")).toBeInTheDocument();
-    expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.getByText("------").closest(".staff-panel__hero")).toHaveAttribute("data-display-zone", "hero");
   });
 
   it("keeps the hero placeholder when the incoming code session still belongs to the previous action", () => {
@@ -198,14 +198,16 @@ describe("DynamicCodePanel", () => {
       />
     );
 
-    const panel = screen.getByText("签到码").closest(".staff-panel");
+    const panel = screen.getByText("签到码").closest(".staff-panel__rail");
     expect(panel).not.toBeNull();
     expect(
-      Array.from(panel?.querySelectorAll("[data-display-zone]") ?? []).map((child) => child.getAttribute("data-display-zone"))
+      Array.from(panel?.querySelectorAll("[data-display-zone]") ?? []).map((child) =>
+        child.getAttribute("data-display-zone")
+      )
     ).toEqual(["controls", "hero", "stats", "actions"]);
   });
 
-  it("renders the panel through TDesign row and col layout primitives instead of a project-owned desktop grid shell", () => {
+  it("renders the panel through a project-owned bento rail instead of TDesign row and cell-group shells", () => {
     const onActionChange = vi.fn();
     const onRefresh = vi.fn();
 
@@ -229,13 +231,13 @@ describe("DynamicCodePanel", () => {
       />
     );
 
-    expect(container.querySelector(".t-row")).not.toBeNull();
-    expect(container.querySelectorAll(".t-col").length).toBeGreaterThanOrEqual(4);
-    expect(container.querySelector(".staff-panel__layout")).not.toBeNull();
+    expect(container.querySelector(".t-row")).toBeNull();
+    expect(container.querySelector(".staff-panel__rail")).not.toBeNull();
+    expect(container.querySelectorAll(".staff-panel__metric-card")).toHaveLength(3);
   });
 
-  // staff 页首先服务手机值班场景，所以默认栅格必须先保证单列阅读顺序。
-  it("uses full-width columns as the mobile-first baseline before desktop breakpoints intervene", () => {
+  // staff 页首先服务手机值班场景，所以默认 rail 必须先保证单列阅读顺序。
+  it("uses a single-column bento rail as the mobile-first baseline", () => {
     const onActionChange = vi.fn();
     const onRefresh = vi.fn();
 
@@ -259,7 +261,9 @@ describe("DynamicCodePanel", () => {
       />
     );
 
-    expect(container.querySelectorAll(".t-col--24").length).toBeGreaterThanOrEqual(4);
-    expect(container.querySelector(".t-col--12")).toBeNull();
+    expect(
+      Array.from(container.querySelectorAll("[data-display-zone]")).map((item) => item.getAttribute("data-display-zone"))
+    ).toEqual(["controls", "hero", "stats", "actions"]);
+    expect(container.querySelector(".staff-panel__rail")).toBeInTheDocument();
   });
 });
