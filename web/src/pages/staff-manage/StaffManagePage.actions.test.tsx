@@ -9,7 +9,9 @@ const activitiesApiMocks = vi.hoisted(() => ({
 }));
 
 const staffApiMocks = vi.hoisted(() => ({
+  adjustAttendanceStates: vi.fn(),
   bulkCheckout: vi.fn(),
+  getActivityRoster: vi.fn(),
   getCodeSession: vi.fn()
 }));
 
@@ -35,7 +37,9 @@ vi.mock("../../features/activities/api", async (importOriginal) => {
 });
 
 vi.mock("../../features/staff/api", () => ({
+  adjustAttendanceStates: staffApiMocks.adjustAttendanceStates,
   bulkCheckout: staffApiMocks.bulkCheckout,
+  getActivityRoster: staffApiMocks.getActivityRoster,
   getCodeSession: staffApiMocks.getCodeSession
 }));
 
@@ -47,6 +51,16 @@ describe("StaffManagePage actions", () => {
       session_token: "sess_staff_manage_123"
     });
     activitiesApiMocks.getActivityDetail.mockImplementation(async (activityId: string) => buildActivityDetail(activityId));
+    staffApiMocks.getActivityRoster.mockResolvedValue({
+      activity_id: "act_101",
+      activity_title: "校园志愿活动",
+      items: []
+    });
+    staffApiMocks.adjustAttendanceStates.mockResolvedValue({
+      activity_id: "act_101",
+      affected_count: 0,
+      status: "success"
+    });
   });
 
   afterEach(() => {
