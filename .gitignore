@@ -11,3 +11,6 @@ web/.env*.local
 
 # ===== Runtime artifacts (logs/pids) =====
 local_dev/runtime/
+
+# ===== Brainstorm visual companion artifacts =====
+.superpowers/
