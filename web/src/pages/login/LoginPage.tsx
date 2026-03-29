@@ -48,6 +48,7 @@ export function LoginPage() {
       tone="brand"
       title="登录"
     >
+      {/* 登录页只保留一个业务主卡，避免页面壳层和表单层各自再造一张卡。 */}
       <AccountLoginForm errorMessage={errorMessage} onSubmit={handleSubmit} pending={pending} />
     </MobilePage>
   );

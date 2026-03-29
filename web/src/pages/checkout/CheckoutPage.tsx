@@ -8,6 +8,6 @@ import { AttendanceActionPage } from "../checkin/CheckinPage";
  */
 export function CheckoutPage() {
   // 签退页复用同一套动作页逻辑，只切换 actionType；
-  // 最终页面 tone 和输入框 tone 都由 `checkout` 动作语义驱动。
+  // 便当主卡、结果主卡和底部动作带都会沿用共享页结构，只由 `checkout` 语义切换色调与文案。
   return <AttendanceActionPage actionType="checkout" />;
 }

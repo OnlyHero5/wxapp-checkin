@@ -1,4 +1,3 @@
-import { Cell, CellGroup } from "tdesign-mobile-react";
 import { useNavigate } from "react-router-dom";
 import {
   clearSession,
@@ -40,7 +39,7 @@ function resolveRoleHint(role: string, permissions: string[]) {
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  // 个人中心第一版只消费登录时已经落到本地的会话快照，避免新开额外请求。
+  // 个人中心继续只消费本地会话快照，避免为了展示资料额外发请求。
   const sessionProfile = getSessionProfileSnapshot();
   const userProfile = sessionProfile.user_profile ?? {};
 
@@ -57,15 +56,27 @@ export function ProfilePage() {
       tone="brand"
       title="我的"
     >
-      <CellGroup theme="card" title="账户信息">
-        <Cell align="top" description={resolveRoleHint(sessionProfile.role, sessionProfile.permissions)} title="当前身份" />
-        {profileFields.map((field) => (
-          <Cell key={field.key} title={field.label} note={userProfile[field.key] || field.emptyText} />
-        ))}
-      </CellGroup>
-      <section>
-        {/* 当前个人中心只保留一个高频动作：退出登录。 */}
-        <AppButton onClick={handleLogout}>退出登录</AppButton>
+      {/* 个人页同样收成单主卡：资料、身份提示和退出动作在一条阅读路径里完成。 */}
+      <section className="profile-page__panel" data-panel-tone="brand">
+        <header className="profile-page__hero">
+          <p className="profile-page__eyebrow">账户信息</p>
+          <div className="profile-page__hero-copy">
+            <h2 className="profile-page__title">{userProfile.name || "当前会话"}</h2>
+            <p className="profile-page__description">{resolveRoleHint(sessionProfile.role, sessionProfile.permissions)}</p>
+          </div>
+        </header>
+        <div className="profile-page__field-list">
+          {profileFields.map((field) => (
+            <div className="profile-page__field-row" key={field.key}>
+              <span className="profile-page__field-label">{field.label}</span>
+              <span className="profile-page__field-value">{userProfile[field.key] || field.emptyText}</span>
+            </div>
+          ))}
+        </div>
+        <div className="profile-page__actions">
+          {/* 当前个人中心只保留一个高频动作：退出登录。 */}
+          <AppButton onClick={handleLogout}>退出登录</AppButton>
+        </div>
       </section>
     </MobilePage>
   );

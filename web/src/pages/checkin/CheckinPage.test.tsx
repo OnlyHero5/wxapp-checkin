@@ -99,6 +99,9 @@ describe("CheckinPage", () => {
     const form = input.closest("form");
 
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkin");
+    expect(document.querySelectorAll("section.activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelector(".attendance-action-detail__footer")).toBeInTheDocument();
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(input.closest(".t-input")).toBeInTheDocument();
     expect(input.closest(".t-form")).toBeInTheDocument();
     expect(form).not.toBeNull();
@@ -120,7 +123,8 @@ describe("CheckinPage", () => {
       });
     });
     expect(screen.getByRole("heading", { name: "签到结果" })).toBeInTheDocument();
-    expect(screen.getByText("提交成功").closest(".t-result")).toBeInTheDocument();
+    expect(document.querySelector(".attendance-action-result__panel")).toBeInTheDocument();
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByText("提交成功")).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
@@ -158,6 +162,9 @@ describe("CheckinPage", () => {
 
     expect(await screen.findByRole("heading", { name: "活动签退" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkout");
+    expect(document.querySelectorAll("section.activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelector(".attendance-action-detail__footer")).toBeInTheDocument();
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.getByPlaceholderText(CODE_PLACEHOLDER).closest(".t-input")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(CODE_PLACEHOLDER).closest(".t-form")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
@@ -175,6 +182,8 @@ describe("CheckinPage", () => {
       });
     });
     expect(screen.getByRole("heading", { name: "签退结果" })).toBeInTheDocument();
+    expect(document.querySelector(".attendance-action-result__panel")).toBeInTheDocument();
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
 
   it("resets the previous result state when switching to another activity route", async () => {
@@ -257,6 +266,8 @@ describe("CheckinPage", () => {
     renderAttendancePage("/activities/act_101/checkin");
 
     expect(await screen.findByText("当前状态下暂不可执行该动作，请先返回详情页确认活动状态。")).toBeInTheDocument();
+    expect(document.querySelectorAll("section.activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.getByText("当前状态下暂不可执行该动作，请先返回详情页确认活动状态。").closest(".t-empty")).toBeInTheDocument();
   });
 });

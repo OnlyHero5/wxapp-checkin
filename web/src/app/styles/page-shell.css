@@ -167,6 +167,216 @@
 }
 
 /* =========================================================
+ * 单主卡页面
+ * ---------------------------------------------------------
+ * 登录、签到结果、个人页都改成“页面壳 + 一张主卡”的同一套语法。
+ * 这里统一负责外卡、标题区、信息行和表单去卡片化覆盖。
+ * ========================================================= */
+
+.account-login-form__panel,
+.attendance-action-result__panel,
+.profile-page__panel {
+  position: relative;
+  display: grid;
+  gap: var(--app-bento-panel-section-gap);
+  padding: var(--app-bento-panel-padding);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-xl);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 255, 0.96));
+  box-shadow: var(--app-bento-panel-shadow);
+  overflow: hidden;
+  --panel-accent: var(--app-tone-brand-accent);
+  --panel-soft: var(--app-tone-brand-soft);
+}
+
+.attendance-action-result__panel[data-panel-tone="checkin"] {
+  --panel-accent: var(--app-tone-checkin-accent);
+  --panel-soft: var(--app-tone-checkin-soft);
+}
+
+.attendance-action-result__panel[data-panel-tone="checkout"] {
+  --panel-accent: var(--app-tone-checkout-accent);
+  --panel-soft: var(--app-tone-checkout-soft);
+}
+
+.account-login-form__panel::before,
+.attendance-action-result__panel::before,
+.profile-page__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--panel-accent), color-mix(in srgb, var(--panel-accent) 58%, white));
+}
+
+.account-login-form__panel::after,
+.attendance-action-result__panel::after,
+.profile-page__panel::after {
+  content: "";
+  position: absolute;
+  inset: auto -18% -38% auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--panel-soft) 68%, white);
+  pointer-events: none;
+}
+
+.account-login-form__hero,
+.attendance-action-result__hero,
+.profile-page__hero,
+.account-login-form__hero-copy,
+.attendance-action-result__hero-copy,
+.profile-page__hero-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+}
+
+.account-login-form__hero,
+.attendance-action-result__hero,
+.profile-page__hero {
+  gap: 10px;
+}
+
+.account-login-form__hero-copy,
+.attendance-action-result__hero-copy,
+.profile-page__hero-copy {
+  gap: 8px;
+}
+
+.account-login-form__eyebrow,
+.attendance-action-result__eyebrow,
+.profile-page__eyebrow,
+.account-login-form__title,
+.attendance-action-result__title,
+.profile-page__title,
+.account-login-form__description,
+.attendance-action-result__description,
+.profile-page__description,
+.attendance-action-detail__section-label,
+.attendance-action-result__meta-label,
+.attendance-action-result__meta-value,
+.profile-page__field-label,
+.profile-page__field-value {
+  margin: 0;
+}
+
+.account-login-form__eyebrow,
+.attendance-action-result__eyebrow,
+.profile-page__eyebrow,
+.attendance-action-detail__section-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--panel-accent);
+}
+
+.account-login-form__title,
+.attendance-action-result__title,
+.profile-page__title {
+  font-size: clamp(1.2rem, 4vw, 1.46rem);
+  line-height: 1.2;
+  color: var(--app-text-strong);
+}
+
+.account-login-form__description,
+.attendance-action-result__description,
+.profile-page__description {
+  line-height: 1.6;
+  color: var(--app-text);
+}
+
+/* 旧表单 class 继续保留给测试和行为使用，但视觉外观收回到主卡本身。 */
+.account-login-form__panel .account-login-form__form {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.account-login-form__panel .account-login-form__form::before {
+  display: none;
+}
+
+.account-login-form__panel .account-login-form__form input,
+.attendance-action-detail__form input {
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface-muted);
+}
+
+.account-login-form__panel .account-login-form__form button,
+.attendance-action-detail__form button {
+  font-weight: 700;
+}
+
+.attendance-action-detail__footer {
+  display: grid;
+  gap: 12px;
+}
+
+.attendance-action-detail__input-shell {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--panel-accent, var(--app-tone-default-accent)) 16%, white);
+  border-radius: var(--app-radius-md);
+  background: color-mix(in srgb, var(--panel-soft, var(--app-tone-default-soft)) 58%, white);
+}
+
+.attendance-action-detail__form {
+  display: grid;
+  gap: 12px;
+}
+
+.attendance-action-result__meta,
+.profile-page__field-list,
+.profile-page__actions {
+  position: relative;
+  z-index: 1;
+}
+
+.attendance-action-result__meta,
+.profile-page__field-list {
+  display: grid;
+}
+
+.attendance-action-result__meta-row,
+.profile-page__field-row {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+  gap: 10px 14px;
+  align-items: start;
+}
+
+.attendance-action-result__meta-row + .attendance-action-result__meta-row,
+.profile-page__field-row + .profile-page__field-row {
+  padding-top: 12px;
+  border-top: 1px solid var(--app-border-subtle);
+}
+
+.attendance-action-result__meta-label,
+.profile-page__field-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--app-text-muted);
+}
+
+.attendance-action-result__meta-value,
+.profile-page__field-value {
+  color: var(--app-text-strong);
+  line-height: 1.6;
+  text-align: right;
+}
+
+.profile-page__actions {
+  display: grid;
+}
+
+/* =========================================================
  * 活动主卡
  * ---------------------------------------------------------
  * 这里把旧的三卡分组收口成一张外卡 + 多个内部分区。
@@ -362,6 +572,16 @@
 }
 
 @media (max-width: 359px) {
+  .attendance-action-result__meta-row,
+  .profile-page__field-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .attendance-action-result__meta-value,
+  .profile-page__field-value {
+    text-align: left;
+  }
+
   .activity-meta-panel__title-row {
     flex-direction: column;
   }

@@ -72,14 +72,21 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
   }
 
   /**
-   * 登录输入同样保持“浏览器语义 + 组件库外观”双成立：
-   * - state 里继续保留原始输入，提交时再统一 trim；
-   * - DOM 上补齐 name / autocomplete，方便密码管理器与自动填充识别；
-   * - placeholder 按页面文案规范补成省略号。
+   * 登录页这一轮要收口成“一张主卡”：
+   * - 外层 panel 负责便当主卡视觉；
+   * - 内层 form 只保留输入与校验，不再自己冒充另一张卡；
+   * - 错误提示继续放在主卡内，避免登录失败时视觉焦点跳走。
    */
 
   return (
-    <div className="stack-form account-login-form">
+    <section className="account-login-form account-login-form__panel" data-panel-tone="brand">
+      <header className="account-login-form__hero">
+        <p className="account-login-form__eyebrow">账号登录</p>
+        <div className="account-login-form__hero-copy">
+          <h2 className="account-login-form__title">使用学号与密码继续</h2>
+          <p className="account-login-form__description">登录成功后会沿用当前会话写入逻辑，不改动现有鉴权流程。</p>
+        </div>
+      </header>
       {/* 必须阻止浏览器原生 submit，避免移动端把学号和密码直接拼进 URL。 */}
       <Form
         className="account-login-form__form"
@@ -117,6 +124,6 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
         </AppButton>
       </Form>
       {errorMessage ? <InlineNotice message={errorMessage} /> : null}
-    </div>
+    </section>
   );
 }

@@ -82,9 +82,14 @@ function AttendanceActionPageContent({ actionType, activityId }: { actionType: A
       ) : (
         <AppLoadingState message="活动信息加载中..." />
       )}
-      <AppButton onClick={handleBack} tone="secondary">
-        返回活动详情
-      </AppButton>
+      {/* 返回入口也进入统一动作带，避免输入主卡下方只悬一颗裸按钮。 */}
+      <section aria-label="页面操作" className="stack-form detail-actions detail-actions--bento">
+        <div className="detail-actions__rail">
+          <AppButton onClick={handleBack} tone="secondary">
+            返回活动详情
+          </AppButton>
+        </div>
+      </section>
     </MobilePage>
   );
 }

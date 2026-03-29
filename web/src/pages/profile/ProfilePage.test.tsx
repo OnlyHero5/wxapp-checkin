@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { clearSession, getSession, saveAuthSession } from "../../shared/session/session-store";
 import { ProfilePage } from "./ProfilePage";
 
+const profileFieldsCount = 4;
+
 function renderProfilePage() {
   render(
     <MemoryRouter initialEntries={["/profile"]}>
@@ -40,8 +42,12 @@ describe("ProfilePage", () => {
 
     expect(screen.getByRole("heading", { name: "我的" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
+    expect(document.querySelectorAll(".profile-page__panel")).toHaveLength(1);
+    expect(document.querySelector(".profile-page__panel")).toHaveAttribute("data-panel-tone", "brand");
+    expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
+    expect(document.querySelector(".profile-page__title")).toHaveTextContent("张三");
     expect(screen.getByText("姓名")).toBeInTheDocument();
-    expect(screen.getByText("张三")).toBeInTheDocument();
+    expect(screen.getByText("姓名").closest(".profile-page__field-row")).toHaveTextContent("张三");
     expect(screen.getByText("学号")).toBeInTheDocument();
     expect(screen.getByText("20230001")).toBeInTheDocument();
     expect(screen.getByText("院系")).toBeInTheDocument();
@@ -49,8 +55,7 @@ describe("ProfilePage", () => {
     expect(screen.getByText("社团")).toBeInTheDocument();
     expect(screen.getByText("青年志愿者协会")).toBeInTheDocument();
     expect(screen.getByText(/工作人员/)).toBeInTheDocument();
-    expect(document.querySelector(".t-cell-group--card")).not.toBeNull();
-    expect(document.querySelectorAll(".t-cell").length).toBeGreaterThan(0);
+    expect(document.querySelectorAll(".profile-page__field-row").length).toBe(profileFieldsCount);
     expect(screen.getByRole("button", { name: "退出登录" }).className).toContain("t-button");
     expect(screen.getByRole("button", { name: "退出登录" })).toHaveClass("app-button");
   });
