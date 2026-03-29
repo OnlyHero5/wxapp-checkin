@@ -102,7 +102,7 @@ describe("StaffManagePage code session", () => {
     expect(screen.getByRole("main")).toHaveAttribute("data-page-layout", "showcase-auto");
     expect(screen.getByText("483920")).toBeInTheDocument();
     expect(screen.getByText("483920").closest(".staff-panel")).toHaveAttribute("data-panel-tone", "staff");
-    expect(screen.getByText("483920").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.getByText("483920").closest(".staff-panel__hero")).toHaveAttribute("data-display-zone", "hero");
     expect(screen.getByText("实时统计")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "立即刷新" }).className).toContain("t-button");
     expect(screen.getByRole("button", { name: "立即刷新" })).toHaveClass("app-button");
@@ -143,7 +143,7 @@ describe("StaffManagePage code session", () => {
     await user.click(screen.getByText("签退码"));
 
     expect(screen.getByText("当前签退码")).toBeInTheDocument();
-    expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.getByText("------").closest(".staff-panel__hero")).toHaveAttribute("data-display-zone", "hero");
     expect(screen.queryByText("483920")).not.toBeInTheDocument();
     expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_101", "checkout");
 
