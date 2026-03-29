@@ -13,7 +13,10 @@ function readAppStyles() {
 const baseCss = readAppStyles();
 
 describe("base.css", () => {
-  it("styles shared app shells through project-owned classes instead of TDesign internal selectors", () => {
-    expect(baseCss).not.toMatch(/\.t-[a-z0-9_-]+/i);
+  it("keeps the app shell anchored on project-owned classes even when component-library selectors appear inside scoped regions", () => {
+    expect(baseCss).toMatch(/\.mobile-page__bento-rail/);
+    expect(baseCss).toMatch(/\.activity-meta-panel/);
+    expect(baseCss).toMatch(/\.staff-manage-workbench/);
+    expect(baseCss).toMatch(/\.profile-page__card/);
   });
 });

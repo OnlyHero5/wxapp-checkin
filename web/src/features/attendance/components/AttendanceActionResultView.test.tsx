@@ -22,7 +22,7 @@ describe("AttendanceActionResultView", () => {
     );
 
     expect(screen.getByRole("heading", { name: "签到结果" })).toBeInTheDocument();
-    expect(screen.getByText("提交成功").closest(".t-result")).toBeInTheDocument();
+    expect(screen.getByText("提交成功").closest(".attendance-action-result__panel")).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "返回活动详情" })).toBeInTheDocument();
   });
