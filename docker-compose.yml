@@ -9,7 +9,7 @@ services:
         ALL_PROXY: ${DOCKER_BUILD_ALL_PROXY:-}
         NO_PROXY: ${DOCKER_BUILD_NO_PROXY:-}
       extra_hosts:
-        - "host.docker.internal:host-gateway"
+        - "host.docker.internal:${HOST_DOCKER_INTERNAL_TARGET:-host-gateway}"
     container_name: wxapp-checkin
     environment:
       # 云服务器与三容器联调都统一走这组 env：
@@ -22,6 +22,10 @@ services:
       SESSION_TTL_SECONDS: ${WXAPP_SESSION_TTL_SECONDS:-7200}
       TOKIO_WORKER_THREADS: ${WXAPP_TOKIO_WORKER_THREADS:-2}
       MYSQL_MAX_CONNECTIONS: ${WXAPP_MYSQL_MAX_CONNECTIONS:-4}
+    extra_hosts:
+      # 云服务器默认继续解析到 `host-gateway`；
+      # 本地若宿主机端口存在冲突，则可在 `.env.docker` 覆写成 `suda-union` 的固定容器 IP。
+      - "host.docker.internal:${HOST_DOCKER_INTERNAL_TARGET:-host-gateway}"
     networks:
       - three-projects-net
     ports:
