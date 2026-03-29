@@ -1,6 +1,9 @@
 use crate::error::AppError;
 use sqlx::{FromRow, MySql, MySqlPool, QueryBuilder, Transaction};
 
+#[cfg(test)]
+use sqlx::Execute;
+
 const ATTENDANCE_ROSTER_SELECT_SQL: &str = r#"
   SELECT
     aa.id AS record_id,
@@ -58,6 +61,39 @@ fn build_attendance_roster_sql(where_clause: &str, for_update: bool) -> String {
     sql.push_str("\n  FOR UPDATE");
   }
   sql
+}
+
+/// 名单修正需要在同一条锁定查询里同时收口活动范围和目标 user_id：
+/// 1. `activity_id` 继续作为第一层过滤，避免事务锁扩散到整张报名表；
+/// 2. `user_id IN (...)` 仍交给 `QueryBuilder` 产出占位符，避免回退到手拼 `?, ?, ?`；
+/// 3. 这里不再在原始 SQL 里预埋 `?`，从根源上杜绝 `= ??` 这种混用占位符的语法错误。
+fn build_user_id_lock_query_builder(
+  legacy_activity_id: i64,
+  user_ids: &[i64],
+) -> QueryBuilder<'static, MySql> {
+  let mut query_builder = QueryBuilder::<MySql>::new(ATTENDANCE_ROSTER_SELECT_SQL);
+  query_builder.push("\n  WHERE aa.activity_id = ");
+  query_builder.push_bind(legacy_activity_id);
+  query_builder.push("\n    AND u.id IN (");
+  {
+    let mut separated = query_builder.separated(", ");
+    for &user_id in user_ids {
+      separated.push_bind(user_id);
+    }
+  }
+  query_builder.push(")");
+  query_builder.push(ATTENDANCE_ROSTER_ORDER_SQL);
+  query_builder.push("\n  FOR UPDATE");
+  query_builder
+}
+
+#[cfg(test)]
+fn build_user_id_lock_sql(user_id_count: usize) -> String {
+  let demo_user_ids = vec![0_i64; user_id_count];
+  build_user_id_lock_query_builder(0, &demo_user_ids)
+    .build()
+    .sql()
+    .to_string()
 }
 
 pub async fn find_attendance_for_update(
@@ -159,29 +195,15 @@ pub async fn list_by_user_ids_for_update(
     return Ok(Vec::new());
   }
 
-  // 项目里已经在别的仓储使用了 `sqlx::QueryBuilder`，
-  // 这里统一收口成同一动态 SQL 构造方式，避免继续手拼占位符字符串。
-  let base_sql = build_attendance_roster_base_sql(
-    r#"
-  WHERE aa.activity_id = ?
-"#,
-  );
-  let mut query_builder = QueryBuilder::<MySql>::new(&base_sql);
-  query_builder.push_bind(legacy_activity_id);
-  query_builder.push(" AND u.id IN (");
-  {
-    let mut separated = query_builder.separated(", ");
-    for user_id in user_ids {
-      separated.push_bind(user_id);
-    }
-  }
-  query_builder.push(")");
-  query_builder.push(ATTENDANCE_ROSTER_ORDER_SQL);
-  query_builder.push("\n  FOR UPDATE");
-
-  query_builder
+  // 名单修正链路必须共用同一份动态锁定 SQL，
+  // 这样测试和运行时都能围绕“activity_id + user_ids”这组边界做回归保护。
+  build_user_id_lock_query_builder(legacy_activity_id, user_ids)
     .build_query_as::<ManagedAttendanceRow>()
     .fetch_all(&mut **tx)
     .await
     .map_err(|error| AppError::internal(format!("锁定名单修正目标失败：{error}")))
 }
+
+#[cfg(test)]
+#[path = "attendance_repo_tests.rs"]
+mod tests;
