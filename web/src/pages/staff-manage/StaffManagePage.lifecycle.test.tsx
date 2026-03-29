@@ -132,7 +132,7 @@ describe("StaffManagePage lifecycle", () => {
 
     expect(screen.getByText("当前签到码")).toBeInTheDocument();
     expect(screen.queryByText("旧活动标题 act_101")).not.toBeInTheDocument();
-    expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.getByText("------").closest(".staff-panel__hero")).toHaveAttribute("data-display-zone", "hero");
     expect(screen.queryByText("483920")).not.toBeInTheDocument();
     expect(screen.queryAllByText("1001")).toHaveLength(0);
     expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_202");
@@ -372,10 +372,17 @@ describe("StaffManagePage lifecycle", () => {
     expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(1);
     expect(activitiesApiMocks.getActivityDetail).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("483920")).not.toBeInTheDocument();
-    expect(screen.getByText("------").closest(".staff-code-panel")).toHaveAttribute("data-display-zone", "hero");
+    expect(screen.getByText("------").closest(".staff-panel__hero")).toHaveAttribute("data-display-zone", "hero");
     expect(screen.getAllByText("--")).toHaveLength(3);
     expect(screen.queryByText(/^0$/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "一键全部签退" })).toBeDisabled();
+
+    // 风险阻断态下页签点击必须被冻结，避免继续触发新的动态码语义切换。
+    await user.click(screen.getByText("签退码"));
+
+    expect(screen.getByText("当前签到码")).toBeInTheDocument();
+    expect(screen.queryByText("当前签退码")).not.toBeInTheDocument();
+    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole("button", { name: "立即刷新" }));
 

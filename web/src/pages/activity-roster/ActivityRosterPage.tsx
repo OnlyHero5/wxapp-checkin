@@ -4,7 +4,6 @@ import {
   AttendanceBatchActionBar
 } from "../../features/staff/components/AttendanceBatchActionBar";
 import { AttendanceRosterList } from "../../features/staff/components/AttendanceRosterList";
-import type { NormalizedRosterItem } from "../../features/staff/attendance-roster-state";
 import { ActivityMetaPanel } from "../../shared/ui/ActivityMetaPanel";
 import { AppLoadingState } from "../../shared/ui/AppLoadingState";
 import { AppTextLink } from "../../shared/ui/AppTextLink";
@@ -78,7 +77,8 @@ export function ActivityRosterPage() {
               </p>
             </header>
             <AttendanceRosterList
-              items={roster.items as NormalizedRosterItem[]}
+              // `roster.items` 在 hook 层已经收口成规范态，这里不再回退到原始接口类型。
+              items={roster.items}
               onSingleAction={(userId, action) => runAdjustment([userId], action, "单人")}
               onToggleSelection={handleToggleSelection}
               selectedIds={selectedIds}
