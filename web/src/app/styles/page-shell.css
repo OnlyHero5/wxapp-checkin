@@ -169,13 +169,19 @@
 /* =========================================================
  * 单主卡页面
  * ---------------------------------------------------------
- * 登录、签到结果、个人页都改成“页面壳 + 一张主卡”的同一套语法。
- * 这里统一负责外卡、标题区、信息行和表单去卡片化覆盖。
+ * 这里承接 Task 6 轻流程页面的项目内钩子：
+ * - 登录页用 `account-login-form__card`
+ * - 结果页用 `attendance-action-result__panel`
+ * - 个人页资料卡用 `profile-page__card`
+ * - 个人页动作卡用 `profile-page__actions`
+ *
+ * 这些类名已经被测试锁住，后续如需重命名必须同步更新计划和测试。
  * ========================================================= */
 
-.account-login-form__panel,
+.account-login-form__card,
 .attendance-action-result__panel,
-.profile-page__panel {
+.profile-page__card,
+.profile-page__actions {
   position: relative;
   display: grid;
   gap: var(--app-bento-panel-section-gap);
@@ -199,9 +205,10 @@
   --panel-soft: var(--app-tone-checkout-soft);
 }
 
-.account-login-form__panel::before,
+.account-login-form__card::before,
 .attendance-action-result__panel::before,
-.profile-page__panel::before {
+.profile-page__card::before,
+.profile-page__actions::before {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
@@ -209,9 +216,10 @@
   background: linear-gradient(90deg, var(--panel-accent), color-mix(in srgb, var(--panel-accent) 58%, white));
 }
 
-.account-login-form__panel::after,
+.account-login-form__card::after,
 .attendance-action-result__panel::after,
-.profile-page__panel::after {
+.profile-page__card::after,
+.profile-page__actions::after {
   content: "";
   position: absolute;
   inset: auto -18% -38% auto;
@@ -282,13 +290,14 @@
 
 .account-login-form__description,
 .attendance-action-result__description,
-.profile-page__description {
+.profile-page__description,
+.profile-page__actions-description {
   line-height: 1.6;
   color: var(--app-text);
 }
 
 /* 旧表单 class 继续保留给测试和行为使用，但视觉外观收回到主卡本身。 */
-.account-login-form__panel .account-login-form__form {
+.account-login-form__card .account-login-form__form {
   position: relative;
   z-index: 1;
   padding: 0;
@@ -298,19 +307,23 @@
   box-shadow: none;
 }
 
-.account-login-form__panel .account-login-form__form::before {
+.account-login-form__card .account-login-form__form::before {
   display: none;
 }
 
-.account-login-form__panel .account-login-form__form input,
+.account-login-form__card .account-login-form__form input,
 .attendance-action-detail__form input {
   border-radius: var(--app-radius-md);
   background: var(--app-surface-muted);
 }
 
-.account-login-form__panel .account-login-form__form button,
+.account-login-form__card .account-login-form__form button,
 .attendance-action-detail__form button {
   font-weight: 700;
+}
+
+.attendance-action-detail__card {
+  display: grid;
 }
 
 .attendance-action-detail__footer {
@@ -340,7 +353,8 @@
 }
 
 .attendance-action-result__meta,
-.profile-page__field-list {
+.profile-page__field-list,
+.profile-page__actions {
   display: grid;
 }
 
@@ -373,7 +387,19 @@
 }
 
 .profile-page__actions {
-  display: grid;
+  gap: 12px;
+}
+
+.profile-page__actions-title,
+.profile-page__actions-description {
+  margin: 0;
+}
+
+.profile-page__actions-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--panel-accent);
 }
 
 /* =========================================================

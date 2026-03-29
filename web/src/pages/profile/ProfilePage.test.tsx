@@ -42,8 +42,9 @@ describe("ProfilePage", () => {
 
     expect(screen.getByRole("heading", { name: "我的" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
-    expect(document.querySelectorAll(".profile-page__panel")).toHaveLength(1);
-    expect(document.querySelector(".profile-page__panel")).toHaveAttribute("data-panel-tone", "brand");
+    expect(document.querySelectorAll(".profile-page__card")).toHaveLength(1);
+    expect(document.querySelector(".profile-page__card")).toHaveAttribute("data-panel-tone", "brand");
+    expect(document.querySelector(".profile-page__actions")).toHaveAttribute("data-panel-tone", "brand");
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(document.querySelector(".profile-page__title")).toHaveTextContent("张三");
     expect(screen.getByText("姓名")).toBeInTheDocument();
@@ -56,6 +57,7 @@ describe("ProfilePage", () => {
     expect(screen.getByText("青年志愿者协会")).toBeInTheDocument();
     expect(screen.getByText(/工作人员/)).toBeInTheDocument();
     expect(document.querySelectorAll(".profile-page__field-row").length).toBe(profileFieldsCount);
+    expect(screen.getByRole("button", { name: "退出登录" }).closest(".profile-page__actions")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "退出登录" }).className).toContain("t-button");
     expect(screen.getByRole("button", { name: "退出登录" })).toHaveClass("app-button");
   });

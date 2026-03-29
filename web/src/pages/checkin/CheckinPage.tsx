@@ -50,7 +50,12 @@ function AttendanceActionPageContent({ actionType, activityId }: { actionType: A
     activityId
   });
 
-  // 成功结果页与输入页拆成两个视觉状态，用户更容易确认“本次操作已经被服务端接受”。
+  /**
+   * 动作页继续把“输入态”和“结果态”拆成两套页面：
+   * - 输入态围绕 `attendance-action-detail__card` 主卡工作；
+   * - 结果态围绕结果确认卡工作；
+   * - 两者都复用同一个 hook，不能在页面层复制提交逻辑。
+   */
   if (result) {
     return (
       <AttendanceActionResultView
@@ -67,7 +72,7 @@ function AttendanceActionPageContent({ actionType, activityId }: { actionType: A
       tone={actionTone}
       title={resolveActionTitle(actionType)}
     >
-      {/* 页面级错误一般出现在详情拉取失败阶段。 */}
+      {/* 页面级错误一般出现在详情拉取失败阶段；输入校验和提交错误仍由主卡内部处理。 */}
       {pageError ? <InlineNotice message={pageError} /> : null}
       {detail ? (
         <AttendanceActionDetailSection
@@ -82,7 +87,7 @@ function AttendanceActionPageContent({ actionType, activityId }: { actionType: A
       ) : (
         <AppLoadingState message="活动信息加载中..." />
       )}
-      {/* 返回入口也进入统一动作带，避免输入主卡下方只悬一颗裸按钮。 */}
+      {/* 返回入口独立留在动作带，避免把“离开当前页”的行为混进动态码主卡正文。 */}
       <section aria-label="页面操作" className="stack-form detail-actions detail-actions--bento">
         <div className="detail-actions__rail">
           <AppButton onClick={handleBack} tone="secondary">

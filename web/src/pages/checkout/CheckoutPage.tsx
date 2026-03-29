@@ -8,6 +8,6 @@ import { AttendanceActionPage } from "../checkin/CheckinPage";
  */
 export function CheckoutPage() {
   // 签退页复用同一套动作页逻辑，只切换 actionType；
-  // 便当主卡、结果主卡和底部动作带都会沿用共享页结构，只由 `checkout` 语义切换色调与文案。
+  // `attendance-action-detail__card` 等结构钩子也必须和签到页保持一致，方便测试与样式统一维护。
   return <AttendanceActionPage actionType="checkout" />;
 }

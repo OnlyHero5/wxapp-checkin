@@ -72,14 +72,14 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
   }
 
   /**
-   * 登录页这一轮要收口成“一张主卡”：
-   * - 外层 panel 负责便当主卡视觉；
-   * - 内层 form 只保留输入与校验，不再自己冒充另一张卡；
-   * - 错误提示继续放在主卡内，避免登录失败时视觉焦点跳走。
+   * 登录页这一轮继续沿用 Task 6 计划里的 `account-login-form__card` 钩子：
+   * - 页面测试和样式都依赖这层主卡语义，后续不要再随意改名；
+   * - 内层 form 只负责字段采集、trim 和提交，不承担“再造一张卡”的职责；
+   * - 错误提示仍留在同一张卡里，这样登录失败后用户视线不会从输入区跳走。
    */
 
   return (
-    <section className="account-login-form account-login-form__panel" data-panel-tone="brand">
+    <section className="account-login-form account-login-form__card" data-panel-tone="brand">
       <header className="account-login-form__hero">
         <p className="account-login-form__eyebrow">账号登录</p>
         <div className="account-login-form__hero-copy">
@@ -95,6 +95,7 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
         preventSubmitDefault
         scrollToFirstError="auto"
       >
+        {/* 学号输入仍保留浏览器可识别的 `username` 语义，方便密码管理器自动填充。 */}
         <FormItem label="学号" name="student_id" rules={loginRules.student_id}>
           <Input
             autocomplete="username"
@@ -108,6 +109,7 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
             value={studentId}
           />
         </FormItem>
+        {/* 密码字段继续走 `current-password`，确保现有登录链路不因布局重构丢失浏览器能力。 */}
         <FormItem label="密码" name="password" rules={loginRules.password}>
           <Input
             autocomplete="current-password"

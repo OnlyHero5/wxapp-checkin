@@ -56,8 +56,8 @@ export function ProfilePage() {
       tone="brand"
       title="我的"
     >
-      {/* 个人页同样收成单主卡：资料、身份提示和退出动作在一条阅读路径里完成。 */}
-      <section className="profile-page__panel" data-panel-tone="brand">
+      {/* 资料摘要卡只负责“我是谁、我现在能做什么”，不要把危险动作继续塞回同一块信息卡。 */}
+      <section className="profile-page__card" data-panel-tone="brand">
         <header className="profile-page__hero">
           <p className="profile-page__eyebrow">账户信息</p>
           <div className="profile-page__hero-copy">
@@ -68,15 +68,18 @@ export function ProfilePage() {
         <div className="profile-page__field-list">
           {profileFields.map((field) => (
             <div className="profile-page__field-row" key={field.key}>
+              {/* 字段行沿用固定顺序，避免不同入口写入快照时造成资料阅读路径跳动。 */}
               <span className="profile-page__field-label">{field.label}</span>
               <span className="profile-page__field-value">{userProfile[field.key] || field.emptyText}</span>
             </div>
           ))}
         </div>
-        <div className="profile-page__actions">
-          {/* 当前个人中心只保留一个高频动作：退出登录。 */}
-          <AppButton onClick={handleLogout}>退出登录</AppButton>
-        </div>
+      </section>
+      {/* 退出登录单独放到动作卡，避免资料确认与会话终止操作混在一个视觉块里。 */}
+      <section className="profile-page__actions" data-panel-tone="brand">
+        <p className="profile-page__actions-title">会话操作</p>
+        <p className="profile-page__actions-description">退出后会清空当前本地会话，并回到公共登录入口。</p>
+        <AppButton onClick={handleLogout}>退出登录</AppButton>
       </section>
     </MobilePage>
   );

@@ -49,15 +49,15 @@ describe("LoginPage", () => {
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
     expect(screen.getByText("账号为学号，请输入当前可用密码。")).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "brand");
-    expect(document.querySelectorAll(".account-login-form__panel")).toHaveLength(1);
-    expect(document.querySelector(".account-login-form__panel")).toHaveAttribute("data-panel-tone", "brand");
+    expect(document.querySelectorAll(".account-login-form__card")).toHaveLength(1);
+    expect(document.querySelector(".account-login-form__card")).toHaveAttribute("data-panel-tone", "brand");
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.getByRole("button", { name: "登录" }).className).toContain("t-button");
     expect(screen.getByRole("button", { name: "登录" })).toHaveClass("app-button");
     expect(screen.getByRole("button", { name: "登录" })).toHaveAttribute("type", "submit");
     expect(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest(".t-input")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(PASSWORD_PLACEHOLDER).closest(".t-input")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest(".account-login-form__panel")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest(".account-login-form__card")).toBeInTheDocument();
 
     const form = screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest("form");
     expect(form).not.toBeNull();
@@ -87,7 +87,7 @@ describe("LoginPage", () => {
     fireEvent.submit(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest("form")!);
 
     expect(await screen.findByText("密码错误")).toBeInTheDocument();
-    expect(document.querySelector(".account-login-form__panel")).toBeInTheDocument();
+    expect(document.querySelector(".account-login-form__card")).toBeInTheDocument();
     expect(getSession()).toBe("");
   });
 });

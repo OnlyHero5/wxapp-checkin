@@ -25,6 +25,7 @@ export function LoginPage() {
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(input: { student_id: string; password: string }) {
+    // 登录页只协调请求生命周期；字段清洗和表单校验继续留在 `AccountLoginForm`。
     setPending(true);
     setErrorMessage("");
 

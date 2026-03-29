@@ -56,14 +56,15 @@ export function AttendanceActionDetailSection({
       return;
     }
 
+    // 页面状态机已经在 hook 里处理 pending 和请求异常，这里只负责把“当前 6 位码”送出去。
     await onSubmit();
   }
 
   /**
-   * 签到/签退输入页现在统一落在活动主卡里：
-   * 1. 详情字段交给共享 `ActivityMetaPanel` 排版；
-   * 2. 动态码输入作为主卡 footer，和详情保持一个阅读闭环；
-   * 3. 不可操作时仍保留同一张主卡，只替换 footer 内容，避免页面结构抖动。
+   * 这一层专门承担“轻流程动作页”的主卡拼装：
+   * 1. 外层 `attendance-action-detail__card` 是 Task 6 计划锁定的稳定钩子；
+   * 2. 详情字段继续交给共享 `ActivityMetaPanel`，避免输入页自己维护字段顺序；
+   * 3. footer 根据可执行性切换成输入区或空态，但永远留在同一张卡里，页面结构不抖动。
    */
   const footer = actionAvailable ? (
     <section aria-label={inputLabel} className="attendance-action-detail__footer">
@@ -76,6 +77,7 @@ export function AttendanceActionDetailSection({
           preventSubmitDefault
           scrollToFirstError="auto"
         >
+          {/* 动态码输入和提交按钮必须留在同一 form 里，才能继续复用原来的 submit 行为与测试入口。 */}
           <FormItem help="请在当前活动下输入 6 位动态验证码" name="dynamic_code" rules={dynamicCodeRules}>
             <Input
               align="center"
@@ -100,20 +102,23 @@ export function AttendanceActionDetailSection({
     </section>
   ) : (
     <section className="attendance-action-detail__footer">
+      {/* 不可执行时只替换 footer 内容，不改变卡片骨架，避免用户误判为页面加载失败。 */}
       <AppEmptyState message="当前状态下暂不可执行该动作，请先返回详情页确认活动状态。" />
     </section>
   );
 
   return (
-    <ActivityMetaPanel
-      description={detail.description}
-      footer={footer}
-      locationText={detail.location}
-      subtitle={detail.activity_type}
-      timeText={detail.start_time}
-      title={detail.activity_title}
-      titleAs="h2"
-      tone={resolveActionTone(actionType)}
-    />
+    <section className="attendance-action-detail__card" data-panel-tone={resolveActionTone(actionType)}>
+      <ActivityMetaPanel
+        description={detail.description}
+        footer={footer}
+        locationText={detail.location}
+        subtitle={detail.activity_type}
+        timeText={detail.start_time}
+        title={detail.activity_title}
+        titleAs="h2"
+        tone={resolveActionTone(actionType)}
+      />
+    </section>
   );
 }

@@ -99,11 +99,13 @@ describe("CheckinPage", () => {
     const form = input.closest("form");
 
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkin");
-    expect(document.querySelectorAll("section.activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelectorAll(".attendance-action-detail__card")).toHaveLength(1);
+    expect(document.querySelector(".attendance-action-detail__card")).toHaveAttribute("data-panel-tone", "checkin");
     expect(document.querySelector(".attendance-action-detail__footer")).toBeInTheDocument();
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(input.closest(".t-input")).toBeInTheDocument();
     expect(input.closest(".t-form")).toBeInTheDocument();
+    expect(input.closest(".attendance-action-detail__card")).toBeInTheDocument();
     expect(form).not.toBeNull();
     expect(screen.getByText("请在当前活动下输入 6 位动态验证码")).toBeInTheDocument();
     expect(submitButton.className).toContain("t-button");
@@ -162,11 +164,13 @@ describe("CheckinPage", () => {
 
     expect(await screen.findByRole("heading", { name: "活动签退" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "checkout");
-    expect(document.querySelectorAll("section.activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelectorAll(".attendance-action-detail__card")).toHaveLength(1);
+    expect(document.querySelector(".attendance-action-detail__card")).toHaveAttribute("data-panel-tone", "checkout");
     expect(document.querySelector(".attendance-action-detail__footer")).toBeInTheDocument();
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.getByPlaceholderText(CODE_PLACEHOLDER).closest(".t-input")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(CODE_PLACEHOLDER).closest(".t-form")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(CODE_PLACEHOLDER).closest(".attendance-action-detail__card")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "页面导航" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "返回活动详情" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "提交签退码" }).className).toContain("t-button");
@@ -266,7 +270,7 @@ describe("CheckinPage", () => {
     renderAttendancePage("/activities/act_101/checkin");
 
     expect(await screen.findByText("当前状态下暂不可执行该动作，请先返回详情页确认活动状态。")).toBeInTheDocument();
-    expect(document.querySelectorAll("section.activity-meta-panel")).toHaveLength(1);
+    expect(document.querySelectorAll(".attendance-action-detail__card")).toHaveLength(1);
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
     expect(screen.getByText("当前状态下暂不可执行该动作，请先返回详情页确认活动状态。").closest(".t-empty")).toBeInTheDocument();
   });
