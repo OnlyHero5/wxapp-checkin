@@ -1,8 +1,8 @@
 # 手机 Web 动态验证码签到 API 协议规范
 
-文档版本：v1.2  
+文档版本：v1.3  
 状态：正式基线  
-更新日期：2026-03-27  
+更新日期：2026-03-31  
 项目：`wxapp-checkin`
 
 ## 1. 文档目标与适用范围
@@ -172,6 +172,7 @@
 
 - `page`：页码，从 1 开始；默认 1。
 - `page_size`：每页条数；默认 50，最大 200。
+- `keyword`：活动搜索关键字；按标题、地点、描述和 `activity_id` 模糊匹配。空字符串按未传处理。
 
 成功响应示例：
 
@@ -209,6 +210,7 @@
 
 - `activity_id` 对外继续使用 `legacy_act_<id>`。
 - staff 可见全部活动；普通用户只看自己相关活动。
+- 搜索关键字提交后继续按分页返回结果；前端应从第一页重新拉取。
 
 ### 5.2 `GET /api/web/activities/{activity_id}`
 
@@ -390,6 +392,7 @@
 用途：
 
 - staff 修正一个或多个成员的签到 / 签退状态。
+- staff 管理页与名单页发现异常签退态（`checked_out=true && checked_in=false`）时，也会复用该接口自动提交自愈请求。
 
 请求体：
 
@@ -423,6 +426,12 @@
 - `invalid_activity`
 - `invalid_param`
 - `session_expired`
+
+补充约束：
+
+- 自动自愈请求与人工修正共用同一路径，区别只体现在 `reason`。
+- 当前自动自愈请求的固定原因文本为：`自动修复异常签退状态`。
+- 自愈成功后，staff 页面必须重新读取名单、统计或动态码，避免后续操作继续建立在脏状态之上。
 
 ### 6.3 `POST /api/web/staff/activities/{activity_id}/bulk-checkout`
 

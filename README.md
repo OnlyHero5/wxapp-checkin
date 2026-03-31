@@ -113,7 +113,15 @@ cd wxapp-checkin
 cp .env.docker.example .env.docker
 ```
 
-然后在 `.env.docker` 里填写 `suda-union` 的账号、密码和签名密钥，再执行：
+`.env.docker` 是当前 Docker 发布的唯一配置入口；数据库连接相关的主机、端口、库名、账号、密码都统一放在这里管理。示例文件当前默认值使用：
+
+- `SUDA_UNION_DB_HOST=host.docker.internal`
+- `SUDA_UNION_DB_PORT=3317`
+- `SUDA_UNION_DB_NAME=suda_union`
+- `SUDA_UNION_DB_USER=suda_union`
+- `SUDA_UNION_DB_PASSWORD=...`
+
+生产环境只需要按实际机器改写 `.env.docker` 里的这些字段和 `WXAPP_QR_SIGNING_KEY`，然后执行：
 
 ```bash
 ./scripts/docker-prod.sh

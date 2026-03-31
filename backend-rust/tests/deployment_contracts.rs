@@ -22,6 +22,8 @@ fn startup_should_run_database_readiness_checks_before_serving() {
 
 #[test]
 fn docker_compose_should_externalize_suda_union_credentials_and_port() {
+  // Compose 只负责从 env 文件组装 DSN，
+  // 不应该把数据库主机、端口、账号、密码硬编码死在 YAML 里。
   let compose =
     fs::read_to_string(repo_file("docker-compose.yml")).expect("read docker-compose.yml");
   assert!(
@@ -29,8 +31,8 @@ fn docker_compose_should_externalize_suda_union_credentials_and_port() {
     "docker compose should read suda-union host from env file instead of hardcoding it"
   );
   assert!(
-    compose.contains("SUDA_UNION_DB_PORT:-3499"),
-    "docker compose should default suda-union port to 3499"
+    compose.contains("SUDA_UNION_DB_PORT"),
+    "docker compose should read suda-union port from env file"
   );
   assert!(
     compose.contains("SUDA_UNION_DB_USER"),
@@ -44,6 +46,8 @@ fn docker_compose_should_externalize_suda_union_credentials_and_port() {
 
 #[test]
 fn docker_env_example_should_document_suda_union_connection_fields() {
+  // `.env.docker.example` 现在承担“唯一 Docker 发布配置入口”的职责，
+  // 因此除了字段存在，还要锁住当前示例 host / port，避免文档和模板再次漂移。
   let env_example = repo_file(".env.docker.example");
   assert!(
     env_example.exists(),
@@ -55,8 +59,12 @@ fn docker_env_example_should_document_suda_union_connection_fields() {
     "docker env example should document the suda-union password field"
   );
   assert!(
-    env.contains("SUDA_UNION_DB_PORT=3499"),
-    "docker env example should lock the suda-union port to 3499 by default"
+    env.contains("SUDA_UNION_DB_HOST=host.docker.internal"),
+    "docker env example should document the current cloud example host"
+  );
+  assert!(
+    env.contains("SUDA_UNION_DB_PORT=3317"),
+    "docker env example should document the current cloud example port"
   );
   assert!(
     env.contains("python3"),
@@ -112,12 +120,20 @@ fn repository_should_offer_one_click_docker_deploy_script() {
 }
 
 #[test]
-fn deployment_doc_should_point_to_suda_union_docker_endpoint() {
+fn deployment_doc_should_describe_env_driven_docker_connection_contract() {
   let deployment_doc =
     fs::read_to_string(repo_file("docs/DEPLOYMENT.md")).expect("read docs/DEPLOYMENT.md");
   assert!(
-    deployment_doc.contains("suda-union:3499"),
-    "deployment doc should describe the docker-network suda-union endpoint on port 3499"
+    deployment_doc.contains(".env.docker"),
+    "deployment doc should keep docker connection settings in the env file"
+  );
+  assert!(
+    deployment_doc.contains("host.docker.internal"),
+    "deployment doc should describe the current cloud example host"
+  );
+  assert!(
+    deployment_doc.contains("3317"),
+    "deployment doc should describe the current cloud example port"
   );
 }
 

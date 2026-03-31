@@ -1,6 +1,6 @@
 # wxapp-checkin 部署手册
 
-更新日期：2026-03-27  
+更新日期：2026-03-31  
 适用范围：`wxapp-checkin` 当前正式形态（`web/ + backend-rust/ + suda_union`）
 
 ## 1. 部署目标
@@ -66,7 +66,7 @@ npm run build
 最小示例：
 
 ```bash
-DATABASE_URL=mysql://wxcheckin_app:replace-password@suda-union:3499/suda_union
+DATABASE_URL=mysql://wxcheckin_app:replace-password@<db-host>:<db-port>/suda_union
 SERVER_PORT=8080
 SESSION_TTL_SECONDS=7200
 QR_SIGNING_KEY=replace-this-before-prod
@@ -76,8 +76,8 @@ MYSQL_MAX_CONNECTIONS=4
 
 说明：
 
-- `suda-union:3499` 是当前三容器 / 云服务器口径下的数据库入口
-- 如果数据库账号、密码有变动，优先改 `DATABASE_URL` 或 `.env.docker` 中的拆分字段
+- 非 Docker 直启 release 时，`DATABASE_URL` 直接写成目标环境可访问的数据库地址即可。
+- 如果走当前推荐的 Docker 一键部署，优先维护 `.env.docker` 中的拆分字段，由 Compose 自动组装 `DATABASE_URL`。
 
 ## 6. 云服务器 Docker 一键部署
 
@@ -90,13 +90,18 @@ cp .env.docker.example .env.docker
 
 然后编辑 `.env.docker`，至少填好：
 
-- `SUDA_UNION_DB_HOST`
-- `SUDA_UNION_DB_PORT=3499`
+- `SUDA_UNION_DB_HOST=host.docker.internal`
+- `SUDA_UNION_DB_PORT=3317`
+- `SUDA_UNION_DB_NAME=suda_union`
 - `SUDA_UNION_DB_USER`
 - `SUDA_UNION_DB_PASSWORD`
 - `WXAPP_QR_SIGNING_KEY`
 
-其中 `WXAPP_QR_SIGNING_KEY` 可以直接参考 `.env.docker.example` 里的 Python 3 生成命令；示例文件里也附了一条实际生成结果，便于你核对格式。
+说明：
+
+- 当前云服务器示例值默认通过 `host.docker.internal:3317` 回连宿主机暴露的 `suda_union` MySQL。
+- 如果你的数据库主机、端口、账号或密码不同，只修改 `.env.docker` 对应字段即可；发布脚本与 Compose 不需要额外改动。
+- `WXAPP_QR_SIGNING_KEY` 可以直接参考 `.env.docker.example` 里的 Python 3 生成命令；示例文件里也附了一条实际生成结果，便于你核对格式。
 
 最后执行：
 

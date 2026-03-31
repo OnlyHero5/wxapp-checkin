@@ -12,19 +12,19 @@ services:
         - "host.docker.internal:${HOST_DOCKER_INTERNAL_TARGET:-host-gateway}"
     container_name: wxapp-checkin
     environment:
-      # 云服务器与三容器联调都统一走这组 env：
-      # - 账号、密码、主机、端口都从 `.env.docker` 一类配置文件读；
-      # - 默认端口固定收敛到用户确认过的 3499；
+      # Docker 发布统一从 `.env.docker` 读取数据库连接字段：
+      # - 当前示例值默认指向 `host.docker.internal:3317`；
+      # - 生产环境若主机、端口或账号不同，只改 `.env.docker` 即可；
       # - 容器内仍然只把 Rust 后端监听在 8080，外部统一经由 nginx:89。
-      DATABASE_URL: mysql://${SUDA_UNION_DB_USER:-wxcheckin_app}:${SUDA_UNION_DB_PASSWORD:-replace-me}@${SUDA_UNION_DB_HOST:-suda-union}:${SUDA_UNION_DB_PORT:-3499}/${SUDA_UNION_DB_NAME:-suda_union}
+      DATABASE_URL: mysql://${SUDA_UNION_DB_USER:-suda_union}:${SUDA_UNION_DB_PASSWORD:-replace-me}@${SUDA_UNION_DB_HOST:-host.docker.internal}:${SUDA_UNION_DB_PORT:-3317}/${SUDA_UNION_DB_NAME:-suda_union}
       QR_SIGNING_KEY: ${WXAPP_QR_SIGNING_KEY:-replace-this-before-prod}
       SERVER_PORT: ${WXAPP_INTERNAL_PORT:-8080}
       SESSION_TTL_SECONDS: ${WXAPP_SESSION_TTL_SECONDS:-7200}
       TOKIO_WORKER_THREADS: ${WXAPP_TOKIO_WORKER_THREADS:-2}
       MYSQL_MAX_CONNECTIONS: ${WXAPP_MYSQL_MAX_CONNECTIONS:-4}
     extra_hosts:
-      # 云服务器默认继续解析到 `host-gateway`；
-      # 本地若宿主机端口存在冲突，则可在 `.env.docker` 覆写成 `suda-union` 的固定容器 IP。
+      # 当前示例 host 依赖 `host.docker.internal` 回连宿主机；
+      # 如需改成其它数据库入口，仍然只在 `.env.docker` 中改 `SUDA_UNION_DB_*`。
       - "host.docker.internal:${HOST_DOCKER_INTERNAL_TARGET:-host-gateway}"
     networks:
       - three-projects-net
