@@ -13,6 +13,22 @@ fn read_repo_file(relative_path: &str) -> String {
 }
 
 #[test]
+fn compatibility_checklist_should_track_current_official_contract() {
+  // 这份兼容清单当前仍被 README 和正式文档显式引用，
+  // 因此它不能停留在旧口径，必须至少覆盖最近已经进入正式基线的能力约束。
+  let checklist = read_repo_file("docs/plans/2026-03-25-rust-api-compat-checklist.md");
+
+  assert!(
+    checklist.contains("keyword"),
+    "compatibility checklist should track the activity keyword search contract"
+  );
+  assert!(
+    checklist.contains("自愈") || checklist.contains("自动修复异常签退状态"),
+    "compatibility checklist should track the staff self-heal side effect"
+  );
+}
+
+#[test]
 fn docker_docs_should_keep_connection_settings_in_env_file_contract() {
   // Docker 发布口径的核心约束不是“某个端口永远固定”，
   // 而是 host / port / user / password 都集中落在 `.env.docker` 一处管理。

@@ -1,6 +1,6 @@
 # Rust 后端 API 兼容清单
 
-更新日期：2026-03-26  
+更新日期：2026-03-31  
 适用范围：`/home/psx/app/wxapp-checkin/backend-rust`
 
 ## 1. 目标
@@ -59,6 +59,12 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 
 ### 3.2 `GET /api/web/activities`
 
+查询参数关键约束：
+
+- `page`
+- `page_size`
+- `keyword`
+
 成功响应关键字段：
 
 - `status`
@@ -91,6 +97,7 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 
 - `activity_id` 对外继续使用 `legacy_act_<id>`。
 - staff 可见全部活动；普通用户只看自己相关活动。
+- `keyword` 搜索正式基线已启用，范围至少覆盖标题、地点、描述与 `activity_id`。
 
 ### 3.3 `GET /api/web/activities/{activity_id}`
 
@@ -186,6 +193,10 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 
 ### 3.7 `POST /api/web/staff/activities/{activity_id}/attendance-adjustments`
 
+用途边界：
+
+- 既承接 staff 人工修正，也承接 staff 页面进入时的自动自愈写请求。
+
 成功响应关键字段：
 
 - `status`
@@ -201,6 +212,11 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 - `invalid_activity`
 - `invalid_param`
 - `forbidden`
+
+补充约束：
+
+- staff 管理页与名单页发现异常签退态时，会自动调用该接口完成自愈。
+- 当前自动自愈请求会带固定原因文本：`自动修复异常签退状态`。
 
 ### 3.8 `POST /api/web/staff/activities/{activity_id}/bulk-checkout`
 

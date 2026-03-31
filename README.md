@@ -18,7 +18,6 @@
 | `backend-rust/` | 唯一正式后端 |
 | `docs/` | 正式需求、功能、接口、部署文档 |
 | `scripts/` | bootstrap、启动、停止脚本 |
-| `design-system/` | 设计资产与设计系统资料 |
 
 ## 当前正式能力
 
