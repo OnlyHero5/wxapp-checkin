@@ -1,5 +1,7 @@
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import fs from "node:fs";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearSession, saveAuthSession } from "../../shared/session/session-store";
 import { buildActivityDetail, renderStaffManagePage } from "./staff-manage-test-helpers";
@@ -42,6 +44,17 @@ vi.mock("../../features/staff/api", () => ({
   getActivityRoster: staffApiMocks.getActivityRoster,
   getCodeSession: staffApiMocks.getCodeSession
 }));
+
+function readAppStyles() {
+  const stylesDir = path.resolve(import.meta.dirname, "../../app/styles");
+  return fs.readdirSync(stylesDir)
+    .filter((fileName) => fileName.endsWith(".css"))
+    .sort()
+    .map((fileName) => fs.readFileSync(path.join(stylesDir, fileName), "utf8"))
+    .join("\n");
+}
+
+const baseCss = readAppStyles();
 
 describe("StaffManagePage actions", () => {
   beforeEach(() => {
@@ -140,6 +153,35 @@ describe("StaffManagePage actions", () => {
     );
     expect(document.querySelectorAll(".staff-code-panel__card")).toHaveLength(1);
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
+  });
+
+  it("renders user-facing helper copy instead of development terminology", async () => {
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+    expect(screen.getByText("刷新动态码")).toBeInTheDocument();
+    expect(screen.getByText("如需获取最新验证码或人数变化，可手动刷新。")).toBeInTheDocument();
+    expect(screen.getByText("活动结束后，可在这里统一完成签退。")).toBeInTheDocument();
+    expect(screen.queryByText("刷新工作台")).not.toBeInTheDocument();
+    expect(screen.queryByText("正常态下只刷新当前动态码；阻断态会走完整安全刷新。")).not.toBeInTheDocument();
+    expect(screen.queryByText("这里保留唯一的批量高风险入口，避免它和发码、刷新动作混在同一层里。")).not.toBeInTheDocument();
+  });
+
+  it("defines a desktop workbench layout that promotes the dynamic code area out of the single mobile column", () => {
+    expect(baseCss).toMatch(/@media\s*\(min-width:\s*1024px\)\s*\{[\s\S]*\.mobile-page\[data-page-layout="showcase-auto"\]\s+\.staff-manage-workbench\s*\{[\s\S]*grid-template-columns:/);
+    expect(baseCss).toMatch(/@media\s*\(min-width:\s*1024px\)\s*\{[\s\S]*\.mobile-page\[data-page-layout="showcase-auto"\]\s+\.staff-manage-workbench__hero\s*\{[\s\S]*grid-column:\s*2/);
   });
 
   it("confirms bulk checkout and refreshes the page state", async () => {

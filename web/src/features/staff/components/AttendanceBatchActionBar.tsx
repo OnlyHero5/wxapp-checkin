@@ -103,13 +103,13 @@ export function AttendanceBatchActionBar({
         <div className="attendance-batch-action-bar__summary-row">
           <div className="attendance-batch-action-bar__summary-copy">
             <p className="attendance-batch-action-bar__summary-label">已选成员</p>
-            <p className="attendance-batch-action-bar__summary-hint">先勾选成员，再统一修正签到或签退状态。</p>
+            <p className="attendance-batch-action-bar__summary-hint">勾选成员后，可统一修正签到或签退状态。</p>
           </div>
           <p className="attendance-batch-action-bar__summary-value">{selectedCount} 人</p>
         </div>
       </div>
       <div className="attendance-batch-action-bar__action">
-        <p className="attendance-batch-action-bar__action-hint">动作选择与确认层仍统一走组件库插件，页面只负责给出上下文。</p>
+        <p className="attendance-batch-action-bar__action-hint">请选择要执行的批量操作。</p>
         <AppButton
           disabled={disabled || selectedCount === 0}
           onClick={handleOpenActionSheet}

@@ -147,7 +147,7 @@ export function DynamicCodePanel({
         <section className="staff-panel__stats-strip" data-display-zone="stats">
           <header className="staff-panel__stats-header">
             <p className="staff-panel__section-eyebrow">实时统计</p>
-            <p className="staff-panel__section-copy">发码、批量签退和回前台刷新都共享这一套统计口径。</p>
+            <p className="staff-panel__section-copy">这里会同步显示当前活动的签到与签退人数。</p>
           </header>
           <div className="staff-panel__metric-grid">
             {/* 这里明确展示累计签到，避免把“已签退成员”从签到统计里误剔除。 */}
@@ -167,8 +167,8 @@ export function DynamicCodePanel({
         </section>
         <section className="staff-panel__action-bar" data-display-zone="actions">
           <div className="staff-panel__action-copy">
-            <p className="staff-panel__section-eyebrow">刷新工作台</p>
-            <p className="staff-panel__section-copy">正常态下只刷新当前动态码；阻断态会走完整安全刷新。</p>
+            <p className="staff-panel__section-eyebrow">刷新动态码</p>
+            <p className="staff-panel__section-copy">如需获取最新验证码或人数变化，可手动刷新。</p>
           </div>
           <AppButton onClick={onRefresh} tone="secondary">
             立即刷新

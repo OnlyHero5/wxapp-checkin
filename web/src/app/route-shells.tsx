@@ -43,7 +43,8 @@ export function hasSession() {
 function AppBusinessShell({ children }: RouteChildrenProps) {
   return (
     <div className="app-business-shell">
-      {children}
+      {/* 内容区单独包一层，方便底部固定导航给页面留下稳定的安全留白。 */}
+      <div className="app-business-shell__content">{children}</div>
       <AppBusinessNav />
     </div>
   );

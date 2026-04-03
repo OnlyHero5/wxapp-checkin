@@ -84,7 +84,7 @@ export function AccountLoginForm({ errorMessage, onSubmit, pending = false }: Ac
         <p className="account-login-form__eyebrow">账号登录</p>
         <div className="account-login-form__hero-copy">
           <h2 className="account-login-form__title">使用学号与密码继续</h2>
-          <p className="account-login-form__description">登录成功后会沿用当前会话写入逻辑，不改动现有鉴权流程。</p>
+          <p className="account-login-form__description">登录后即可查看活动并完成签到或签退。</p>
         </div>
       </header>
       {/* 必须阻止浏览器原生 submit，避免移动端把学号和密码直接拼进 URL。 */}

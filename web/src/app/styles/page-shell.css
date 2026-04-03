@@ -28,6 +28,8 @@
 /* 头部只保留弱容器语义，真实导航结构交给 TDesign Navbar。 */
 .mobile-page__masthead,
 .mobile-page__header,
+.mobile-page__header-row,
+.mobile-page__header-actions,
 .mobile-page__content {
   min-width: 0;
 }
@@ -60,6 +62,23 @@
   z-index: 1;
   display: grid;
   gap: 12px;
+}
+
+.mobile-page__header-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.mobile-page__header-actions {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+
+.mobile-page__header-actions > * {
+  min-width: 0;
 }
 
 .mobile-page[data-page-tone="brand"] .mobile-page__masthead {
@@ -162,8 +181,37 @@
 .app-business-shell {
   min-height: 100vh;
   min-height: 100dvh;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+}
+
+.app-business-shell__content {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/*
+ * 业务导航改成项目层固定：
+ * 1. 组件库的 fixed/placeholder 在真实联调里不稳定；
+ * 2. 导航必须始终贴在视口底部；
+ * 3. 宽屏时也要和页面主体一起居中，而不是散成整条满屏工具栏。
+ */
+.app-business-nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  padding: 0 14px calc(12px + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.app-business-nav__bar {
+  width: min(100%, var(--app-shell-max-width-wide));
+  pointer-events: auto;
 }
 
 /* =========================================================
@@ -622,5 +670,16 @@
 
   .activity-meta-panel__detail-value {
     text-align: left;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-page__header-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .mobile-page__header-actions {
+    justify-items: end;
   }
 }

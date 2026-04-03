@@ -32,7 +32,7 @@ const profileFields = [
 function resolveRoleHint(role: string, permissions: string[]) {
   // 角色提示不追求完整罗列权限，只回答“我当前能走哪类业务链路”。
   if (role === "staff" || permissions.includes("activity:manage")) {
-    return "当前身份：工作人员，可进入活动管理、名单修正等后台链路。";
+    return "当前身份：工作人员，可进入活动管理和名单修正。";
   }
   return "当前身份：普通用户，可查看活动详情并完成签到签退。";
 }

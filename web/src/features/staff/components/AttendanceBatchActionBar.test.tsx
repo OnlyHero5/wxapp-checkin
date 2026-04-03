@@ -52,6 +52,9 @@ describe("AttendanceBatchActionBar", () => {
     expect(document.querySelector(".attendance-batch-action-bar__summary")).toHaveTextContent("已选成员");
     expect(document.querySelector(".attendance-batch-action-bar__summary")).toHaveTextContent("3 人");
     expect(document.querySelector(".attendance-batch-action-bar__action")).toBeInTheDocument();
+    expect(screen.getByText("勾选成员后，可统一修正签到或签退状态。")).toBeInTheDocument();
+    expect(screen.getByText("请选择要执行的批量操作。")).toBeInTheDocument();
+    expect(screen.queryByText("动作选择与确认层仍统一走组件库插件，页面只负责给出上下文。")).not.toBeInTheDocument();
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
 
     await user.click(screen.getByRole("button", { name: "批量操作" }));

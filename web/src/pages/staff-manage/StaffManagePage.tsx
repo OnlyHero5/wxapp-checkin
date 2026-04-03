@@ -94,7 +94,7 @@ function StaffManagePageContent({ activityId }: StaffManagePageContentProps) {
             <p className="staff-manage-workbench__danger-eyebrow">危险动作</p>
             <h2 className="staff-manage-workbench__danger-title">活动结束统一签退</h2>
             <p className="staff-manage-workbench__danger-description">
-              这里保留唯一的批量高风险入口，避免它和发码、刷新动作混在同一层里。
+              活动结束后，可在这里统一完成签退。
             </p>
           </div>
           <BulkCheckoutButton

@@ -32,6 +32,7 @@
   --app-radius-xs: 10px;
   --app-backdrop-blur: blur(18px);
   --app-bento-shell-max-width: 520px;
+  --app-shell-max-width-wide: 1120px;
   --app-bento-shell-gap: 18px;
   --app-bento-rail-gap: 16px;
   --app-bento-panel-padding: 18px;

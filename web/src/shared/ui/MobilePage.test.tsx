@@ -51,7 +51,7 @@ describe("MobilePage", () => {
     expect(screen.getByRole("main")).toHaveAttribute("data-page-layout", "showcase-auto");
   });
 
-  it("renders header actions through the component-library navbar right slot", () => {
+  it("renders header actions through a project-owned action rail so narrow screens do not squeeze the title", () => {
     render(
       <MobilePage
         headerActions={<a href="/activities/act_101">返回活动详情</a>}
@@ -64,7 +64,8 @@ describe("MobilePage", () => {
     const actionLink = screen.getByRole("link", { name: "返回活动详情" });
 
     expect(document.querySelector(".t-navbar")).not.toBeNull();
-    expect(actionLink.closest(".t-navbar__right")).toBeInTheDocument();
+    expect(actionLink.closest(".t-navbar__right")).toBeNull();
+    expect(actionLink.closest(".mobile-page__header-actions")).toBeInTheDocument();
   });
 
   it("keeps the page shell top-aligned so short pages do not stretch into tall blank panels", () => {
@@ -114,5 +115,20 @@ describe("MobilePage", () => {
     expect(baseCss).toMatch(/--app-bento-rail-gap:/);
     expect(baseCss).toMatch(/--app-bento-panel-padding:/);
     expect(baseCss).toMatch(/--app-bento-panel-shadow:/);
+  });
+
+  it("keeps the title row and header action rail responsive instead of forcing actions into the navbar title line", () => {
+    render(
+      <MobilePage
+        headerActions={<a href="/activities/act_101">返回活动详情</a>}
+        title="活动管理"
+      >
+        <p>当前动态码</p>
+      </MobilePage>
+    );
+
+    expect(baseCss).toMatch(/\.mobile-page__header-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+    expect(baseCss).toMatch(/\.mobile-page__header-actions\s*\{[^}]*justify-items:\s*start;/);
+    expect(baseCss).toMatch(/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*\.mobile-page__header-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto;/);
   });
 });

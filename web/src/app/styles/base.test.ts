@@ -19,4 +19,10 @@ describe("base.css", () => {
     expect(baseCss).toMatch(/\.staff-manage-workbench/);
     expect(baseCss).toMatch(/\.profile-page__card/);
   });
+
+  it("pins the business nav with project-owned shell rules instead of relying only on component-library fixed behavior", () => {
+    expect(baseCss).toMatch(/\.app-business-shell\s*\{[^}]*padding-bottom:/);
+    expect(baseCss).toMatch(/\.app-business-nav\s*\{[^}]*position:\s*fixed;/);
+    expect(baseCss).toMatch(/\.app-business-nav__bar\s*\{[^}]*width:\s*min\(100%,/);
+  });
 });

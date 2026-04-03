@@ -496,7 +496,7 @@
 
 @media (min-width: 768px) {
   .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
-    width: min(100%, 620px);
+    width: min(100%, 640px);
   }
 
   .staff-code-panel__card {
@@ -512,7 +512,30 @@
 
 @media (min-width: 1024px) {
   .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
-    width: min(100%, 980px);
+    width: min(100%, var(--app-shell-max-width-wide));
+  }
+
+  /*
+   * 桌面端把 summary / danger 收到左侧栏，
+   * 动态码工作区提升为右侧主区域，避免只是把手机单列简单放大。
+   */
+  .mobile-page[data-page-layout="showcase-auto"] .staff-manage-workbench {
+    grid-template-columns: minmax(280px, 0.92fr) minmax(0, 1.48fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-manage-workbench__summary {
+    grid-column: 1;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-manage-workbench__hero {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .mobile-page[data-page-layout="showcase-auto"] .staff-manage-workbench__danger {
+    grid-column: 1;
   }
 
   /* 大屏时把动态码页的 hero 和 stats 拉成两段，但仍保留同一条工作台轨道。 */

@@ -45,9 +45,6 @@ export function AppBusinessNav() {
       <TabBar
         bordered
         className="app-business-nav__bar"
-        fixed
-        placeholder
-        safeAreaInsetBottom
         split
         value={activeKey || undefined}
         onChange={handleChange}

@@ -47,14 +47,22 @@ export function MobilePage({
         <header className="mobile-page__masthead">
           {eyebrow ? <p className="mobile-page__eyebrow">{eyebrow}</p> : null}
           <section className="mobile-page__header">
-            <Navbar
-              animation={false}
-              className="mobile-page__navbar"
-              fixed={false}
-              right={headerActions}
-              safeAreaInsetTop={false}
-              title={<h1 className="mobile-page__navbar-title">{title}</h1>}
-            />
+            {/*
+             * 头部动作不再塞进 Navbar 右槽：
+             * 1. 手机端标题一长就会和返回入口互相挤压；
+             * 2. staff 管理页和详情页都需要稳定的标题阅读区；
+             * 3. 这里拆成“标题行 + 独立动作带”后，桌面端再横向拼回去即可。
+             */}
+            <div className="mobile-page__header-row">
+              <Navbar
+                animation={false}
+                className="mobile-page__navbar"
+                fixed={false}
+                safeAreaInsetTop={false}
+                title={<h1 className="mobile-page__navbar-title">{title}</h1>}
+              />
+              {headerActions ? <div className="mobile-page__header-actions">{headerActions}</div> : null}
+            </div>
             {description ? <p className="mobile-page__description">{description}</p> : null}
           </section>
         </header>

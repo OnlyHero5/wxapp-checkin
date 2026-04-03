@@ -107,7 +107,7 @@ describe("StaffManagePage code session", () => {
     expect(screen.getByRole("button", { name: "立即刷新" }).className).toContain("t-button");
     expect(screen.getByRole("button", { name: "立即刷新" })).toHaveClass("app-button");
     expect(screen.getByRole("link", { name: "返回活动详情" })).toHaveAttribute("href", "/activities/act_101");
-    expect(screen.getByRole("link", { name: "返回活动详情" }).closest(".t-navbar__right")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回活动详情" }).closest(".mobile-page__header-actions")).toBeInTheDocument();
 
     await user.click(screen.getByText("签退码"));
 
