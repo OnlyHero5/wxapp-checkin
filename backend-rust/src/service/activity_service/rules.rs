@@ -3,7 +3,10 @@ use crate::db::activity_repo::UserActivityRow;
 use crate::domain::AttendanceActionType;
 use crate::domain::progress_status_from_legacy;
 use crate::error::AppError;
+use chrono::TimeZone;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+const LEGACY_CHINA_OFFSET_SECONDS: i32 = 8 * 60 * 60;
 
 /// 报名状态、签到状态和时间窗口是多个活动接口共享的核心规则。
 /// 统一放在这里，避免详情、列表和动态码接口各自复制判断分支。
@@ -85,7 +88,16 @@ fn system_time_to_millis(value: SystemTime) -> Result<u64, AppError> {
 }
 
 fn naive_millis(value: chrono::NaiveDateTime) -> Result<u64, AppError> {
-  let timestamp = value.and_utc().timestamp_millis();
+  // suda_union 的 DATETIME 没有时区信息，但业务语义一直是北京时间本地时间。
+  // 这里必须先按 +08:00 还原成“本地墙上时间对应的绝对时刻”，
+  // 不能再直接 `and_utc()`，否则会把整个发码窗口整体推迟 8 小时。
+  let offset =
+    chrono::FixedOffset::east_opt(LEGACY_CHINA_OFFSET_SECONDS).expect("valid china offset");
+  let timestamp = offset
+    .from_local_datetime(&value)
+    .single()
+    .ok_or_else(|| AppError::internal("活动时间无法映射到北京时间"))?
+    .timestamp_millis();
   u64::try_from(timestamp).map_err(|_| AppError::internal("活动时间非法"))
 }
 
@@ -94,7 +106,9 @@ mod tests {
   use super::ensure_activity_time_valid;
   use super::format_display_time;
   use super::is_registered_apply_state;
+  use super::is_within_issue_window;
   use crate::db::activity_repo::ActivityRow;
+  use std::time::{Duration, UNIX_EPOCH};
 
   fn sample_activity_row(start: chrono::NaiveDateTime, end: chrono::NaiveDateTime) -> ActivityRow {
     ActivityRow {
@@ -143,5 +157,29 @@ mod tests {
     let error = ensure_activity_time_valid(&activity).expect_err("should reject invalid time");
     assert_eq!(error.status(), "forbidden");
     assert_eq!(error.error_code(), Some("activity_time_invalid"));
+  }
+
+  #[test]
+  fn issue_window_should_treat_legacy_datetime_as_china_local_time() {
+    // suda_union 里的 DATETIME 语义是北京时间本地墙上时间，
+    // staff 页面显示 17:12，就意味着发码窗口应从北京时间 16:42 开始。
+    let start = chrono::NaiveDate::from_ymd_opt(2026, 4, 5)
+      .expect("date")
+      .and_hms_opt(17, 12, 0)
+      .expect("time");
+    let end = chrono::NaiveDate::from_ymd_opt(2026, 4, 5)
+      .expect("date")
+      .and_hms_opt(18, 0, 0)
+      .expect("time");
+    let activity = sample_activity_row(start, end);
+
+    // 这里显式用北京时间 2026-04-05 17:08:00 做断言，
+    // 以便锁住用户反馈的“开始前 30 分钟窗口内仍被拒绝发码”故障。
+    let now = UNIX_EPOCH + Duration::from_millis(1_775_380_080_000);
+
+    assert!(
+      is_within_issue_window(&activity, now).expect("issue window"),
+      "17:12 开始的活动在北京时间 17:08 应已进入发码窗口"
+    );
   }
 }
