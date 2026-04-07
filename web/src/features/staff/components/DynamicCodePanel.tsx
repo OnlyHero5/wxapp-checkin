@@ -65,15 +65,20 @@ function resolveAttendanceCounts(codeSession: CodeSessionResponse | null) {
   };
 }
 
-function resolveCountdownTimeMs(codeSession: CodeSessionResponse | null) {
+function resolveCountdownTimeMsFromClientBaseline(
+  codeSession: CodeSessionResponse | null,
+  receivedAtMs: number
+) {
   if (!codeSession) {
     return 0;
   }
 
-  const receivedAtMs = Date.now();
-  const serverTimeMs = codeSession.server_time_ms ?? receivedAtMs;
-  const serverOffsetMs = serverTimeMs - receivedAtMs;
-  return Math.max(0, codeSession.expires_at - (Date.now() + serverOffsetMs));
+  const serverTimeMs = codeSession.server_time_ms
+    ?? (typeof codeSession.expires_in_ms === "number"
+      ? codeSession.expires_at - codeSession.expires_in_ms
+      : receivedAtMs);
+  const elapsedClientMs = Math.max(0, Date.now() - receivedAtMs);
+  return Math.max(0, codeSession.expires_at - serverTimeMs - elapsedClientMs);
 }
 
 /**
@@ -90,15 +95,32 @@ export function DynamicCodePanel({
 }: DynamicCodePanelProps) {
   const displayedCodeSession = resolveDisplayedCodeSession(activityId, actionType, codeSession);
   const lastFinishedRefreshKeyRef = useRef("");
+  const countdownBaselineRef = useRef<{ key: string; receivedAtMs: number } | null>(null);
   const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
   // 动作标签和当前 tab 绑定，确保首屏还没拿到码时也能给管理员稳定的语义提示。
   const actionLabel = actionType === "checkout" ? "当前签退码" : "当前签到码";
   const heroMetaLoading = loading || (!!codeSession && !displayedCodeSession);
   const heroDisplayCode = displayedCodeSession?.code ?? "------";
-  const countdownTimeMs = heroMetaLoading ? 0 : resolveCountdownTimeMs(displayedCodeSession);
   const refreshKey = displayedCodeSession
     ? `${displayedCodeSession.activity_id}:${displayedCodeSession.action_type}:${displayedCodeSession.expires_at}`
     : "";
+  if (displayedCodeSession && countdownBaselineRef.current?.key !== refreshKey) {
+    // 每轮新动态码只记录一次“到达客户端的本地时间”，
+    // 后续重渲染必须沿用同一基线，不能把倒计时重新算回初始剩余值。
+    countdownBaselineRef.current = {
+      key: refreshKey,
+      receivedAtMs: Date.now()
+    };
+  }
+  if (!displayedCodeSession) {
+    countdownBaselineRef.current = null;
+  }
+  const countdownTimeMs = heroMetaLoading
+    ? 0
+    : resolveCountdownTimeMsFromClientBaseline(
+      displayedCodeSession,
+      countdownBaselineRef.current?.receivedAtMs ?? Date.now()
+    );
 
   function handleCountdownFinish() {
     /**

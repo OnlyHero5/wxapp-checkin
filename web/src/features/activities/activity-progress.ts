@@ -1,5 +1,7 @@
 import type { ActivitySummary } from "./api";
 
+const CHINA_TIMEZONE_OFFSET_HOURS = 8;
+
 // 兼容当前文档、历史小程序和后端可能返回的多种“进行中”写法。
 const ONGOING_PROGRESS_STATUSES = new Set([
   "ongoing",
@@ -50,16 +52,40 @@ export function parseActivityTime(timeText?: string) {
     return 0;
   }
 
-  // 统一按本地时间创建 Date，对当前“手机校内活动”场景已经足够。
-  const date = new Date(
-    dateBits[0],
-    Math.max(0, dateBits[1] - 1),
-    dateBits[2],
-    Number.isNaN(timeBits[0]) ? 0 : timeBits[0],
-    Number.isNaN(timeBits[1]) ? 0 : timeBits[1],
-    Number.isNaN(timeBits[2]) ? 0 : timeBits[2]
+  return parseChinaLocalTimeToUnixMs({
+    day: dateBits[2],
+    hour: Number.isNaN(timeBits[0]) ? 0 : timeBits[0],
+    minute: Number.isNaN(timeBits[1]) ? 0 : timeBits[1],
+    month: Math.max(0, dateBits[1] - 1),
+    second: Number.isNaN(timeBits[2]) ? 0 : timeBits[2],
+    year: dateBits[0]
+  });
+}
+
+type ChinaLocalTimeParts = {
+  day: number;
+  hour: number;
+  minute: number;
+  month: number;
+  second: number;
+  year: number;
+};
+
+/**
+ * 历史活动时间字符串的业务语义固定是北京时间本地时间。
+ * 显式转成 UNIX 毫秒可以避免浏览器宿主时区不同导致排序和比较结果漂移。
+ */
+export function parseChinaLocalTimeToUnixMs(parts: ChinaLocalTimeParts) {
+  const utcTimeMs = Date.UTC(
+    parts.year,
+    parts.month,
+    parts.day,
+    parts.hour - CHINA_TIMEZONE_OFFSET_HOURS,
+    parts.minute,
+    parts.second
   );
-  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+
+  return Number.isNaN(utcTimeMs) ? 0 : utcTimeMs;
 }
 
 /**

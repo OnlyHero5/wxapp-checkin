@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { resolveCanCheckin, resolveCanCheckout, resolveProgressStatus } from "./view-model";
+import { describe, expect, it, vi } from "vitest";
+import {
+  formatServerTime,
+  resolveCanCheckin,
+  resolveCanCheckout,
+  resolveProgressStatus
+} from "./view-model";
 
 describe("activities view-model", () => {
   it("treats activities without explicit progress_status as ongoing instead of completed", () => {
@@ -29,5 +34,15 @@ describe("activities view-model", () => {
       start_time: "2026-03-01 09:00:00",
       support_checkout: true
     })).toBe(true);
+  });
+
+  it("formats server time with an explicit Asia/Shanghai timezone contract", () => {
+    const formatSpy = vi.spyOn(Intl, "DateTimeFormat");
+
+    formatServerTime(1773104400000);
+
+    expect(formatSpy).toHaveBeenCalledWith("zh-CN", expect.objectContaining({
+      timeZone: "Asia/Shanghai"
+    }));
   });
 });

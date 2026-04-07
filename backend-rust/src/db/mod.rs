@@ -36,6 +36,16 @@ pub fn connect_pool(config: &Config) -> Result<MySqlPool, AppError> {
     .acquire_timeout(Duration::from_secs(3))
     .idle_timeout(Some(Duration::from_secs(60)))
     .max_lifetime(Some(Duration::from_secs(300)))
+    .after_connect(|connection, _meta| {
+      Box::pin(async move {
+        // `suda_log.time` 是 TIMESTAMP，读出来会受会话时区影响。
+        // 这里固定成北京时间，避免签到/签退展示时间跟着数据库 session 漂移。
+        sqlx::query("SET time_zone = '+08:00'")
+          .execute(connection)
+          .await?;
+        Ok(())
+      })
+    })
     .connect_lazy(&config.database_url)
     .map_err(|error| AppError::invalid_config(format!("初始化 MySQL 连接池失败：{error}")))
 }

@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv, type UserConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { configDefaults } from "vitest/config";
 import { resolveRuntimeConfig, shouldProxyApiBase } from "./src/shared/runtime/runtime-config";
 
 export function createAppViteConfig(env: Record<string, string | undefined>): UserConfig {
@@ -20,6 +21,7 @@ export function createAppViteConfig(env: Record<string, string | undefined>): Us
         }
       : undefined,
     test: {
+      exclude: [...configDefaults.exclude, "e2e/**"],
       environment: "jsdom",
       globals: true,
       setupFiles: "./src/test/setup.ts"

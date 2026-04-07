@@ -189,6 +189,20 @@ fn dynamic_in_queries_should_use_sqlx_query_builder() {
 }
 
 #[test]
+fn mysql_pool_should_pin_session_timezone_to_beijing() {
+  let source = fs::read_to_string(manifest_file("src/db/mod.rs")).expect("read db/mod.rs");
+
+  assert!(
+    source.contains(".after_connect("),
+    "mysql pool should initialize each session with an explicit timezone contract"
+  );
+  assert!(
+    source.contains("SET time_zone = '+08:00'"),
+    "mysql session should pin time_zone to +08:00 before reading TIMESTAMP audit data"
+  );
+}
+
+#[test]
 fn service_helper_logic_should_be_centralized_in_shared_module() {
   let activity_list = fs::read_to_string(manifest_file("src/service/activity_service/list.rs"))
     .expect("read activity_service/list.rs");

@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "lint": "eslint src vite.config.ts --max-warnings 0",
     "test": "vitest --run",
+    "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=/home/psx/app/output/playwright/.ms-playwright playwright test --config=playwright.config.ts",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
+    "@playwright/test": "^1.54.2",
     "@types/node": "^24.5.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

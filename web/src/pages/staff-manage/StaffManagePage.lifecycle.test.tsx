@@ -20,19 +20,6 @@ const staffApiMocks = vi.hoisted(() => ({
   getCodeSession: vi.fn()
 }));
 
-vi.mock("tdesign-mobile-react", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("tdesign-mobile-react")>();
-
-  return {
-    ...actual,
-    CountDown: ({ onFinish }: { onFinish?: () => void }) => (
-      <button className="t-count-down" onClick={onFinish} type="button">
-        触发动态码过期
-      </button>
-    )
-  };
-});
-
 vi.mock("../../features/activities/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../features/activities/api")>();
   return {
@@ -69,7 +56,6 @@ describe("StaffManagePage lifecycle", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.resetAllMocks();
     clearSession();
   });
