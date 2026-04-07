@@ -164,7 +164,12 @@
 
 ## 8. 文档关系
 
-- 需求基线：`docs/REQUIREMENTS.md`
-- 接口基线：`docs/API_SPEC.md`
-- 部署手册：`docs/DEPLOYMENT.md`
-- Rust 兼容清单：`docs/plans/2026-03-25-rust-api-compat-checklist.md`
+| 文档 | 说明 |
+|------|------|
+| `docs/REQUIREMENTS.md` | 需求基线，业务规则与角色定义 |
+| `docs/API_SPEC.md` | 接口基线，API 契约与错误码 |
+| `docs/SECURITY_SPEC.md` | 安全机制规格，动态码算法、限流、防重放 |
+| `docs/AUDIT_LOG_SPEC.md` | 审计日志规格，写入场景与格式 |
+| `docs/DATABASE_SCHEMA.md` | 数据库表结构说明 |
+| `docs/DEPLOYMENT.md` | 部署手册 |
+| `docs/plans/2026-03-25-rust-api-compat-checklist.md` | Rust 兼容清单 |

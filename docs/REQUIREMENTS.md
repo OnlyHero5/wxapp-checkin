@@ -1,8 +1,8 @@
 # 手机 Web 动态验证码签到系统需求文档
 
-文档版本：v2.3  
-状态：正式基线  
-更新日期：2026-03-31  
+文档版本：v2.4
+状态：正式基线
+更新日期：2026-04-05
 项目：`wxapp-checkin`
 
 ## 1. 文档目的
@@ -109,6 +109,48 @@
 - `NFR-004` 业务失败必须返回真实 HTTP 状态码，并继续保持统一 JSON envelope。
 - `NFR-005` 系统时间以服务端为准。
 
+## 8.5 安全机制
+
+详细规格见 `docs/SECURITY_SPEC.md`，本节仅概述核心规则。
+
+### 8.5.1 动态码算法
+
+- 签名算法：HMAC-SHA256
+- 时间片长度：10 秒
+- 码格式：6 位数字（前导补零）
+- 签名内容：`web-code:v1|{activity_id}|{action_type}|{slot}`
+- 发码窗口：活动开始前 30 分钟到活动结束后 30 分钟
+
+### 8.5.2 会话认证
+
+- 算法：JWT (HS256)
+- 默认有效期：7200 秒（2 小时）
+- 传递方式：`Authorization: Bearer <session_token>`
+
+### 8.5.3 防重放机制
+
+- 实现：内存级 TTL 缓存（moka）
+- TTL：90 秒
+- 唯一键：`u:{user_id}:{activity_id}:{action_type}:{slot}`
+- 限制：单实例内存级，服务重启或部署多实例时状态不共享
+
+### 8.5.4 限流机制
+
+- 实现：令牌桶算法（governor 库）
+- 窗口：60 秒
+- 最大错误尝试次数：12 次
+- 限流键：`u:{user_id}:{activity_id}`
+- 限制：单实例内存级
+
+### 8.5.5 审计日志
+
+详细规格见 `docs/AUDIT_LOG_SPEC.md`。
+
+写入场景：
+- 普通用户签到/签退
+- staff 名单修正（每人一条 + 汇总一条）
+- staff 批量签退（每人一条 + 汇总一条）
+
 ## 9. 验收标准
 
 - `AC-001` 登录、活动列表、活动详情、发码、验码、roster、名单修正、批量签退可完整走通。
@@ -121,7 +163,12 @@
 
 ## 10. 相关文档
 
-- 功能基线：`docs/FUNCTIONAL_SPEC.md`
-- 接口基线：`docs/API_SPEC.md`
-- 部署手册：`docs/DEPLOYMENT.md`
-- Rust 兼容清单：`docs/plans/2026-03-25-rust-api-compat-checklist.md`
+| 文档 | 说明 |
+|------|------|
+| `docs/FUNCTIONAL_SPEC.md` | 功能基线，页面行为与交互规则 |
+| `docs/API_SPEC.md` | 接口基线，API 契约与错误码 |
+| `docs/SECURITY_SPEC.md` | 安全机制规格，动态码、会话、防重放 |
+| `docs/AUDIT_LOG_SPEC.md` | 审计日志规格，写入场景与格式 |
+| `docs/DATABASE_SCHEMA.md` | 数据库表结构说明 |
+| `docs/DEPLOYMENT.md` | 部署手册 |
+| `docs/plans/2026-03-25-rust-api-compat-checklist.md` | Rust 兼容清单 |
