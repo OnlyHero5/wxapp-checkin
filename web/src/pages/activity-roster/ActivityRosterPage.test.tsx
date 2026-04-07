@@ -85,7 +85,7 @@ describe("ActivityRosterPage", () => {
 
     expect(await screen.findByRole("heading", { name: "参会名单" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-page-tone", "staff");
-    expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
+    expect(await screen.findByText("校园志愿活动")).toBeInTheDocument();
     expect(screen.getByText("测试用户")).toBeInTheDocument();
     expect(screen.getByText("2025000011")).toBeInTheDocument();
     expect(screen.getByText("补签成员")).toBeInTheDocument();
