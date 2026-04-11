@@ -1,8 +1,8 @@
 # 安全机制规格说明
 
-文档版本：v1.0
+文档版本：v1.1
 状态：正式基线
-更新日期：2026-04-05
+更新日期：2026-04-11
 项目：`wxapp-checkin`
 
 ## 1. 概述
@@ -168,15 +168,15 @@ fn generate_code(signing_key: &str, activity_id: &str, action_type: &str, slot: 
 使用内存级 TTL 缓存（`moka` 库）：
 - 缓存容量：20,000 条
 - TTL：90 秒
-- 唯一键格式：`u:{user_id}:{activity_id}:{action_type}:{slot}`
+- 唯一键格式：`{student_id}:{legacy_activity_id}:{action_type}:{slot}`
 
 ### 4.3 防重放键结构
 
 ```
-key = "u:{user_id}:{activity_id}:{action_type}:{slot}"
+key = "{student_id}:{legacy_activity_id}:{action_type}:{slot}"
 ```
 
-**示例**：`u:7:legacy_act_101:checkin:123`
+**示例**：`2025000007:101:checkin:123`
 
 ### 4.4 工作流程
 

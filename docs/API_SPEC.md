@@ -1,8 +1,8 @@
 # 手机 Web 动态验证码签到 API 协议规范
 
-文档版本：v1.3  
+文档版本：v1.4  
 状态：正式基线  
-更新日期：2026-03-31  
+更新日期：2026-04-11  
 项目：`wxapp-checkin`
 
 ## 1. 文档目标与适用范围
@@ -341,7 +341,7 @@
 
 - 正式 Web 口径不接收 `qr_payload`；
 - 后端以 `activity_id + action_type + code` 判定动态码；
-- 防重放唯一键收敛为 `user_id + activity_id + action_type + slot`。
+- 防重放唯一键收敛为 `student_id + legacy_activity_id + action_type + slot`。
 
 ## 6. staff 管理接口
 
@@ -400,8 +400,7 @@
 {
   "user_ids": [7, 8],
   "patch": {
-    "checked_in": true,
-    "checked_out": false
+    "checked_in": true
   },
   "reason": "批量设为已签到"
 }
@@ -430,6 +429,10 @@
 补充约束：
 
 - 自动自愈请求与人工修正共用同一路径，区别只体现在 `reason`。
+- `patch` 一次只能表达一个动作：
+  - `{"checked_in": true}` / `{"checked_in": false}`
+  - `{"checked_out": true}` / `{"checked_out": false}`
+  - 不再接受同时提交 `checked_in` 与 `checked_out` 的旧双字段写法。
 - 当前自动自愈请求的固定原因文本为：`自动修复异常签退状态`。
 - 自愈成功后，staff 页面必须重新读取名单、统计或动态码，避免后续操作继续建立在脏状态之上。
 

@@ -1,6 +1,6 @@
 # Rust 后端 API 兼容清单
 
-更新日期：2026-03-31  
+更新日期：2026-04-11  
 适用范围：`/home/psx/app/wxapp-checkin/backend-rust`
 
 ## 1. 目标
@@ -216,6 +216,7 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 补充约束：
 
 - staff 管理页与名单页发现异常签退态时，会自动调用该接口完成自愈。
+- `patch` 已收口为单字段命令式写法，一次请求只能表达一个布尔位动作。
 - 当前自动自愈请求会带固定原因文本：`自动修复异常签退状态`。
 
 ### 3.8 `POST /api/web/staff/activities/{activity_id}/bulk-checkout`

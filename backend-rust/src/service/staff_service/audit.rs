@@ -21,6 +21,13 @@ impl StaffAuditActionKind {
       Self::BulkCheckout => "/api/web/staff/bulk-checkout",
     }
   }
+
+  fn summary_action_type(self) -> &'static str {
+    match self {
+      Self::AttendanceAdjustment => "attendance-adjustment",
+      Self::BulkCheckout => "bulk-checkout",
+    }
+  }
 }
 
 /// 审计日志共享的上下文统一收敛在这里：
@@ -94,7 +101,7 @@ where
   let content = json!({
     "activity_id": format_activity_id(context.legacy_activity_id),
     "legacy_activity_numeric_id": context.legacy_activity_id,
-    "action_type": "bulk-checkout",
+    "action_type": context.action_kind.summary_action_type(),
     "server_time_ms": context.server_time_ms,
     "record_id": context.batch_id,
     "operator_student_id": context.current_user.student_id,
@@ -112,5 +119,5 @@ where
     "",
   )
   .await
-  .map_err(|error| AppError::internal(format!("写入批量签退汇总日志失败：{error}")))
+  .map_err(|error| AppError::internal(format!("写入 staff 汇总审计日志失败：{error}")))
 }

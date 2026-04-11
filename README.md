@@ -57,12 +57,23 @@ cd wxapp-checkin
 ./scripts/dev.sh local
 ```
 
+`./scripts/bootstrap.sh` 会在首次执行时补齐以下本地配置文件，不会覆盖你已经修改过的本地值：
+
+- `backend-rust/.env.local.sh`：本机联调使用的 Rust 后端环境变量
+- `backend-rust/.env.prod`：`./scripts/prod-backend.sh` 的仓库内兜底生产配置
+- `web/.env.local`：Web dev server 运行时配置
+
 最小自检：
 
 ```bash
 curl http://127.0.0.1:9989/actuator/health
 curl http://127.0.0.1:5173/
 ```
+
+说明：
+
+- `/actuator/health` 是脚本默认探活地址；
+- 后端同时兼容 `GET /health`，便于反向代理或外部探针复用。
 
 停止：
 
@@ -77,6 +88,12 @@ curl http://127.0.0.1:5173/
 - MySQL 8（只需要 `suda_union`）
 - `mysql` CLI
 - `curl`
+
+Web 端运行时路径相关环境变量：
+
+- `VITE_APP_BASE_PATH`：前端路由基路径
+- `VITE_API_BASE_PATH`：接口基础路径，默认 `/api/web`
+- `VITE_API_PROXY_TARGET`：本地 Vite 代理目标，默认 `http://127.0.0.1:9989`
 
 ## 推荐验证命令
 

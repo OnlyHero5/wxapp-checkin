@@ -1,8 +1,8 @@
 # 审计日志规格说明
 
-文档版本：v1.0
+文档版本：v1.1
 状态：正式基线
-更新日期：2026-04-05
+更新日期：2026-04-11
 项目：`wxapp-checkin`
 
 ## 1. 概述
@@ -156,7 +156,7 @@ CREATE TABLE suda_log (
 {
   "activity_id": "legacy_act_101",
   "legacy_activity_numeric_id": 101,
-  "action_type": "bulk-checkout",
+  "action_type": "attendance-adjustment",
   "server_time_ms": 1760000005000,
   "record_id": "adj_1760000005000",
   "operator_student_id": "2025000001",
@@ -170,6 +170,11 @@ CREATE TABLE suda_log (
 |------|------|------|
 | `affected_count` | `number` | 影响的用户数量 |
 | 其他字段 | - | 同上 |
+
+补充说明：
+
+- 名单修正汇总日志固定使用 `action_type = "attendance-adjustment"`。
+- 即使本次修正没有真正改动任何成员状态，仍会写一条汇总日志，用于保留人工修正或自动自愈批次的审计轨迹。
 
 ### 4.4 staff 批量签退（每人记录）
 

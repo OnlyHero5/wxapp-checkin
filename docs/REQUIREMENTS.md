@@ -1,8 +1,8 @@
 # 手机 Web 动态验证码签到系统需求文档
 
-文档版本：v2.4
+文档版本：v2.5
 状态：正式基线
-更新日期：2026-04-05
+更新日期：2026-04-11
 项目：`wxapp-checkin`
 
 ## 1. 文档目的
@@ -131,7 +131,7 @@
 
 - 实现：内存级 TTL 缓存（moka）
 - TTL：90 秒
-- 唯一键：`u:{user_id}:{activity_id}:{action_type}:{slot}`
+- 唯一键：`{student_id}:{legacy_activity_id}:{action_type}:{slot}`
 - 限制：单实例内存级，服务重启或部署多实例时状态不共享
 
 ### 8.5.4 限流机制
