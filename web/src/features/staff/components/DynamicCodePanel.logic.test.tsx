@@ -7,6 +7,7 @@ vi.mock("./DynamicCodeHero", () => ({
   DynamicCodeHero: (props: {
     countdownTimeMs: number;
     codeText: string;
+    onCountdownFinish: () => void;
   }) => {
     heroRenderSpy(props);
     return (
@@ -76,12 +77,13 @@ describe("DynamicCodePanel countdown logic", () => {
     }));
   });
 
-  it("proactively refreshes an already expired code session once and does not loop on the same expired key", async () => {
+  it("proactively refreshes an already expired code session twice at most for the same expired key", async () => {
     /**
      * 这个场景对应真实回归：
      * - 管理员手动刷新后，后端返回的 code-session 在前端落地时已经过期；
      * - TDesign CountDown 初始 time=0 只会显示 00，不会自己触发 onFinish；
-     * - 因此前端必须主动补一次刷新，但同一轮过期 key 不能无限连刷。
+     * - 因此前端必须主动补刷新；
+     * - 但同一轮过期 key 最多只能补两次，避免页面进入无限刷新环。
      */
     vi.spyOn(Date, "now").mockReturnValue(5000);
 
@@ -127,7 +129,77 @@ describe("DynamicCodePanel countdown logic", () => {
     );
 
     await waitFor(() => {
-      expect(onRefresh).toHaveBeenCalledTimes(1);
+      expect(onRefresh).toHaveBeenCalledTimes(2);
+    });
+
+    view.rerender(
+      <DynamicCodePanel
+        activityId="act_202"
+        actionType="checkin"
+        codeSession={{ ...expiredCodeSession }}
+        onActionChange={() => undefined}
+        onRefresh={onRefresh}
+      />
+    );
+
+    await waitFor(() => {
+      expect(onRefresh).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("retries once more when the first refresh still resolves to the same expired key after countdown finish", async () => {
+    /**
+     * 这个场景对应线上真正更棘手的边界：
+     * - 倒计时归零后，前端已经发起过一次刷新；
+     * - 但这次请求回来时，仍然是上一轮已经过期的 code-session；
+     * - 面板必须允许再补一次刷新，否则 UI 会卡在 `00` 和旧码上。
+     */
+    let now = 1000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+
+    const onRefresh = vi.fn();
+    const codeSession = {
+      action_type: "checkin" as const,
+      activity_id: "act_303",
+      checkin_count: 6,
+      checkout_count: 1,
+      code: "123456",
+      expires_at: 5000,
+      expires_in_ms: 4000,
+      server_time_ms: 1000,
+      status: "success" as const
+    };
+
+    const view = render(
+      <DynamicCodePanel
+        activityId="act_303"
+        actionType="checkin"
+        codeSession={codeSession}
+        onActionChange={() => undefined}
+        onRefresh={onRefresh}
+      />
+    );
+
+    const firstHeroProps = heroRenderSpy.mock.calls[heroRenderSpy.mock.calls.length - 1]?.[0] as {
+      onCountdownFinish: () => void;
+    };
+
+    firstHeroProps.onCountdownFinish();
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+
+    now = 5000;
+    view.rerender(
+      <DynamicCodePanel
+        activityId="act_303"
+        actionType="checkin"
+        codeSession={{ ...codeSession }}
+        onActionChange={() => undefined}
+        onRefresh={onRefresh}
+      />
+    );
+
+    await waitFor(() => {
+      expect(onRefresh).toHaveBeenCalledTimes(2);
     });
   });
 });

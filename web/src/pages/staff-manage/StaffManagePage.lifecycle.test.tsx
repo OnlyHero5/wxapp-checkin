@@ -127,7 +127,7 @@ describe("StaffManagePage lifecycle", () => {
       await Promise.resolve();
     });
 
-    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_202", "checkin");
+    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_202", "checkin", expect.any(String));
 
     resolveNextActivityCode?.({
       action_type: "checkin",
@@ -294,7 +294,7 @@ describe("StaffManagePage lifecycle", () => {
 
     await waitFor(() => {
       expect(staffApiMocks.getCodeSession.mock.calls.length).toBeGreaterThan(codeRefreshCallCount);
-      expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_101", "checkout");
+      expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_101", "checkout", expect.any(String));
     });
     expect(staffApiMocks.getActivityRoster).toHaveBeenCalledTimes(1);
   });

@@ -98,7 +98,7 @@ describe("StaffManagePage code session", () => {
     await user.click(screen.getByText("签退码"));
 
     expect(await screen.findByText("654321")).toBeInTheDocument();
-    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_101", "checkout");
+    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_101", "checkout", expect.any(String));
   });
 
   it("shows a placeholder hero while the next action code is still loading", async () => {
@@ -131,7 +131,7 @@ describe("StaffManagePage code session", () => {
     expect(screen.getByText("当前签退码")).toBeInTheDocument();
     expect(screen.getByText("------").closest(".staff-panel__hero")).toHaveAttribute("data-display-zone", "hero");
     expect(screen.queryByText("483920")).not.toBeInTheDocument();
-    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_101", "checkout");
+    expect(staffApiMocks.getCodeSession).toHaveBeenLastCalledWith("act_101", "checkout", expect.any(String));
 
     resolveCheckout?.({
       action_type: "checkout",

@@ -1,8 +1,20 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DynamicCodeHero } from "./DynamicCodeHero";
+import { resolveCountdownDisplaySeconds } from "./DynamicCodeHero";
 
 describe("DynamicCodeHero", () => {
+  it("keeps the last sub-second visually rounded up so the UI does not show 00 before real expiry", () => {
+    expect(resolveCountdownDisplaySeconds({
+      milliseconds: 600,
+      seconds: 0
+    })).toBe("01");
+    expect(resolveCountdownDisplaySeconds({
+      milliseconds: 0,
+      seconds: 0
+    })).toBe("00");
+  });
+
   it("renders the action header, code display, and countdown without the legacy badge ribbon wrapper", async () => {
     render(
       <DynamicCodeHero

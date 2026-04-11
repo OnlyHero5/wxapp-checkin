@@ -113,6 +113,48 @@ describe("requestJson", () => {
     });
   });
 
+  it("does not merge inflight GET requests when headers differ", async () => {
+    /**
+     * staff 动态码刷新必须每次都直达后端拿最新 slot，
+     * 因此只要调用方显式换了刷新标签，就不能再复用旧 Promise。
+     */
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(createJsonResponse({
+        status: "success",
+        value: "first"
+      }, {
+        status: 200
+      }))
+      .mockResolvedValueOnce(createJsonResponse({
+        status: "success",
+        value: "second"
+      }, {
+        status: 200
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const firstRequest = requestJson("/activities", {
+      headers: {
+        "X-Refresh-Nonce": "req-1"
+      }
+    });
+    const secondRequest = requestJson("/activities", {
+      headers: {
+        "X-Refresh-Nonce": "req-2"
+      }
+    });
+
+    await expect(firstRequest).resolves.toEqual({
+      status: "success",
+      value: "first"
+    });
+    await expect(secondRequest).resolves.toEqual({
+      status: "success",
+      value: "second"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("injects the Authorization header into requests", async () => {
     const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({
       status: "success"

@@ -31,6 +31,7 @@ export function useStaffCodeSessionState({
     resetBeforeLoad: boolean
   ) => {
     const requestVersion = requestGuardRef.current.beginRequest();
+    const refreshNonce = `code-session:${requestVersion}`;
 
     if (!activityId) {
       if (requestGuardRef.current.isCurrent(requestVersion)) {
@@ -47,7 +48,7 @@ export function useStaffCodeSessionState({
     }
 
     try {
-      const sessionResult = await getCodeSession(activityId, actionType);
+      const sessionResult = await getCodeSession(activityId, actionType, refreshNonce);
       if (requestGuardRef.current.isCurrent(requestVersion)) {
         setCodeSession(sessionResult);
       }

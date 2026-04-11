@@ -1,4 +1,5 @@
 import { CountDown, Skeleton, Tag } from "tdesign-mobile-react";
+import type { ReactNode } from "react";
 import type { ActivityActionType } from "../../activities/api";
 
 export type DynamicCodeHeroProps = {
@@ -15,6 +16,27 @@ function resolveActionTagTheme(actionType: ActivityActionType) {
   return actionType === "checkout" ? "warning" : "success";
 }
 
+type CountdownDisplayTimeData = {
+  milliseconds: number;
+  seconds: number;
+};
+
+export function resolveCountdownDisplaySeconds(timeData?: CountdownDisplayTimeData) {
+  if (!timeData) {
+    return "00";
+  }
+
+  /**
+   * 视觉层必须按“向上取整秒数”展示：
+   * - 剩 600ms 时仍然显示 `01`，避免用户误以为已经归零；
+   * - 真正到 0 才显示 `00`，和自动刷新时机保持一致；
+   * - 这里只负责显示，不改 CountDown 内部的真实结束时间。
+   */
+  const totalMs = Math.max(0, (timeData.seconds * 1000) + timeData.milliseconds);
+  const displaySeconds = totalMs <= 0 ? 0 : Math.ceil(totalMs / 1000);
+  return `${displaySeconds}`.padStart(2, "0");
+}
+
 export function DynamicCodeHero({
   actionLabel,
   actionType,
@@ -24,6 +46,10 @@ export function DynamicCodeHero({
   onCountdownFinish,
   showSkeleton
 }: DynamicCodeHeroProps) {
+  const countdownContent = ((timeData: CountdownDisplayTimeData) => {
+    return resolveCountdownDisplaySeconds(timeData);
+  }) as unknown as (() => ReactNode);
+
   /**
    * 动态码大字展示是组件库没有直接提供的展示型能力。
    *
@@ -88,10 +114,10 @@ export function DynamicCodeHero({
               <span>剩余时间</span>
               <span className="staff-code-panel__countdown">
                 <CountDown
-                  format="ss"
+                  content={countdownContent}
                   key={`${actionType}:${countdownTimeMs}`}
+                  millisecond
                   onFinish={onCountdownFinish}
-                  splitWithUnit
                   time={countdownTimeMs}
                 />
               </span>

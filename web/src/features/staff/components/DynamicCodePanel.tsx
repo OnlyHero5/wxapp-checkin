@@ -94,7 +94,10 @@ export function DynamicCodePanel({
   onRefresh
 }: DynamicCodePanelProps) {
   const displayedCodeSession = resolveDisplayedCodeSession(activityId, actionType, codeSession);
-  const lastTriggeredRefreshKeyRef = useRef("");
+  const autoRefreshStateRef = useRef<{ attemptCount: number; key: string }>({
+    attemptCount: 0,
+    key: ""
+  });
   const countdownBaselineRef = useRef<{ key: string; receivedAtMs: number } | null>(null);
   const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
   // 动作标签和当前 tab 绑定，确保首屏还没拿到码时也能给管理员稳定的语义提示。
@@ -122,6 +125,38 @@ export function DynamicCodePanel({
       countdownBaselineRef.current?.receivedAtMs ?? Date.now()
     );
 
+  function tryTriggerAutoRefresh(reason: "expired-response" | "timer-finished") {
+    if (!displayedCodeSession || heroMetaLoading || !refreshKey) {
+      return false;
+    }
+
+    if (autoRefreshStateRef.current.key !== refreshKey) {
+      autoRefreshStateRef.current = {
+        attemptCount: 0,
+        key: refreshKey
+      };
+    }
+
+    /**
+     * 同一轮动态码最多允许自动补刷两次：
+     * 1. 正常倒计时走到 0 触发的第一次刷新；
+     * 2. 如果第一次刷新回来的仍是这轮过期会话，再补一次兜底刷新。
+     *
+     * 再往后继续拿到同一轮 key，基本就说明后端或网络真的卡住了，
+     * 此时宁可停下来等待用户主动刷新，也不能把页面推入无限刷新环。
+     */
+    if (autoRefreshStateRef.current.attemptCount >= 2) {
+      return false;
+    }
+
+    autoRefreshStateRef.current.attemptCount += 1;
+
+    // 这里只保留触发原因文档化，方便后续维护继续对照“倒计时结束”和“过期响应兜底”两条链路。
+    void reason;
+    onRefresh();
+    return true;
+  }
+
   useEffect(() => {
     /**
      * TDesign CountDown 只会在“内部从正数 tick 到 <= 0”时触发 `onFinish`。
@@ -135,11 +170,7 @@ export function DynamicCodePanel({
     if (!displayedCodeSession || heroMetaLoading || countdownTimeMs > 0) {
       return;
     }
-    if (lastTriggeredRefreshKeyRef.current === refreshKey) {
-      return;
-    }
-    lastTriggeredRefreshKeyRef.current = refreshKey;
-    onRefresh();
+    tryTriggerAutoRefresh("expired-response");
   }, [countdownTimeMs, displayedCodeSession, heroMetaLoading, onRefresh, refreshKey]);
 
   function handleCountdownFinish() {
@@ -152,11 +183,7 @@ export function DynamicCodePanel({
     if (!displayedCodeSession || heroMetaLoading) {
       return;
     }
-    if (lastTriggeredRefreshKeyRef.current === refreshKey) {
-      return;
-    }
-    lastTriggeredRefreshKeyRef.current = refreshKey;
-    onRefresh();
+    tryTriggerAutoRefresh("timer-finished");
   }
 
   /**

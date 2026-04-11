@@ -102,9 +102,24 @@ function encodePathSegment(value: string) {
  * 动态码会话接口故意保持“一个动作一个请求”，
  * 这样前后台切换刷新和切 tab 刷新都能共用同一套入口。
  */
-export function getCodeSession(activityId: string, actionType: ActivityActionType) {
+export function getCodeSession(
+  activityId: string,
+  actionType: ActivityActionType,
+  refreshNonce?: string
+) {
   return requestJson<CodeSessionResponse>(
-    `/activities/${encodePathSegment(activityId)}/code-session?action_type=${encodeURIComponent(actionType)}`
+    `/activities/${encodePathSegment(activityId)}/code-session?action_type=${encodeURIComponent(actionType)}`,
+    refreshNonce
+      ? {
+          /**
+           * 动态码刷新语义和普通 GET 读取不同：
+           * 这里显式附带刷新标签，避免 requestJson 的 in-flight 去重把两次刷新并成同一个旧 Promise。
+           */
+          headers: {
+            "X-Refresh-Nonce": refreshNonce
+          }
+        }
+      : undefined
   );
 }
 
