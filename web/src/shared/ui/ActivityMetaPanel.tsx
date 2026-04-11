@@ -1,4 +1,4 @@
-import { ElementType, ReactNode } from "react";
+import { Children, ElementType, Fragment, ReactNode, isValidElement } from "react";
 import {
   type ActivityMetaCounts,
   buildActivityMetaSections
@@ -29,6 +29,22 @@ type ActivityMetaPanelProps = {
   title: ReactNode;
   titleAs?: ElementType;
 };
+
+/**
+ * footer 允许调用方传 fragment、数组或单个 block。
+ *
+ * 共享层需要把这些形态统一折叠成“逻辑动作数量”，
+ * 才能稳定判断当前应该走全宽单列还是双列入口带。
+ */
+function countActionItems(content: ReactNode): number {
+  return Children.toArray(content).reduce<number>((count, child) => {
+    if (isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment) {
+      return count + countActionItems(child.props.children);
+    }
+
+    return count + 1;
+  }, 0);
+}
 
 export function ActivityMetaPanel({
   as: Container = "section",
@@ -72,6 +88,14 @@ export function ActivityMetaPanel({
   const hasMetricsSection = metrics.rows.length > 0;
   const hasActionSection = actions.content != null;
   const isPlainStatusText = typeof hero.statusContent === "string" || typeof hero.statusContent === "number";
+  /**
+   * 共享面板需要显式区分“单动作块”和“多动作入口”：
+   * 1. 签到/签退页只有一个验证码 footer，必须铺满主卡宽度；
+   * 2. 列表/详情页会传多个入口，仍要保持原来的双列动作带；
+   * 3. 这个判断收口在共享层，业务页就不需要各自追加宽度 hack。
+   */
+  const actionCount = hasActionSection ? countActionItems(actions.content) : 0;
+  const actionLayout = actionCount <= 1 ? "single" : "multiple";
 
   return (
     <Container className={`activity-meta-panel activity-meta-panel--${tone}`} data-panel-tone={tone}>
@@ -127,7 +151,19 @@ export function ActivityMetaPanel({
       ) : null}
 
       {/* 动作区改为消费共享 section 数据，这样主卡本身只剩“渲染模型”职责。 */}
-      {hasActionSection ? <footer className="activity-meta-panel__section activity-meta-panel__section--actions activity-meta-actions">{actions.content}</footer> : null}
+      {hasActionSection ? (
+        <footer
+          className={[
+            "activity-meta-panel__section",
+            "activity-meta-panel__section--actions",
+            "activity-meta-actions",
+            `activity-meta-actions--${actionLayout}`
+          ].join(" ")}
+          data-actions-layout={actionLayout}
+        >
+          {actions.content}
+        </footer>
+      ) : null}
     </Container>
   );
 }

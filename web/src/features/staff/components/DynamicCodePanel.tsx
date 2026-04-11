@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { TabPanel, Tabs } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 import type { CodeSessionResponse } from "../api";
@@ -94,7 +94,7 @@ export function DynamicCodePanel({
   onRefresh
 }: DynamicCodePanelProps) {
   const displayedCodeSession = resolveDisplayedCodeSession(activityId, actionType, codeSession);
-  const lastFinishedRefreshKeyRef = useRef("");
+  const lastTriggeredRefreshKeyRef = useRef("");
   const countdownBaselineRef = useRef<{ key: string; receivedAtMs: number } | null>(null);
   const { checkinCount, checkoutCount, totalCheckedIn } = resolveAttendanceCounts(codeSession);
   // 动作标签和当前 tab 绑定，确保首屏还没拿到码时也能给管理员稳定的语义提示。
@@ -122,20 +122,40 @@ export function DynamicCodePanel({
       countdownBaselineRef.current?.receivedAtMs ?? Date.now()
     );
 
+  useEffect(() => {
+    /**
+     * TDesign CountDown 只会在“内部从正数 tick 到 <= 0”时触发 `onFinish`。
+     * 如果接口返回时这轮 code-session 已经过期，组件首帧只会看到 `00`，
+     * 因此前端需要主动补一次刷新，把“首帧即过期”的缺口收口在面板内部。
+     *
+     * 这里继续沿用 refreshKey 去重：
+     * - 同一轮过期动态码只允许补刷一次，避免后端继续回旧会话时进入刷新环；
+     * - 新一轮动态码拿到新的 refreshKey 后，仍然可以再次正常自动刷新。
+     */
+    if (!displayedCodeSession || heroMetaLoading || countdownTimeMs > 0) {
+      return;
+    }
+    if (lastTriggeredRefreshKeyRef.current === refreshKey) {
+      return;
+    }
+    lastTriggeredRefreshKeyRef.current = refreshKey;
+    onRefresh();
+  }, [countdownTimeMs, displayedCodeSession, heroMetaLoading, onRefresh, refreshKey]);
+
   function handleCountdownFinish() {
     /**
      * 这里改成直接吃 TDesign `CountDown.onFinish`：
      * 1. 刷新时机与组件库显示生命周期保持一致；
      * 2. 不再在父层再手写一套 `setTimeout`；
-     * 3. 仍保留 refreshKey 去重，避免同一轮动态码被重复刷新。
+     * 3. 和“首帧即过期”的兜底共用同一份 refreshKey 去重，避免同一轮动态码被重复刷新。
      */
     if (!displayedCodeSession || heroMetaLoading) {
       return;
     }
-    if (lastFinishedRefreshKeyRef.current === refreshKey) {
+    if (lastTriggeredRefreshKeyRef.current === refreshKey) {
       return;
-    };
-    lastFinishedRefreshKeyRef.current = refreshKey;
+    }
+    lastTriggeredRefreshKeyRef.current = refreshKey;
     onRefresh();
   }
 

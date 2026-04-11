@@ -73,6 +73,50 @@ describe("ActivityMetaPanel", () => {
     expect(screen.getByRole("button", { name: "查看详情" })).toBeInTheDocument();
   });
 
+  it("marks a single footer block as full-width so action pages can stretch one input shell across the main card", () => {
+    const { container } = render(
+      <ActivityMetaPanel
+        footer={(
+          // 动作页会把验证码表单包成一个 footer block，
+          // 共享面板必须显式暴露“单动作”语义，样式层才能安全铺满。
+          <section aria-label="签到码输入区">
+            <button type="button">提交签到码</button>
+          </section>
+        )}
+        subtitle="志愿"
+        title="校园志愿活动"
+      />
+    );
+
+    const actionsSection = container.querySelector(".activity-meta-panel__section--actions");
+
+    expect(actionsSection).not.toBeNull();
+    expect(actionsSection?.getAttribute("data-actions-layout")).toBe("single");
+    expect(actionsSection?.classList.contains("activity-meta-actions--single")).toBe(true);
+  });
+
+  it("keeps multiple footer items on the shared two-column layout for detail and list cards", () => {
+    const { container } = render(
+      <ActivityMetaPanel
+        footer={(
+          <>
+            {/* 多动作场景仍然要维持双列入口，避免把详情/列表页按钮重新堆成单列。 */}
+            <button type="button">查看详情</button>
+            <button type="button">进入管理</button>
+          </>
+        )}
+        subtitle="志愿"
+        title="校园志愿活动"
+      />
+    );
+
+    const actionsSection = container.querySelector(".activity-meta-panel__section--actions");
+
+    expect(actionsSection).not.toBeNull();
+    expect(actionsSection?.getAttribute("data-actions-layout")).toBe("multiple");
+    expect(actionsSection?.classList.contains("activity-meta-actions--multiple")).toBe(true);
+  });
+
   it("keeps the activity title visible without creating a second named heading under the page h1", () => {
     render(
       <ActivityMetaPanel

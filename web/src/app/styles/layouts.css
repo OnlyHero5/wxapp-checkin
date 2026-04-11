@@ -54,8 +54,17 @@
 .activity-meta-actions {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+/* 共享面板先输出动作布局语义，样式层只负责把 single / multiple 映射到列数。 */
+.activity-meta-actions--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 列表卡和详情页等多入口场景继续保留原来的双列动作带。 */
+.activity-meta-actions--multiple {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 /* 状态标签本体仍是组件库 Tag，这里只保留收缩行为。 */
@@ -303,7 +312,7 @@
 
 /* 小屏上动作区仍按双列排列，但不强迫按钮挤成一行文本。 */
 @media (max-width: 359px) {
-  .activity-meta-actions {
+  .activity-meta-actions--multiple {
     grid-template-columns: minmax(0, 1fr);
   }
 }

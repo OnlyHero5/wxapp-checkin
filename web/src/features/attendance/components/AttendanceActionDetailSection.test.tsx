@@ -23,7 +23,7 @@ const detail = {
 
 describe("AttendanceActionDetailSection", () => {
   it("renders activity detail rows plus the code input when the action is allowed", () => {
-    render(
+    const { container } = render(
       <AttendanceActionDetailSection
         actionType="checkin"
         code="123456"
@@ -35,9 +35,15 @@ describe("AttendanceActionDetailSection", () => {
       />
     );
 
+    // 签到/签退页只会传一个验证码 footer block，
+    // 这里直接锁共享主卡输出的单动作语义，避免页面层再补宽度 hack。
+    const actionsSection = container.querySelector(".activity-meta-panel__section--actions");
+
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
     expect(screen.getByText("负责现场秩序维护")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "提交签到码" })).toBeInTheDocument();
+    expect(actionsSection?.getAttribute("data-actions-layout")).toBe("single");
+    expect(actionsSection?.classList.contains("activity-meta-actions--single")).toBe(true);
   });
 
   it("falls back to the shared empty state when the action is unavailable", () => {
