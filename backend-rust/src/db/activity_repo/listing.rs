@@ -1,4 +1,6 @@
 use super::ActivityRow;
+use super::RawActivityRow;
+use super::materialize_activity_row;
 use crate::error::AppError;
 use sqlx::{MySql, MySqlPool, QueryBuilder};
 
@@ -8,8 +10,8 @@ const ACTIVITY_SELECT_SQL: &str = r#"
     CAST(a.name AS CHAR(255) CHARACTER SET utf8mb4) AS activity_title,
     CAST(a.description AS CHAR CHARACTER SET utf8mb4) AS description,
     CAST(a.location AS CHAR(255) CHARACTER SET utf8mb4) AS location,
-    CAST(a.activity_stime AS DATETIME) AS activity_stime,
-    CAST(a.activity_etime AS DATETIME) AS activity_etime,
+    DATE_FORMAT(a.activity_stime, '%Y-%m-%d %H:%i:%s') AS activity_stime,
+    DATE_FORMAT(a.activity_etime, '%Y-%m-%d %H:%i:%s') AS activity_etime,
     a.type AS legacy_type,
     a.state AS legacy_state,
     CAST(COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS SIGNED) AS registered_count,
@@ -82,11 +84,16 @@ async fn list_activities(
   query_builder.push(" OFFSET ");
   query_builder.push_bind(offset);
 
-  query_builder
-    .build_query_as::<ActivityRow>()
+  let raw_rows = query_builder
+    .build_query_as::<RawActivityRow>()
     .fetch_all(pool)
     .await
-    .map_err(|error| AppError::internal(format!("读取活动列表失败：{error}")))
+    .map_err(|error| AppError::internal(format!("读取活动列表失败：{error}")))?;
+
+  raw_rows
+    .into_iter()
+    .map(materialize_activity_row)
+    .collect()
 }
 
 fn append_visibility_clause(
