@@ -174,7 +174,8 @@ fn bulk_checkout_target_where_clause() -> &'static str {
   r#"
   WHERE aa.activity_id = ?
     AND aa.state IN (0, 2)
-    AND NOT (aa.check_in = 1 AND aa.check_out = 1)
+    AND aa.check_in = 1
+    AND aa.check_out = 0
 "#
 }
 

@@ -115,6 +115,24 @@ fn official_docs_should_describe_staff_self_heal_side_effect() {
 }
 
 #[test]
+fn official_docs_should_describe_bulk_checkout_as_checked_in_only() {
+  let requirements = read_repo_file("docs/REQUIREMENTS.md");
+  let functional_spec = read_repo_file("docs/FUNCTIONAL_SPEC.md");
+  let api_spec = read_repo_file("docs/API_SPEC.md");
+
+  for content in [&requirements, &functional_spec, &api_spec] {
+    assert!(
+      content.contains("已签到未签退"),
+      "official docs should say bulk checkout only targets checked-in members"
+    );
+    assert!(
+      content.contains("跳过"),
+      "official docs should say unchecked-in members are skipped during bulk checkout"
+    );
+  }
+}
+
+#[test]
 fn api_spec_should_not_claim_all_time_fields_are_unix_milliseconds() {
   let api_spec = read_repo_file("docs/API_SPEC.md");
 

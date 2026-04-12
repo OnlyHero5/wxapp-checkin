@@ -15,7 +15,7 @@ use crate::service::shared_helpers::{ensure_activity_has_no_anomalous_attendance
 
 /// 批量签退和名单修正共享同一审计上下文，但业务语义更单一：
 /// - 必须显式确认；
-/// - 对所有有效报名且尚未完成签退的记录收敛到“已签到且已签退”；
+/// - 只对已签到未签退的记录收敛到“已签到且已签退”；
 /// - 只有真正签退到成员时，才补一条批次汇总日志。
 pub async fn bulk_checkout(
   state: &AppState,

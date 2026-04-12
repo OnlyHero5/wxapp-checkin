@@ -20,19 +20,19 @@ fn user_id_lock_sql_should_keep_one_activity_placeholder_before_in_clause() {
 }
 
 #[test]
-fn bulk_checkout_target_sql_should_cover_all_effective_members_not_only_checked_in_rows() {
+fn bulk_checkout_target_sql_should_only_lock_checked_in_members_who_have_not_checked_out() {
   let sql = build_bulk_checkout_target_sql();
 
   assert!(
     sql.contains("aa.state IN (0, 2)"),
-    "一键全部签退必须覆盖所有有效报名成员，而不是只看已签到未签退"
+    "一键全部签退仍然只能作用于有效报名成员"
   );
   assert!(
-    sql.contains("NOT (aa.check_in = 1 AND aa.check_out = 1)"),
-    "一键全部签退应只排除已经完成签退的人"
+    sql.contains("AND aa.check_in = 1"),
+    "一键全部签退只能命中已签到成员"
   );
   assert!(
-    !sql.contains("AND aa.check_in = 1\n    AND aa.check_out = 0"),
-    "一键全部签退不应再只锁定已签到未签退成员"
+    sql.contains("AND aa.check_out = 0"),
+    "一键全部签退不能再把未签到成员推进到已签退"
   );
 }

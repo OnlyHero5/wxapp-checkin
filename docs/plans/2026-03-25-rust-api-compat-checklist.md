@@ -224,6 +224,11 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 
 ### 3.8 `POST /api/web/staff/activities/{activity_id}/bulk-checkout`
 
+补充约束：
+
+- 只允许对“已签到未签退”的成员执行批量签退；
+- 未签到成员必须跳过，不得被直接推进到“已签退”。
+
 成功响应关键字段：
 
 - `status`
