@@ -1,6 +1,7 @@
 use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::auth_service;
+use crate::api::client_ip::ClientIp;
 use axum::Json;
 use axum::Router;
 use axum::extract::State;
@@ -41,8 +42,10 @@ pub struct LoginResponse {
 
 async fn login(
   State(state): State<AppState>,
+  client_ip: ClientIp,
   Json(request): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, AppError> {
-  let response = auth_service::login(&state, &request.student_id, &request.password).await?;
+  let response =
+    auth_service::login(&state, &request.student_id, &request.password, client_ip.as_str()).await?;
   Ok(Json(response))
 }

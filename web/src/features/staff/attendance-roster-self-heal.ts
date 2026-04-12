@@ -16,6 +16,16 @@ type EnsureRosterConsistencyInput = {
   getActivityRoster?: typeof defaultGetActivityRoster;
 };
 
+function buildAnomalousRosterMessage(roster: ActivityRosterResponse) {
+  const anomalousMembers = roster.items
+    .filter((item) => item.checked_out && !item.checked_in)
+    .map((item) => `${item.student_id} ${item.name}`);
+  if (anomalousMembers.length === 0) {
+    return "自动修复异常签退状态失败，请稍后重试。";
+  }
+  return `自动修复异常签退状态失败：${anomalousMembers.join("、")} 仍处于未签到已签退异常状态，请先修正后再继续。`;
+}
+
 /**
  * 管理页和名单页都依赖同一份 roster 自愈口径，
  * 这样异常签退状态只在一个地方判定、修复和回读，避免两个页面各自漂移。
@@ -50,7 +60,7 @@ export async function ensureRosterConsistency({
   const healedRoster = await getActivityRoster(activityId);
   const remainingAnomalousUserIds = collectAnomalousRosterUserIds(healedRoster.items);
   if (remainingAnomalousUserIds.length > 0) {
-    throw new Error("自动修复异常签退状态失败，请稍后重试。");
+    throw new Error(buildAnomalousRosterMessage(healedRoster));
   }
 
   return {

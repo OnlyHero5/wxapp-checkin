@@ -1,4 +1,4 @@
-import { clearSession, getSession } from "../session/session-store";
+import { clearSession, readSessionState } from "../session/session-store";
 import { resolveRuntimeConfig } from "../runtime/runtime-config";
 import { ApiError, NetworkError, SessionExpiredError } from "./errors";
 
@@ -143,8 +143,13 @@ async function parseResponsePayload(response: Response) {
 }
 
 export async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const sessionToken = getSession();
+  const sessionState = readSessionState();
+  const sessionToken = sessionState.token;
   const method = options.method ?? "GET";
+
+  if (sessionState.expiredLocally) {
+    throw new SessionExpiredError();
+  }
 
   async function executeRequest() {
     try {

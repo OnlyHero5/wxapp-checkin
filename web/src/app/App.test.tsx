@@ -110,6 +110,18 @@ describe("AppRoutes", () => {
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
   });
 
+  it("redirects /activities to login when the locally stored session is already expired", () => {
+    window.localStorage.setItem("session_token", "sess_expired_123");
+    window.localStorage.setItem("session_context", JSON.stringify({
+      permissions: ["activity:manage"],
+      role: "staff",
+      session_expires_at: Date.now() - 1000
+    }));
+    renderPath("/activities");
+
+    expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
+  });
+
   it("redirects /login to activities when session exists", async () => {
     setSession("sess_123");
     renderPath("/login");

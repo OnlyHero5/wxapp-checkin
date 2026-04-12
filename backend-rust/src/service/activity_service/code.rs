@@ -7,7 +7,7 @@ use crate::app_state::AppState;
 use crate::db::activity_repo;
 use crate::domain::{AttendanceActionType, WebRole, format_activity_id, parse_activity_id};
 use crate::error::AppError;
-use crate::service::shared_helpers::{now_millis, role_from_user};
+use crate::service::shared_helpers::{ensure_activity_has_no_anomalous_attendance_rows, now_millis, role_from_user};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::time::SystemTime;
@@ -41,6 +41,7 @@ pub async fn issue_code_session(
         Some("invalid_activity"),
       )
     })?;
+  ensure_activity_has_no_anomalous_attendance_rows(state, legacy_activity_id).await?;
   ensure_activity_time_valid(&activity)?;
   ensure_activity_action_allowed(&activity, *action_type)?;
   ensure_within_issue_window(&activity, SystemTime::now())?;

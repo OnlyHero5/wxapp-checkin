@@ -27,3 +27,8 @@
   - `npm run test:e2e`
   - `cargo clippy --all-targets --all-features -- -D warnings`
   - `cargo build --release`
+- 当前补充核实中的重点证据：
+  - `backend-rust/src/app_state.rs` 仍把 `QR_SIGNING_KEY` 复用于 JWT，会话和动态码未拆分密钥。
+  - `backend-rust/src/config.rs`、`scripts/docker-prod.sh`、`scripts/prod-backend.sh` 只检查非空，不拦截占位密钥。
+  - 登录枚举、IP 维度限流、审计 IP、统计 SQL、前端本地会话过期处理、nginx 安全头、文档一致性问题已完成修复。
+  - `web/playwright.config.ts` 已补可选 `webkit` 项目；当前宿主机缺少 WebKit 系统依赖，无法在本机直接执行该项目。

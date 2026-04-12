@@ -18,8 +18,6 @@ const ATTENDANCE_ROSTER_SELECT_SQL: &str = r#"
 "#;
 const ATTENDANCE_ROSTER_ORDER_SQL: &str = "\n  ORDER BY u.username ASC";
 
-/// 签到写路径后续会直接锁定 `suda_activity_apply`。
-/// 这里先把读写函数和 roster 查询抽出来，避免业务层自己拼 SQL。
 #[derive(Debug, Clone, FromRow)]
 pub struct AttendanceRecord {
   pub id: i64,
@@ -41,8 +39,6 @@ pub struct AttendanceRosterRow {
   pub check_out_flag: i64,
 }
 
-/// 普通名单读取与 staff 事务内名单读取共用同一组列形状。
-/// 这里显式保留两个语义别名，方便调用层继续表达“读路径”与“锁定写路径”的区别。
 pub type RosterRow = AttendanceRosterRow;
 pub type ManagedAttendanceRow = AttendanceRosterRow;
 
@@ -51,10 +47,6 @@ fn build_attendance_roster_base_sql(where_clause: &str) -> String {
 }
 
 fn build_attendance_roster_sql(where_clause: &str, for_update: bool) -> String {
-  // 名单相关查询共享同一组列投影：
-  // 1. 避免 roster / 批量签退 / 名单修正三处继续手抄同一段 `SELECT ... CAST(...)`；
-  // 2. 保证 utf8mb4_bin 转型口径始终一致；
-  // 3. 只把差异保留在 `WHERE` 与是否 `FOR UPDATE`。
   let mut sql = build_attendance_roster_base_sql(where_clause);
   sql.push_str(ATTENDANCE_ROSTER_ORDER_SQL);
   if for_update {
@@ -63,10 +55,6 @@ fn build_attendance_roster_sql(where_clause: &str, for_update: bool) -> String {
   sql
 }
 
-/// 名单修正需要在同一条锁定查询里同时收口活动范围和目标 user_id：
-/// 1. `activity_id` 继续作为第一层过滤，避免事务锁扩散到整张报名表；
-/// 2. `user_id IN (...)` 仍交给 `QueryBuilder` 产出占位符，避免回退到手拼 `?, ?, ?`；
-/// 3. 这里不再在原始 SQL 里预埋 `?`，从根源上杜绝 `= ??` 这种混用占位符的语法错误。
 fn build_user_id_lock_query_builder(
   legacy_activity_id: i64,
   user_ids: &[i64],
@@ -90,10 +78,7 @@ fn build_user_id_lock_query_builder(
 #[cfg(test)]
 fn build_user_id_lock_sql(user_id_count: usize) -> String {
   let demo_user_ids = vec![0_i64; user_id_count];
-  build_user_id_lock_query_builder(0, &demo_user_ids)
-    .build()
-    .sql()
-    .to_string()
+  build_user_id_lock_query_builder(0, &demo_user_ids).build().sql().to_string()
 }
 
 pub async fn find_attendance_for_update(
@@ -101,8 +86,6 @@ pub async fn find_attendance_for_update(
   legacy_activity_id: i64,
   student_id: &str,
 ) -> Result<Option<AttendanceRecord>, AppError> {
-  // 签到写路径读到的用户名/姓名同样来自 `utf8mb4_bin` 文本列。
-  // 若不在这里转型，事务入口和 roster 相关接口都会直接因为解码失败而中断。
   sqlx::query_as::<_, AttendanceRecord>(
     r#"
       SELECT
@@ -166,6 +149,27 @@ pub async fn list_roster(
     .map_err(|error| AppError::internal(format!("读取 roster 失败：{error}")))
 }
 
+pub async fn list_anomalous_rows(
+  pool: &MySqlPool,
+  legacy_activity_id: i64,
+) -> Result<Vec<RosterRow>, AppError> {
+  let sql = build_attendance_roster_sql(
+    r#"
+  WHERE aa.activity_id = ?
+    AND aa.state IN (0, 2)
+    AND aa.check_in = 0
+    AND aa.check_out = 1
+"#,
+    false,
+  );
+
+  sqlx::query_as::<_, RosterRow>(&sql)
+  .bind(legacy_activity_id)
+  .fetch_all(pool)
+  .await
+    .map_err(|error| AppError::internal(format!("检查异常签到状态失败：{error}")))
+}
+
 fn bulk_checkout_target_where_clause() -> &'static str {
   r#"
   WHERE aa.activity_id = ?
@@ -184,7 +188,6 @@ pub async fn list_bulk_checkout_targets_for_update(
   legacy_activity_id: i64,
 ) -> Result<Vec<ManagedAttendanceRow>, AppError> {
   let sql = build_attendance_roster_sql(bulk_checkout_target_where_clause(), true);
-
   sqlx::query_as::<_, ManagedAttendanceRow>(&sql)
     .bind(legacy_activity_id)
     .fetch_all(&mut **tx)
@@ -200,9 +203,6 @@ pub async fn list_by_user_ids_for_update(
   if user_ids.is_empty() {
     return Ok(Vec::new());
   }
-
-  // 名单修正链路必须共用同一份动态锁定 SQL，
-  // 这样测试和运行时都能围绕“activity_id + user_ids”这组边界做回归保护。
   build_user_id_lock_query_builder(legacy_activity_id, user_ids)
     .build_query_as::<ManagedAttendanceRow>()
     .fetch_all(&mut **tx)

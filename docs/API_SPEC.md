@@ -109,8 +109,17 @@
 
 ### 3.8 时间字段
 
-- 统一使用毫秒级 Unix 时间戳；
-- 字段名统一为 `*_at` 或 `*_time_ms`；
+- 机器时效字段使用毫秒级 Unix 时间戳，例如：
+  - `session_expires_at`
+  - `server_time_ms`
+  - `expires_at`
+  - `expires_in_ms`
+- 页面展示时间字段使用格式化字符串 `YYYY-MM-DD HH:mm`，例如：
+  - `start_time`
+  - `my_checkin_time`
+  - `my_checkout_time`
+  - `items[*].checkin_time`
+  - `items[*].checkout_time`
 - 一切时效判断以后端时间为准。
 
 ## 4. 认证接口
@@ -152,11 +161,14 @@
 
 失败语义：
 
-- `identity_not_found`：学号不存在；
-- `invalid_password`：密码错误；
-- `account_disabled`：账号已停用；
+- `invalid_credentials`：学号不存在、密码错误或账号已停用时的统一对外响应；
 - `rate_limited`：登录失败次数过多，需稍后重试；
 - `invalid_param`：请求体缺字段或为空。
+
+补充说明：
+
+- 为避免账号枚举，登录接口不再对外区分 `identity_not_found` / `invalid_password` / `account_disabled`；
+- 受保护接口在 bearer token 反查用户时，若发现账号已停用，仍会返回 `account_disabled`。
 
 ## 5. 活动与动态码接口
 
@@ -292,6 +304,7 @@
 - `invalid_param`
 - `outside_activity_time_window`
 - `activity_time_invalid`
+- `attendance_state_invalid`
 
 补充说明：
 
@@ -427,6 +440,7 @@
 - `invalid_activity`
 - `invalid_param`
 - `session_expired`
+- `attendance_state_invalid`
 
 补充约束：
 
@@ -479,9 +493,8 @@
 | error_code | 含义 | 典型接口 |
 | --- | --- | --- |
 | `session_expired` | 会话失效 | 全部鉴权接口 |
-| `identity_not_found` | 学号不存在 | `auth/login` |
-| `invalid_password` | 密码错误 | `auth/login` |
-| `account_disabled` | 账号已停用 | `auth/login` / 鉴权接口 |
+| `invalid_credentials` | 学号不存在、密码错误或停用账号的统一登录失败响应 | `auth/login` |
+| `account_disabled` | bearer 鉴权阶段发现账号已停用 | 鉴权接口 |
 | `invalid_param` | 请求字段缺失或非法 | 多数写接口 |
 | `invalid_activity` | 活动不存在或不可见 | 活动 / staff / 动态码 |
 | `invalid_code` | 动态码错误 | `code-consume` |
@@ -490,6 +503,7 @@
 | `duplicate` | 同一时段重复提交 | `code-consume` |
 | `outside_activity_time_window` | 不在发码或验码允许时间窗 | `code-session` / `code-consume` |
 | `activity_time_invalid` | 活动时间信息异常 | `code-session` |
+| `attendance_state_invalid` | 名单中存在异常签退状态，必须先修正后再继续 staff 高风险操作 | `code-session` / `staff/bulk-checkout` |
 
 ## 8. 当前实现边界
 

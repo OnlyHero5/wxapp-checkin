@@ -153,6 +153,23 @@ fn docker_compose_should_define_backend_healthcheck() {
 }
 
 #[test]
+fn nginx_should_ship_basic_clickjacking_and_content_sniffing_defenses() {
+  let nginx_conf = fs::read_to_string(repo_file("docker/nginx.conf")).expect("read docker/nginx.conf");
+
+  for header in [
+    "Content-Security-Policy",
+    "X-Frame-Options",
+    "X-Content-Type-Options",
+    "Referrer-Policy",
+  ] {
+    assert!(
+      nginx_conf.contains(header),
+      "nginx config should explicitly set {header}"
+    );
+  }
+}
+
+#[test]
 fn repository_should_offer_one_click_docker_deploy_script() {
   assert!(
     repo_file("scripts/docker-prod.sh").exists(),

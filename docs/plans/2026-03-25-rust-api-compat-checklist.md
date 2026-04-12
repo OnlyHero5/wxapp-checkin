@@ -22,13 +22,13 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 前端依赖的关键错误态必须保留：
 
 - `session_expired`
-- `identity_not_found`
-- `invalid_password`
 - `account_disabled`
+- `invalid_credentials`
 - `invalid_param`
 - `invalid_activity`
 - `outside_activity_time_window`
 - `activity_time_invalid`
+- `attendance_state_invalid`
 - `invalid_code`
 - `expired`
 - `duplicate`
@@ -54,9 +54,7 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 
 关键错误态：
 
-- `identity_not_found`
-- `invalid_password`
-- `account_disabled`
+- `invalid_credentials`
 - `rate_limited`
 - `invalid_param`
 
@@ -143,6 +141,7 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 - `invalid_param`
 - `outside_activity_time_window`
 - `activity_time_invalid`
+- `attendance_state_invalid`
 - `forbidden`
 
 ### 3.5 `POST /api/web/activities/{activity_id}/code-consume`
@@ -215,6 +214,7 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 - `invalid_activity`
 - `invalid_param`
 - `forbidden`
+- `attendance_state_invalid`
 
 补充约束：
 

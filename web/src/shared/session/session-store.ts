@@ -13,18 +13,75 @@ export type SessionProfileSnapshot = {
   user_profile: SessionUserProfile | null;
 };
 
-export function getSession() {
-  const storage = getStorage();
+type SessionState = {
+  context: ReturnType<typeof readSessionContext>;
+  expiredLocally: boolean;
+  token: string;
+};
+
+function isExpiredLocally(sessionExpiresAt?: number) {
+  return typeof sessionExpiresAt === "number" && sessionExpiresAt <= Date.now();
+}
+
+function clearStoredSessionState(storage: Storage | null) {
   if (!storage) {
-    return "";
+    return;
   }
 
   try {
-    // 读取失败时直接视为“没有会话”，比让页面崩掉更可控。
-    return normalizeSessionToken(storage.getItem(SESSION_STORAGE_KEY));
+    storage.removeItem(SESSION_STORAGE_KEY);
+    writeSessionContext(storage, null);
+    // 兼容历史版本：曾经用于浏览器绑定的本地 key 仍可能残留，统一清掉避免误判。
+    storage.removeItem("browser_binding_key");
   } catch {
-    return "";
+    return;
   }
+}
+
+export function readSessionState(): SessionState {
+  const storage = getStorage();
+  if (!storage) {
+    return {
+      context: null,
+      expiredLocally: false,
+      token: ""
+    };
+  }
+
+  try {
+    const token = normalizeSessionToken(storage.getItem(SESSION_STORAGE_KEY));
+    const context = readSessionContext(storage);
+    if (!token) {
+      return {
+        context,
+        expiredLocally: false,
+        token: ""
+      };
+    }
+    if (isExpiredLocally(context?.session_expires_at)) {
+      clearStoredSessionState(storage);
+      return {
+        context: null,
+        expiredLocally: true,
+        token: ""
+      };
+    }
+    return {
+      context,
+      expiredLocally: false,
+      token
+    };
+  } catch {
+    return {
+      context: null,
+      expiredLocally: false,
+      token: ""
+    };
+  }
+}
+
+export function getSession() {
+  return readSessionState().token;
 }
 
 export function setSession(sessionToken: string) {
@@ -59,6 +116,7 @@ export function setSession(sessionToken: string) {
 type AuthSessionPayload = {
   permissions?: string[];
   role?: string;
+  session_expires_at?: number;
   session_token: string;
   user_profile?: SessionUserProfile;
 };
@@ -80,6 +138,7 @@ export function saveAuthSession(payload: AuthSessionPayload) {
     writeSessionContext(storage, {
       permissions: payload.permissions,
       role: payload.role,
+      session_expires_at: payload.session_expires_at,
       user_profile: payload.user_profile
     });
   } catch {
@@ -90,19 +149,19 @@ export function saveAuthSession(payload: AuthSessionPayload) {
 }
 
 export function getSessionRole() {
-  return readSessionContext(getStorage())?.role ?? "normal";
+  return readSessionState().context?.role ?? "normal";
 }
 
 export function getSessionPermissions() {
-  return readSessionContext(getStorage())?.permissions ?? [];
+  return readSessionState().context?.permissions ?? [];
 }
 
 export function getSessionUserProfile() {
-  return readSessionContext(getStorage())?.user_profile ?? null;
+  return readSessionState().context?.user_profile ?? null;
 }
 
 export function getSessionProfileSnapshot(): SessionProfileSnapshot {
-  const context = readSessionContext(getStorage());
+  const context = readSessionState().context;
   return {
     permissions: context?.permissions ?? [],
     role: context?.role ?? "normal",
@@ -123,18 +182,5 @@ export function isStaffSession() {
 }
 
 export function clearSession() {
-  const storage = getStorage();
-  if (!storage) {
-    return;
-  }
-
-  try {
-    storage.removeItem(SESSION_STORAGE_KEY);
-    writeSessionContext(storage, null);
-    // 兼容历史版本：曾经用于浏览器绑定的本地 key 仍可能残留，统一清掉避免误判。
-    storage.removeItem("browser_binding_key");
-  } catch {
-    // 清理失败时同样不抛错，避免“本来是要跳登录页，结果先崩页面”。
-    return;
-  }
+  clearStoredSessionState(getStorage());
 }

@@ -3,6 +3,7 @@ pub use super::activity_contracts::{
   CodeConsumeRequest, CodeConsumeResponse, CodeSessionQuery, CodeSessionResponse,
 };
 use crate::api::auth_extractor::CurrentUser;
+use crate::api::client_ip::ClientIp;
 use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::activity_service;
@@ -60,6 +61,7 @@ async fn get_code_session(
 async fn consume_code(
   State(state): State<AppState>,
   current_user: CurrentUser,
+  client_ip: ClientIp,
   Path(activity_id): Path<String>,
   Json(request): Json<CodeConsumeRequest>,
 ) -> Result<Json<CodeConsumeResponse>, AppError> {
@@ -69,6 +71,7 @@ async fn consume_code(
     &activity_id,
     request.action_type,
     &request.code,
+    client_ip.as_str(),
   )
   .await?;
   Ok(Json(response))

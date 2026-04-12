@@ -113,3 +113,30 @@ fn official_docs_should_describe_staff_self_heal_side_effect() {
     "api spec should describe the automatic attendance-adjustment side effect"
   );
 }
+
+#[test]
+fn api_spec_should_not_claim_all_time_fields_are_unix_milliseconds() {
+  let api_spec = read_repo_file("docs/API_SPEC.md");
+
+  assert!(
+    api_spec.contains("格式化时间字符串") || api_spec.contains("YYYY-MM-DD HH:mm"),
+    "api spec should explicitly document that activity display times are formatted strings"
+  );
+}
+
+#[test]
+fn deployment_docs_should_explicitly_call_out_database_preconditions() {
+  let readme = read_repo_file("README.md");
+  let deployment_doc = read_repo_file("docs/DEPLOYMENT.md");
+
+  for content in [&readme, &deployment_doc] {
+    assert!(
+      content.contains("不会初始化数据库") || content.contains("不会做任何数据初始化"),
+      "deployment docs should say that this repository does not initialize the database"
+    );
+    assert!(
+      content.contains("关键表") && (content.contains("预先存在") || content.contains("必须已有")),
+      "deployment docs should say that required suda_union tables must already exist"
+    );
+  }
+}

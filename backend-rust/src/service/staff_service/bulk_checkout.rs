@@ -11,21 +11,23 @@ use crate::app_state::AppState;
 use crate::db::attendance_repo;
 use crate::domain::format_activity_id;
 use crate::error::AppError;
-use crate::service::shared_helpers::now_millis;
+use crate::service::shared_helpers::{ensure_activity_has_no_anomalous_attendance_rows, now_millis};
 
 /// 批量签退和名单修正共享同一审计上下文，但业务语义更单一：
 /// - 必须显式确认；
 /// - 对所有有效报名且尚未完成签退的记录收敛到“已签到且已签退”；
-/// - 最后补一条批次汇总日志。
+/// - 只有真正签退到成员时，才补一条批次汇总日志。
 pub async fn bulk_checkout(
   state: &AppState,
   current_user: &CurrentUser,
   activity_id: &str,
   input: BulkCheckoutInput,
+  client_ip: &str,
 ) -> Result<BulkCheckoutResponse, AppError> {
   require_staff(current_user)?;
   let legacy_activity_id = crate::domain::parse_activity_id(activity_id)?;
   require_activity(state, legacy_activity_id).await?;
+  ensure_activity_has_no_anomalous_attendance_rows(state, legacy_activity_id).await?;
   let BulkCheckoutInput { reason } = input;
   let batch_id = format!("batch_{}", now_millis()?);
   let server_time_ms = now_millis()?;
@@ -35,6 +37,7 @@ pub async fn bulk_checkout(
     .await
     .map_err(|error| AppError::internal(format!("开启批量签退事务失败：{error}")))?;
   let log_context = StaffLogContext {
+    client_ip,
     current_user,
     legacy_activity_id,
     action_kind: StaffAuditActionKind::BulkCheckout,
@@ -49,7 +52,9 @@ pub async fn bulk_checkout(
     insert_staff_log(tx.as_mut(), &log_context, &row, 1, 1).await?;
     affected_count += 1;
   }
-  insert_batch_summary_log(tx.as_mut(), &log_context, affected_count).await?;
+  if affected_count > 0 {
+    insert_batch_summary_log(tx.as_mut(), &log_context, affected_count).await?;
+  }
   tx.commit()
     .await
     .map_err(|error| AppError::internal(format!("提交批量签退事务失败：{error}")))?;

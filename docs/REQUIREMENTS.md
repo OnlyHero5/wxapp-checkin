@@ -68,8 +68,8 @@
 
 - `FR-001` 无有效会话时必须进入登录流程。
 - `FR-002` 登录输入字段固定为 `student_id`、`password`。
-- `FR-003` 学号不存在时不得登录，并返回 `identity_not_found`。
-- `FR-003A` 已停用账号不得登录，并返回 `account_disabled`。
+- `FR-003` 登录凭证无效时不得登录，并统一返回 `invalid_credentials`，避免账号枚举。
+- `FR-003A` 已停用账号不得登录；登录接口对外仍统一返回 `invalid_credentials`，但 bearer 鉴权接口继续返回 `account_disabled` 并清理本地会话。
 - `FR-004` 登录成功后必须返回 `session_token`、`session_expires_at`、`role`、`permissions`、`user_profile`。
 - `FR-005` 会话失效后必须返回 `session_expired`。
 - `FR-005A` 登录失败次数过多时必须返回 `rate_limited`。

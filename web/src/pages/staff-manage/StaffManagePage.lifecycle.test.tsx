@@ -459,7 +459,7 @@ describe("StaffManagePage lifecycle", () => {
     renderStaffManagePage();
 
     await waitFor(() => {
-      expect(screen.getByText(/自动修复异常签退状态失败/)).toBeInTheDocument();
+      expect(screen.getByText(/2025000012.*异常成员.*未签到已签退/)).toBeInTheDocument();
     });
     expect(screen.getByRole("button", { name: "一键全部签退" })).toBeDisabled();
     expect(screen.queryByText("483920")).not.toBeInTheDocument();

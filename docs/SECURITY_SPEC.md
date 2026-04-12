@@ -224,7 +224,7 @@ key = "{student_id}:{legacy_activity_id}:{action_type}:{slot}"
 
 使用 `governor` 库的令牌桶算法：
 - 动态码错误限流：基于 `user_id + activity_id`
-- 登录失败限流：基于 `student_id`
+- 登录失败限流：同时基于 `student_id` 与客户端 IP
 - 内存级限流
 - 不支持分布式
 
@@ -260,9 +260,13 @@ HTTP 状态码：`429`
 
 1. 登录失败限流
 - 接口：`POST /api/web/auth/login`
-- 键：`student_id`
+- 键：
+  - `student_id`
+  - 客户端 IP
 - 窗口：60 秒
-- 默认阈值：5 次失败后返回 `rate_limited`
+- 默认阈值：
+  - 单学号 5 次失败后返回 `rate_limited`
+  - 单 IP 20 次失败后返回 `rate_limited`
 
 2. 动态码错误限流
 - 接口：`POST /api/web/activities/{activity_id}/code-consume`
@@ -300,9 +304,9 @@ HTTP 状态码：`429`
 
 ### 6.3 安全注意事项
 
-- 学号不存在时返回 `identity_not_found`
-- 密码为空、哈希为空或 bcrypt 校验失败时返回 `invalid_password`
-- 账号已停用时返回 `account_disabled`
+- 登录接口对外统一返回 `invalid_credentials`
+- 学号不存在、密码为空、哈希为空、bcrypt 校验失败、账号已停用都会映射到同一登录失败响应
+- 详细失败原因继续写入登录失败审计日志，但已进入 `rate_limited` 的重复拦截请求不再继续落库
 - 登录失败次数过多时返回 `rate_limited`
 - 不支持通过 API 修改密码
 - 密码修改需要通过外部系统完成

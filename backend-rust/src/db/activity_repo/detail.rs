@@ -22,8 +22,8 @@ pub async fn find_activity_by_id(
         a.type AS legacy_type,
         a.state AS legacy_state,
         CAST(COALESCE(SUM(CASE WHEN aa.state IN (0, 2) THEN 1 ELSE 0 END), 0) AS SIGNED) AS registered_count,
-        CAST(COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkin_count,
-        CAST(COALESCE(SUM(CASE WHEN aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkout_count
+        CAST(COALESCE(SUM(CASE WHEN aa.state IN (0, 2) AND aa.check_in = 1 AND aa.check_out = 0 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkin_count,
+        CAST(COALESCE(SUM(CASE WHEN aa.state IN (0, 2) AND aa.check_in = 1 AND aa.check_out = 1 THEN 1 ELSE 0 END), 0) AS SIGNED) AS checkout_count
       FROM suda_activity a
       LEFT JOIN suda_activity_apply aa ON aa.activity_id = a.id
       WHERE a.id = ?

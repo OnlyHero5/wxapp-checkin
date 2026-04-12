@@ -38,6 +38,7 @@ impl StaffAuditActionKind {
 /// - 操作原因。
 #[derive(Debug, Clone, Copy)]
 pub(super) struct StaffLogContext<'a> {
+  pub client_ip: &'a str,
   pub current_user: &'a CurrentUser,
   pub legacy_activity_id: i64,
   pub action_kind: StaffAuditActionKind,
@@ -83,7 +84,7 @@ where
     &row.name,
     context.action_kind.path(),
     &content,
-    "",
+    context.client_ip,
     "",
   )
   .await
@@ -115,7 +116,7 @@ where
     &context.current_user.name,
     context.action_kind.path(),
     &content,
-    "",
+    context.client_ip,
     "",
   )
   .await

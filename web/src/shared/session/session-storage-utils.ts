@@ -11,6 +11,7 @@ export type SessionUserProfile = {
 export type StoredSessionContext = {
   permissions?: string[];
   role?: string;
+  session_expires_at?: number;
   user_profile?: SessionUserProfile;
 };
 
@@ -47,6 +48,14 @@ function normalizePermissions(value: string[] | null | undefined) {
   return (value ?? []).map((item) => `${item ?? ""}`.trim()).filter(Boolean);
 }
 
+function normalizeSessionExpiresAt(value: unknown) {
+  const numericValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return undefined;
+  }
+  return Math.trunc(numericValue);
+}
+
 export function readSessionContext(storage: Storage | null) {
   if (!storage) {
     return null;
@@ -61,6 +70,7 @@ export function readSessionContext(storage: Storage | null) {
     return {
       permissions: normalizePermissions(parsed.permissions),
       role: normalizeRole(parsed.role),
+      session_expires_at: normalizeSessionExpiresAt(parsed.session_expires_at),
       user_profile: parsed.user_profile
     } satisfies StoredSessionContext;
   } catch {
@@ -84,6 +94,7 @@ export function writeSessionContext(storage: Storage | null, context: StoredSess
       JSON.stringify({
         permissions: normalizePermissions(context.permissions),
         role: normalizeRole(context.role),
+        session_expires_at: normalizeSessionExpiresAt(context.session_expires_at),
         user_profile: context.user_profile ?? null
       })
     );

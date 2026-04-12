@@ -154,7 +154,7 @@ describe("attendance-roster-self-heal", () => {
       activityId: "act_101",
       adjustAttendanceStates,
       getActivityRoster
-    })).rejects.toThrow("自动修复异常签退状态失败");
+    })).rejects.toThrow("自动修复异常签退状态失败：9 异常成员 仍处于未签到已签退异常状态");
 
     expect(getActivityRoster).toHaveBeenCalledTimes(2);
     expect(adjustAttendanceStates).toHaveBeenCalledTimes(1);

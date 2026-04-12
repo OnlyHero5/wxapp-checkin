@@ -20,6 +20,7 @@ pub async fn adjust_attendance(
   current_user: &CurrentUser,
   activity_id: &str,
   input: AttendanceAdjustmentInput,
+  client_ip: &str,
 ) -> Result<AttendanceAdjustmentResponse, AppError> {
   require_staff(current_user)?;
   let legacy_activity_id = crate::domain::parse_activity_id(activity_id)?;
@@ -37,6 +38,7 @@ pub async fn adjust_attendance(
     .await
     .map_err(|error| AppError::internal(format!("开启名单修正事务失败：{error}")))?;
   let log_context = StaffLogContext {
+    client_ip,
     current_user,
     legacy_activity_id,
     action_kind: StaffAuditActionKind::AttendanceAdjustment,
@@ -63,9 +65,9 @@ pub async fn adjust_attendance(
     insert_staff_log(tx.as_mut(), &log_context, &row, check_in, check_out).await?;
     affected_count += 1;
   }
-  // 名单修正无论是否真的改动了成员状态，都需要留下 staff 级汇总审计，
-  // 这样人工修正、批量修正和自动自愈都能在 `suda_log` 里留下可追溯批次。
-  insert_batch_summary_log(tx.as_mut(), &log_context, affected_count).await?;
+  if affected_count > 0 {
+    insert_batch_summary_log(tx.as_mut(), &log_context, affected_count).await?;
+  }
   tx.commit()
     .await
     .map_err(|error| AppError::internal(format!("提交名单修正事务失败：{error}")))?;

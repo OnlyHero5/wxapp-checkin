@@ -193,6 +193,20 @@ describe("requestJson", () => {
     }));
   });
 
+  it("clears locally expired sessions before sending another request", async () => {
+    window.localStorage.setItem("session_token", "sess_auth_123");
+    window.localStorage.setItem("session_context", JSON.stringify({
+      role: "staff",
+      session_expires_at: Date.now() - 1000
+    }));
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(requestJson("/activities")).rejects.toBeInstanceOf(SessionExpiredError);
+    expect(getSession()).toBe("");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("aborts slow requests after the configured timeout with a stable NetworkError", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockImplementation((_input: string, init?: RequestInit) => {

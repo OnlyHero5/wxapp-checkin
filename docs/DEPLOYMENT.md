@@ -22,6 +22,11 @@
 - MySQL 8
 - Nginx（或等价静态资源 / 反向代理）
 
+数据库前置条件：
+
+- 当前仓库不会初始化数据库，也不会创建任何业务表；
+- 部署前必须预先准备好 `suda_union`，并确保关键表 `suda_user`、`suda_department_u`、`suda_department`、`suda_activity`、`suda_activity_apply`、`suda_log` 必须已有且目标账号可读写。
+
 如果你准备直接走当前推荐的云服务器 Docker 方案，还需要：
 
 - Docker / Docker Compose Plugin

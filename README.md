@@ -90,6 +90,11 @@ curl http://127.0.0.1:5173/
 - `mysql` CLI
 - `curl`
 
+数据库前置条件：
+
+- 仓库不会初始化数据库或创建表；
+- 生产/联调前必须预先准备好 `suda_union`，并确保关键表 `suda_user`、`suda_department_u`、`suda_department`、`suda_activity`、`suda_activity_apply`、`suda_log` 必须已有且目标账号可读。
+
 Web 端运行时路径相关环境变量：
 
 - `VITE_APP_BASE_PATH`：前端路由基路径

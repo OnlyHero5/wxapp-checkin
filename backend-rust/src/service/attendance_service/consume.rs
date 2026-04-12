@@ -25,6 +25,7 @@ pub async fn consume_code(
   activity_id: &str,
   action_type: AttendanceActionType,
   code: &str,
+  client_ip: &str,
 ) -> Result<CodeConsumeResponse, AppError> {
   ensure_normal_user_can_consume(current_user)?;
   let (legacy_activity_id, activity) = load_activity_or_throw(state, activity_id).await?;
@@ -79,6 +80,7 @@ pub async fn consume_code(
     action_type,
     &record_id,
     server_time_ms,
+    client_ip,
   )
   .await?;
   tx.commit()

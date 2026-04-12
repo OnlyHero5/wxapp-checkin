@@ -1,9 +1,29 @@
 import { defineConfig } from "@playwright/test";
 
+const includeWebkitProject = process.env.PLAYWRIGHT_INCLUDE_WEBKIT === "1";
+
 export default defineConfig({
   // 真实浏览器测试产物统一落到工作区 output，避免再回落到系统缓存或临时目录。
   testDir: "./e2e",
   outputDir: "/home/psx/app/output/playwright/wxapp-checkin/test-results",
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        browserName: "chromium"
+      }
+    },
+    ...(includeWebkitProject
+      ? [
+          {
+            name: "webkit",
+            use: {
+              browserName: "webkit"
+            }
+          }
+        ]
+      : [])
+  ],
   timeout: 30_000,
   use: {
     baseURL: "http://127.0.0.1:4173",

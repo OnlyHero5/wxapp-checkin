@@ -133,8 +133,8 @@
 | `name` | `VARCHAR(255)` | 操作人姓名 |
 | `path` | `VARCHAR(255)` | API 路径 |
 | `content` | `TEXT` | JSON 格式的操作详情 |
-| `ip` | `VARCHAR(45)` | 客户端 IP（当前为空） |
-| `address` | `VARCHAR(255)` | 地址（当前为空） |
+| `ip` | `VARCHAR(45)` | 客户端 IP（当前通过代理头提取） |
+| `address` | `VARCHAR(255)` | 地址（当前仍为空） |
 | `time` | `TIMESTAMP` | MySQL 写入时间；应用侧读取前会固定会话时区为 `+08:00` 并按北京时间解释 |
 
 时间字段补充说明：

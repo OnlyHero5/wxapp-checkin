@@ -326,6 +326,42 @@ fn activity_detail_should_explicitly_guard_anomalous_attendance_states() {
 }
 
 #[test]
+fn staff_high_risk_actions_should_recheck_anomalous_roster_state_on_the_server() {
+  let code_service = fs::read_to_string(manifest_file("src/service/activity_service/code.rs"))
+    .expect("read code.rs");
+  let bulk_checkout_service = fs::read_to_string(manifest_file("src/service/staff_service/bulk_checkout.rs"))
+    .expect("read bulk_checkout.rs");
+
+  assert!(
+    code_service.contains("ensure_activity_has_no_anomalous_attendance_rows"),
+    "dynamic code issuing should enforce the roster anomaly guard on the server side"
+  );
+  assert!(
+    bulk_checkout_service.contains("ensure_activity_has_no_anomalous_attendance_rows"),
+    "bulk checkout should enforce the roster anomaly guard on the server side"
+  );
+}
+
+#[test]
+fn activity_statistics_should_filter_cancelled_rows_out_of_checkin_and_checkout_counts() {
+  let listing_source = fs::read_to_string(manifest_file("src/db/activity_repo/listing.rs"))
+    .expect("read listing.rs");
+  let detail_source = fs::read_to_string(manifest_file("src/db/activity_repo/detail.rs"))
+    .expect("read detail.rs");
+
+  for source in [listing_source, detail_source] {
+    assert!(
+      source.contains("aa.state IN (0, 2) AND aa.check_in = 1 AND aa.check_out = 0"),
+      "checkin_count should ignore cancelled apply rows"
+    );
+    assert!(
+      source.contains("aa.state IN (0, 2) AND aa.check_in = 1 AND aa.check_out = 1"),
+      "checkout_count should ignore cancelled apply rows"
+    );
+  }
+}
+
+#[test]
 fn backend_source_files_should_stay_under_220_lines() {
   let mut files = Vec::new();
   collect_rs_files(&manifest_file("src"), &mut files);

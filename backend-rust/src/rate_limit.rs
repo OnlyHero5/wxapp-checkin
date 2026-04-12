@@ -55,28 +55,52 @@ impl InvalidCodeAttemptLimiter {
 #[derive(Debug)]
 pub struct LoginAttemptLimiter {
   window: Duration,
-  limiter: Option<DefaultKeyedRateLimiter<String>>,
+  student_id_limiter: Option<DefaultKeyedRateLimiter<String>>,
+  client_ip_limiter: Option<DefaultKeyedRateLimiter<String>>,
 }
 
 impl LoginAttemptLimiter {
-  pub fn new(max_attempts_per_student_id: u32, window: Duration) -> Self {
+  pub fn new(
+    max_attempts_per_student_id: u32,
+    max_attempts_per_ip: u32,
+    window: Duration,
+  ) -> Self {
     Self {
       window,
-      limiter: build_keyed_limiter(max_attempts_per_student_id, window),
+      student_id_limiter: build_keyed_limiter(max_attempts_per_student_id, window),
+      client_ip_limiter: build_keyed_limiter(max_attempts_per_ip, window),
     }
   }
 
-  pub fn record_failed_attempt_or_throw(&self, student_id: &str) -> Result<(), AppError> {
-    let Some(limiter) = &self.limiter else {
-      return Ok(());
-    };
-
-    let key = student_id.trim().to_string();
-    if key.is_empty() {
-      return Ok(());
+  pub fn record_failed_attempt_or_throw(
+    &self,
+    student_id: &str,
+    client_ip: &str,
+  ) -> Result<(), AppError> {
+    let student_key = student_id.trim().to_string();
+    if !student_key.is_empty()
+      && self
+        .student_id_limiter
+        .as_ref()
+        .is_some_and(|limiter| limiter.check_key(&student_key).is_err())
+    {
+      return Err(AppError::business(
+        "forbidden",
+        format!(
+          "登录失败次数过多，请稍后再试（{} 秒后重试）",
+          self.window.as_secs()
+        ),
+        Some("rate_limited"),
+      ));
     }
 
-    if limiter.check_key(&key).is_err() {
+    let ip_key = client_ip.trim().to_string();
+    if !ip_key.is_empty()
+      && self
+        .client_ip_limiter
+        .as_ref()
+        .is_some_and(|limiter| limiter.check_key(&ip_key).is_err())
+    {
       return Err(AppError::business(
         "forbidden",
         format!(
@@ -130,13 +154,42 @@ mod tests {
 
   #[test]
   fn login_limiter_should_reject_after_exceeding_burst_budget() {
-    let limiter = LoginAttemptLimiter::new(2, Duration::from_secs(60));
+    let limiter = LoginAttemptLimiter::new(2, 4, Duration::from_secs(60));
 
-    assert!(limiter.record_failed_attempt_or_throw("2025000007").is_ok());
-    assert!(limiter.record_failed_attempt_or_throw("2025000007").is_ok());
+    assert!(
+      limiter
+        .record_failed_attempt_or_throw("2025000007", "10.8.0.15")
+        .is_ok()
+    );
+    assert!(
+      limiter
+        .record_failed_attempt_or_throw("2025000007", "10.8.0.15")
+        .is_ok()
+    );
     let error = limiter
-      .record_failed_attempt_or_throw("2025000007")
+      .record_failed_attempt_or_throw("2025000007", "10.8.0.15")
       .expect_err("third login failure should be rejected");
+
+    assert_eq!(error.error_code(), Some("rate_limited"));
+  }
+
+  #[test]
+  fn login_limiter_should_reject_after_exceeding_ip_budget_even_with_rotating_student_ids() {
+    let limiter = LoginAttemptLimiter::new(10, 2, Duration::from_secs(60));
+
+    assert!(
+      limiter
+        .record_failed_attempt_or_throw("2025000007", "10.8.0.15")
+        .is_ok()
+    );
+    assert!(
+      limiter
+        .record_failed_attempt_or_throw("2025000008", "10.8.0.15")
+        .is_ok()
+    );
+    let error = limiter
+      .record_failed_attempt_or_throw("2025000009", "10.8.0.15")
+      .expect_err("third failure from same ip should be rejected");
 
     assert_eq!(error.error_code(), Some("rate_limited"));
   }

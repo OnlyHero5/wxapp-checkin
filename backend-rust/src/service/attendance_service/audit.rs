@@ -16,6 +16,7 @@ pub async fn insert_action_log<'e, E>(
   action_type: AttendanceActionType,
   record_id: &str,
   server_time_ms: u64,
+  client_ip: &str,
 ) -> Result<(), AppError>
 where
   E: Executor<'e, Database = sqlx::MySql>,
@@ -41,7 +42,7 @@ where
     &current_user.name,
     path,
     &content,
-    "",
+    client_ip,
     "",
   )
   .await

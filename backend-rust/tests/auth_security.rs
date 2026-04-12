@@ -74,6 +74,10 @@ async fn insert_temp_user(
 }
 
 async fn delete_temp_user(pool: &MySqlPool, student_id: &str) -> Result<(), Box<dyn Error>> {
+  sqlx::query("DELETE FROM suda_activity_apply WHERE username = ?")
+    .bind(student_id)
+    .execute(pool)
+    .await?;
   sqlx::query("DELETE FROM suda_department_u WHERE username = ?")
     .bind(student_id)
     .execute(pool)
@@ -83,6 +87,71 @@ async fn delete_temp_user(pool: &MySqlPool, student_id: &str) -> Result<(), Box<
     .execute(pool)
     .await?;
   Ok(())
+}
+
+#[tokio::test]
+async fn code_session_should_report_specific_anomalous_student_in_message() -> TestResult {
+  let Some(database_url) = test_database_url() else {
+    return Ok(());
+  };
+  let state = build_test_state(database_url)?;
+  let student_id = unique_student_id();
+  let staff_user_id = insert_temp_user(state.pool(), &student_id, "correct-password", false).await?;
+  sqlx::query(
+    r#"
+      UPDATE suda_user
+      SET role = 0
+      WHERE username = ?
+    "#,
+  )
+  .bind(&student_id)
+  .execute(state.pool())
+  .await?;
+  sqlx::query(
+    r#"
+      INSERT INTO suda_activity_apply(activity_id, username, state, check_in, check_out)
+      VALUES (101, ?, 0, 0, 1)
+    "#,
+  )
+  .bind(&student_id)
+  .execute(state.pool())
+  .await?;
+
+  let outcome: TestResult = async {
+    let session_token =
+      state
+        .session_token_signer()
+        .issue(staff_user_id, &student_id, "staff", SystemTime::now())?;
+    let request = Request::builder()
+      .method("GET")
+      .uri("/api/web/activities/legacy_act_101/code-session?action_type=checkin")
+      .header("authorization", format!("Bearer {session_token}"))
+      .body(Body::empty())?;
+    let response = build_router(state.clone())
+      .oneshot(request)
+      .await
+      .map_err(|error| format!("code-session request failed: {error}"))?;
+    let status = response.status();
+    let bytes = response.into_body().collect().await?.to_bytes();
+    let body = serde_json::from_slice::<serde_json::Value>(&bytes)?;
+
+    if status != StatusCode::FORBIDDEN {
+      return Err(format!("expected 403 for anomalous roster, got {status}").into());
+    }
+    if body["error_code"] != "attendance_state_invalid" {
+      return Err(format!("expected attendance_state_invalid, got {body:?}").into());
+    }
+    let message = body["message"].as_str().unwrap_or_default();
+    if !message.contains(&student_id) || !message.contains("测试用户") || !message.contains("未签到已签退") {
+      return Err(format!("expected detailed anomaly message, got {body:?}").into());
+    }
+
+    Ok(())
+  }
+  .await;
+
+  delete_temp_user(state.pool(), &student_id).await?;
+  outcome
 }
 
 #[tokio::test]
@@ -117,14 +186,119 @@ async fn disabled_account_should_not_login() -> TestResult {
     if status != StatusCode::FORBIDDEN {
       return Err(format!("expected 403 for disabled login, got {status}").into());
     }
-    if body["error_code"] != "account_disabled" {
-      return Err(format!("expected account_disabled, got {body:?}").into());
+    if body["error_code"] != "invalid_credentials" {
+      return Err(format!("expected invalid_credentials, got {body:?}").into());
+    }
+    if body["message"] != "账号或密码错误" {
+      return Err(format!("expected generic login failure message, got {body:?}").into());
     }
 
     Ok(())
   }
   .await;
 
+  delete_temp_user(state.pool(), &student_id).await?;
+  outcome
+}
+
+#[tokio::test]
+async fn missing_identity_should_not_leak_account_enumeration_signal() -> TestResult {
+  let Some(database_url) = test_database_url() else {
+    return Ok(());
+  };
+  let state = build_test_state(database_url)?;
+  let student_id = unique_student_id();
+
+  let request = Request::builder()
+    .method("POST")
+    .uri("/api/web/auth/login")
+    .header("content-type", "application/json")
+    .body(Body::from(
+      json!({
+        "student_id": student_id,
+        "password": "wrong-password"
+      })
+      .to_string(),
+    ))?;
+  let response = build_router(state)
+    .oneshot(request)
+    .await
+    .map_err(|error| format!("login request failed: {error}"))?;
+  let status = response.status();
+  let bytes = response.into_body().collect().await?.to_bytes();
+  let body = serde_json::from_slice::<serde_json::Value>(&bytes)?;
+
+  if status != StatusCode::FORBIDDEN {
+    return Err(format!("expected 403 for invalid login, got {status}").into());
+  }
+  if body["error_code"] != "invalid_credentials" {
+    return Err(format!("expected invalid_credentials, got {body:?}").into());
+  }
+  if body["message"] != "账号或密码错误" {
+    return Err(format!("expected generic login failure message, got {body:?}").into());
+  }
+
+  Ok(())
+}
+
+#[tokio::test]
+async fn login_failure_audit_should_capture_forwarded_client_ip() -> TestResult {
+  let Some(database_url) = test_database_url() else {
+    return Ok(());
+  };
+  let state = build_test_state(database_url)?;
+  let student_id = unique_student_id();
+  insert_temp_user(state.pool(), &student_id, "correct-password", false).await?;
+
+  let outcome: TestResult = async {
+    let request = Request::builder()
+      .method("POST")
+      .uri("/api/web/auth/login")
+      .header("content-type", "application/json")
+      .header("x-real-ip", "10.8.0.15")
+      .body(Body::from(
+        json!({
+          "student_id": student_id,
+          "password": "wrong-password"
+        })
+        .to_string(),
+      ))?;
+    let response = build_router(state.clone())
+      .oneshot(request)
+      .await
+      .map_err(|error| format!("login request failed: {error}"))?;
+    let status = response.status();
+
+    if status != StatusCode::FORBIDDEN {
+      return Err(format!("expected 403 for invalid login, got {status}").into());
+    }
+
+    let latest_ip = sqlx::query_scalar::<_, Option<String>>(
+      r#"
+        SELECT ip
+        FROM suda_log
+        WHERE username = ? AND path = '/api/web/auth/login'
+        ORDER BY id DESC
+        LIMIT 1
+      "#,
+    )
+    .bind(&student_id)
+    .fetch_one(state.pool())
+    .await?
+    .unwrap_or_default();
+
+    if latest_ip != "10.8.0.15" {
+      return Err(format!("expected login audit ip 10.8.0.15, got {latest_ip:?}").into());
+    }
+
+    Ok(())
+  }
+  .await;
+
+  sqlx::query("DELETE FROM suda_log WHERE username = ? AND path = '/api/web/auth/login'")
+    .bind(&student_id)
+    .execute(state.pool())
+    .await?;
   delete_temp_user(state.pool(), &student_id).await?;
   outcome
 }
@@ -214,6 +388,69 @@ async fn login_route_should_rate_limit_repeated_failures_per_student_id() -> Tes
   }
   .await;
 
+  delete_temp_user(state.pool(), &student_id).await?;
+  outcome
+}
+
+#[tokio::test]
+async fn rate_limited_login_requests_should_not_keep_appending_audit_rows() -> TestResult {
+  let Some(database_url) = test_database_url() else {
+    return Ok(());
+  };
+  let state = build_test_state(database_url)?;
+  let student_id = unique_student_id();
+  insert_temp_user(state.pool(), &student_id, "correct-password", false).await?;
+
+  let outcome: TestResult = async {
+    let app = build_router(state.clone());
+
+    for _ in 0..6 {
+      let request = Request::builder()
+        .method("POST")
+        .uri("/api/web/auth/login")
+        .header("content-type", "application/json")
+        .header("x-real-ip", "10.8.0.15")
+        .body(Body::from(
+          json!({
+            "student_id": student_id,
+            "password": "wrong-password"
+          })
+          .to_string(),
+        ))?;
+      let response = app
+        .clone()
+        .oneshot(request)
+        .await
+        .map_err(|error| format!("login request failed: {error}"))?;
+
+      if response.status() != StatusCode::FORBIDDEN && response.status() != StatusCode::TOO_MANY_REQUESTS {
+        return Err(format!("unexpected login status {}", response.status()).into());
+      }
+    }
+
+    let audit_count = sqlx::query_scalar::<_, i64>(
+      r#"
+        SELECT COUNT(*)
+        FROM suda_log
+        WHERE username = ? AND path = '/api/web/auth/login'
+      "#,
+    )
+    .bind(&student_id)
+    .fetch_one(state.pool())
+    .await?;
+
+    if audit_count != 5 {
+      return Err(format!("expected 5 login audit rows before rate limit, got {audit_count}").into());
+    }
+
+    Ok(())
+  }
+  .await;
+
+  sqlx::query("DELETE FROM suda_log WHERE username = ? AND path = '/api/web/auth/login'")
+    .bind(&student_id)
+    .execute(state.pool())
+    .await?;
   delete_temp_user(state.pool(), &student_id).await?;
   outcome
 }

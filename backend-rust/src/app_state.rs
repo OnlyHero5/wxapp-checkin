@@ -40,7 +40,7 @@ impl AppState {
         session_token_signer,
         replay_guard: ReplayGuard::new(Duration::from_secs(90)),
         invalid_code_limiter: InvalidCodeAttemptLimiter::new(12, Duration::from_secs(60)),
-        login_attempt_limiter: LoginAttemptLimiter::new(5, Duration::from_secs(60)),
+        login_attempt_limiter: LoginAttemptLimiter::new(5, 20, Duration::from_secs(60)),
       }),
     })
   }

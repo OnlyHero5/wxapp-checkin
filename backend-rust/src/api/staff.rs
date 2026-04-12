@@ -4,6 +4,7 @@ pub use super::staff_contracts::{
   BulkCheckoutRequest, BulkCheckoutResponse,
 };
 use crate::api::auth_extractor::CurrentUser;
+use crate::api::client_ip::ClientIp;
 use crate::app_state::AppState;
 use crate::error::AppError;
 use crate::service::staff_service;
@@ -37,22 +38,27 @@ async fn get_roster(
 async fn adjust_attendance(
   State(state): State<AppState>,
   current_user: CurrentUser,
+  client_ip: ClientIp,
   Path(activity_id): Path<String>,
   Json(request): Json<AttendanceAdjustmentRequest>,
 ) -> Result<Json<AttendanceAdjustmentResponse>, AppError> {
   let input = request.into_input()?;
   let response =
-    staff_service::adjust_attendance(&state, &current_user, &activity_id, input).await?;
+    staff_service::adjust_attendance(&state, &current_user, &activity_id, input, client_ip.as_str())
+      .await?;
   Ok(Json(response))
 }
 
 async fn bulk_checkout(
   State(state): State<AppState>,
   current_user: CurrentUser,
+  client_ip: ClientIp,
   Path(activity_id): Path<String>,
   Json(request): Json<BulkCheckoutRequest>,
 ) -> Result<Json<BulkCheckoutResponse>, AppError> {
   let input = request.into_input()?;
-  let response = staff_service::bulk_checkout(&state, &current_user, &activity_id, input).await?;
+  let response =
+    staff_service::bulk_checkout(&state, &current_user, &activity_id, input, client_ip.as_str())
+      .await?;
   Ok(Json(response))
 }

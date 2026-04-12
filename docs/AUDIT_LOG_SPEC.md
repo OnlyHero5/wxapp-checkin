@@ -37,8 +37,8 @@ CREATE TABLE suda_log (
 | `name` | `VARCHAR(255)` | 是 | 操作人姓名 |
 | `path` | `VARCHAR(255)` | 是 | API 路径（见下文） |
 | `content` | `TEXT` | 是 | JSON 格式的操作详情 |
-| `ip` | `VARCHAR(45)` | 否 | 客户端 IP（当前实现传空） |
-| `address` | `VARCHAR(255)` | 否 | 地址（当前实现传空） |
+| `ip` | `VARCHAR(45)` | 否 | 客户端 IP（当前通过反向代理头提取） |
+| `address` | `VARCHAR(255)` | 否 | 地址（当前实现仍传空） |
 | `time` | `TIMESTAMP` | 自动 | MySQL 写入时间；应用读取时会固定会话时区为 `+08:00` |
 
 ---
@@ -62,7 +62,6 @@ CREATE TABLE suda_log (
 | 场景 | 原因 |
 |------|------|
 | 登录成功 | 当前实现不写日志 |
-| 登录失败 | 当前实现会写 `/api/web/auth/login` 审计日志 |
 | 活动列表查询 | 只读操作 |
 | 活动详情查询 | 只读操作 |
 | 动态码获取 | 只读操作 |
@@ -175,7 +174,7 @@ CREATE TABLE suda_log (
 补充说明：
 
 - 名单修正汇总日志固定使用 `action_type = "attendance-adjustment"`。
-- 即使本次修正没有真正改动任何成员状态，仍会写一条汇总日志，用于保留人工修正或自动自愈批次的审计轨迹。
+- 仅当本次修正确实改动了至少 1 名成员状态时，才写这条汇总日志。
 
 ### 4.4 staff 批量签退（每人记录）
 
@@ -185,7 +184,7 @@ CREATE TABLE suda_log (
 
 ### 4.5 staff 批量签退（汇总记录）
 
-**触发条件**：批量签退完成后，写入汇总日志
+**触发条件**：批量签退完成且至少签退了 1 名成员后，写入汇总日志
 
 ```json
 {
@@ -219,7 +218,7 @@ CREATE TABLE suda_log (
 
 ### 4.7 登录失败审计
 
-**触发条件**：登录失败、账号已停用或登录失败次数过多
+**触发条件**：登录失败或账号已停用时写审计；进入 `rate_limited` 后，后续被限流的重复请求不再继续落库
 
 **代码位置**：`backend-rust/src/service/auth_service.rs`
 
@@ -237,7 +236,9 @@ CREATE TABLE suda_log (
 - `path` 固定为 `/api/web/auth/login`
 - `username` 固定写当前尝试的 `student_id`
 - 如果数据库中还没有命中该用户，`name` 会写空字符串
-- 当前实现记录失败登录，不记录成功登录
+- `error_code` 记录内部真实失败原因，例如 `identity_not_found` / `invalid_password` / `account_disabled`
+- `ip` 当前会优先记录反向代理透传的客户端 IP
+- 当前实现记录失败登录，不记录成功登录；已进入 `rate_limited` 的重复拦截请求不再额外写 `suda_log`
 
 ---
 

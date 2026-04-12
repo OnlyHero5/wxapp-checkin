@@ -23,6 +23,11 @@
 - `P2` 路由守卫只看本地 token/role，`session_expires_at` 正式字段未落地，过期会话和篡改的本地 role 都会先进入业务壳层。
 - `P2` Docker/部署文档把容器模式和手工 Nginx 模式混写，且没有明确说明“仓库不会初始化数据库”；新环境部署易被误导。
 - `P2/P3` nginx 未显式设置 CSP、X-Frame-Options、Referrer-Policy、X-Content-Type-Options 等基础头，结合 localStorage bearer token，前端防护纵深偏弱。
+- `P1/P2` 活动列表与详情统计 SQL 的 `checkin_count` / `checkout_count` 未按 `aa.state IN (0,2)` 过滤，取消报名但残留签到态的记录会污染人数统计，并与 roster / 批量签退口径不一致。
+- `P2` 前端登录成功虽然拿到了 `session_expires_at`，但本地会话层完全不持久化也不使用该字段；路由守卫只认 token 存在和本地 role，过期会话与被篡改的本地身份都会先进入业务壳层。
+- `P2` nginx 已转发 `X-Real-IP` / `X-Forwarded-For`，但所有审计写入仍固定把 `ip` / `address` 置空，登录失败、签到签退和 staff 操作都无法追溯真实客户端来源。
+- `P2/P3` 当前移动端自动化只跑单浏览器 Chromium；缺少 WebKit/iOS Safari / 微信内置浏览器矩阵，移动端 H5 兼容性仍有真实盲区。
+- `P2/P3` README / 部署文档把 MySQL 前置条件写成“只需要 suda_union”，但没有明确写出必须预先具备关键表且仓库不会初始化数据库，首次部署很容易误判准备完成。
 
 ## 本轮已修复
 - 动态码窗口与 `completed` 状态冲突已修复：结束后 30 分钟内不再被 `legacy_state=completed` 提前截断。
@@ -34,7 +39,17 @@
 
 ## 仍保留未修
 - 密钥问题未处理：按用户要求保留现状。
-- 登录枚举/IP 归因/基础安全响应头等问题未处理。
+- WebKit / iOS Safari 的自动化验证仍受当前主机缺少系统依赖限制；仓库已补可选 `webkit` Playwright 项目与脚本，但当前环境无法直接执行。
+
+## 本轮已修复
+- 登录接口对外已统一收口为 `invalid_credentials`，避免通过 `identity_not_found` / `invalid_password` / `account_disabled` 枚举账号。
+- 登录失败限流已扩展为 `student_id + 客户端 IP` 双维度；日志仍保留内部真实失败原因。
+- 登录失败、普通用户签到/签退、staff 名单修正、staff 批量签退的审计日志已开始记录代理透传的客户端 IP。
+- staff 动态码签发与一键全部签退已在后端补异常态闸门，发现 `check_in=0 && check_out=1` 时会拒绝继续执行高风险动作。
+- 活动列表与详情统计 SQL 已统一过滤 `aa.state IN (0,2)`，取消报名残留签到态不再污染统计。
+- 前端已落地 `session_expires_at` 本地过期清理；路由守卫和请求层都会在本地先清理过期会话。
+- nginx 已补基础安全头：CSP、`X-Frame-Options`、`X-Content-Type-Options`、`Referrer-Policy`。
+- README / 部署 / API / 安全 / 审计 / 数据库 / 兼容清单文档已同步到当前实现口径。
 
 ## 验证结果
 - `web`: `npm test`、`npm run lint`、`npm run build`、`npm run test:e2e` 全部通过。

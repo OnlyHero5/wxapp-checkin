@@ -17,9 +17,11 @@ pub async fn login(
   state: &AppState,
   student_id: &str,
   password: &str,
+  client_ip: &str,
 ) -> Result<LoginResponse, AppError> {
   let normalized_student_id = normalize(student_id);
   let normalized_password = normalize(password);
+  let normalized_client_ip = normalize(client_ip);
   if normalized_student_id.is_empty() || normalized_password.is_empty() {
     return Err(AppError::business(
       "invalid_param",
@@ -31,25 +33,29 @@ pub async fn login(
   let user = match user_repo::find_user_by_student_id(state.pool(), &normalized_student_id).await? {
     Some(user) => user,
     None => {
-      return reject_login_with(
-        state,
-        &normalized_student_id,
-        None,
-        AppError::business(
-          "forbidden",
-          "学号不存在，请确认后重试",
-          Some("identity_not_found"),
-        ),
-      )
-      .await;
+      return reject_login_with(state, &normalized_student_id, None, &normalized_client_ip, "identity_not_found").await;
     }
   };
 
-  if let Err(error) = ensure_account_active(user.invalid) {
-    return reject_login_with(state, &normalized_student_id, Some(&user.name), error).await;
+  if ensure_account_active(user.invalid).is_err() {
+    return reject_login_with(
+      state,
+      &normalized_student_id,
+      Some(&user.name),
+      &normalized_client_ip,
+      "account_disabled",
+    )
+    .await;
   }
-  if let Err(error) = verify_password(user.password.as_deref(), &normalized_password) {
-    return reject_login_with(state, &normalized_student_id, Some(&user.name), error).await;
+  if verify_password(user.password.as_deref(), &normalized_password).is_err() {
+    return reject_login_with(
+      state,
+      &normalized_student_id,
+      Some(&user.name),
+      &normalized_client_ip,
+      "invalid_password",
+    )
+    .await;
   }
   let role = role_from_legacy(user.role);
   let permissions = permissions_for_role(role)
@@ -145,29 +151,47 @@ async fn reject_login_with<T>(
   state: &AppState,
   student_id: &str,
   name: Option<&str>,
-  error: AppError,
+  client_ip: &str,
+  audit_error_code: &str,
 ) -> Result<T, AppError> {
+  let public_error = AppError::business("forbidden", "账号或密码错误", Some("invalid_credentials"));
   let final_error = state
     .login_attempt_limiter()
-    .record_failed_attempt_or_throw(student_id)
+    .record_failed_attempt_or_throw(student_id, client_ip)
     .err()
-    .unwrap_or(error);
-  if let Err(log_error) =
-    record_login_failure_audit(state, student_id, name.unwrap_or(""), &final_error).await
-  {
-    warn!(
-      student_id,
-      error = %log_error,
-      "写入登录失败审计日志失败"
-    );
+    .unwrap_or(public_error);
+  if should_record_login_failure_audit(&final_error) {
+    if let Err(log_error) =
+      record_login_failure_audit(
+        state,
+        student_id,
+        name.unwrap_or(""),
+        audit_error_code,
+        client_ip,
+        &final_error,
+      )
+      .await
+    {
+      warn!(
+        student_id,
+        error = %log_error,
+        "写入登录失败审计日志失败"
+      );
+    }
   }
   Err(final_error)
+}
+
+fn should_record_login_failure_audit(error: &AppError) -> bool {
+  error.error_code() != Some("rate_limited")
 }
 
 async fn record_login_failure_audit(
   state: &AppState,
   student_id: &str,
   name: &str,
+  audit_error_code: &str,
+  client_ip: &str,
   error: &AppError,
 ) -> Result<(), AppError> {
   let server_time_ms = SystemTime::now()
@@ -177,7 +201,11 @@ async fn record_login_failure_audit(
   let content = json!({
     "student_id": student_id,
     "result": "failed",
-    "error_code": error.error_code(),
+    "error_code": if error.error_code() == Some("rate_limited") {
+      error.error_code()
+    } else {
+      Some(audit_error_code)
+    },
     "server_time_ms": server_time_ms,
     "source": "wxapp-checkin-rust"
   });
@@ -187,7 +215,7 @@ async fn record_login_failure_audit(
     name,
     "/api/web/auth/login",
     &content,
-    "",
+    client_ip,
     "",
   )
   .await
