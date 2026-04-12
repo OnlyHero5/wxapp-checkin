@@ -1,6 +1,6 @@
 # wxapp-checkin 部署手册
 
-更新日期：2026-03-31  
+更新日期：2026-04-12  
 适用范围：`wxapp-checkin` 当前正式形态（`web/ + backend-rust/ + suda_union`）
 
 ## 1. 部署目标
@@ -114,6 +114,8 @@ cp .env.docker.example .env.docker
 - 校验 `.env.docker` 是否存在且关键字段不为空
 - 若默认 Docker 网络不存在则自动创建
 - `docker compose --env-file .env.docker up -d --build wxapp-checkin`
+- `docker/start.sh` 以同级子进程方式同时监管 Rust 后端与 nginx，任一关键进程退出都会让容器以失败状态退出
+- Compose `healthcheck` 通过 `http://127.0.0.1:89/backend-healthz` 穿透到 Rust `/actuator/health`；该探针现在会连同数据库一起做 readiness 检查，避免只剩静态文件服务或数据库已断开时仍被误判为存活
 - 容器日志走 `docker logs`，并按 `5m * 2` 的默认滚动上限做保留控制
 
 启动后可用以下命令追日志：
@@ -121,6 +123,22 @@ cp .env.docker.example .env.docker
 ```bash
 docker logs -f wxapp-checkin
 ```
+
+部署后先做容器级验证：
+
+```bash
+docker compose --env-file .env.docker ps wxapp-checkin
+docker inspect --format '{{.State.Health.Status}}' wxapp-checkin
+curl -fsS http://127.0.0.1:${WXAPP_HTTP_PORT:-89}/healthz
+curl -fsS http://127.0.0.1:${WXAPP_HTTP_PORT:-89}/backend-healthz
+```
+
+预期：
+
+- `docker compose ps` 中 `wxapp-checkin` 为 `running`，且状态列最终收敛到 `healthy`
+- `docker inspect --format '{{.State.Health.Status}}' wxapp-checkin` 输出 `healthy`
+- `/healthz` 返回 `ok`
+- `/backend-healthz` 返回 `{"status":"UP"}`，表示 nginx、Rust 后端和数据库都可用；若数据库不可用，会返回 `503` + `{"status":"DOWN"}`
 
 预期终端标识：
 
@@ -143,6 +161,7 @@ cd /path/to/wxapp-checkin
 
 ```bash
 curl http://127.0.0.1:8080/actuator/health
+curl http://127.0.0.1:8080/health
 ```
 
 预期：
@@ -184,6 +203,9 @@ server {
 ## 10. 最小验收
 
 ```bash
+docker compose --env-file .env.docker ps wxapp-checkin
+docker inspect --format '{{.State.Health.Status}}' wxapp-checkin
+curl -fsS http://127.0.0.1:89/backend-healthz
 curl http://127.0.0.1:8080/actuator/health
 curl -I http://<your-host>/checkin/
 ```

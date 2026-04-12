@@ -101,11 +101,13 @@ Web 端运行时路径相关环境变量：
 ```bash
 cd web
 npm test
+npm run test:e2e
 npm run lint
 npm run build
 
 cd ../backend-rust
 cargo test
+cargo clippy --all-targets --all-features -- -D warnings
 cargo build --release
 ```
 
@@ -164,12 +166,22 @@ cp .env.docker.example .env.docker
 docker logs -f wxapp-checkin
 ```
 
+推荐同时做容器健康校验：
+
+```bash
+docker compose --env-file .env.docker ps wxapp-checkin
+docker inspect --format '{{.State.Health.Status}}' wxapp-checkin
+curl -fsS http://127.0.0.1:${WXAPP_HTTP_PORT:-89}/backend-healthz
+```
+
+其中 `/backend-healthz` 会经由 nginx 反代到 Rust `/actuator/health`，只有前端、后端和数据库都可用时才会返回 `{"status":"UP"}`；数据库不可用时会返回 `503` 和 `{"status":"DOWN"}`。
+
 预期会看到：
 
 - 紫色 `[WXAPP-CHECKIN-OK]`：已连上 `suda_union`、已验证关键表、HTTP 监听成功
 - 蓝色 `[WXAPP-CHECKIN-ERROR]`：会明确打印失败阶段和报错原因
 
-日志策略默认只走 `docker logs`，并通过 Compose 把单文件大小限制为 `5m`、保留 `2` 个滚动文件，避免云服务器磁盘被日志持续占满。
+日志策略默认只走 `docker logs`，并通过 Compose 把单文件大小限制为 `5m`、保留 `2` 个滚动文件，避免云服务器磁盘被日志持续占满。容器内 `docker/start.sh` 会同时监管 Rust 后端和 nginx，任一关键进程退出都会让容器失败退出，避免出现“只剩静态页还活着”的假存活状态。
 
 ## 三项目 Docker 一键启动
 

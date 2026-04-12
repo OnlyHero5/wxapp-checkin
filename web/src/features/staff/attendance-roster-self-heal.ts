@@ -47,8 +47,14 @@ export async function ensureRosterConsistency({
   });
 
   // 自愈完成后必须回读名单，把页面后续操作建立在最新服务器状态之上。
+  const healedRoster = await getActivityRoster(activityId);
+  const remainingAnomalousUserIds = collectAnomalousRosterUserIds(healedRoster.items);
+  if (remainingAnomalousUserIds.length > 0) {
+    throw new Error("自动修复异常签退状态失败，请稍后重试。");
+  }
+
   return {
     didHeal: true,
-    roster: await getActivityRoster(activityId)
+    roster: healedRoster
   };
 }

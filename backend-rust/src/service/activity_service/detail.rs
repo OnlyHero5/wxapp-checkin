@@ -1,5 +1,6 @@
 use super::list::is_visible_for_normal;
 use super::rules::format_display_time;
+use super::rules::is_anomalous_attendance_state;
 use super::rules::is_checked_in;
 use super::rules::is_checked_out;
 use super::rules::is_registered_apply_state;
@@ -52,12 +53,16 @@ pub async fn get_activity_detail(
     .as_ref()
     .map(|row| is_registered_apply_state(row.state))
     .unwrap_or(false);
+  let has_anomalous_attendance_state = user_activity
+    .as_ref()
+    .map(is_anomalous_attendance_state)
+    .unwrap_or(false);
   let my_checked_in = user_activity.as_ref().map(is_checked_in).unwrap_or(false);
   let my_checked_out = user_activity.as_ref().map(is_checked_out).unwrap_or(false);
-  let activity_not_completed = progress_status_from_legacy(activity.legacy_state) != "completed";
   let can_checkin =
-    within_window && activity_not_completed && my_registered && !my_checked_in && !my_checked_out;
-  let can_checkout = within_window && activity_not_completed && my_checked_in && !my_checked_out;
+    within_window && my_registered && !has_anomalous_attendance_state && !my_checked_in && !my_checked_out;
+  let can_checkout =
+    within_window && !has_anomalous_attendance_state && my_checked_in && !my_checked_out;
   let my_checkin_time = if my_checked_in || my_checked_out {
     log_repo::find_latest_action_time(
       state.pool(),

@@ -1,7 +1,6 @@
 use crate::db::activity_repo::ActivityRow;
 use crate::db::activity_repo::UserActivityRow;
 use crate::domain::AttendanceActionType;
-use crate::domain::progress_status_from_legacy;
 use crate::error::AppError;
 use chrono::TimeZone;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -20,6 +19,10 @@ pub fn is_checked_in(row: &UserActivityRow) -> bool {
 
 pub fn is_checked_out(row: &UserActivityRow) -> bool {
   row.check_in_flag == 1 && row.check_out_flag == 1
+}
+
+pub fn is_anomalous_attendance_state(row: &UserActivityRow) -> bool {
+  row.check_in_flag == 0 && row.check_out_flag == 1
 }
 
 pub fn format_display_time(value: chrono::NaiveDateTime) -> String {
@@ -59,16 +62,11 @@ pub(super) fn ensure_activity_time_valid(activity: &ActivityRow) -> Result<(u64,
 }
 
 pub(super) fn ensure_activity_action_allowed(
-  activity: &ActivityRow,
+  _activity: &ActivityRow,
   _action_type: AttendanceActionType,
 ) -> Result<(), AppError> {
-  if progress_status_from_legacy(activity.legacy_state) == "completed" {
-    return Err(AppError::business(
-      "forbidden",
-      "活动已结束，无法生成动态码",
-      None,
-    ));
-  }
+  // 当前正式口径以“开始前 30 分钟到结束后 30 分钟”的时间窗为准。
+  // 因此活动进入 legacy completed 后，只要仍处于时间窗内，仍允许 staff 发码与用户完成收尾签退。
   Ok(())
 }
 
@@ -102,84 +100,5 @@ fn naive_millis(value: chrono::NaiveDateTime) -> Result<u64, AppError> {
 }
 
 #[cfg(test)]
-mod tests {
-  use super::ensure_activity_time_valid;
-  use super::format_display_time;
-  use super::is_registered_apply_state;
-  use super::is_within_issue_window;
-  use crate::db::activity_repo::ActivityRow;
-  use std::time::{Duration, UNIX_EPOCH};
-
-  fn sample_activity_row(start: chrono::NaiveDateTime, end: chrono::NaiveDateTime) -> ActivityRow {
-    ActivityRow {
-      legacy_activity_id: 101,
-      activity_title: "测试活动".to_string(),
-      description: Some("desc".to_string()),
-      location: Some("loc".to_string()),
-      activity_stime: start,
-      activity_etime: end,
-      legacy_type: 1,
-      legacy_state: 1,
-      registered_count: 0,
-      checkin_count: 0,
-      checkout_count: 0,
-    }
-  }
-
-  #[test]
-  fn registered_apply_state_should_match_legacy_rules() {
-    assert!(is_registered_apply_state(0));
-    assert!(is_registered_apply_state(2));
-    assert!(!is_registered_apply_state(1));
-  }
-
-  #[test]
-  fn display_time_should_keep_ui_format() {
-    let naive = chrono::NaiveDate::from_ymd_opt(2026, 3, 25)
-      .expect("date")
-      .and_hms_opt(20, 4, 0)
-      .expect("time");
-    assert_eq!(format_display_time(naive), "2026-03-25 20:04");
-  }
-
-  #[test]
-  fn invalid_activity_time_should_use_contract_error_code() {
-    let start = chrono::NaiveDate::from_ymd_opt(2026, 3, 25)
-      .expect("date")
-      .and_hms_opt(20, 4, 0)
-      .expect("time");
-    let end = chrono::NaiveDate::from_ymd_opt(2026, 3, 25)
-      .expect("date")
-      .and_hms_opt(19, 59, 0)
-      .expect("time");
-    let activity = sample_activity_row(start, end);
-
-    let error = ensure_activity_time_valid(&activity).expect_err("should reject invalid time");
-    assert_eq!(error.status(), "forbidden");
-    assert_eq!(error.error_code(), Some("activity_time_invalid"));
-  }
-
-  #[test]
-  fn issue_window_should_treat_legacy_datetime_as_china_local_time() {
-    // suda_union 里的 DATETIME 语义是北京时间本地墙上时间，
-    // staff 页面显示 17:12，就意味着发码窗口应从北京时间 16:42 开始。
-    let start = chrono::NaiveDate::from_ymd_opt(2026, 4, 5)
-      .expect("date")
-      .and_hms_opt(17, 12, 0)
-      .expect("time");
-    let end = chrono::NaiveDate::from_ymd_opt(2026, 4, 5)
-      .expect("date")
-      .and_hms_opt(18, 0, 0)
-      .expect("time");
-    let activity = sample_activity_row(start, end);
-
-    // 这里显式用北京时间 2026-04-05 17:08:00 做断言，
-    // 以便锁住用户反馈的“开始前 30 分钟窗口内仍被拒绝发码”故障。
-    let now = UNIX_EPOCH + Duration::from_millis(1_775_380_080_000);
-
-    assert!(
-      is_within_issue_window(&activity, now).expect("issue window"),
-      "17:12 开始的活动在北京时间 17:08 应已进入发码窗口"
-    );
-  }
-}
+#[path = "rules_tests.rs"]
+mod tests;

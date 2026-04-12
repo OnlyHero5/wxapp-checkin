@@ -166,18 +166,24 @@ pub async fn list_roster(
     .map_err(|error| AppError::internal(format!("读取 roster 失败：{error}")))
 }
 
-pub async fn list_checked_in_for_update(
+fn bulk_checkout_target_where_clause() -> &'static str {
+  r#"
+  WHERE aa.activity_id = ?
+    AND aa.state IN (0, 2)
+    AND NOT (aa.check_in = 1 AND aa.check_out = 1)
+"#
+}
+
+#[cfg(test)]
+fn build_bulk_checkout_target_sql() -> String {
+  build_attendance_roster_sql(bulk_checkout_target_where_clause(), true)
+}
+
+pub async fn list_bulk_checkout_targets_for_update(
   tx: &mut Transaction<'_, sqlx::MySql>,
   legacy_activity_id: i64,
 ) -> Result<Vec<ManagedAttendanceRow>, AppError> {
-  let sql = build_attendance_roster_sql(
-    r#"
-  WHERE aa.activity_id = ?
-    AND aa.check_in = 1
-    AND aa.check_out = 0
-"#,
-    true,
-  );
+  let sql = build_attendance_roster_sql(bulk_checkout_target_where_clause(), true);
 
   sqlx::query_as::<_, ManagedAttendanceRow>(&sql)
     .bind(legacy_activity_id)

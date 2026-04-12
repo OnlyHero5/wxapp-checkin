@@ -50,6 +50,14 @@ pub fn connect_pool(config: &Config) -> Result<MySqlPool, AppError> {
     .map_err(|error| AppError::invalid_config(format!("初始化 MySQL 连接池失败：{error}")))
 }
 
+pub async fn ping(pool: &MySqlPool) -> Result<(), AppError> {
+  sqlx::query_scalar::<_, i64>("SELECT 1")
+    .fetch_one(pool)
+    .await
+    .map(|_| ())
+    .map_err(|error| AppError::internal(format!("数据库探活失败：{error}")))
+}
+
 /// 启动时必须先把数据库与关键表探活做完，再开始对外监听 HTTP。
 /// 这样云服务器上如果账号、密码、端口或授权不对，会直接在终端蓝色错误日志里暴露出来。
 pub async fn run_startup_checks(pool: &MySqlPool) -> Result<StartupCheckReport, AppError> {

@@ -177,9 +177,9 @@ describe("ActivityRosterPage", () => {
             user_id: 12,
             student_id: "2025000012",
             name: "异常成员",
-            checked_in: false,
+            checked_in: true,
             checked_out: true,
-            checkin_time: "",
+            checkin_time: "2026-03-10 09:05",
             checkout_time: "2026-03-10 10:10"
           }
         ],
@@ -221,6 +221,23 @@ describe("ActivityRosterPage", () => {
         reason: "单人设为已签到",
         user_ids: [12]
       });
+    });
+  });
+
+  it("short-circuits duplicate single-member adjustments while one request is still pending", async () => {
+    const user = userEvent.setup();
+    staffApiMocks.adjustAttendanceStates.mockImplementation(() => new Promise(() => {}));
+
+    renderActivityRosterPage();
+
+    expect(await screen.findByText("补签成员")).toBeInTheDocument();
+    const singleAction = screen.getByText("设为已签到");
+
+    await user.click(singleAction);
+    await user.click(singleAction);
+
+    await waitFor(() => {
+      expect(staffApiMocks.adjustAttendanceStates).toHaveBeenCalledTimes(1);
     });
   });
 

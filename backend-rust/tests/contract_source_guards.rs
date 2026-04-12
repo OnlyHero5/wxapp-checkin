@@ -304,6 +304,28 @@ fn attendance_consume_flow_should_delegate_validation_steps_to_helpers() {
 }
 
 #[test]
+fn activity_detail_should_not_preemptively_close_actions_just_because_legacy_state_is_completed() {
+  let source = fs::read_to_string(manifest_file("src/service/activity_service/detail.rs"))
+    .expect("read detail.rs");
+
+  assert!(
+    !source.contains("activity_not_completed"),
+    "detail action availability should no longer be hard-blocked by completed state before the documented +30 minute window closes"
+  );
+}
+
+#[test]
+fn activity_detail_should_explicitly_guard_anomalous_attendance_states() {
+  let source = fs::read_to_string(manifest_file("src/service/activity_service/detail.rs"))
+    .expect("read detail.rs");
+
+  assert!(
+    source.contains("is_anomalous_attendance_state"),
+    "detail action availability should explicitly block dirty 0/1 attendance rows instead of exposing a normal-user recovery path"
+  );
+}
+
+#[test]
 fn backend_source_files_should_stay_under_220_lines() {
   let mut files = Vec::new();
   collect_rs_files(&manifest_file("src"), &mut files);

@@ -5,6 +5,7 @@ use crate::error::AppError;
 /// 签到状态机继续只围绕两个 legacy 标志位工作：
 /// - `check_in`
 /// - `check_out`
+///
 /// 这里把状态流转集中起来，避免主流程和批量接口各自散落判断。
 pub fn next_flags(
   attendance: &AttendanceRecord,
@@ -12,6 +13,13 @@ pub fn next_flags(
 ) -> Result<(i64, i64), AppError> {
   match action_type {
     AttendanceActionType::Checkin => {
+      if attendance.check_in_flag == 0 && attendance.check_out_flag == 1 {
+        return Err(AppError::business(
+          "forbidden",
+          "当前签到状态异常，请联系工作人员处理",
+          None,
+        ));
+      }
       if attendance.check_in_flag == 0 {
         return Ok((1, 0));
       }
@@ -77,6 +85,21 @@ mod tests {
     };
 
     let error = next_flags(&record, AttendanceActionType::Checkout).expect_err("should reject");
+    assert_eq!(error.status(), "forbidden");
+  }
+
+  #[test]
+  fn checkin_should_reject_anomalous_checked_out_without_checkin_state() {
+    let record = AttendanceRecord {
+      id: 1,
+      activity_id: 101,
+      username: "2025000011".to_string(),
+      state: 0,
+      check_in_flag: 0,
+      check_out_flag: 1,
+    };
+
+    let error = next_flags(&record, AttendanceActionType::Checkin).expect_err("should reject anomaly");
     assert_eq!(error.status(), "forbidden");
   }
 }

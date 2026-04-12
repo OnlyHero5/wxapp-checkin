@@ -58,7 +58,7 @@
   - 未签到：`check_in=0, check_out=0`
   - 已签到未签退：`check_in=1, check_out=0`
   - 已签退：`check_in=1, check_out=1`
-- 一键全部签退只作用于“已签到未签退”。
+- 一键全部签退作用于当前活动下所有有效报名成员；执行后应统一收敛为“已签到且已签退”。
 - staff 修正、一键签退和普通用户签到 / 签退都必须写审计日志。
 - staff 管理页与名单页发现异常签退态（`checked_out=true && checked_in=false`）时，必须先通过统一修正接口自动修复，再继续高风险操作。
 
@@ -69,8 +69,10 @@
 - `FR-001` 无有效会话时必须进入登录流程。
 - `FR-002` 登录输入字段固定为 `student_id`、`password`。
 - `FR-003` 学号不存在时不得登录，并返回 `identity_not_found`。
+- `FR-003A` 已停用账号不得登录，并返回 `account_disabled`。
 - `FR-004` 登录成功后必须返回 `session_token`、`session_expires_at`、`role`、`permissions`、`user_profile`。
 - `FR-005` 会话失效后必须返回 `session_expired`。
+- `FR-005A` 登录失败次数过多时必须返回 `rate_limited`。
 
 ### 7.2 活动
 
@@ -92,6 +94,7 @@
   - `rate_limited`
   - `forbidden`
 - `FR-014` 需要有限流与防重放能力，但正式基线不依赖 Redis。
+- `FR-014A` 登录接口与动态码消费接口都必须具备最小限流能力。
 
 ### 7.4 staff 管理
 

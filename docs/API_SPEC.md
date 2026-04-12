@@ -154,6 +154,8 @@
 
 - `identity_not_found`：学号不存在；
 - `invalid_password`：密码错误；
+- `account_disabled`：账号已停用；
+- `rate_limited`：登录失败次数过多，需稍后重试；
 - `invalid_param`：请求体缺字段或为空。
 
 ## 5. 活动与动态码接口
@@ -440,7 +442,8 @@
 
 用途：
 
-- 对当前活动内“已签到未签退”用户执行批量签退。
+- 对当前活动内所有有效报名且尚未完成签退的用户执行批量签退；
+- 执行后统一收敛为“已签到且已签退”。
 
 请求体：
 
@@ -478,11 +481,12 @@
 | `session_expired` | 会话失效 | 全部鉴权接口 |
 | `identity_not_found` | 学号不存在 | `auth/login` |
 | `invalid_password` | 密码错误 | `auth/login` |
+| `account_disabled` | 账号已停用 | `auth/login` / 鉴权接口 |
 | `invalid_param` | 请求字段缺失或非法 | 多数写接口 |
 | `invalid_activity` | 活动不存在或不可见 | 活动 / staff / 动态码 |
 | `invalid_code` | 动态码错误 | `code-consume` |
 | `expired` | 动态码过期 | `code-consume` |
-| `rate_limited` | 动态码错误尝试过多被限流 | `code-consume` |
+| `rate_limited` | 登录或动态码错误尝试过多被限流 | `auth/login` / `code-consume` |
 | `duplicate` | 同一时段重复提交 | `code-consume` |
 | `outside_activity_time_window` | 不在发码或验码允许时间窗 | `code-session` / `code-consume` |
 | `activity_time_invalid` | 活动时间信息异常 | `code-session` |

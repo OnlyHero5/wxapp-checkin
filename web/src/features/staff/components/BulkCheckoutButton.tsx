@@ -28,7 +28,7 @@ export function BulkCheckoutButton({
     await Dialog.confirm?.({
       cancelBtn: "取消",
       confirmBtn: "确认全部签退",
-      content: "该操作会把当前活动下所有“已签到未签退”成员统一签退。",
+      content: "该操作会把当前活动下所有有效报名成员统一收敛为“已签到且已签退”状态。",
       onConfirm: () => onConfirm(DEFAULT_REASON),
       title: "确认批量签退"
     });

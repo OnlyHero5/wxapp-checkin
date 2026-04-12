@@ -1,6 +1,7 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { flushSync } from "react-dom";
+import { Dialog } from "tdesign-mobile-react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearSession, saveAuthSession } from "../../shared/session/session-store";
 import {
@@ -175,6 +176,36 @@ describe("StaffManagePage lifecycle", () => {
         value: "visible"
       });
       document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes the current code session when the page is restored from bfcache", async () => {
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    expect(await screen.findByText("483920")).toBeInTheDocument();
+    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      const pageShowEvent = new Event("pageshow");
+      Object.defineProperty(pageShowEvent, "persisted", {
+        configurable: true,
+        value: true
+      });
+      window.dispatchEvent(pageShowEvent);
     });
 
     expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(2);
@@ -381,6 +412,61 @@ describe("StaffManagePage lifecycle", () => {
     expect(screen.getByRole("button", { name: "一键全部签退" })).not.toBeDisabled();
   });
 
+  it("keeps risky staff actions blocked when the reread roster is still anomalous after self-heal", async () => {
+    staffApiMocks.getActivityRoster
+      .mockResolvedValueOnce({
+        activity_id: "act_101",
+        activity_title: "校园志愿活动",
+        items: [
+          {
+            user_id: 12,
+            student_id: "2025000012",
+            name: "异常成员",
+            checked_in: false,
+            checked_out: true,
+            checkin_time: "",
+            checkout_time: "2026-03-10 10:10"
+          }
+        ]
+      })
+      .mockResolvedValueOnce({
+        activity_id: "act_101",
+        activity_title: "校园志愿活动",
+        items: [
+          {
+            user_id: 12,
+            student_id: "2025000012",
+            name: "异常成员",
+            checked_in: false,
+            checked_out: true,
+            checkin_time: "",
+            checkout_time: "2026-03-10 10:10"
+          }
+        ]
+      });
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+
+    renderStaffManagePage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/自动修复异常签退状态失败/)).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "一键全部签退" })).toBeDisabled();
+    expect(screen.queryByText("483920")).not.toBeInTheDocument();
+    expect(screen.getByText("------")).toBeInTheDocument();
+    expect(staffApiMocks.getCodeSession).toHaveBeenCalledTimes(0);
+  });
+
   it("shows a wake lock hint when the browser cannot keep the screen awake", async () => {
     Object.defineProperty(navigator, "wakeLock", {
       configurable: true,
@@ -401,5 +487,48 @@ describe("StaffManagePage lifecycle", () => {
     renderStaffManagePage();
 
     expect(await screen.findByText("当前浏览器不支持自动保持屏幕常亮，请手动关闭自动锁屏或保持屏幕常亮。")).toBeInTheDocument();
+  });
+
+  it("short-circuits duplicate bulk checkout confirms while one request is still pending", async () => {
+    const originalConfirm = Dialog.confirm;
+
+    staffApiMocks.getCodeSession.mockResolvedValue({
+      action_type: "checkin",
+      activity_id: "act_101",
+      checkin_count: 18,
+      checkout_count: 3,
+      code: "483920",
+      expires_at: 1760000007500,
+      expires_in_ms: 4200,
+      server_time_ms: 1760000003300,
+      status: "success"
+    });
+    staffApiMocks.bulkCheckout.mockImplementation(() => new Promise(() => {}));
+    Object.defineProperty(Dialog, "confirm", {
+      configurable: true,
+      value: async (options?: { onConfirm?: () => unknown }) => {
+        await options?.onConfirm?.();
+        return true;
+      }
+    });
+
+    try {
+      renderStaffManagePage();
+
+      expect(await screen.findByText("483920")).toBeInTheDocument();
+
+      const button = screen.getByRole("button", { name: "一键全部签退" });
+      fireEvent.click(button);
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(staffApiMocks.bulkCheckout).toHaveBeenCalledTimes(1);
+      });
+    } finally {
+      Object.defineProperty(Dialog, "confirm", {
+        configurable: true,
+        value: originalConfirm
+      });
+    }
   });
 });

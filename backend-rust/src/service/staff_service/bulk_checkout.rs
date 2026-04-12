@@ -15,7 +15,7 @@ use crate::service::shared_helpers::now_millis;
 
 /// 批量签退和名单修正共享同一审计上下文，但业务语义更单一：
 /// - 必须显式确认；
-/// - 只处理“已签到未签退”的记录；
+/// - 对所有有效报名且尚未完成签退的记录收敛到“已签到且已签退”；
 /// - 最后补一条批次汇总日志。
 pub async fn bulk_checkout(
   state: &AppState,
@@ -42,7 +42,7 @@ pub async fn bulk_checkout(
     server_time_ms,
     reason: &reason,
   };
-  let rows = attendance_repo::list_checked_in_for_update(&mut tx, legacy_activity_id).await?;
+  let rows = attendance_repo::list_bulk_checkout_targets_for_update(&mut tx, legacy_activity_id).await?;
   let mut affected_count = 0_i64;
   for row in rows {
     attendance_repo::update_attendance_flags(&mut tx, row.record_id, 1, 1).await?;

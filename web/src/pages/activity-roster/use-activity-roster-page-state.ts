@@ -55,6 +55,7 @@ export function useActivityRosterPageState(activityId: string) {
   const [errorMessage, setErrorMessage] = useState("");
   const [resultMessage, setResultMessage] = useState("");
   const requestGuardRef = useRef(createRequestGuard());
+  const adjustmentInFlightRef = useRef(false);
 
   const loadRoster = useCallback(async (resetBeforeLoad: boolean) => {
     const requestVersion = requestGuardRef.current.beginRequest();
@@ -120,11 +121,12 @@ export function useActivityRosterPageState(activityId: string) {
     action: AttendanceActionKey,
     reasonPrefix: "单人" | "批量"
   ) => {
-    if (!activityId || userIds.length === 0) {
+    if (!activityId || userIds.length === 0 || adjustmentInFlightRef.current) {
       return;
     }
 
     const payload = resolveAttendanceActionPayload(action);
+    adjustmentInFlightRef.current = true;
     setAdjusting(true);
     setErrorMessage("");
     setResultMessage("");
@@ -146,6 +148,7 @@ export function useActivityRosterPageState(activityId: string) {
 
       setErrorMessage(resolvePageErrorMessage(error, "参会名单加载失败，请稍后重试。"));
     } finally {
+      adjustmentInFlightRef.current = false;
       setAdjusting(false);
     }
   }, [activityId, loadRoster, navigate]);
