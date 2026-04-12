@@ -128,6 +128,7 @@ export function useActivitiesPageState() {
   }
 
   const sections = buildVisibleSections(activities, isStaff);
+  const activeSection = sections.find((section) => section.key === activeSectionKey) ?? sections[0];
 
   useEffect(() => {
     // 分组来源固定，但仍然只在当前 key 失效时回落，避免刷新后把用户手动切换的页签强行重置。
@@ -147,8 +148,11 @@ export function useActivitiesPageState() {
     draftKeyword,
     errorMessage,
     eyebrow,
+    activeSectionCount: activeSection?.items.length ?? 0,
+    activeSectionTitle: activeSection?.title ?? "活动",
     hasMore,
     isStaff,
+    keyword,
     loadFirstPage,
     loadMorePage,
     loading,

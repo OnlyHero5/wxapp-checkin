@@ -56,4 +56,29 @@ describe("ActivityCard", () => {
     expect(container.querySelectorAll("article.activity-meta-panel")).toHaveLength(1);
     expect(container.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
   });
+
+  it("shows explicit incomplete labels for completed activities that missed attendance steps", () => {
+    render(
+      <MemoryRouter>
+        <ActivityCard
+          activity={{
+            activity_id: "act_missed_checkout",
+            activity_title: "结项答辩",
+            activity_type: "答辩",
+            checkin_count: 12,
+            checkout_count: 5,
+            location: "独墅湖校区",
+            my_registered: true,
+            my_checked_in: true,
+            my_checked_out: false,
+            progress_status: "completed",
+            start_time: "2026-03-10 09:00:00"
+          }}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByText("未签退").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("已完成")).toHaveLength(0);
+  });
 });

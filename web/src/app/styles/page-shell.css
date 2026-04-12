@@ -1,7 +1,12 @@
 /* =========================================================
- * 页面壳层
+ * 页面壳层与共享主卡
  * ---------------------------------------------------------
- * `MobilePage` 现在只负责页面结构与留白，不再维护项目级卡面系统。
+ * 这一层统一处理：
+ * - MobilePage 页面壳
+ * - 底部业务导航留白
+ * - 登录/结果/个人页单主卡
+ * - 活动主卡 ActivityMetaPanel
+ * - 详情页动作带
  * ========================================================= */
 
 .mobile-page {
@@ -11,9 +16,15 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 18px 14px 32px;
-  padding: calc(18px + constant(safe-area-inset-top)) 14px calc(32px + constant(safe-area-inset-bottom));
-  padding: calc(18px + env(safe-area-inset-top)) 14px calc(32px + env(safe-area-inset-bottom));
+  padding: 24px 16px 36px;
+  padding:
+    calc(24px + constant(safe-area-inset-top))
+    16px
+    calc(36px + constant(safe-area-inset-bottom));
+  padding:
+    calc(24px + env(safe-area-inset-top))
+    16px
+    calc(36px + env(safe-area-inset-bottom));
 }
 
 .mobile-page__shell {
@@ -25,7 +36,6 @@
   min-width: 0;
 }
 
-/* 头部只保留弱容器语义，真实导航结构交给 TDesign Navbar。 */
 .mobile-page__masthead,
 .mobile-page__header,
 .mobile-page__header-row,
@@ -37,23 +47,35 @@
 .mobile-page__masthead {
   position: relative;
   display: grid;
-  gap: 12px;
-  padding: var(--app-bento-panel-padding) var(--app-bento-panel-padding) calc(var(--app-bento-panel-padding) + 2px);
+  gap: 14px;
+  padding: 24px;
   border: 1px solid var(--app-border-subtle);
   border-radius: var(--app-radius-xl);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.94));
-  box-shadow: var(--app-bento-panel-shadow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0)),
+    color-mix(in srgb, var(--app-bg-soft) 82%, white);
+  box-shadow: var(--app-shadow-card), var(--app-shadow-ring);
   overflow: hidden;
+}
+
+.mobile-page__masthead::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 1px;
+  background: color-mix(in srgb, var(--page-accent-soft, var(--app-tone-default-soft)) 70%, white);
 }
 
 .mobile-page__masthead::after {
   content: "";
   position: absolute;
-  inset: auto -16% -40% auto;
+  inset: auto -10% -20% auto;
   width: 180px;
   height: 180px;
   border-radius: 50%;
-  background: var(--page-accent-soft, var(--app-tone-default-soft));
+  background: color-mix(in srgb, var(--page-accent-soft, var(--app-tone-default-soft)) 55%, white);
+  opacity: 0.65;
   pointer-events: none;
 }
 
@@ -82,37 +104,35 @@
 }
 
 .mobile-page[data-page-tone="brand"] .mobile-page__masthead {
-  --page-accent-soft: rgba(37, 99, 235, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(233, 241, 255, 0.96));
+  --page-accent-soft: var(--app-tone-brand-soft);
 }
 
 .mobile-page[data-page-tone="staff"] .mobile-page__masthead {
-  --page-accent-soft: rgba(107, 77, 246, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(240, 236, 255, 0.96));
+  --page-accent-soft: var(--app-tone-staff-soft);
 }
 
 .mobile-page[data-page-tone="checkin"] .mobile-page__masthead {
-  --page-accent-soft: rgba(15, 155, 132, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(234, 251, 246, 0.96));
+  --page-accent-soft: var(--app-tone-checkin-soft);
 }
 
 .mobile-page[data-page-tone="checkout"] .mobile-page__masthead {
-  --page-accent-soft: rgba(217, 119, 6, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(255, 245, 231, 0.96));
+  --page-accent-soft: var(--app-tone-checkout-soft);
 }
 
 .mobile-page__eyebrow {
   margin: 0;
   position: relative;
   z-index: 1;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  font-weight: 700;
-  color: var(--page-accent-color, var(--app-tone-default-accent));
+  font-size: 0.78rem;
+  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--page-accent-color, var(--app-text-muted));
 }
 
 .mobile-page[data-page-tone="brand"] .mobile-page__eyebrow {
-  --page-accent-color: var(--app-tone-brand-accent);
+  --page-accent-color: var(--app-accent);
 }
 
 .mobile-page[data-page-tone="staff"] .mobile-page__eyebrow {
@@ -133,38 +153,37 @@
   min-width: 0;
 }
 
+.mobile-page__navbar .t-navbar__content {
+  padding: 0;
+}
+
 .mobile-page__navbar-title {
   margin: 0;
-  font-size: clamp(1.92rem, 6vw, 2.42rem);
+  font-family: var(--app-font-heading);
+  font-size: clamp(2rem, 6vw, 2.7rem);
   line-height: 1.04;
-  letter-spacing: -0.04em;
+  font-weight: 500;
+  letter-spacing: -0.03em;
   color: var(--app-text-strong);
   overflow-wrap: anywhere;
 }
 
 .mobile-page__description {
   margin: 0;
+  max-width: 34rem;
   color: var(--app-text);
-  line-height: 1.6;
-  max-width: 28rem;
+  line-height: 1.65;
 }
 
-/* 正文区保持可收缩单列，防止页面内容在窄屏里被固定宽度撑爆。 */
 .mobile-page__content {
   min-width: 0;
 }
 
-.mobile-page__content-stack {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--app-bento-rail-gap);
-}
-
-/* 单列便当轨道是所有正式页面共享的外层节奏，避免业务页重复发明壳层。 */
+.mobile-page__content-stack,
 .mobile-page__bento-rail {
   display: grid;
-  gap: var(--app-bento-rail-gap);
   grid-template-columns: minmax(0, 1fr);
+  gap: var(--app-bento-rail-gap);
 }
 
 .mobile-page__content-stack > * {
@@ -177,7 +196,6 @@
   color: var(--app-text);
 }
 
-/* 路由壳统一采用“内容 + 底部导航”两段式，避免 fixed nav 遮挡正文。 */
 .app-business-shell {
   min-height: 100vh;
   min-height: 100dvh;
@@ -193,12 +211,6 @@
   flex: 1 1 auto;
 }
 
-/*
- * 业务导航改成项目层固定：
- * 1. 组件库的 fixed/placeholder 在真实联调里不稳定；
- * 2. 导航必须始终贴在视口底部；
- * 3. 宽屏时也要和页面主体一起居中，而不是散成整条满屏工具栏。
- */
 .app-business-nav {
   position: fixed;
   inset: auto 0 0 0;
@@ -214,18 +226,6 @@
   pointer-events: auto;
 }
 
-/* =========================================================
- * 单主卡页面
- * ---------------------------------------------------------
- * 这里承接 Task 6 轻流程页面的项目内钩子：
- * - 登录页用 `account-login-form__card`
- * - 结果页用 `attendance-action-result__panel`
- * - 个人页资料卡用 `profile-page__card`
- * - 个人页动作卡用 `profile-page__actions`
- *
- * 这些类名已经被测试锁住，后续如需重命名必须同步更新计划和测试。
- * ========================================================= */
-
 .account-login-form__card,
 .attendance-action-result__panel,
 .profile-page__card,
@@ -236,10 +236,12 @@
   padding: var(--app-bento-panel-padding);
   border: 1px solid var(--app-border-subtle);
   border-radius: var(--app-radius-xl);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 255, 0.96));
-  box-shadow: var(--app-bento-panel-shadow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0)),
+    color-mix(in srgb, var(--app-surface) 95%, white);
+  box-shadow: var(--app-shadow-card), var(--app-shadow-ring);
   overflow: hidden;
-  --panel-accent: var(--app-tone-brand-accent);
+  --panel-accent: var(--app-accent);
   --panel-soft: var(--app-tone-brand-soft);
 }
 
@@ -260,8 +262,8 @@
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--panel-accent), color-mix(in srgb, var(--panel-accent) 58%, white));
+  height: 3px;
+  background: color-mix(in srgb, var(--panel-accent) 85%, white);
 }
 
 .account-login-form__card::after,
@@ -270,11 +272,12 @@
 .profile-page__actions::after {
   content: "";
   position: absolute;
-  inset: auto -18% -38% auto;
-  width: 180px;
-  height: 180px;
+  inset: auto -14% -22% auto;
+  width: 170px;
+  height: 170px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--panel-soft) 68%, white);
+  background: color-mix(in srgb, var(--panel-soft) 60%, white);
+  opacity: 0.7;
   pointer-events: none;
 }
 
@@ -322,17 +325,20 @@
 .attendance-action-result__eyebrow,
 .profile-page__eyebrow,
 .attendance-action-detail__section-label {
-  font-size: 0.84rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--panel-accent);
 }
 
 .account-login-form__title,
 .attendance-action-result__title,
 .profile-page__title {
-  font-size: clamp(1.2rem, 4vw, 1.46rem);
-  line-height: 1.2;
+  font-family: var(--app-font-heading);
+  font-size: clamp(1.45rem, 4vw, 1.75rem);
+  line-height: 1.18;
+  font-weight: 500;
   color: var(--app-text-strong);
 }
 
@@ -340,11 +346,10 @@
 .attendance-action-result__description,
 .profile-page__description,
 .profile-page__actions-description {
-  line-height: 1.6;
   color: var(--app-text);
+  line-height: 1.65;
 }
 
-/* 旧表单 class 继续保留给测试和行为使用，但视觉外观收回到主卡本身。 */
 .account-login-form__card .account-login-form__form {
   position: relative;
   z-index: 1;
@@ -359,15 +364,9 @@
   display: none;
 }
 
-.account-login-form__card .account-login-form__form input,
-.attendance-action-detail__form input {
-  border-radius: var(--app-radius-md);
-  background: var(--app-surface-muted);
-}
-
 .account-login-form__card .account-login-form__form button,
 .attendance-action-detail__form button {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .attendance-action-detail__card {
@@ -382,10 +381,10 @@
 .attendance-action-detail__input-shell {
   display: grid;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--panel-accent, var(--app-tone-default-accent)) 16%, white);
-  border-radius: var(--app-radius-md);
-  background: color-mix(in srgb, var(--panel-soft, var(--app-tone-default-soft)) 58%, white);
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--panel-accent, var(--app-accent)) 16%, white);
+  border-radius: var(--app-radius-lg);
+  background: color-mix(in srgb, var(--panel-soft, var(--app-tone-brand-soft)) 28%, white);
 }
 
 .attendance-action-detail__form {
@@ -393,23 +392,28 @@
   gap: 12px;
 }
 
-.attendance-action-result__meta,
-.profile-page__field-list,
-.profile-page__actions {
-  position: relative;
-  z-index: 1;
+.attendance-action-detail__form .t-input {
+  background: transparent;
+}
+
+.attendance-action-detail__form input {
+  font-family: var(--app-font-mono);
+  letter-spacing: 0.1em;
+  text-align: center;
 }
 
 .attendance-action-result__meta,
 .profile-page__field-list,
 .profile-page__actions {
+  position: relative;
+  z-index: 1;
   display: grid;
 }
 
 .attendance-action-result__meta-row,
 .profile-page__field-row {
   display: grid;
-  grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+  grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
   gap: 10px 14px;
   align-items: start;
 }
@@ -422,8 +426,8 @@
 
 .attendance-action-result__meta-label,
 .profile-page__field-label {
-  font-size: 0.84rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--app-text-muted);
 }
 
@@ -444,17 +448,12 @@
 }
 
 .profile-page__actions-title {
-  font-size: 0.84rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--panel-accent);
 }
-
-/* =========================================================
- * 活动主卡
- * ---------------------------------------------------------
- * 这里把旧的三卡分组收口成一张外卡 + 多个内部分区。
- * ========================================================= */
 
 .activity-meta-panel {
   position: relative;
@@ -463,8 +462,10 @@
   padding: var(--app-bento-panel-padding);
   border: 1px solid var(--app-border-subtle);
   border-radius: var(--app-radius-xl);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 249, 255, 0.96));
-  box-shadow: var(--app-bento-panel-shadow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0)),
+    color-mix(in srgb, var(--app-surface) 94%, white);
+  box-shadow: var(--app-shadow-card), var(--app-shadow-ring);
   overflow: hidden;
 }
 
@@ -472,8 +473,8 @@
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--panel-accent, var(--app-tone-default-accent)), color-mix(in srgb, var(--panel-accent, var(--app-tone-default-accent)) 58%, white));
+  height: 3px;
+  background: color-mix(in srgb, var(--panel-accent, var(--app-text)) 82%, white);
 }
 
 .activity-meta-panel__section {
@@ -487,7 +488,10 @@
   border-top: 1px solid var(--app-border-subtle);
 }
 
-.activity-meta-panel__section--hero {
+.activity-meta-panel__section--hero,
+.activity-meta-panel__section--detail,
+.activity-meta-panel__section--metrics,
+.activity-meta-panel__section--actions {
   display: grid;
   gap: 12px;
 }
@@ -506,11 +510,20 @@
   margin: 0;
 }
 
+.activity-meta-panel__subtitle,
+.activity-meta-panel__section-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .activity-meta-panel__subtitle {
-  font-size: 0.84rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--panel-accent, var(--app-tone-default-accent));
+  color: var(--panel-accent, var(--app-text));
+}
+
+.activity-meta-panel__section-label {
+  color: var(--app-text-muted);
 }
 
 .activity-meta-panel__title-row {
@@ -521,14 +534,16 @@
 }
 
 .activity-meta-panel__title {
-  font-size: clamp(1.24rem, 4vw, 1.56rem);
-  line-height: 1.18;
+  font-family: var(--app-font-heading);
+  font-size: clamp(1.45rem, 4vw, 1.78rem);
+  line-height: 1.15;
+  font-weight: 500;
   color: var(--app-text-strong);
 }
 
 .activity-meta-panel__description {
   color: var(--app-text);
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 .activity-meta-panel__status-slot {
@@ -546,22 +561,8 @@
   padding: 6px 12px;
   border-radius: 999px;
   background: var(--panel-soft, var(--app-tone-default-soft));
-  color: var(--panel-accent, var(--app-tone-default-accent));
-  font-weight: 700;
-}
-
-.activity-meta-panel__section--detail,
-.activity-meta-panel__section--metrics,
-.activity-meta-panel__section--actions {
-  display: grid;
-  gap: 12px;
-}
-
-.activity-meta-panel__section-label {
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--app-text-muted);
+  color: var(--panel-accent, var(--app-text));
+  font-weight: 600;
 }
 
 .activity-meta-panel__detail-list {
@@ -574,14 +575,18 @@
   grid-template-columns: minmax(0, 88px) minmax(0, 1fr);
   gap: 12px;
   align-items: start;
-  padding: 12px 14px;
-  border-radius: var(--app-radius-md);
-  background: var(--app-surface-muted);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.activity-meta-panel__detail-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .activity-meta-panel__detail-label {
   font-size: 0.84rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--app-text-muted);
 }
 
@@ -602,10 +607,10 @@
 .activity-meta-panel__metric-card {
   display: grid;
   gap: 6px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--panel-accent, var(--app-tone-default-accent)) 16%, white);
-  border-radius: var(--app-radius-md);
-  background: color-mix(in srgb, var(--panel-soft, var(--app-tone-default-soft)) 58%, white);
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--panel-accent, var(--app-text)) 14%, white);
+  border-radius: var(--app-radius-lg);
+  background: color-mix(in srgb, var(--panel-soft, var(--app-tone-default-soft)) 26%, white);
 }
 
 .activity-meta-panel__metric-label {
@@ -614,24 +619,20 @@
 }
 
 .activity-meta-panel__metric-value {
-  font-size: 1.22rem;
-  font-weight: 800;
+  font-family: var(--app-font-heading);
+  font-size: 1.4rem;
+  font-weight: 500;
   color: var(--app-text-strong);
 }
-
-/* =========================================================
- * 活动详情动作带
- * ---------------------------------------------------------
- * 详情页不再把按钮塞进活动主卡，而是独立成一条次卡动作带，
- * 这样主信息与高频操作能保持稳定分区。
- * ========================================================= */
 
 .detail-actions--bento {
   padding: var(--app-bento-panel-padding);
   border: 1px solid var(--app-border-subtle);
   border-radius: var(--app-radius-xl);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 251, 255, 0.95));
-  box-shadow: var(--app-bento-panel-shadow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0)),
+    color-mix(in srgb, var(--app-surface) 92%, white);
+  box-shadow: var(--app-shadow-card), var(--app-shadow-ring);
 }
 
 .detail-actions__rail {
@@ -647,12 +648,14 @@
 
 @media (max-width: 359px) {
   .attendance-action-result__meta-row,
-  .profile-page__field-row {
+  .profile-page__field-row,
+  .activity-meta-panel__detail-row {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .attendance-action-result__meta-value,
-  .profile-page__field-value {
+  .profile-page__field-value,
+  .activity-meta-panel__detail-value {
     text-align: left;
   }
 
@@ -663,17 +666,14 @@
   .activity-meta-panel__status-slot {
     justify-content: flex-start;
   }
-
-  .activity-meta-panel__detail-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .activity-meta-panel__detail-value {
-    text-align: left;
-  }
 }
 
 @media (min-width: 768px) {
+  .mobile-page {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
   .mobile-page__header-row {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;

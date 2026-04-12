@@ -78,9 +78,9 @@ test("staff manage page refreshes code through a real browser click", async ({ p
             activity_id: "act_101",
             checkin_count: 18,
             checkout_count: 3,
-            code: checkinCodeRequestCount === 1 ? "483920" : "111222",
-            expires_at: 4_102_444_800_000,
-            expires_in_ms: 4_000,
+            code: checkinCodeRequestCount <= 2 ? "483920" : "111222",
+            expires_at: 4_102_444_816_000,
+            expires_in_ms: 20_000,
             server_time_ms: 4_102_444_796_000,
             status: "success"
           }
@@ -96,8 +96,8 @@ test("staff manage page refreshes code through a real browser click", async ({ p
             checkin_count: 18,
             checkout_count: 3,
             code: "654321",
-            expires_at: 4_102_444_900_000,
-            expires_in_ms: 5_000,
+            expires_at: 4_102_444_916_000,
+            expires_in_ms: 21_000,
             server_time_ms: 4_102_444_895_000,
             status: "success"
           }

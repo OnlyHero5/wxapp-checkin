@@ -1,80 +1,131 @@
 /* =========================================================
  * 全局基线
  * ---------------------------------------------------------
- * 只保留应用级 token、字体和通用 reset。
- * 页面结构和具体业务样式拆到独立文件，避免 `base.css` 继续膨胀。
+ * 这一轮把视觉语言切回 DESIGN.md 定义的暖色、编辑感与纸张质感：
+ * - 暖米色背景
+ * - 暖中性色文字
+ * - terracotta 品牌色
+ * - serif 标题 / sans UI
+ * - ring shadow 替代玻璃拟态和重渐变
  * ========================================================= */
 
 :root {
   color-scheme: light;
-  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --app-font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --app-font-heading: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", "Songti SC", Georgia, serif;
+  --app-font-mono: "SFMono-Regular", "Roboto Mono", "Fira Code", "Courier New", monospace;
+  font-family: var(--app-font-body);
 
-  /* 这一轮把原来偏灰偏白的基线，升级成更有层级的浅底多色系统。 */
-  --app-bg: #eef3ff;
-  --app-bg-soft: #f8fbff;
-  --app-surface: rgba(255, 255, 255, 0.96);
+  --app-bg: #f5f4ed;
+  --app-bg-soft: #faf9f5;
+  --app-bg-muted: #ece8db;
+  --app-surface: #faf9f5;
   --app-surface-strong: #ffffff;
-  --app-surface-muted: #f7f9ff;
-  --app-surface-contrast: #edf3ff;
-  --app-border: rgba(137, 155, 192, 0.32);
-  --app-border-strong: rgba(112, 131, 173, 0.46);
-  --app-border-subtle: rgba(180, 194, 222, 0.4);
-  --app-text-strong: #18213a;
-  --app-text: #46526d;
-  --app-text-muted: #72809a;
-  --app-shadow-soft: 0 10px 28px rgba(31, 52, 95, 0.08);
-  --app-shadow-card: 0 18px 42px rgba(31, 52, 95, 0.12);
-  --app-shadow-raised: 0 24px 52px rgba(31, 52, 95, 0.16);
-  --app-radius-xl: 26px;
-  --app-radius-lg: 20px;
-  --app-radius-md: 16px;
-  --app-radius-sm: 12px;
-  --app-radius-xs: 10px;
-  --app-backdrop-blur: blur(18px);
-  --app-bento-shell-max-width: 520px;
-  --app-shell-max-width-wide: 1120px;
-  --app-bento-shell-gap: 18px;
-  --app-bento-rail-gap: 16px;
-  --app-bento-panel-padding: 18px;
-  --app-bento-panel-section-gap: 14px;
-  --app-bento-panel-shadow: 0 18px 42px rgba(31, 52, 95, 0.12);
-  --app-bento-metric-gap: 10px;
+  --app-surface-muted: #f1eee4;
+  --app-surface-contrast: #e9e5d7;
+  --app-surface-dark: #30302e;
+  --app-surface-dark-strong: #141413;
+  --app-border: #e8e6dc;
+  --app-border-strong: #d8d2c4;
+  --app-border-subtle: #f0eee6;
+  --app-text-strong: #141413;
+  --app-text: #5e5d59;
+  --app-text-muted: #87867f;
+  --app-text-soft: #a39e93;
+  --app-text-on-dark: #b0aea5;
+  --app-accent: #c96442;
+  --app-accent-strong: #d97757;
+  --app-focus: #3898ec;
+  --app-success: #5c7a61;
+  --app-warning: #a86c2f;
+  --app-danger: #b53333;
 
-  /* 颜色必须服务业务语义，因此每个 tone 都提供 accent / soft / strong 三层。 */
-  --app-tone-default-accent: #66758f;
-  --app-tone-default-soft: rgba(102, 117, 143, 0.12);
-  --app-tone-default-strong: #e9eef9;
-  --app-tone-brand-accent: #2563eb;
-  --app-tone-brand-soft: rgba(37, 99, 235, 0.14);
-  --app-tone-brand-strong: #dfeaff;
-  --app-tone-checkin-accent: #0f9b84;
-  --app-tone-checkin-soft: rgba(15, 155, 132, 0.14);
-  --app-tone-checkin-strong: #dcf8f1;
-  --app-tone-checkout-accent: #d97706;
-  --app-tone-checkout-soft: rgba(217, 119, 6, 0.14);
-  --app-tone-checkout-strong: #fff0da;
-  --app-tone-staff-accent: #6b4df6;
-  --app-tone-staff-soft: rgba(107, 77, 246, 0.14);
-  --app-tone-staff-strong: #ece6ff;
-  --app-tone-danger-accent: #d3485f;
-  --app-tone-danger-soft: rgba(211, 72, 95, 0.14);
+  --app-shadow-soft: 0 0 0 1px rgba(61, 61, 58, 0.06);
+  --app-shadow-card: 0 18px 36px rgba(20, 20, 19, 0.06);
+  --app-shadow-raised: 0 24px 54px rgba(20, 20, 19, 0.08);
+  --app-shadow-ring: 0 0 0 1px #d1cfc5;
+  --app-radius-xl: 24px;
+  --app-radius-lg: 18px;
+  --app-radius-md: 12px;
+  --app-radius-sm: 10px;
+  --app-radius-xs: 8px;
+  --app-backdrop-blur: blur(10px);
+  --app-bento-shell-max-width: 680px;
+  --app-shell-max-width-wide: 1180px;
+  --app-bento-shell-gap: 24px;
+  --app-bento-rail-gap: 18px;
+  --app-bento-panel-padding: 24px;
+  --app-bento-panel-section-gap: 18px;
+  --app-bento-panel-shadow: var(--app-shadow-card);
+  --app-bento-metric-gap: 12px;
 
-  /* 只通过公开 token 对齐组件库字体和按钮基础尺寸。 */
-  --td-font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --td-font-family-medium: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --td-button-border-radius: 16px;
-  --td-button-large-height: 52px;
+  --app-tone-default-accent: var(--app-text);
+  --app-tone-default-soft: rgba(94, 93, 89, 0.08);
+  --app-tone-default-strong: #efede5;
+  --app-tone-brand-accent: var(--app-accent);
+  --app-tone-brand-soft: rgba(201, 100, 66, 0.12);
+  --app-tone-brand-strong: #f4e4dd;
+  --app-tone-checkin-accent: var(--app-success);
+  --app-tone-checkin-soft: rgba(92, 122, 97, 0.12);
+  --app-tone-checkin-strong: #e7eee6;
+  --app-tone-checkout-accent: var(--app-warning);
+  --app-tone-checkout-soft: rgba(168, 108, 47, 0.12);
+  --app-tone-checkout-strong: #f3e8dc;
+  --app-tone-staff-accent: #3d3d3a;
+  --app-tone-staff-soft: rgba(61, 61, 58, 0.08);
+  --app-tone-staff-strong: #ebe8df;
+  --app-tone-danger-accent: var(--app-danger);
+  --app-tone-danger-soft: rgba(181, 51, 51, 0.12);
+
+  /* TDesign Mobile 全局颜色收口到暖色系统，避免蓝色默认值泄露到按钮、链接和 tabs。 */
+  --td-font-family: var(--app-font-body);
+  --td-font-family-medium: var(--app-font-body);
+  --td-brand-color-1: #faeee9;
+  --td-brand-color-2: #f4ddd4;
+  --td-brand-color-3: #ecc4b4;
+  --td-brand-color-4: #e3a88f;
+  --td-brand-color-5: #d98a69;
+  --td-brand-color-6: var(--app-accent-strong);
+  --td-brand-color-7: var(--app-accent);
+  --td-brand-color-8: #a85338;
+  --td-brand-color-9: #82402b;
+  --td-brand-color-10: #623121;
+  --td-brand-color: var(--td-brand-color-7);
+  --td-brand-color-focus: var(--td-brand-color-1);
+  --td-brand-color-active: var(--td-brand-color-8);
+  --td-brand-color-disabled: var(--td-brand-color-3);
+  --td-brand-color-light: var(--td-brand-color-1);
+  --td-brand-color-light-active: var(--td-brand-color-2);
+  --td-text-color-primary: var(--app-text-strong);
+  --td-text-color-secondary: var(--app-text);
+  --td-text-color-placeholder: var(--app-text-muted);
+  --td-text-color-disabled: var(--app-text-soft);
+  --td-bg-color-container: var(--app-surface-strong);
+  --td-bg-color-container-hover: var(--app-surface);
+  --td-bg-color-secondarycontainer: var(--app-surface-muted);
+  --td-border-level-1-color: var(--app-border-subtle);
+  --td-border-level-2-color: var(--app-border);
+  --td-component-stroke: var(--app-border-subtle);
+  --td-button-border-radius: 12px;
+  --td-button-large-height: 48px;
+  --td-cell-group-border-color: var(--app-border-subtle);
+  --td-error-color: var(--app-danger);
+  --td-success-color: var(--app-success);
+  --td-warning-color: var(--app-warning);
+  --td-navbar-bg-color: transparent;
+  --td-tab-track-color: transparent;
+  --td-tab-default-color: var(--app-text-muted);
+  --td-tab-active-color: var(--app-text-strong);
+  --td-tab-nav-bg-color: transparent;
 
   background: var(--app-bg);
   color: var(--app-text);
 }
 
-/* 所有盒模型统一走 border-box，避免宽度与内边距累计失控。 */
 * {
   box-sizing: border-box;
 }
 
-/* 页面根节点始终吃满视口高度，公共壳层才有可靠的纵向基线。 */
 html,
 body,
 #root {
@@ -82,18 +133,15 @@ body,
   margin: 0;
 }
 
-/* 背景保持浅色与轻层次，不靠强烈光效制造“伪质感”。 */
 body {
   min-width: 320px;
   background:
-    radial-gradient(circle at 0 0, rgba(37, 99, 235, 0.14) 0, transparent 28%),
-    radial-gradient(circle at 100% 0, rgba(107, 77, 246, 0.12) 0, transparent 24%),
-    radial-gradient(circle at 50% 100%, rgba(15, 155, 132, 0.08) 0, transparent 22%),
-    linear-gradient(180deg, #f8fbff 0%, #eef3ff 42%, #edf2fb 100%);
+    radial-gradient(circle at top left, rgba(217, 183, 151, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0)),
+    var(--app-bg);
   color: var(--app-text);
 }
 
-/* 表单控件继承页面字体，避免原生控件和页面正文分裂。 */
 button,
 input,
 textarea,
@@ -101,7 +149,6 @@ select {
   font: inherit;
 }
 
-/* 根容器保持 flex，页面组件才能稳定占满横向空间。 */
 #root {
   display: flex;
   width: 100%;

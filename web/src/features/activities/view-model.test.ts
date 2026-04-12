@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   formatServerTime,
+  resolveActivityDisplayStatus,
   resolveCanCheckin,
   resolveCanCheckout,
+  resolveJoinStatus,
   resolveProgressStatus
 } from "./view-model";
 
@@ -44,5 +46,55 @@ describe("activities view-model", () => {
     expect(formatSpy).toHaveBeenCalledWith("zh-CN", expect.objectContaining({
       timeZone: "Asia/Shanghai"
     }));
+  });
+
+  it("treats a completed activity as finished only after both checkin and checkout are done", () => {
+    expect(resolveActivityDisplayStatus({
+      my_checked_in: true,
+      my_checked_out: true,
+      my_registered: true,
+      progress_status: "completed",
+      start_time: "2026-03-01 09:00:00"
+    })).toBe("completed");
+
+    expect(resolveJoinStatus({
+      my_checked_in: true,
+      my_checked_out: true,
+      my_registered: true,
+      progress_status: "completed",
+      start_time: "2026-03-01 09:00:00"
+    })).toBe("已完成");
+  });
+
+  it("marks completed activities without checkin or checkout explicitly as missing steps", () => {
+    expect(resolveActivityDisplayStatus({
+      my_checked_in: false,
+      my_checked_out: false,
+      my_registered: true,
+      progress_status: "completed",
+      start_time: "2026-03-01 09:00:00"
+    })).toBe("missed_checkin");
+    expect(resolveJoinStatus({
+      my_checked_in: false,
+      my_checked_out: false,
+      my_registered: true,
+      progress_status: "completed",
+      start_time: "2026-03-01 09:00:00"
+    })).toBe("未签到");
+
+    expect(resolveActivityDisplayStatus({
+      my_checked_in: true,
+      my_checked_out: false,
+      my_registered: true,
+      progress_status: "completed",
+      start_time: "2026-03-01 09:00:00"
+    })).toBe("missed_checkout");
+    expect(resolveJoinStatus({
+      my_checked_in: true,
+      my_checked_out: false,
+      my_registered: true,
+      progress_status: "completed",
+      start_time: "2026-03-01 09:00:00"
+    })).toBe("未签退");
   });
 });

@@ -14,4 +14,14 @@ describe("StatusTag", () => {
 
     expect(screen.getByText("已完成").closest(".status-tag")).toHaveClass("status-tag", "status-tag--completed");
   });
+
+  it("renders explicit warning statuses for missing attendance steps on completed activities", () => {
+    const { rerender } = render(<StatusTag status="missed_checkin" />);
+
+    expect(screen.getByText("未签到").closest(".status-tag")).toHaveClass("status-tag", "status-tag--missed_checkin");
+
+    rerender(<StatusTag status="missed_checkout" />);
+
+    expect(screen.getByText("未签退").closest(".status-tag")).toHaveClass("status-tag", "status-tag--missed_checkout");
+  });
 });

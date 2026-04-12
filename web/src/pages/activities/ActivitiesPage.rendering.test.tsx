@@ -70,14 +70,17 @@ describe("ActivitiesPage rendering", () => {
     ).toEqual(expect.arrayContaining(["校园志愿活动", "创新论坛"]));
     expect(document.querySelector(".mobile-page__masthead")).toBeInTheDocument();
     expect(document.querySelector(".mobile-page__content-stack")).toBeInTheDocument();
+    expect(screen.getByText("当前分组")).toBeInTheDocument();
+    expect(screen.getAllByText("正在进行").length).toBeGreaterThan(0);
+    expect(screen.getByText("共 1 场活动")).toBeInTheDocument();
     expect(document.querySelector(".t-tabs")).toBeInTheDocument();
     expect(document.querySelector(".t-list")).toBeInTheDocument();
-    expect(screen.getByText("正在进行")).toBeInTheDocument();
+    expect(screen.getAllByText("正在进行").length).toBeGreaterThan(0);
     expect(screen.getByText("历史活动")).toBeInTheDocument();
     expect(screen.getByText("校园志愿活动")).toBeInTheDocument();
     expect(screen.getByText("创新论坛")).toBeInTheDocument();
     expect(screen.getByText("已报名")).toBeInTheDocument();
-    expect(screen.getAllByText("已签退").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("已完成").length).toBeGreaterThan(0);
     expect(screen.queryByText("不应展示的活动")).not.toBeInTheDocument();
     expect(screen.queryByText("累计签到")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { hidden: true, name: "查看详情" })).toHaveLength(2);
@@ -120,6 +123,8 @@ describe("ActivitiesPage rendering", () => {
 
     expect(await screen.findByRole("heading", { name: "活动列表" })).toBeInTheDocument();
     expect(screen.getByText("查看活动并进入管理页展示动态码、处理批量签退。")).toBeInTheDocument();
+    expect(screen.getByText("当前分组")).toBeInTheDocument();
+    expect(screen.getByText("共 1 场活动")).toBeInTheDocument();
     expect(
       screen.getAllByRole("heading", { hidden: true, level: 2 }).map((heading) => heading.textContent)
     ).toEqual(expect.arrayContaining(["管理态活动 A", "管理态活动 B"]));

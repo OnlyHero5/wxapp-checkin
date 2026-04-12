@@ -23,13 +23,54 @@ export type ActivitySection = {
   title: string;
 };
 
+export type ActivityDisplayStatus = "completed" | "missed_checkin" | "missed_checkout" | "ongoing";
+
 export { parseActivityTime, resolveProgressStatus } from "./activity-progress";
+
+type ActivityAttendanceDisplayInput = Pick<
+  ActivitySummary,
+  "my_checked_in" | "my_checked_out" | "my_registered" | "progress_status" | "start_time"
+>;
+
+function resolveCompletedAttendanceDisplayStatus(activity: ActivityAttendanceDisplayInput) {
+  if (resolveProgressStatus(activity) !== "completed") {
+    return null;
+  }
+
+  if (activity.my_checked_out) {
+    return "completed" as const;
+  }
+  if (activity.my_checked_in) {
+    return "missed_checkout" as const;
+  }
+  if (activity.my_registered) {
+    return "missed_checkin" as const;
+  }
+
+  return null;
+}
+
+export function resolveActivityDisplayStatus(activity: ActivityAttendanceDisplayInput): ActivityDisplayStatus {
+  return resolveCompletedAttendanceDisplayStatus(activity) ?? resolveProgressStatus(activity);
+}
 
 /**
  * 普通用户在 UI 上真正关心的是“我和这个活动现在是什么关系”，
  * 因此把多个布尔字段压缩成一个中文标签。
  */
-export function resolveJoinStatus(activity: Pick<ActivitySummary, "my_registered" | "my_checked_in" | "my_checked_out">) {
+export function resolveJoinStatus(activity: ActivityAttendanceDisplayInput) {
+  const completedAttendanceStatus = resolveCompletedAttendanceDisplayStatus(activity);
+
+  if (completedAttendanceStatus === "completed") {
+    return "已完成";
+  }
+  if (completedAttendanceStatus === "missed_checkin") {
+    return "未签到";
+  }
+  if (completedAttendanceStatus === "missed_checkout") {
+    return "未签退";
+  }
+
   if (activity.my_checked_out) {
     return "已签退";
   }

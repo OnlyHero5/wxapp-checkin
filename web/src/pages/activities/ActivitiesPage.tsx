@@ -18,6 +18,8 @@ import { useActivitiesPageState } from "./use-activities-page-state";
 export function ActivitiesPage() {
   const {
     activeSectionKey,
+    activeSectionCount,
+    activeSectionTitle,
     applySearchKeyword,
     description,
     draftKeyword,
@@ -25,6 +27,7 @@ export function ActivitiesPage() {
     eyebrow,
     hasMore,
     isStaff,
+    keyword,
     loadMorePage,
     loading,
     loadingMore,
@@ -54,6 +57,15 @@ export function ActivitiesPage() {
           placeholder="搜索活动标题、地点、描述或ID"
           value={draftKeyword}
         />
+      </section>
+      <section aria-label="当前筛选结果" className="activities-page__summary">
+        <div className="activities-page__summary-copy">
+          <p className="activities-page__summary-label">当前分组</p>
+          <h2 className="activities-page__summary-title">{activeSectionTitle}</h2>
+          <p className="activities-page__summary-description">
+            {keyword ? `已按“${keyword}”筛选，共 ${activeSectionCount} 场活动。` : `共 ${activeSectionCount} 场活动`}
+          </p>
+        </div>
       </section>
       {errorMessage ? (
         <section className="stack-form activities-page__feedback">

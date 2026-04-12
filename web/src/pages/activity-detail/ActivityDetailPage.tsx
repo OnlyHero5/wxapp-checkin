@@ -5,6 +5,7 @@ import {
   buildActivityRosterPath
 } from "../../features/activities/api";
 import {
+  resolveActivityDisplayStatus,
   resolveCanCheckin,
   resolveCanCheckout,
   resolveJoinStatus,
@@ -58,6 +59,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
 
   // 两个动作的最终可执行性统一通过 view-model 推导。
   const progressStatus = resolveProgressStatus(detail);
+  const displayStatus = isStaff ? progressStatus : resolveActivityDisplayStatus(detail);
   const canCheckin = resolveCanCheckin(detail);
   const canCheckout = resolveCanCheckout(detail);
   return (
@@ -84,7 +86,7 @@ function ActivityDetailPageContent({ activityId }: ActivityDetailPageContentProp
         joinStatusText={resolveJoinStatus(detail)}
         locationText={detail.location}
         progressText={progressStatus === "completed" ? "已完成" : "进行中"}
-        statusSlot={<StatusTag status={progressStatus} />}
+        statusSlot={<StatusTag status={displayStatus} />}
         subtitle={detail.activity_type}
         timeText={detail.start_time}
         tone={detailTone}

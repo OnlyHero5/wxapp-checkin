@@ -1,11 +1,10 @@
 /* =========================================================
  * Staff 页面专项样式
  * ---------------------------------------------------------
- * 这一层只负责 staff 业务区的布局和展示型强化：
- * - 动态码主卡
- * - 批量修正信息块
- * - 名单滑动动作
- * 不重新实现 Tabs / CountDown / Checkbox / SwipeCell 行为。
+ * 管理态和名单态保持同一套工作台语言：
+ * - 暖色基底
+ * - 深色动态码主卡
+ * - 克制的统计块与修正工具条
  * ========================================================= */
 
 .staff-panel,
@@ -33,14 +32,6 @@
   min-width: 0;
 }
 
-.staff-panel__controls,
-.staff-panel__hero,
-.staff-panel__stats-strip,
-.staff-panel__action-bar {
-  width: 100%;
-}
-
-/* 管理页与名单页都围绕单列便当轨道排布，桌面再做增强，不反过来。 */
 .staff-manage-workbench,
 .activity-roster-workbench,
 .staff-panel__rail {
@@ -48,50 +39,21 @@
   gap: 16px;
 }
 
-/* 动作切换只允许作为“细节导航”，不能抢走动态码本体的视觉中心。 */
-.staff-panel__controls {
-  display: grid;
-  padding: 14px;
-  border: 1px solid var(--app-border-subtle);
-  border-radius: var(--app-radius-lg);
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: var(--app-shadow-soft);
-}
-
-.staff-panel__tabs [role="tablist"] {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding: 6px;
-  border: 1px solid rgba(107, 77, 246, 0.14);
-  border-radius: var(--app-radius-md);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: var(--app-shadow-soft);
-}
-
-.staff-panel__tabs [role="tab"] {
-  min-height: 44px;
-  border-radius: var(--app-radius-sm);
-  font-weight: 700;
-  color: var(--app-text-muted);
-}
-
-.staff-panel__tabs [role="tab"][aria-selected="true"] {
-  color: var(--app-tone-staff-accent);
-  background: var(--app-tone-staff-strong);
-}
-
+.staff-panel__controls,
 .staff-panel__hero,
 .staff-panel__stats-strip,
 .staff-panel__action-bar,
 .attendance-batch-action-bar,
 .activity-roster-workbench__rail,
 .staff-manage-workbench__danger {
-  padding: 16px;
+  width: 100%;
+  padding: 18px;
   border: 1px solid var(--app-border-subtle);
   border-radius: var(--app-radius-xl);
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: var(--app-shadow-soft);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0)),
+    color-mix(in srgb, var(--app-surface) 94%, white);
+  box-shadow: var(--app-shadow-card), var(--app-shadow-ring);
 }
 
 .staff-panel__stats-strip,
@@ -103,15 +65,44 @@
   gap: 14px;
 }
 
+.staff-panel__tabs [role="tablist"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: color-mix(in srgb, var(--app-surface) 88%, white);
+  box-shadow: var(--app-shadow-ring);
+}
+
+.staff-panel__tabs [role="tab"] {
+  min-height: 46px;
+  border-radius: var(--app-radius-md);
+  color: var(--app-text-muted);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.staff-panel__tabs [role="tab"][aria-selected="true"] {
+  color: var(--app-text-strong);
+  background: var(--app-surface-strong);
+  box-shadow: var(--app-shadow-ring);
+}
+
+.staff-panel__tabs .t-tabs__track {
+  display: none;
+}
+
 .staff-panel__section-eyebrow,
 .attendance-batch-action-bar__eyebrow,
 .activity-roster-workbench__rail-eyebrow,
 .staff-manage-workbench__danger-eyebrow {
   margin: 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--app-tone-staff-accent);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
 }
 
 .staff-panel__section-copy,
@@ -120,30 +111,31 @@
 .activity-roster-workbench__rail-description,
 .staff-manage-workbench__danger-description {
   margin: 0;
-  color: var(--app-text-muted);
-  font-size: 0.88rem;
-  line-height: 1.5;
+  color: var(--app-text);
+  font-size: 0.92rem;
+  line-height: 1.6;
 }
 
-/* 动态码主卡需要明显强于普通信息块，因此单独提升背景、边框和内边距。 */
 .staff-code-panel__card {
   position: relative;
   padding: 22px 20px;
-  border: 1px solid rgba(107, 77, 246, 0.16);
+  border: 1px solid #30302e;
   border-radius: var(--app-radius-xl);
-  background: linear-gradient(180deg, #ffffff, #f6f2ff);
-  box-shadow: var(--app-shadow-raised);
+  background:
+    radial-gradient(circle at top right, rgba(201, 100, 66, 0.18), transparent 34%),
+    linear-gradient(180deg, #353531, #141413);
+  box-shadow: 0 18px 42px rgba(20, 20, 19, 0.18);
   overflow: hidden;
 }
 
 .staff-code-panel__card::after {
   content: "";
   position: absolute;
-  inset: auto -12% -28% auto;
-  width: 200px;
-  height: 200px;
+  inset: auto -8% -16% auto;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
-  background: rgba(107, 77, 246, 0.12);
+  background: rgba(201, 100, 66, 0.16);
   pointer-events: none;
 }
 
@@ -176,21 +168,24 @@
 }
 
 .staff-code-hero__eyebrow {
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--app-tone-staff-accent);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(176, 174, 165, 0.82);
 }
 
 .staff-code-hero__title {
-  font-size: 1.1rem;
-  line-height: 1.3;
-  color: var(--app-text-strong);
+  font-family: var(--app-font-heading);
+  font-size: 1.45rem;
+  line-height: 1.18;
+  font-weight: 500;
+  color: var(--app-bg-soft);
 }
 
 .staff-code-hero__tag {
   flex-shrink: 0;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .staff-code-panel__body {
@@ -205,10 +200,10 @@
   display: grid;
   justify-items: center;
   width: 100%;
-  padding: 18px 14px;
+  padding: 20px 14px;
   border-radius: var(--app-radius-lg);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+  background: rgba(250, 249, 245, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(250, 249, 245, 0.12);
 }
 
 .staff-code-panel__value-skeleton {
@@ -224,9 +219,10 @@
   position: relative;
   z-index: 1;
   margin: 0;
-  color: var(--app-text-strong);
-  font-size: clamp(2.2rem, 10vw, 2.8rem);
-  font-weight: 800;
+  font-family: var(--app-font-mono);
+  color: var(--app-bg-soft);
+  font-size: clamp(2.5rem, 10vw, 3.2rem);
+  font-weight: 700;
   letter-spacing: clamp(0.18em, 1vw, 0.28em);
 }
 
@@ -237,8 +233,8 @@
   gap: 10px;
   padding: 10px 14px;
   border-radius: var(--app-radius-md);
-  background: rgba(107, 77, 246, 0.08);
-  color: var(--app-text);
+  background: rgba(250, 249, 245, 0.08);
+  color: var(--app-text-on-dark);
   font-weight: 600;
 }
 
@@ -246,10 +242,13 @@
   display: inline-flex;
   min-width: 2ch;
   justify-content: center;
-  color: var(--app-tone-staff-accent);
+  color: #f0dfd7;
 }
 
-.staff-panel__stats-header {
+.staff-panel__stats-header,
+.staff-panel__action-copy,
+.staff-manage-workbench__danger-copy,
+.activity-roster-workbench__rail-header {
   display: grid;
   gap: 6px;
 }
@@ -264,8 +263,9 @@
   display: grid;
   gap: 6px;
   padding: 14px;
+  border: 1px solid var(--app-border);
   border-radius: var(--app-radius-lg);
-  background: linear-gradient(180deg, rgba(107, 77, 246, 0.08), rgba(107, 77, 246, 0.16));
+  background: color-mix(in srgb, var(--app-tone-staff-soft) 28%, white);
 }
 
 .staff-panel__metric-label,
@@ -282,28 +282,15 @@
 }
 
 .staff-panel__metric-value {
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-family: var(--app-font-heading);
+  font-size: 1.5rem;
+  line-height: 1.05;
+  font-weight: 500;
   color: var(--app-text-strong);
 }
 
-.staff-panel__action-bar {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.staff-panel__action-copy {
-  display: grid;
-  gap: 6px;
-}
-
-/* 批量修正区显式拆成 summary 和 action，避免再次塌成一块。 */
 .attendance-batch-action-bar {
   gap: 16px;
-}
-
-.attendance-batch-action-bar__summary,
-.attendance-batch-action-bar__action {
-  width: 100%;
 }
 
 .attendance-batch-action-bar__summary-row {
@@ -313,62 +300,58 @@
   gap: 16px;
 }
 
-.attendance-batch-action-bar__summary-copy {
+.attendance-batch-action-bar__summary-copy,
+.attendance-batch-action-bar__action {
   display: grid;
-  gap: 6px;
+  gap: 10px;
 }
 
 .attendance-batch-action-bar__summary-label {
-  font-size: 1rem;
-  font-weight: 700;
+  font-family: var(--app-font-heading);
+  font-size: 1.28rem;
+  line-height: 1.1;
+  font-weight: 500;
   color: var(--app-text-strong);
 }
 
 .attendance-batch-action-bar__summary-value {
   flex-shrink: 0;
   padding: 10px 12px;
-  border-radius: var(--app-radius-md);
-  background: rgba(107, 77, 246, 0.12);
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--app-tone-staff-accent);
-}
-
-.attendance-batch-action-bar__action {
-  display: grid;
-  gap: 10px;
-}
-
-.staff-manage-workbench__danger {
-  border-color: rgba(176, 44, 44, 0.18);
-  background: linear-gradient(180deg, rgba(255, 246, 246, 0.96), rgba(255, 238, 238, 0.98));
-}
-
-.staff-manage-workbench__danger-copy {
-  display: grid;
-  gap: 6px;
-}
-
-.staff-manage-workbench__danger-title {
-  font-size: 1.05rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-strong);
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--app-text-strong);
 }
 
-.activity-roster-workbench__rail-header {
-  display: grid;
-  gap: 6px;
+.staff-manage-workbench__danger {
+  border-color: color-mix(in srgb, var(--app-danger) 20%, white);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0)),
+    color-mix(in srgb, var(--app-tone-danger-soft) 26%, white);
 }
 
-/* 名单行要比截图里更干净，因此滑动动作宽度和文案都收敛。 */
+.staff-manage-workbench__danger-eyebrow {
+  color: var(--app-danger);
+}
+
+.staff-manage-workbench__danger-title {
+  font-family: var(--app-font-heading);
+  font-size: 1.35rem;
+  line-height: 1.12;
+  font-weight: 500;
+  color: var(--app-text-strong);
+}
+
 .attendance-roster-list {
   display: grid;
   gap: 14px;
 }
 
 .attendance-roster-list__item {
-  border-radius: var(--app-radius-lg);
-  box-shadow: var(--app-shadow-soft);
   overflow: hidden;
+  border-radius: var(--app-radius-lg);
 }
 
 .attendance-roster-card,
@@ -378,12 +361,8 @@
   padding: 16px;
   border: 1px solid var(--app-border-subtle);
   border-radius: var(--app-radius-lg);
-  background: var(--app-surface);
-  box-shadow: none;
-}
-
-.attendance-roster-card {
-  position: relative;
+  background: var(--app-surface-strong);
+  box-shadow: var(--app-shadow-ring);
 }
 
 .attendance-roster-card__header {
@@ -407,14 +386,16 @@
 }
 
 .attendance-roster-card__student-id {
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--app-text-muted);
 }
 
 .attendance-roster-card__name {
-  font-size: 1.05rem;
-  line-height: 1.35;
+  font-family: var(--app-font-heading);
+  font-size: 1.2rem;
+  line-height: 1.18;
+  font-weight: 500;
   color: var(--app-text-strong);
 }
 
@@ -429,7 +410,7 @@
 }
 
 .attendance-roster-card__status {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .attendance-roster-card__times {
@@ -464,43 +445,33 @@
   min-width: 112px;
   padding: 16px 12px;
   border-radius: 14px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.32;
   text-align: center;
 }
 
 .attendance-roster-list__action--checkin {
-  background: linear-gradient(180deg, rgba(15, 155, 132, 0.2), rgba(15, 155, 132, 0.32));
+  background: color-mix(in srgb, var(--app-tone-checkin-soft) 60%, white);
   color: var(--app-tone-checkin-accent);
 }
 
 .attendance-roster-list__action--checkout {
-  background: linear-gradient(180deg, rgba(217, 119, 6, 0.2), rgba(217, 119, 6, 0.32));
+  background: color-mix(in srgb, var(--app-tone-checkout-soft) 60%, white);
   color: var(--app-tone-checkout-accent);
 }
 
 .attendance-roster-list__action--reset {
-  background: linear-gradient(180deg, rgba(107, 77, 246, 0.16), rgba(107, 77, 246, 0.26));
+  background: color-mix(in srgb, var(--app-tone-staff-soft) 60%, white);
   color: var(--app-tone-staff-accent);
-}
-
-/* staff 页面所有主要块统一吃一层更明显的卡面阴影，维持管理态识别。 */
-.mobile-page[data-page-tone="staff"] .inline-notice,
-.mobile-page[data-page-tone="staff"] .app-state,
-.mobile-page[data-page-tone="staff"] .attendance-batch-action-bar,
-.mobile-page[data-page-tone="staff"] .staff-panel__stats-strip,
-.mobile-page[data-page-tone="staff"] .activity-roster-workbench__rail,
-.mobile-page[data-page-tone="staff"] .staff-manage-workbench__danger {
-  box-shadow: 0 18px 36px rgba(63, 44, 143, 0.1);
 }
 
 @media (min-width: 768px) {
   .mobile-page[data-page-layout="showcase-auto"] .mobile-page__shell {
-    width: min(100%, 640px);
+    width: min(100%, 760px);
   }
 
   .staff-code-panel__card {
-    padding: 26px 24px;
+    padding: 28px 24px;
   }
 
   .staff-panel__action-bar,
@@ -515,12 +486,8 @@
     width: min(100%, var(--app-shell-max-width-wide));
   }
 
-  /*
-   * 桌面端把 summary / danger 收到左侧栏，
-   * 动态码工作区提升为右侧主区域，避免只是把手机单列简单放大。
-   */
   .mobile-page[data-page-layout="showcase-auto"] .staff-manage-workbench {
-    grid-template-columns: minmax(280px, 0.92fr) minmax(0, 1.48fr);
+    grid-template-columns: minmax(300px, 0.94fr) minmax(0, 1.46fr);
     gap: 20px;
     align-items: start;
   }
@@ -538,7 +505,6 @@
     grid-column: 1;
   }
 
-  /* 大屏时把动态码页的 hero 和 stats 拉成两段，但仍保留同一条工作台轨道。 */
   .mobile-page[data-page-layout="showcase-auto"] .staff-panel__rail {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -551,7 +517,7 @@
   }
 
   .staff-code-panel__value {
-    font-size: clamp(4rem, 8vw, 5.8rem);
-    letter-spacing: 0.3em;
+    font-size: clamp(4.2rem, 8vw, 5.8rem);
+    letter-spacing: 0.32em;
   }
 }

@@ -25,4 +25,12 @@ describe("base.css", () => {
     expect(baseCss).toMatch(/\.app-business-nav\s*\{[^}]*position:\s*fixed;/);
     expect(baseCss).toMatch(/\.app-business-nav__bar\s*\{[^}]*width:\s*min\(100%,/);
   });
+
+  it("defines the warm editorial design tokens from DESIGN.md instead of the old cool-toned glass palette", () => {
+    expect(baseCss).toMatch(/--app-bg:\s*#f5f4ed;/);
+    expect(baseCss).toMatch(/--app-surface:\s*#faf9f5;/);
+    expect(baseCss).toMatch(/--app-text-strong:\s*#141413;/);
+    expect(baseCss).toMatch(/--app-accent:\s*#c96442;/);
+    expect(baseCss).toMatch(/--app-font-heading:/);
+  });
 });

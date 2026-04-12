@@ -9,6 +9,7 @@
 当前推荐发布入口：
 
 - 云服务器 Docker 一键部署：`./scripts/docker-prod.sh`
+- 三项目 Docker 一键启动：`./scripts/start-three-dockers.sh`
 
 ## 目录
 
@@ -169,6 +170,40 @@ docker logs -f wxapp-checkin
 - 蓝色 `[WXAPP-CHECKIN-ERROR]`：会明确打印失败阶段和报错原因
 
 日志策略默认只走 `docker logs`，并通过 Compose 把单文件大小限制为 `5m`、保留 `2` 个滚动文件，避免云服务器磁盘被日志持续占满。
+
+## 三项目 Docker 一键启动
+
+如果你本机同级目录同时存在：
+
+- `../suda_union`
+- `../wxapp-checkin`
+- `../suda-gs-ams`
+
+可直接在 `wxapp-checkin` 仓库根目录执行：
+
+```bash
+./scripts/start-three-dockers.sh
+```
+
+脚本会自动：
+
+- 确保共享网络 `three-projects-net` 存在
+- 先启动 `suda-union` 并等待 `healthy`
+- 再启动 `wxapp-checkin`
+- 最后启动 `suda-gs-ams`
+- 对三个项目做基础 HTTP 探活
+
+如果当前 `wxapp-checkin` 有新改动，需要先重建它的 Docker 镜像，再启动三项目：
+
+```bash
+./scripts/start-three-dockers.sh --rebuild-wxapp
+```
+
+如果三项目都要强制重建：
+
+```bash
+./scripts/start-three-dockers.sh --rebuild-all
+```
 
 ## 正式文档
 
