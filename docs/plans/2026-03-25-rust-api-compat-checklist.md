@@ -24,6 +24,7 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 - `session_expired`
 - `identity_not_found`
 - `invalid_password`
+- `account_disabled`
 - `invalid_param`
 - `invalid_activity`
 - `outside_activity_time_window`
@@ -55,6 +56,8 @@ Rust 后端在当前正式基线下，哪些 `/api/web/**` 契约、错误态和
 
 - `identity_not_found`
 - `invalid_password`
+- `account_disabled`
+- `rate_limited`
 - `invalid_param`
 
 ### 3.2 `GET /api/web/activities`

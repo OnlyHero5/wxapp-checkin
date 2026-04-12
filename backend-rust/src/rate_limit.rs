@@ -52,9 +52,59 @@ impl InvalidCodeAttemptLimiter {
   }
 }
 
+#[derive(Debug)]
+pub struct LoginAttemptLimiter {
+  window: Duration,
+  limiter: Option<DefaultKeyedRateLimiter<String>>,
+}
+
+impl LoginAttemptLimiter {
+  pub fn new(max_attempts_per_student_id: u32, window: Duration) -> Self {
+    Self {
+      window,
+      limiter: build_keyed_limiter(max_attempts_per_student_id, window),
+    }
+  }
+
+  pub fn record_failed_attempt_or_throw(&self, student_id: &str) -> Result<(), AppError> {
+    let Some(limiter) = &self.limiter else {
+      return Ok(());
+    };
+
+    let key = student_id.trim().to_string();
+    if key.is_empty() {
+      return Ok(());
+    }
+
+    if limiter.check_key(&key).is_err() {
+      return Err(AppError::business(
+        "forbidden",
+        format!(
+          "登录失败次数过多，请稍后再试（{} 秒后重试）",
+          self.window.as_secs()
+        ),
+        Some("rate_limited"),
+      ));
+    }
+    Ok(())
+  }
+}
+
+fn build_keyed_limiter(
+  max_attempts_per_key: u32,
+  window: Duration,
+) -> Option<DefaultKeyedRateLimiter<String>> {
+  let max_attempts = NonZeroU32::new(max_attempts_per_key)?;
+  let quota = window
+    .checked_div(max_attempts_per_key)
+    .and_then(Quota::with_period)?;
+
+  Some(RateLimiter::keyed(quota.allow_burst(max_attempts)))
+}
+
 #[cfg(test)]
 mod tests {
-  use super::InvalidCodeAttemptLimiter;
+  use super::{InvalidCodeAttemptLimiter, LoginAttemptLimiter};
   use std::time::Duration;
 
   #[test]
@@ -74,6 +124,19 @@ mod tests {
     let error = limiter
       .record_invalid_attempt_or_throw(7, "legacy_act_101", 0)
       .expect_err("third invalid attempt should be rejected");
+
+    assert_eq!(error.error_code(), Some("rate_limited"));
+  }
+
+  #[test]
+  fn login_limiter_should_reject_after_exceeding_burst_budget() {
+    let limiter = LoginAttemptLimiter::new(2, Duration::from_secs(60));
+
+    assert!(limiter.record_failed_attempt_or_throw("2025000007").is_ok());
+    assert!(limiter.record_failed_attempt_or_throw("2025000007").is_ok());
+    let error = limiter
+      .record_failed_attempt_or_throw("2025000007")
+      .expect_err("third login failure should be rejected");
 
     assert_eq!(error.error_code(), Some("rate_limited"));
   }

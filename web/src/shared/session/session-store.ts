@@ -30,7 +30,7 @@ export function getSession() {
 export function setSession(sessionToken: string) {
   const storage = getStorage();
   if (!storage) {
-    return;
+    return false;
   }
 
   const normalized = normalizeSessionToken(sessionToken);
@@ -40,9 +40,9 @@ export function setSession(sessionToken: string) {
       storage.removeItem(SESSION_STORAGE_KEY);
       writeSessionContext(storage, null);
     } catch {
-      return;
+      return false;
     }
-    return;
+    return true;
   }
 
   try {
@@ -50,9 +50,10 @@ export function setSession(sessionToken: string) {
     // 只写 token 的调用方视为“没有同步上下文”，避免遗留旧角色污染新会话。
     writeSessionContext(storage, null);
   } catch {
-    // 存储失败时不抛错，让上层继续依赖内存中的当前渲染流程完成跳转。
-    return;
+    return false;
   }
+
+  return true;
 }
 
 type AuthSessionPayload = {
@@ -65,13 +66,13 @@ type AuthSessionPayload = {
 export function saveAuthSession(payload: AuthSessionPayload) {
   const storage = getStorage();
   if (!storage) {
-    return;
+    return false;
   }
 
   const normalizedToken = normalizeSessionToken(payload.session_token);
   if (!normalizedToken) {
     clearSession();
-    return;
+    return false;
   }
 
   try {
@@ -82,8 +83,10 @@ export function saveAuthSession(payload: AuthSessionPayload) {
       user_profile: payload.user_profile
     });
   } catch {
-    return;
+    return false;
   }
+
+  return true;
 }
 
 export function getSessionRole() {

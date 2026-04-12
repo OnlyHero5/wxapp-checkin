@@ -19,6 +19,7 @@ pub struct AppError {
   http_status: StatusCode,
   message: String,
   error_code: Option<String>,
+  detail: Option<String>,
 }
 
 impl AppError {
@@ -51,6 +52,7 @@ impl AppError {
       http_status: resolve_http_status(status, error_code),
       message: message.into(),
       error_code: error_code.map(ToOwned::to_owned),
+      detail: None,
     }
   }
 
@@ -59,15 +61,22 @@ impl AppError {
   }
 
   pub fn internal(message: impl Into<String>) -> Self {
-    Self::business("error", message, Some("internal_error"))
+    Self {
+      status: "error",
+      http_status: StatusCode::INTERNAL_SERVER_ERROR,
+      message: "系统内部错误，请稍后重试".to_string(),
+      error_code: Some("internal_error".to_string()),
+      detail: Some(message.into()),
+    }
   }
 }
 
 impl Display for AppError {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    let rendered_message = self.detail.as_deref().unwrap_or(&self.message);
     match &self.error_code {
-      Some(error_code) => write!(f, "{} ({error_code})", self.message),
-      None => write!(f, "{}", self.message),
+      Some(error_code) => write!(f, "{rendered_message} ({error_code})"),
+      None => write!(f, "{rendered_message}"),
     }
   }
 }
@@ -79,11 +88,12 @@ impl IntoResponse for AppError {
     // API 错误继续返回现有 envelope，同时在容器终端补一条稳定日志。
     // 这样前端契约、运维排查和 HTTP 语义三者可以同时成立。
     let error_code = self.error_code.clone();
+    let log_message = self.detail.clone().unwrap_or_else(|| self.message.clone());
     terminal_banner::print_error(
       "接口请求失败",
       match error_code.as_deref() {
-        Some(code) => format!("{code}: {}", self.message),
-        None => self.message.clone(),
+        Some(code) => format!("{code}: {log_message}"),
+        None => log_message,
       },
     );
     let body = ErrorResponse::new(self.status, self.message, self.error_code);

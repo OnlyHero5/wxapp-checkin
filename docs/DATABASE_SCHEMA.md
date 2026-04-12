@@ -1,8 +1,8 @@
 # 数据库表结构说明
 
-文档版本：v1.0
+文档版本：v1.1
 状态：正式基线
-更新日期：2026-04-05
+更新日期：2026-04-12
 项目：`wxapp-checkin`
 
 ## 1. 概述
@@ -43,6 +43,11 @@
 - `role` 值为 0、1、2、3 时映射为 `staff`
 - 其他值映射为 `normal`
 
+**账号状态真实口径**：
+- `invalid` 字段由外部系统维护；
+- `wxapp-checkin` 登录和 bearer token 鉴权都会校验该字段；
+- `invalid=1` 的账号不能重新登录，也不能继续使用旧 token 访问业务接口。
+
 ### 2.2 `suda_department` - 院系表
 
 | 字段 | 类型 | 说明 |
@@ -67,8 +72,8 @@
 | `name` | `VARCHAR(255)` | 活动标题 |
 | `description` | `TEXT` | 活动描述 |
 | `location` | `VARCHAR(255)` | 活动地点 |
-| `activity_stime` | `DATETIME` | 活动开始时间 |
-| `activity_etime` | `DATETIME` | 活动结束时间 |
+| `activity_stime` | `DATETIME / 兼容 legacy TIMESTAMP 语义` | 活动开始时间 |
+| `activity_etime` | `DATETIME / 兼容 legacy TIMESTAMP 语义` | 活动结束时间 |
 | `type` | `INT` | 活动类型（1=讲座，其他=活动） |
 | `state` | `INT` | 活动状态（>=4 为已结束） |
 
@@ -79,6 +84,11 @@
 **状态映射**：
 - `state >= 4` → "completed"
 - `state < 4` → "ongoing"
+
+**时间字段真实口径**：
+- 应用层当前通过 `DATE_FORMAT(..., '%Y-%m-%d %H:%i:%s')` 读取活动时间；
+- 读取后会把 legacy 时间按“北京时间墙上时间”做 8 小时折返补偿；
+- 因此排查活动时间问题时，不能只盯数据库列类型，还要看应用层的兼容解码逻辑。
 
 ---
 
@@ -125,7 +135,13 @@
 | `content` | `TEXT` | JSON 格式的操作详情 |
 | `ip` | `VARCHAR(45)` | 客户端 IP（当前为空） |
 | `address` | `VARCHAR(255)` | 地址（当前为空） |
-| `time` | `TIMESTAMP` | 写入时间 |
+| `time` | `TIMESTAMP` | MySQL 写入时间；应用侧读取前会固定会话时区为 `+08:00` 并按北京时间解释 |
+
+时间字段补充说明：
+- `content.server_time_ms`：Rust 服务在写日志时记录的服务端 Unix 毫秒时间戳；
+- `time`：MySQL `CURRENT_TIMESTAMP` 写入时间；
+- 应用读取 `suda_log.time` 前会执行 `SET time_zone = '+08:00'`，因此 API / roster 中展示的最新动作时间以北京时间为准；
+- 如果你在独立 SQL 会话里手工查询 `suda_log.time`，需要自行确认该会话时区，否则显示值可能与应用侧不一致。
 
 ---
 

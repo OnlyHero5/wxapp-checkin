@@ -47,22 +47,21 @@ pub async fn find_latest_action_time(
   action_type: &str,
   legacy_activity_id: i64,
 ) -> Result<Option<chrono::NaiveDateTime>, AppError> {
-  let activity_pattern = format!("%\"legacy_activity_numeric_id\":{legacy_activity_id}%");
-  let action_pattern = format!("%\"action_type\":\"{action_type}\"%");
   sqlx::query_scalar::<_, chrono::NaiveDateTime>(
     r#"
       SELECT CAST(time AS DATETIME)
       FROM suda_log
       WHERE username = ?
-        AND content LIKE ?
-        AND content LIKE ?
+        AND JSON_VALID(content)
+        AND CAST(JSON_UNQUOTE(JSON_EXTRACT(content, '$.legacy_activity_numeric_id')) AS SIGNED) = ?
+        AND JSON_UNQUOTE(JSON_EXTRACT(content, '$.action_type')) = ?
       ORDER BY id DESC
       LIMIT 1
     "#,
   )
   .bind(username)
-  .bind(activity_pattern)
-  .bind(action_pattern)
+  .bind(legacy_activity_id)
+  .bind(action_type)
   .fetch_optional(pool)
   .await
   .map_err(|error| AppError::internal(format!("查询最新日志时间失败：{error}")))
@@ -88,8 +87,6 @@ pub async fn find_latest_action_times(
     return Ok(HashMap::new());
   }
 
-  let activity_pattern = format!("%\"legacy_activity_numeric_id\":{legacy_activity_id}%");
-  let action_pattern = format!("%\"action_type\":\"{action_type}\"%");
   let mut query_builder = QueryBuilder::<MySql>::new(
     r#"
       SELECT
@@ -99,12 +96,13 @@ pub async fn find_latest_action_times(
       INNER JOIN (
         SELECT username, MAX(id) AS latest_id
         FROM suda_log
-        WHERE content LIKE
+        WHERE JSON_VALID(content)
+          AND CAST(JSON_UNQUOTE(JSON_EXTRACT(content, '$.legacy_activity_numeric_id')) AS SIGNED) =
     "#,
   );
-  query_builder.push_bind(&activity_pattern);
-  query_builder.push(" AND content LIKE ");
-  query_builder.push_bind(&action_pattern);
+  query_builder.push_bind(legacy_activity_id);
+  query_builder.push(" AND JSON_UNQUOTE(JSON_EXTRACT(content, '$.action_type')) = ");
+  query_builder.push_bind(action_type);
   query_builder.push(" AND username IN (");
   {
     let mut separated = query_builder.separated(", ");

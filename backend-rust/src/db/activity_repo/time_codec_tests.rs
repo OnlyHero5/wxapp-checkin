@@ -2,7 +2,7 @@ use super::parse_legacy_activity_time_text;
 
 #[test]
 fn parse_legacy_activity_time_text_should_keep_beijing_wall_clock_time() {
-  /**
+  /*
    * 这个断言直接对应线上回归：
    * - `wxapp-checkin` 当前把 MySQL 会话时区固定成 `+08:00`；
    * - 旧 `suda_activity` 的 `TIMESTAMP` 实际保存的是“北京时间墙上时间”；

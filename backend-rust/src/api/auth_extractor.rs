@@ -60,6 +60,7 @@ async fn load_current_user(state: &AppState, session_token: &str) -> Result<Curr
   if user.id != claims.uid {
     return Err(session_expired());
   }
+  auth_service::ensure_account_active(user.invalid)?;
 
   let current_user = auth_service::build_current_user(
     user.id,

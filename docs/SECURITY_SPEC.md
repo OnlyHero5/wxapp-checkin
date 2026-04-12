@@ -1,8 +1,8 @@
 # 安全机制规格说明
 
-文档版本：v1.1
+文档版本：v1.2
 状态：正式基线
-更新日期：2026-04-11
+更新日期：2026-04-12
 项目：`wxapp-checkin`
 
 ## 1. 概述
@@ -151,6 +151,18 @@ fn generate_code(signing_key: &str, activity_id: &str, action_type: &str, slot: 
 
 前端收到 `session_expired` 后必须清理本地会话并跳转到登录页。
 
+### 3.5 账号禁用字段真实口径
+
+数据库 `suda_user.invalid` 字段当前已接入登录与鉴权拦截链路：
+- `backend-rust/src/service/auth_service.rs` 登录时会拒绝 `invalid != 0` 的账号；
+- `backend-rust/src/api/auth_extractor.rs` 会在 bearer token 反查数据库后再次校验 `invalid`；
+- 被停用账号继续使用旧 token 访问受保护接口时，也会收到 `account_disabled`。
+
+因此当前正式口径是：
+- `invalid=1` 已被后端视为生效的停用状态；
+- 停用账号不能重新登录，也不能继续使用已有会话访问业务接口；
+- 前端收到 `account_disabled` 后，应按会话失效处理并清理本地会话。
+
 ---
 
 ## 4. 防重放机制
@@ -211,7 +223,8 @@ key = "{student_id}:{legacy_activity_id}:{action_type}:{slot}"
 **代码位置**：`backend-rust/src/rate_limit.rs`
 
 使用 `governor` 库的令牌桶算法：
-- 基于 user_id + activity_id 的键
+- 动态码错误限流：基于 `user_id + activity_id`
+- 登录失败限流：基于 `student_id`
 - 内存级限流
 - 不支持分布式
 
@@ -241,6 +254,28 @@ key = "u:{user_id}:{activity_id}"
 
 HTTP 状态码：`429`
 
+### 5.6 限流真实覆盖范围
+
+当前正式实现覆盖两类限流：
+
+1. 登录失败限流
+- 接口：`POST /api/web/auth/login`
+- 键：`student_id`
+- 窗口：60 秒
+- 默认阈值：5 次失败后返回 `rate_limited`
+
+2. 动态码错误限流
+- 接口：`POST /api/web/activities/{activity_id}/code-consume`
+- 键：`u:{user_id}:{activity_id}`
+- 只对 `invalid_code` / `expired` 计数
+- 窗口：60 秒
+- 默认阈值：12 次失败后返回 `rate_limited`
+
+当前仍**不覆盖**：
+- staff 名单修正
+- staff 批量签退
+- 活动列表 / 详情 / roster 只读查询
+
 ---
 
 ## 6. 密码处理
@@ -265,9 +300,29 @@ HTTP 状态码：`429`
 
 ### 6.3 安全注意事项
 
-- 密码错误统一返回 `invalid_password`，不区分"用户不存在"和"密码错误"
+- 学号不存在时返回 `identity_not_found`
+- 密码为空、哈希为空或 bcrypt 校验失败时返回 `invalid_password`
+- 账号已停用时返回 `account_disabled`
+- 登录失败次数过多时返回 `rate_limited`
 - 不支持通过 API 修改密码
 - 密码修改需要通过外部系统完成
+
+### 6.4 错误响应与脱敏真实口径
+
+**代码位置**：
+- `backend-rust/src/error.rs`
+- `backend-rust/src/api/error_response.rs`
+
+当前实现区分两类错误：
+
+1. **业务错误**
+   - 继续返回稳定 envelope：`status` / `message` / `error_code`
+   - 同时映射真实 HTTP 状态码，例如 `rate_limited -> 429`
+
+2. **内部错误**
+   - 统一返回 `status=error`、`error_code=internal_error`
+   - 客户端消息固定为：`系统内部错误，请稍后重试`
+   - 详细错误文本只打印到容器终端日志，不再直接暴露给前端
 
 ---
 

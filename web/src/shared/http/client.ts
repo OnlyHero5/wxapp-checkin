@@ -12,6 +12,8 @@ type RequestOptions = {
   body?: unknown;
   headers?: Record<string, string>;
   method?: HttpMethod;
+  signal?: AbortSignal;
+  timeoutMs?: number;
 };
 
 type ApiResponse = {
@@ -30,11 +32,13 @@ type ApiResponse = {
  * - GET 是幂等读取，最适合共享 in-flight Promise
  */
 const inflightGetRequests = new Map<string, Promise<unknown>>();
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 const { apiBasePath } = resolveRuntimeConfig(import.meta.env as Record<string, string | undefined>);
 
 function isSessionExpired(payload: ApiResponse) {
   // `session_expired` 是当前 Web 端最关键的统一错误信号。
-  return `${payload.error_code ?? ""}`.trim().toLowerCase() === "session_expired";
+  const normalizedErrorCode = `${payload.error_code ?? ""}`.trim().toLowerCase();
+  return normalizedErrorCode === "session_expired" || normalizedErrorCode === "account_disabled";
 }
 
 function stableSerialize(value: unknown): string {
@@ -59,7 +63,64 @@ function stableSerialize(value: unknown): string {
 
 function buildGetRequestKey(path: string, sessionToken: string, options: RequestOptions) {
   // 把 session 和 headers 一并纳入 key，避免不同身份的读请求被错误共用。
-  return ["GET", path, sessionToken, stableSerialize(options.body), stableSerialize(options.headers)].join("|");
+  return [
+    "GET",
+    path,
+    sessionToken,
+    stableSerialize(options.body),
+    stableSerialize(options.headers),
+    `${options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS}`
+  ].join("|");
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function createManagedRequestSignal(options: RequestOptions) {
+  const controller = new AbortController();
+  const timeoutMs = Math.max(0, options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS);
+  let wasAbortedByCaller = false;
+  let didTimeout = false;
+  let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
+
+  const handleExternalAbort = () => {
+    wasAbortedByCaller = true;
+    controller.abort();
+  };
+
+  if (options.signal) {
+    if (options.signal.aborted) {
+      handleExternalAbort();
+    } else {
+      options.signal.addEventListener("abort", handleExternalAbort, {
+        once: true
+      });
+    }
+  }
+
+  if (timeoutMs > 0) {
+    timeoutId = globalThis.setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, timeoutMs);
+  }
+
+  return {
+    cleanup() {
+      if (timeoutId !== undefined) {
+        globalThis.clearTimeout(timeoutId);
+      }
+      options.signal?.removeEventListener("abort", handleExternalAbort);
+    },
+    didTimeout() {
+      return didTimeout;
+    },
+    signal: controller.signal,
+    wasAbortedByCaller() {
+      return wasAbortedByCaller || options.signal?.aborted === true;
+    }
+  };
 }
 
 async function parseResponsePayload(response: Response) {
@@ -86,53 +147,72 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   const method = options.method ?? "GET";
 
   async function executeRequest() {
-    let response: Response;
     try {
-      response = await fetch(`${apiBasePath}${path}`, {
-        method,
-        headers: {
-          // 统一在这一层注入会话，页面和 API 封装层不必各自重复拼 Authorization。
-          "Content-Type": "application/json",
-          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
-          ...options.headers
-        },
-        body: options.body === undefined ? undefined : JSON.stringify(options.body)
-      });
+      const managedSignal = createManagedRequestSignal(options);
+      try {
+        let response: Response;
+        try {
+          response = await fetch(`${apiBasePath}${path}`, {
+            method,
+            headers: {
+              // 统一在这一层注入会话，页面和 API 封装层不必各自重复拼 Authorization。
+              "Content-Type": "application/json",
+              ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+              ...options.headers
+            },
+            body: options.body === undefined ? undefined : JSON.stringify(options.body),
+            signal: managedSignal.signal
+          });
+        } catch (error) {
+          if (managedSignal.didTimeout()) {
+            throw new NetworkError("请求超时，请稍后重试");
+          }
+          if (managedSignal.wasAbortedByCaller() || isAbortError(error)) {
+            throw new NetworkError("请求已取消，请稍后重试");
+          }
+          // 真正的网络失败（断网、DNS、跨域失败等）统一走 NetworkError。
+          throw new NetworkError(error instanceof Error ? error.message : undefined);
+        }
+
+        const payload = await parseResponsePayload(response);
+        if (isSessionExpired(payload)) {
+          // 只要服务端明确说会话失效，就立刻清本地 token，避免继续带着脏会话请求。
+          clearSession();
+          throw new SessionExpiredError(payload.message, payload);
+        }
+
+        if (!response.ok) {
+          // 先按 HTTP 失败兜底，再让页面根据 `error.code` 自行翻译业务文案。
+          throw new ApiError(payload.message ?? "请求失败", {
+            code: payload.error_code,
+            payload,
+            status: payload.status
+          });
+        }
+
+        if (payload.status && payload.status !== "success") {
+          // 兼容“HTTP 200 + 业务状态失败”的接口风格。
+          throw new ApiError(payload.message ?? "请求失败", {
+            code: payload.error_code,
+            payload,
+            status: payload.status
+          });
+        }
+
+        // 成功时直接返回 payload，由各业务模块按自己的类型消费。
+        return payload as T;
+      } finally {
+        managedSignal.cleanup();
+      }
     } catch (error) {
-      // 真正的网络失败（断网、DNS、跨域失败等）统一走 NetworkError。
-      throw new NetworkError(error instanceof Error ? error.message : undefined);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new NetworkError();
     }
-
-    const payload = await parseResponsePayload(response);
-    if (isSessionExpired(payload)) {
-      // 只要服务端明确说会话失效，就立刻清本地 token，避免继续带着脏会话请求。
-      clearSession();
-      throw new SessionExpiredError(payload.message, payload);
-    }
-
-    if (!response.ok) {
-      // 先按 HTTP 失败兜底，再让页面根据 `error.code` 自行翻译业务文案。
-      throw new ApiError(payload.message ?? "请求失败", {
-        code: payload.error_code,
-        payload,
-        status: payload.status
-      });
-    }
-
-    if (payload.status && payload.status !== "success") {
-      // 兼容“HTTP 200 + 业务状态失败”的接口风格。
-      throw new ApiError(payload.message ?? "请求失败", {
-        code: payload.error_code,
-        payload,
-        status: payload.status
-      });
-    }
-
-    // 成功时直接返回 payload，由各业务模块按自己的类型消费。
-    return payload as T;
   }
 
-  if (method === "GET") {
+  if (method === "GET" && !options.signal) {
     const requestKey = buildGetRequestKey(path, sessionToken, options);
     const existing = inflightGetRequests.get(requestKey);
     if (existing) {

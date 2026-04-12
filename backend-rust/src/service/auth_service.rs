@@ -1,10 +1,13 @@
 use crate::api::auth::{LoginResponse, UserProfileResponse};
 use crate::api::auth_extractor::CurrentUser;
 use crate::app_state::AppState;
+use crate::db::log_repo;
 use crate::db::user_repo;
 use crate::domain::{WebRole, permissions_for_role, role_from_legacy};
 use crate::error::AppError;
+use serde_json::json;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::warn;
 
 /// 认证服务故意保持“薄业务层”：
 /// - 只组合仓储、密码规则和 token；
@@ -25,17 +28,29 @@ pub async fn login(
     ));
   }
 
-  let user = user_repo::find_user_by_student_id(state.pool(), &normalized_student_id)
-    .await?
-    .ok_or_else(|| {
-      AppError::business(
-        "forbidden",
-        "学号不存在，请确认后重试",
-        Some("identity_not_found"),
+  let user = match user_repo::find_user_by_student_id(state.pool(), &normalized_student_id).await? {
+    Some(user) => user,
+    None => {
+      return reject_login_with(
+        state,
+        &normalized_student_id,
+        None,
+        AppError::business(
+          "forbidden",
+          "学号不存在，请确认后重试",
+          Some("identity_not_found"),
+        ),
       )
-    })?;
+      .await;
+    }
+  };
 
-  verify_password(user.password.as_deref(), &normalized_password)?;
+  if let Err(error) = ensure_account_active(user.invalid) {
+    return reject_login_with(state, &normalized_student_id, Some(&user.name), error).await;
+  }
+  if let Err(error) = verify_password(user.password.as_deref(), &normalized_password) {
+    return reject_login_with(state, &normalized_student_id, Some(&user.name), error).await;
+  }
   let role = role_from_legacy(user.role);
   let permissions = permissions_for_role(role)
     .into_iter()
@@ -66,6 +81,18 @@ pub async fn login(
       club: String::new(),
     },
   })
+}
+
+pub(crate) fn ensure_account_active(invalid: Option<i8>) -> Result<(), AppError> {
+  if matches!(invalid, Some(value) if value != 0) {
+    return Err(AppError::business(
+      "forbidden",
+      "账号已停用，请联系管理员",
+      Some("account_disabled"),
+    ));
+  }
+
+  Ok(())
 }
 
 pub fn build_current_user(
@@ -114,26 +141,58 @@ fn normalize(value: &str) -> String {
   value.trim().to_string()
 }
 
-#[cfg(test)]
-mod tests {
-  use super::build_current_user;
-  use crate::domain::WebRole;
-
-  #[test]
-  fn current_user_should_inherit_staff_permissions() {
-    let current_user = build_current_user(
-      7,
-      "2025000007".to_string(),
-      "刘洋".to_string(),
-      WebRole::Staff,
-      "学生会".to_string(),
-    );
-
-    assert_eq!(current_user.role, "staff");
-    assert!(
-      current_user
-        .permissions
-        .contains(&"activity:manage".to_string())
+async fn reject_login_with<T>(
+  state: &AppState,
+  student_id: &str,
+  name: Option<&str>,
+  error: AppError,
+) -> Result<T, AppError> {
+  let final_error = state
+    .login_attempt_limiter()
+    .record_failed_attempt_or_throw(student_id)
+    .err()
+    .unwrap_or(error);
+  if let Err(log_error) =
+    record_login_failure_audit(state, student_id, name.unwrap_or(""), &final_error).await
+  {
+    warn!(
+      student_id,
+      error = %log_error,
+      "写入登录失败审计日志失败"
     );
   }
+  Err(final_error)
 }
+
+async fn record_login_failure_audit(
+  state: &AppState,
+  student_id: &str,
+  name: &str,
+  error: &AppError,
+) -> Result<(), AppError> {
+  let server_time_ms = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .map(|duration| duration.as_millis() as u64)
+    .map_err(|_| AppError::internal("系统时间异常，无法记录登录审计"))?;
+  let content = json!({
+    "student_id": student_id,
+    "result": "failed",
+    "error_code": error.error_code(),
+    "server_time_ms": server_time_ms,
+    "source": "wxapp-checkin-rust"
+  });
+  log_repo::insert_log(
+    state.pool(),
+    student_id,
+    name,
+    "/api/web/auth/login",
+    &content,
+    "",
+    "",
+  )
+  .await
+}
+
+#[cfg(test)]
+#[path = "auth_service_tests.rs"]
+mod tests;

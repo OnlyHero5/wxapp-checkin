@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getSession, setSession } from "../session/session-store";
-import { ApiError, SessionExpiredError } from "./errors";
+import { ApiError, NetworkError, SessionExpiredError } from "./errors";
 import { requestJson } from "./client";
 
 function createJsonResponse(payload: unknown, init?: ResponseInit) {
@@ -19,6 +19,7 @@ describe("requestJson", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
     window.localStorage.clear();
   });
 
@@ -56,6 +57,22 @@ describe("requestJson", () => {
       createJsonResponse({
         error_code: "session_expired",
         message: "会话失效，请重新登录",
+        status: "forbidden"
+      }, {
+        status: 403
+      })
+    ));
+
+    await expect(requestJson("/activities")).rejects.toBeInstanceOf(SessionExpiredError);
+    expect(getSession()).toBe("");
+  });
+
+  it("also clears the local session when the backend reports account_disabled", async () => {
+    setSession("sess_123");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      createJsonResponse({
+        error_code: "account_disabled",
+        message: "账号已停用，请联系管理员",
         status: "forbidden"
       }, {
         status: 403
@@ -174,5 +191,54 @@ describe("requestJson", () => {
       }),
       method: "GET"
     }));
+  });
+
+  it("aborts slow requests after the configured timeout with a stable NetworkError", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockImplementation((_input: string, init?: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("The operation was aborted.", "AbortError"));
+        }, {
+          once: true
+        });
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const requestPromise = requestJson("/activities", {
+      timeoutMs: 10
+    });
+    const assertion = expect(requestPromise).rejects.toEqual(new NetworkError("请求超时，请稍后重试"));
+
+    await vi.advanceTimersByTimeAsync(10);
+
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps caller-triggered aborts to a stable NetworkError", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockImplementation((_input: string, init?: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("The operation was aborted.", "AbortError"));
+        }, {
+          once: true
+        });
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const requestPromise = requestJson("/activities", {
+      signal: controller.signal,
+      timeoutMs: 1000
+    });
+    const assertion = expect(requestPromise).rejects.toEqual(new NetworkError("请求已取消，请稍后重试"));
+
+    controller.abort();
+
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

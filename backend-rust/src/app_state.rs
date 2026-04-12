@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::db;
 use crate::error::AppError;
-use crate::rate_limit::InvalidCodeAttemptLimiter;
+use crate::rate_limit::{InvalidCodeAttemptLimiter, LoginAttemptLimiter};
 use crate::replay_guard::ReplayGuard;
 use crate::token::SessionTokenSigner;
 use sqlx::MySqlPool;
@@ -22,6 +22,7 @@ struct SharedState {
   session_token_signer: SessionTokenSigner,
   replay_guard: ReplayGuard,
   invalid_code_limiter: InvalidCodeAttemptLimiter,
+  login_attempt_limiter: LoginAttemptLimiter,
 }
 
 impl AppState {
@@ -39,6 +40,7 @@ impl AppState {
         session_token_signer,
         replay_guard: ReplayGuard::new(Duration::from_secs(90)),
         invalid_code_limiter: InvalidCodeAttemptLimiter::new(12, Duration::from_secs(60)),
+        login_attempt_limiter: LoginAttemptLimiter::new(5, Duration::from_secs(60)),
       }),
     })
   }
@@ -61,5 +63,9 @@ impl AppState {
 
   pub fn invalid_code_limiter(&self) -> &InvalidCodeAttemptLimiter {
     &self.shared.invalid_code_limiter
+  }
+
+  pub fn login_attempt_limiter(&self) -> &LoginAttemptLimiter {
+    &self.shared.login_attempt_limiter
   }
 }

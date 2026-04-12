@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../../features/auth/api";
 import { AccountLoginForm } from "../../features/auth/components/AccountLoginForm";
@@ -19,25 +19,37 @@ function resolveErrorMessage(error: unknown) {
   return "登录失败，请稍后重试。";
 }
 
+const SESSION_PERSIST_ERROR_MESSAGE = "登录状态保存失败，请检查浏览器存储权限后重试。";
+
 export function LoginPage() {
   const navigate = useNavigate();
   const [errorMessage, setErrorMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const submitInFlightRef = useRef(false);
 
   async function handleSubmit(input: { student_id: string; password: string }) {
     // 登录页只协调请求生命周期；字段清洗和表单校验继续留在 `AccountLoginForm`。
+    if (submitInFlightRef.current) {
+      return;
+    }
+
+    submitInFlightRef.current = true;
     setPending(true);
     setErrorMessage("");
 
     try {
       const result = await login(input);
       // 登录完成时把 token、角色、权限和用户资料一起写入，后续路由守卫直接复用。
-      saveAuthSession(result);
+      if (!saveAuthSession(result)) {
+        setErrorMessage(SESSION_PERSIST_ERROR_MESSAGE);
+        return;
+      }
       navigate("/activities");
     } catch (error) {
       // 其他错误统一回显到登录面板，由用户自行重试。
       setErrorMessage(resolveErrorMessage(error));
     } finally {
+      submitInFlightRef.current = false;
       setPending(false);
     }
   }

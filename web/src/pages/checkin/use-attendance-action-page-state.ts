@@ -23,6 +23,17 @@ type UseAttendanceActionPageStateInput = {
   activityId: string;
 };
 
+function createUnavailableDetail(activityId: string): ActivityDetail {
+  return {
+    activity_id: activityId || "unavailable",
+    activity_title: "活动信息暂不可用",
+    can_checkin: false,
+    can_checkout: false,
+    description: "请稍后重试，或返回活动详情页重新进入。",
+    progress_status: "ongoing"
+  };
+}
+
 /**
  * 签到/签退页的状态机集中在这里维护。
  *
@@ -45,18 +56,18 @@ export function useAttendanceActionPageState({
   const [result, setResult] = useState<CodeConsumeResponse | null>(null);
   // 详情可能因为首屏和回前台刷新同时在路上，所以只接受最后一次请求。
   const detailRequestGuardRef = useRef(createRequestGuard());
+  const submitInFlightRef = useRef(false);
 
   const loadDetail = useCallback(async () => {
     const requestVersion = detailRequestGuardRef.current.beginRequest();
 
     if (!activityId) {
       setPageError("活动不存在");
-      setDetail(null);
+      setDetail(createUnavailableDetail(activityId));
       return;
     }
 
     setPageError("");
-    setDetail(null);
 
     try {
       const detailResult = await getActivityDetail(activityId);
@@ -71,6 +82,7 @@ export function useAttendanceActionPageState({
 
       if (detailRequestGuardRef.current.isCurrent(requestVersion)) {
         setPageError(resolvePageErrorMessage(error, "活动信息加载失败"));
+        setDetail((currentDetail) => currentDetail ?? createUnavailableDetail(activityId));
       }
     }
   }, [activityId, navigate]);
@@ -85,10 +97,15 @@ export function useAttendanceActionPageState({
   }, [loadDetail]);
 
   const handleSubmit = useCallback(async () => {
+    if (submitInFlightRef.current || pending) {
+      return;
+    }
+
     if (!detail || !isActionAllowed(detail, actionType)) {
       return;
     }
 
+    submitInFlightRef.current = true;
     setPending(true);
     setErrorMessage("");
 
@@ -106,9 +123,10 @@ export function useAttendanceActionPageState({
 
       setErrorMessage(resolveConsumeError(error));
     } finally {
+      submitInFlightRef.current = false;
       setPending(false);
     }
-  }, [actionType, activityId, code, detail, navigate]);
+  }, [actionType, activityId, code, detail, navigate, pending]);
 
   return {
     actionTone,

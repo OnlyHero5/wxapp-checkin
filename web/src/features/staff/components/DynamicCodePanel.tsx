@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { TabPanel, Tabs } from "tdesign-mobile-react";
 import type { ActivityActionType } from "../../activities/api";
 import type { CodeSessionResponse } from "../api";
@@ -125,7 +125,7 @@ export function DynamicCodePanel({
       countdownBaselineRef.current?.receivedAtMs ?? Date.now()
     );
 
-  function tryTriggerAutoRefresh(reason: "expired-response" | "timer-finished") {
+  const tryTriggerAutoRefresh = useCallback((_reason: "expired-response" | "timer-finished") => {
     if (!displayedCodeSession || heroMetaLoading || !refreshKey) {
       return false;
     }
@@ -150,12 +150,9 @@ export function DynamicCodePanel({
     }
 
     autoRefreshStateRef.current.attemptCount += 1;
-
-    // 这里只保留触发原因文档化，方便后续维护继续对照“倒计时结束”和“过期响应兜底”两条链路。
-    void reason;
     onRefresh();
     return true;
-  }
+  }, [displayedCodeSession, heroMetaLoading, onRefresh, refreshKey]);
 
   useEffect(() => {
     /**
@@ -171,7 +168,7 @@ export function DynamicCodePanel({
       return;
     }
     tryTriggerAutoRefresh("expired-response");
-  }, [countdownTimeMs, displayedCodeSession, heroMetaLoading, onRefresh, refreshKey]);
+  }, [countdownTimeMs, displayedCodeSession, heroMetaLoading, tryTriggerAutoRefresh]);
 
   function handleCountdownFinish() {
     /**

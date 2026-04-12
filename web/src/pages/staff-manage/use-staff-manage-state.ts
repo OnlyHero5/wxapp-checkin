@@ -35,6 +35,7 @@ export function useStaffManageState(activityId: string) {
   const previousActivityIdRef = useRef("");
   const previousActionTypeRef = useRef<ActivityActionType | null>(null);
   const actionTypeRef = useRef<ActivityActionType>("checkin");
+  const bulkCheckoutInFlightRef = useRef(false);
   const { requestWakeLock, wakeLockMessage } = useScreenWakeLock();
   const handleSessionExpired = useCallback(() => {
     navigate("/login");
@@ -163,10 +164,11 @@ export function useStaffManageState(activityId: string) {
   }, [actionType, refreshCurrentCodeSession]);
 
   async function handleBulkCheckout(reason: string) {
-    if (riskActionsBlocked) {
+    if (bulkCheckoutInFlightRef.current || bulkPending || riskActionsBlocked) {
       return;
     }
 
+    bulkCheckoutInFlightRef.current = true;
     setBulkPending(true);
     setResultMessage("");
 
@@ -188,6 +190,7 @@ export function useStaffManageState(activityId: string) {
       }
       setErrorMessage(resolvePageErrorMessage(error, "活动管理信息加载失败，请稍后重试。"));
     } finally {
+      bulkCheckoutInFlightRef.current = false;
       setBulkPending(false);
     }
   }

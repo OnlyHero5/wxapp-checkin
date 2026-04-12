@@ -90,10 +90,7 @@ async fn list_activities(
     .await
     .map_err(|error| AppError::internal(format!("读取活动列表失败：{error}")))?;
 
-  raw_rows
-    .into_iter()
-    .map(materialize_activity_row)
-    .collect()
+  raw_rows.into_iter().map(materialize_activity_row).collect()
 }
 
 fn append_visibility_clause(

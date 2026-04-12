@@ -98,6 +98,27 @@ fn docker_start_script_should_stream_backend_logs_to_terminal_without_file_log()
 }
 
 #[test]
+fn docker_start_script_should_fail_container_when_any_critical_process_exits() {
+  let script = fs::read_to_string(repo_file("docker/start.sh")).expect("read docker/start.sh");
+  assert!(
+    script.contains("NGINX_PID"),
+    "docker start script should track the nginx pid instead of treating it as an untracked foreground child"
+  );
+  assert!(
+    script.contains("nginx -g 'daemon off;' &"),
+    "docker start script should launch nginx under the supervisor shell so it can observe both critical processes"
+  );
+  assert!(
+    script.contains("wait -n"),
+    "docker start script should exit when either the backend or nginx exits"
+  );
+  assert!(
+    !script.contains("exec nginx -g 'daemon off;'"),
+    "docker start script should not hand pid 1 directly to nginx because that hides backend crashes from the container runtime"
+  );
+}
+
+#[test]
 fn docker_compose_should_limit_log_retention() {
   let compose =
     fs::read_to_string(repo_file("docker-compose.yml")).expect("read docker-compose.yml");
@@ -109,6 +130,26 @@ fn docker_compose_should_limit_log_retention() {
     compose.contains("max-file"),
     "docker compose should cap the number of rotated docker log files"
   );
+}
+
+#[test]
+fn docker_compose_should_define_backend_healthcheck() {
+  let compose =
+    fs::read_to_string(repo_file("docker-compose.yml")).expect("read docker-compose.yml");
+  assert!(
+    compose.contains("healthcheck:"),
+    "docker compose should define a container healthcheck so reverse-proxied backend failures are visible to orchestration"
+  );
+  assert!(
+    compose.contains("/backend-healthz"),
+    "docker compose healthcheck should probe the backend through nginx instead of only checking the static file server"
+  );
+  for field in ["interval:", "timeout:", "retries:", "start_period:"] {
+    assert!(
+      compose.contains(field),
+      "docker compose healthcheck should specify {field} to make probe timing explicit"
+    );
+  }
 }
 
 #[test]
@@ -134,6 +175,24 @@ fn deployment_doc_should_describe_env_driven_docker_connection_contract() {
   assert!(
     deployment_doc.contains("3317"),
     "deployment doc should describe the current cloud example port"
+  );
+}
+
+#[test]
+fn deployment_doc_should_describe_healthcheck_and_validation_commands() {
+  let deployment_doc =
+    fs::read_to_string(repo_file("docs/DEPLOYMENT.md")).expect("read docs/DEPLOYMENT.md");
+  assert!(
+    deployment_doc.contains("/backend-healthz"),
+    "deployment doc should describe the docker backend health probe exposed through nginx"
+  );
+  assert!(
+    deployment_doc.contains("docker inspect --format"),
+    "deployment doc should show how to inspect docker health status after deployment"
+  );
+  assert!(
+    deployment_doc.contains("docker compose ps"),
+    "deployment doc should include a compose-level verification command for container health"
   );
 }
 

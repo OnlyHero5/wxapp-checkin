@@ -150,6 +150,15 @@ describe("CheckinPage", () => {
     expect(await screen.findByText("验证码已过期，请重新输入最新验证码")).toBeInTheDocument();
   });
 
+  it("does not keep showing the loading state when the initial detail request fails", async () => {
+    activitiesApiMocks.getActivityDetail.mockRejectedValueOnce(new Error("活动信息加载失败了"));
+
+    renderAttendancePage("/activities/act_101/checkin");
+
+    expect(await screen.findByText("活动信息加载失败了")).toBeInTheDocument();
+    expect(screen.queryByText("活动信息加载中...")).not.toBeInTheDocument();
+  });
+
   it("renders checkout copy and submits checkout codes", async () => {
     const user = userEvent.setup();
     activitiesApiMocks.consumeActivityCode.mockResolvedValue({
@@ -188,6 +197,26 @@ describe("CheckinPage", () => {
     expect(screen.getByRole("heading", { name: "签退结果" })).toBeInTheDocument();
     expect(document.querySelector(".attendance-action-result__panel")).toBeInTheDocument();
     expect(document.querySelectorAll(".t-cell-group--card")).toHaveLength(0);
+  });
+
+  it("short-circuits duplicate attendance submits while the current request is pending", async () => {
+    const user = userEvent.setup();
+    activitiesApiMocks.consumeActivityCode.mockImplementation(() => new Promise(() => {}));
+
+    renderAttendancePage("/activities/act_101/checkin");
+
+    const input = await screen.findByPlaceholderText(CODE_PLACEHOLDER);
+    const form = input.closest("form");
+    expect(form).not.toBeNull();
+
+    await user.type(input, "123456");
+
+    fireEvent.submit(form!);
+    fireEvent.submit(form!);
+
+    await waitFor(() => {
+      expect(activitiesApiMocks.consumeActivityCode).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("resets the previous result state when switching to another activity route", async () => {

@@ -1,8 +1,8 @@
 # 审计日志规格说明
 
-文档版本：v1.1
+文档版本：v1.2
 状态：正式基线
-更新日期：2026-04-11
+更新日期：2026-04-12
 项目：`wxapp-checkin`
 
 ## 1. 概述
@@ -26,7 +26,7 @@ CREATE TABLE suda_log (
   content TEXT NOT NULL COMMENT 'JSON 格式操作详情',
   ip VARCHAR(45) DEFAULT '' COMMENT '客户端 IP',
   address VARCHAR(255) DEFAULT '' COMMENT '地址',
-  time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '写入时间'
+  time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'MySQL 写入时间'
 );
 ```
 
@@ -39,7 +39,7 @@ CREATE TABLE suda_log (
 | `content` | `TEXT` | 是 | JSON 格式的操作详情 |
 | `ip` | `VARCHAR(45)` | 否 | 客户端 IP（当前实现传空） |
 | `address` | `VARCHAR(255)` | 否 | 地址（当前实现传空） |
-| `time` | `TIMESTAMP` | 自动 | 写入时间 |
+| `time` | `TIMESTAMP` | 自动 | MySQL 写入时间；应用读取时会固定会话时区为 `+08:00` |
 
 ---
 
@@ -49,6 +49,7 @@ CREATE TABLE suda_log (
 
 | 场景 | 触发接口 | path 值 | 操作人 |
 |------|----------|---------|--------|
+| 登录失败 | `POST /api/web/auth/login` | `/api/web/auth/login` | 本次尝试的 `student_id`（姓名未知时为空） |
 | 普通用户签到 | `POST /api/web/activities/{id}/code-consume` | `/api/web/attendance/checkin` | 签到用户本人 |
 | 普通用户签退 | `POST /api/web/activities/{id}/code-consume` | `/api/web/attendance/checkout` | 签退用户本人 |
 | staff 名单修正（每人） | `POST /api/web/staff/activities/{id}/attendance-adjustments` | `/api/web/staff/attendance-adjustment` | 被修正用户 |
@@ -61,7 +62,7 @@ CREATE TABLE suda_log (
 | 场景 | 原因 |
 |------|------|
 | 登录成功 | 当前实现不写日志 |
-| 登录失败 | 当前实现不写日志 |
+| 登录失败 | 当前实现会写 `/api/web/auth/login` 审计日志 |
 | 活动列表查询 | 只读操作 |
 | 活动详情查询 | 只读操作 |
 | 动态码获取 | 只读操作 |
@@ -200,12 +201,51 @@ CREATE TABLE suda_log (
 }
 ```
 
+### 4.6 时间字段真实口径
+
+`suda_log` 当前同时存在两套时间信息：
+
+| 字段 | 来源 | 精度 | 当前用途 |
+|------|------|------|----------|
+| `content.server_time_ms` | Rust 服务进程本地时钟 | 毫秒 | API 响应体、审计 JSON、批次追踪 |
+| `time` | MySQL `CURRENT_TIMESTAMP` | 秒级 / TIMESTAMP | SQL 查询、roster 最近动作时间 |
+
+补充说明：
+- 应用连接池会在每个 MySQL 会话执行 `SET time_zone = '+08:00'`；
+- `backend-rust/src/db/log_repo.rs` 查询最新动作时间时会 `CAST(time AS DATETIME)`，按北京时间解释；
+- 如果你在独立 SQL 客户端排查，请先执行 `SET time_zone = '+08:00';`，否则 `time` 的显示值可能与应用侧不一致。
+
+---
+
+### 4.7 登录失败审计
+
+**触发条件**：登录失败、账号已停用或登录失败次数过多
+
+**代码位置**：`backend-rust/src/service/auth_service.rs`
+
+```json
+{
+  "student_id": "2025000007",
+  "result": "failed",
+  "error_code": "invalid_password",
+  "server_time_ms": 1760000004300,
+  "source": "wxapp-checkin-rust"
+}
+```
+
+补充说明：
+- `path` 固定为 `/api/web/auth/login`
+- `username` 固定写当前尝试的 `student_id`
+- 如果数据库中还没有命中该用户，`name` 会写空字符串
+- 当前实现记录失败登录，不记录成功登录
+
 ---
 
 ## 5. path 字段值对照表
 
 | path | 含义 |
 |------|------|
+| `/api/web/auth/login` | 登录失败 |
 | `/api/web/attendance/checkin` | 普通用户签到 |
 | `/api/web/attendance/checkout` | 普通用户签退 |
 | `/api/web/staff/attendance-adjustment` | staff 名单修正 |
@@ -213,7 +253,18 @@ CREATE TABLE suda_log (
 
 ---
 
-## 6. 查询示例
+## 6. 查询方式与示例
+
+当前正式实现（`backend-rust/src/db/log_repo.rs`）仍采用以下口径：
+- `content` 是紧凑 JSON 字符串，由 `serde_json::to_string` 序列化写入；
+- 运行期查询使用 `JSON_VALID` + `JSON_EXTRACT` 精确过滤 `legacy_activity_numeric_id` / `action_type`；
+- roster 场景使用批量查询 `find_latest_action_times(...)`，通过 `MAX(id)` 一次回收每个成员最近一条日志，避免一人一查。
+
+人工 SQL 排查前建议先固定会话时区：
+
+```sql
+SET time_zone = '+08:00';
+```
 
 ### 6.1 查询某用户在某活动的所有签到记录
 
@@ -221,7 +272,8 @@ CREATE TABLE suda_log (
 SELECT *
 FROM suda_log
 WHERE username = '2025000007'
-  AND content LIKE '%"legacy_activity_numeric_id":101%'
+  AND JSON_VALID(content)
+  AND CAST(JSON_UNQUOTE(JSON_EXTRACT(content, '$.legacy_activity_numeric_id')) AS SIGNED) = 101
 ORDER BY id DESC;
 ```
 
@@ -231,7 +283,8 @@ ORDER BY id DESC;
 SELECT *
 FROM suda_log
 WHERE path LIKE '/api/web/staff/%'
-  AND content LIKE '%"legacy_activity_numeric_id":101%'
+  AND JSON_VALID(content)
+  AND CAST(JSON_UNQUOTE(JSON_EXTRACT(content, '$.legacy_activity_numeric_id')) AS SIGNED) = 101
 ORDER BY id DESC;
 ```
 
@@ -241,10 +294,29 @@ ORDER BY id DESC;
 SELECT CAST(time AS DATETIME) AS action_time
 FROM suda_log
 WHERE username = '2025000007'
-  AND content LIKE '%"action_type":"checkin"%'
-  AND content LIKE '%"legacy_activity_numeric_id":101%'
+  AND JSON_VALID(content)
+  AND JSON_UNQUOTE(JSON_EXTRACT(content, '$.action_type')) = 'checkin'
+  AND CAST(JSON_UNQUOTE(JSON_EXTRACT(content, '$.legacy_activity_numeric_id')) AS SIGNED) = 101
 ORDER BY id DESC
 LIMIT 1;
+```
+
+### 6.4 批量查询 roster 最近签到时间（当前应用侧实现口径）
+
+```sql
+SELECT
+  CAST(logs.username AS CHAR(20) CHARACTER SET utf8mb4) AS username,
+  CAST(logs.time AS DATETIME) AS action_time
+FROM suda_log logs
+INNER JOIN (
+  SELECT username, MAX(id) AS latest_id
+  FROM suda_log
+  WHERE JSON_VALID(content)
+    AND CAST(JSON_UNQUOTE(JSON_EXTRACT(content, '$.legacy_activity_numeric_id')) AS SIGNED) = 101
+    AND JSON_UNQUOTE(JSON_EXTRACT(content, '$.action_type')) = 'checkin'
+    AND username IN ('2025000007', '2025000008')
+  GROUP BY username
+) latest ON latest.latest_id = logs.id;
 ```
 
 ---

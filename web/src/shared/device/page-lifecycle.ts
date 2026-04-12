@@ -11,11 +11,19 @@ export function subscribePageVisible(onVisible: () => void) {
       onVisible();
     }
   };
+  const handlePageShow = (event: Event) => {
+    // bfcache 恢复通常只触发 pageshow，不一定再补 visibilitychange。
+    if ((event as PageTransitionEvent).persisted) {
+      onVisible();
+    }
+  };
 
   document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("pageshow", handlePageShow);
 
   return () => {
     // 返回 unsubscribe，方便页面在 unmount 时安全释放监听。
     document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("pageshow", handlePageShow);
   };
 }

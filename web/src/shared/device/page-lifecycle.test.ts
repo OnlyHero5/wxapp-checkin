@@ -31,4 +31,20 @@ describe("subscribePageVisible", () => {
 
     unsubscribe();
   });
+
+  it("invokes the callback when the page is restored from bfcache via pageshow", () => {
+    const callback = vi.fn();
+    const unsubscribe = subscribePageVisible(callback);
+    const pageShowEvent = new Event("pageshow");
+    Object.defineProperty(pageShowEvent, "persisted", {
+      configurable: true,
+      value: true
+    });
+
+    window.dispatchEvent(pageShowEvent);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+  });
 });

@@ -79,7 +79,7 @@ pub(super) fn parse_legacy_activity_time_text(
     .or_else(|_| chrono::NaiveDateTime::parse_from_str(value.trim(), "%Y-%m-%d %H:%M"))
     .map_err(|error| AppError::internal(format!("解析活动时间失败：{error}")))?;
 
-  /**
+  /*
    * legacy `suda_activity` 的时间列虽然是 `TIMESTAMP`，
    * 但现网数据实际按“北京时间墙上时间”写入了 UTC 会话。
    *
@@ -90,7 +90,9 @@ pub(super) fn parse_legacy_activity_time_text(
    * 后续详情展示、列表排序、发码窗口判断才能继续共用同一份正确时间。
    */
   parsed
-    .checked_sub_signed(chrono::Duration::hours(LEGACY_ACTIVITY_SESSION_OFFSET_HOURS))
+    .checked_sub_signed(chrono::Duration::hours(
+      LEGACY_ACTIVITY_SESSION_OFFSET_HOURS,
+    ))
     .ok_or_else(|| AppError::internal("活动时间折返失败：超出合法范围"))
 }
 

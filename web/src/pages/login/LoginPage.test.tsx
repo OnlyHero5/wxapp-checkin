@@ -33,6 +33,7 @@ describe("LoginPage", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     window.localStorage.clear();
   });
@@ -89,5 +90,46 @@ describe("LoginPage", () => {
     expect(await screen.findByText("密码错误")).toBeInTheDocument();
     expect(document.querySelector(".account-login-form__card")).toBeInTheDocument();
     expect(getSession()).toBe("");
+  });
+
+  it("does not navigate when session persistence fails locally", async () => {
+    const user = userEvent.setup();
+    authApiMocks.login.mockResolvedValue({
+      session_token: "sess_login_123",
+      status: "success"
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota exceeded");
+    });
+
+    renderLoginPage();
+
+    await user.type(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER), "2025000011");
+    await user.type(screen.getByPlaceholderText(PASSWORD_PLACEHOLDER), "123456");
+    fireEvent.submit(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest("form")!);
+
+    expect(await screen.findByText("登录状态保存失败，请检查浏览器存储权限后重试。")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "活动页已打开" })).not.toBeInTheDocument();
+    expect(getSession()).toBe("");
+  });
+
+  it("short-circuits duplicate login submits while one request is still pending", async () => {
+    const user = userEvent.setup();
+    authApiMocks.login.mockImplementation(() => new Promise(() => {}));
+
+    renderLoginPage();
+
+    await user.type(screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER), "2025000011");
+    await user.type(screen.getByPlaceholderText(PASSWORD_PLACEHOLDER), "123456");
+
+    const form = screen.getByPlaceholderText(STUDENT_ID_PLACEHOLDER).closest("form");
+    expect(form).not.toBeNull();
+
+    fireEvent.submit(form!);
+    fireEvent.submit(form!);
+
+    await waitFor(() => {
+      expect(authApiMocks.login).toHaveBeenCalledTimes(1);
+    });
   });
 });

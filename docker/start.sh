@@ -12,15 +12,33 @@ set -euo pipefail
 # - 资源受限服务器上不额外落容器内日志文件，统一交给 `docker logs` + Compose 日志轮转
 
 BACKEND_PID=""
+NGINX_PID=""
 
 cleanup() {
-  if [[ -n "${BACKEND_PID}" ]] && kill -0 "${BACKEND_PID}" 2>/dev/null; then
-    kill "${BACKEND_PID}" || true
-    wait "${BACKEND_PID}" || true
-  fi
+  local pid
+  for pid in "${BACKEND_PID:-}" "${NGINX_PID:-}"; do
+    if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+      kill "${pid}" 2>/dev/null || true
+    fi
+  done
+
+  for pid in "${BACKEND_PID:-}" "${NGINX_PID:-}"; do
+    if [[ -n "${pid}" ]]; then
+      wait "${pid}" 2>/dev/null || true
+    fi
+  done
 }
 
-trap cleanup EXIT INT TERM
+handle_signal() {
+  local exit_code="$1"
+  trap - EXIT INT TERM
+  cleanup
+  exit "${exit_code}"
+}
+
+trap cleanup EXIT
+trap 'handle_signal 130' INT
+trap 'handle_signal 143' TERM
 
 # 容器内固定把 Rust 后端收敛到 8080；
 # 宿主机不会直接映射它，避免绕开 Nginx 的单入口约束。
@@ -32,6 +50,22 @@ export SERVER_PORT="${SERVER_PORT:-8080}"
 /usr/local/bin/wxapp-checkin-backend-rust &
 BACKEND_PID="$!"
 
-# 用前台 nginx 托管静态资源并反代 API；
-# 这样容器主进程稳定，docker stop 也能按预期回收。
-exec nginx -g 'daemon off;'
+# nginx 也交给当前 shell 监管：
+# - 任一关键子进程退出都视为容器失败；
+# - `docker stop` 时 shell 会先转发信号，再统一回收剩余子进程。
+nginx -g 'daemon off;' &
+NGINX_PID="$!"
+
+set +e
+wait -n "${BACKEND_PID}" "${NGINX_PID}"
+EXIT_STATUS="$?"
+set -e
+
+if [[ "${EXIT_STATUS}" -eq 0 ]]; then
+  echo "[wxapp-start] critical child exited unexpectedly" >&2
+  EXIT_STATUS=1
+fi
+
+cleanup
+trap - EXIT
+exit "${EXIT_STATUS}"
