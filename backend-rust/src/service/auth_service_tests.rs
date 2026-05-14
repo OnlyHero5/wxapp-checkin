@@ -22,10 +22,15 @@ fn current_user_should_inherit_staff_permissions() {
 
 #[test]
 fn disabled_account_should_be_rejected() {
-  let error = ensure_account_active(Some(1)).expect_err("invalid=1 should be rejected");
+  let error = ensure_account_active(Some(0)).expect_err("invalid=0 should be rejected");
 
   assert_eq!(error.status(), "forbidden");
   assert_eq!(error.error_code(), Some("account_disabled"));
+}
+
+#[test]
+fn enabled_account_should_be_accepted() {
+  assert!(ensure_account_active(Some(1)).is_ok());
 }
 
 #[test]

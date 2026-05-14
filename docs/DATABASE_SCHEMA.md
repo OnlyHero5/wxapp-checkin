@@ -37,7 +37,7 @@
 | `password` | `VARCHAR(60)` | bcrypt 密码哈希 |
 | `name` | `VARCHAR(255)` | 真实姓名 |
 | `role` | `INT` | 角色编号（0-3 为 staff，其他为 normal） |
-| `invalid` | `TINYINT` | 账号状态（0=正常，1=禁用） |
+| `invalid` | `TINYINT` | 账号状态（1=正常，0=禁用） |
 
 **角色映射规则**：
 - `role` 值为 0、1、2、3 时映射为 `staff`
@@ -46,7 +46,7 @@
 **账号状态真实口径**：
 - `invalid` 字段由外部系统维护；
 - `wxapp-checkin` 登录和 bearer token 鉴权都会校验该字段；
-- `invalid=1` 的账号不能重新登录，也不能继续使用旧 token 访问业务接口。
+- `invalid=0` 的账号不能重新登录，也不能继续使用旧 token 访问业务接口。
 
 ### 2.2 `suda_department` - 院系表
 

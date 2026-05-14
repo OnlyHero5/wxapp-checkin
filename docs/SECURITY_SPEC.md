@@ -154,12 +154,13 @@ fn generate_code(signing_key: &str, activity_id: &str, action_type: &str, slot: 
 ### 3.5 账号禁用字段真实口径
 
 数据库 `suda_user.invalid` 字段当前已接入登录与鉴权拦截链路：
-- `backend-rust/src/service/auth_service.rs` 登录时会拒绝 `invalid != 0` 的账号；
+- `backend-rust/src/service/auth_service.rs` 登录时会拒绝 `invalid = 0` 的账号；
 - `backend-rust/src/api/auth_extractor.rs` 会在 bearer token 反查数据库后再次校验 `invalid`；
 - 被停用账号继续使用旧 token 访问受保护接口时，也会收到 `account_disabled`。
 
 因此当前正式口径是：
-- `invalid=1` 已被后端视为生效的停用状态；
+- `invalid=1` 表示账号正常可用；
+- `invalid=0` 已被后端视为生效的停用状态；
 - 停用账号不能重新登录，也不能继续使用已有会话访问业务接口；
 - 前端收到 `account_disabled` 后，应按会话失效处理并清理本地会话。
 

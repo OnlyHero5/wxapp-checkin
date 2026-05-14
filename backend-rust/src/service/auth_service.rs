@@ -38,24 +38,10 @@ pub async fn login(
   };
 
   if ensure_account_active(user.invalid).is_err() {
-    return reject_login_with(
-      state,
-      &normalized_student_id,
-      Some(&user.name),
-      &normalized_client_ip,
-      "account_disabled",
-    )
-    .await;
+    return reject_login_with(state, &normalized_student_id, Some(&user.name), &normalized_client_ip, "account_disabled").await;
   }
   if verify_password(user.password.as_deref(), &normalized_password).is_err() {
-    return reject_login_with(
-      state,
-      &normalized_student_id,
-      Some(&user.name),
-      &normalized_client_ip,
-      "invalid_password",
-    )
-    .await;
+    return reject_login_with(state, &normalized_student_id, Some(&user.name), &normalized_client_ip, "invalid_password").await;
   }
   let role = role_from_legacy(user.role);
   let permissions = permissions_for_role(role)
@@ -90,7 +76,8 @@ pub async fn login(
 }
 
 pub(crate) fn ensure_account_active(invalid: Option<i8>) -> Result<(), AppError> {
-  if matches!(invalid, Some(value) if value != 0) {
+  // `suda_union` 里 `invalid = 1` 才是可用账号，`0` 表示锁定。
+  if !matches!(invalid, Some(value) if value != 0) {
     return Err(AppError::business(
       "forbidden",
       "账号已停用，请联系管理员",
@@ -143,9 +130,7 @@ fn verify_password(password_hash: Option<&str>, password: &str) -> Result<(), Ap
   Ok(())
 }
 
-fn normalize(value: &str) -> String {
-  value.trim().to_string()
-}
+fn normalize(value: &str) -> String { value.trim().to_string() }
 
 async fn reject_login_with<T>(
   state: &AppState,
